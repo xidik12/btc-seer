@@ -32,6 +32,15 @@ export const api = {
   getMacroData: () => fetchAPI('/market/macro'),
   getOnchainData: () => fetchAPI('/market/onchain'),
 
+  // Influencers
+  getInfluencerTweets: (limit = 20, category = null) => {
+    let url = `/influencers/latest?limit=${limit}`
+    if (category) url += `&category=${category}`
+    return fetchAPI(url)
+  },
+  getInfluencerSentiment: (hours = 24) => fetchAPI(`/influencers/sentiment?hours=${hours}`),
+  getTopInfluencers: (hours = 24) => fetchAPI(`/influencers/top-influencers?hours=${hours}`),
+
   // History
   getAccuracy: (days = 30) => fetchAPI(`/history/accuracy?days=${days}`),
 }

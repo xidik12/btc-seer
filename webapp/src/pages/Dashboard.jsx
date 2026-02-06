@@ -1,8 +1,10 @@
 import PriceWidget from '../components/PriceWidget'
+import PriceChart from '../components/PriceChart'
 import PredictionCard from '../components/PredictionCard'
 import SignalPanel from '../components/SignalPanel'
 import SentimentGauge from '../components/SentimentGauge'
 import NewsCarousel from '../components/NewsCarousel'
+import InfluencerFeed from '../components/InfluencerFeed'
 import MacroDashboard from '../components/MacroDashboard'
 
 export default function Dashboard() {
@@ -16,10 +18,12 @@ export default function Dashboard() {
       </header>
 
       <PriceWidget />
+      <PriceChart />
       <PredictionCard />
       <SignalPanel />
       <SentimentGauge />
       <NewsCarousel />
+      <InfluencerFeed />
       <MacroDashboard />
 
       <p className="text-text-muted text-[10px] text-center pb-4 leading-relaxed">

@@ -9,54 +9,44 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  ReferenceLine,
 } from 'recharts'
 import { api } from '../utils/api.js'
 import {
   formatPricePrecise,
   formatPrice,
   formatNumber,
+  formatPercent,
   formatTime,
   formatDate,
 } from '../utils/format.js'
 
 const TIMEFRAMES = [
-  { label: '24h', hours: 24 },
-  { label: '7d', hours: 168 },
-  { label: '30d', hours: 720 },
+  { label: '24H', value: '1d' },
+  { label: '1W', value: '1w' },
+  { label: '1M', value: '1mo' },
+  { label: '1Y', value: '1y' },
+  { label: 'ALL', value: 'all' },
 ]
 
-function ChartTooltip({ active, payload, label }) {
+function ChartTooltip({ active, payload }) {
   if (!active || !payload?.length) return null
-
   const d = payload[0]?.payload
   if (!d) return null
 
   return (
-    <div className="bg-bg-card border border-text-muted/20 rounded-lg px-3 py-2 shadow-xl text-xs">
-      <p className="text-text-secondary mb-1">
+    <div className="bg-[#1a1a2e] border border-[#2a2a45] rounded-lg px-3 py-2 shadow-2xl text-xs backdrop-blur-sm">
+      <p className="text-[#8888aa] mb-1.5 text-[10px]">
         {formatDate(d.time)} {formatTime(d.time)}
       </p>
-      <div className="space-y-0.5">
-        <p className="text-text-primary">
-          <span className="text-text-secondary mr-1">O:</span>
-          {formatPricePrecise(d.open)}
-        </p>
-        <p className="text-text-primary">
-          <span className="text-text-secondary mr-1">H:</span>
-          {formatPricePrecise(d.high)}
-        </p>
-        <p className="text-text-primary">
-          <span className="text-text-secondary mr-1">L:</span>
-          {formatPricePrecise(d.low)}
-        </p>
-        <p className="text-text-primary font-medium">
-          <span className="text-text-secondary mr-1">C:</span>
-          {formatPricePrecise(d.close)}
-        </p>
-        <p className="text-text-secondary">
-          <span className="mr-1">Vol:</span>
-          {formatNumber(d.volume)}
-        </p>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+        <p><span className="text-[#6a6a80]">O </span><span className="text-[#e0e0ee]">{formatPricePrecise(d.open)}</span></p>
+        <p><span className="text-[#6a6a80]">H </span><span className="text-[#00d68f]">{formatPricePrecise(d.high)}</span></p>
+        <p><span className="text-[#6a6a80]">C </span><span className="text-[#e0e0ee] font-medium">{formatPricePrecise(d.close)}</span></p>
+        <p><span className="text-[#6a6a80]">L </span><span className="text-[#ff4d6a]">{formatPricePrecise(d.low)}</span></p>
+      </div>
+      <div className="mt-1 pt-1 border-t border-[#2a2a45]">
+        <p className="text-[#6a6a80]">Vol <span className="text-[#4a9eff]">{formatNumber(d.volume)}</span></p>
       </div>
     </div>
   )
@@ -65,25 +55,36 @@ function ChartTooltip({ active, payload, label }) {
 function VolumeTooltip({ active, payload }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-bg-card border border-text-muted/20 rounded-lg px-2 py-1 shadow-xl text-xs">
-      <span className="text-text-secondary">Vol: </span>
-      <span className="text-text-primary">{formatNumber(payload[0]?.value)}</span>
+    <div className="bg-[#1a1a2e] border border-[#2a2a45] rounded-lg px-2 py-1 shadow-2xl text-xs">
+      <span className="text-[#6a6a80]">Vol </span>
+      <span className="text-[#4a9eff]">{formatNumber(payload[0]?.value)}</span>
     </div>
   )
 }
 
 export default function PriceChart() {
-  const [timeframe, setTimeframe] = useState(TIMEFRAMES[0])
+  const [tfIndex, setTfIndex] = useState(0)
   const [candles, setCandles] = useState([])
+  const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const fetchCandles = useCallback(async () => {
+  const timeframe = TIMEFRAMES[tfIndex]
+
+  const fetchData = useCallback(async () => {
     try {
       setError(null)
-      const data = await api.getCandles(timeframe.hours)
-      const formatted = (data || []).map((c) => ({
-        time: c.time || c.timestamp || c.t,
+      const data = await api.getPriceStats(timeframe.value)
+
+      if (data?.error) {
+        setError(data.error)
+        setCandles([])
+        setStats(null)
+        return
+      }
+
+      const formatted = (data?.candles || []).map((c) => ({
+        time: c.timestamp || c.time || c.t,
         open: c.open ?? c.o,
         high: c.high ?? c.h,
         low: c.low ?? c.l,
@@ -91,49 +92,83 @@ export default function PriceChart() {
         volume: c.volume ?? c.v ?? 0,
       }))
       setCandles(formatted)
+      setStats({
+        price: data.current_price,
+        change: data.change,
+        changePct: data.change_pct,
+        high: data.high,
+        low: data.low,
+        volume: data.volume,
+      })
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [timeframe.hours])
+  }, [timeframe.value])
 
   useEffect(() => {
     setLoading(true)
-    fetchCandles()
-    const interval = setInterval(fetchCandles, 60_000)
+    fetchData()
+    const interval = setInterval(fetchData, 60_000)
     return () => clearInterval(interval)
-  }, [fetchCandles])
+  }, [fetchData])
 
-  const priceChange =
-    candles.length >= 2
-      ? candles[candles.length - 1].close - candles[0].close
-      : 0
-  const isPositive = priceChange >= 0
-  const gradientColor = isPositive ? '#00d68f' : '#ff4d6a'
-  const strokeColor = isPositive ? '#00d68f' : '#ff4d6a'
+  const isPositive = (stats?.change ?? 0) >= 0
+  const accentColor = isPositive ? '#00d68f' : '#ff4d6a'
+  const dimColor = isPositive ? 'rgba(0,214,143,0.08)' : 'rgba(255,77,106,0.08)'
 
   const formatXTick = (tick) => {
     if (!tick) return ''
-    if (timeframe.hours <= 24) return formatTime(tick)
-    return formatDate(tick)
+    const tf = timeframe.value
+    if (tf === '1d') return formatTime(tick)
+    if (tf === '1w') return new Date(tick).toLocaleDateString('en-US', { weekday: 'short' })
+    if (tf === '1mo') return formatDate(tick)
+    // 1y, all — show month + year
+    return new Date(tick).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
   }
 
+  // Calculate Y domain with padding
+  const prices = candles.map((c) => c.close).filter(Boolean)
+  const minP = Math.min(...prices)
+  const maxP = Math.max(...prices)
+  const pad = (maxP - minP) * 0.05 || 100
+  const yDomain = prices.length ? [minP - pad, maxP + pad] : ['auto', 'auto']
+
+  // Average line
+  const avgPrice = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : null
+
   return (
-    <div className="bg-bg-card rounded-2xl p-4 slide-up">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-text-primary font-semibold text-sm">
-          BTC Price
-        </h3>
-        <div className="flex gap-1">
-          {TIMEFRAMES.map((tf) => (
+    <div className="bg-bg-card rounded-2xl overflow-hidden slide-up">
+      {/* Header with stats */}
+      <div className="px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-text-primary font-semibold text-sm">BTC Price</h3>
+            {stats && (
+              <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${isPositive ? 'bg-accent-green/10 text-accent-green' : 'bg-accent-red/10 text-accent-red'}`}>
+                {isPositive ? '+' : ''}{stats.changePct?.toFixed(2)}%
+              </span>
+            )}
+          </div>
+          {stats && (
+            <div className="flex items-center gap-3 text-[10px] text-text-muted">
+              <span>H <span className="text-accent-green">{formatPrice(stats.high)}</span></span>
+              <span>L <span className="text-accent-red">{formatPrice(stats.low)}</span></span>
+            </div>
+          )}
+        </div>
+
+        {/* Timeframe buttons */}
+        <div className="flex gap-1 bg-bg-secondary/50 rounded-lg p-0.5">
+          {TIMEFRAMES.map((tf, i) => (
             <button
               key={tf.label}
-              onClick={() => setTimeframe(tf)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                timeframe.label === tf.label
-                  ? 'bg-accent-blue text-white'
-                  : 'bg-bg-secondary text-text-secondary hover:text-text-primary'
+              onClick={() => setTfIndex(i)}
+              className={`flex-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-all duration-200 ${
+                tfIndex === i
+                  ? 'bg-accent-blue text-white shadow-sm shadow-accent-blue/25'
+                  : 'text-text-muted hover:text-text-secondary'
               }`}
             >
               {tf.label}
@@ -143,73 +178,75 @@ export default function PriceChart() {
       </div>
 
       {loading ? (
-        <div className="h-[200px] flex items-center justify-center">
-          <div className="text-text-secondary text-sm pulse-glow">
-            Loading chart...
+        <div className="h-[220px] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-5 h-5 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+            <span className="text-text-muted text-xs">Loading chart...</span>
           </div>
         </div>
       ) : error ? (
-        <div className="h-[200px] flex flex-col items-center justify-center gap-2">
+        <div className="h-[220px] flex flex-col items-center justify-center gap-2">
           <p className="text-accent-red text-sm">Failed to load chart</p>
-          <button
-            onClick={fetchCandles}
-            className="text-accent-blue text-xs hover:underline"
-          >
-            Retry
-          </button>
+          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">Retry</button>
         </div>
       ) : candles.length === 0 ? (
-        <div className="h-[200px] flex items-center justify-center">
+        <div className="h-[220px] flex items-center justify-center">
           <p className="text-text-secondary text-sm">No data available</p>
         </div>
       ) : (
         <>
           {/* Price area chart */}
-          <div className="h-[180px] -mx-2">
+          <div className="h-[190px] px-1">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={candles}
-                margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
-              >
+              <AreaChart data={candles} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
                 <defs>
                   <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={gradientColor} stopOpacity={0.25} />
-                    <stop offset="100%" stopColor={gradientColor} stopOpacity={0} />
+                    <stop offset="0%" stopColor={accentColor} stopOpacity={0.20} />
+                    <stop offset="50%" stopColor={accentColor} stopOpacity={0.06} />
+                    <stop offset="100%" stopColor={accentColor} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#2a2a38"
+                  strokeDasharray="3 6"
+                  stroke="#1e1e30"
                   vertical={false}
                 />
+                {avgPrice && (
+                  <ReferenceLine
+                    y={avgPrice}
+                    stroke="#3a3a55"
+                    strokeDasharray="4 4"
+                    strokeWidth={0.5}
+                  />
+                )}
                 <XAxis
                   dataKey="time"
                   tickFormatter={formatXTick}
-                  tick={{ fill: '#5a5a70', fontSize: 10 }}
+                  tick={{ fill: '#4a4a66', fontSize: 9 }}
                   axisLine={false}
                   tickLine={false}
-                  minTickGap={40}
+                  minTickGap={50}
                 />
                 <YAxis
-                  domain={['auto', 'auto']}
+                  domain={yDomain}
                   tickFormatter={(v) => formatPrice(v)}
-                  tick={{ fill: '#5a5a70', fontSize: 10 }}
+                  tick={{ fill: '#4a4a66', fontSize: 9 }}
                   axisLine={false}
                   tickLine={false}
-                  width={60}
+                  width={58}
                   orientation="right"
                 />
                 <Tooltip content={<ChartTooltip />} />
                 <Area
                   type="monotone"
                   dataKey="close"
-                  stroke={strokeColor}
-                  strokeWidth={2}
+                  stroke={accentColor}
+                  strokeWidth={1.5}
                   fill="url(#priceGradient)"
                   dot={false}
                   activeDot={{
-                    r: 4,
-                    fill: strokeColor,
+                    r: 3,
+                    fill: accentColor,
                     stroke: '#0f0f14',
                     strokeWidth: 2,
                   }}
@@ -219,19 +256,16 @@ export default function PriceChart() {
           </div>
 
           {/* Volume bar chart */}
-          <div className="h-[48px] -mx-2 mt-1">
+          <div className="h-[36px] px-1 mb-2">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={candles}
-                margin={{ top: 0, right: 4, left: 4, bottom: 0 }}
-              >
+              <BarChart data={candles} margin={{ top: 0, right: 8, left: 4, bottom: 0 }}>
                 <XAxis dataKey="time" hide />
                 <YAxis hide domain={[0, 'auto']} />
                 <Tooltip content={<VolumeTooltip />} />
                 <Bar
                   dataKey="volume"
                   fill="#4a9eff"
-                  opacity={0.35}
+                  opacity={0.25}
                   radius={[1, 1, 0, 0]}
                 />
               </BarChart>

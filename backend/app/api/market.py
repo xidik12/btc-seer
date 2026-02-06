@@ -50,12 +50,12 @@ async def get_current_price(session: AsyncSession = Depends(get_session)):
 
 @router.get("/stats")
 async def get_price_stats(
-    timeframe: str = Query("1d", pattern="^(1m|5m|15m|1h|4h|1d|1w|1mo|all)$"),
+    timeframe: str = Query("1d", pattern="^(1m|5m|15m|1h|4h|1d|1w|1mo|1y|all)$"),
     session: AsyncSession = Depends(get_session),
 ):
     """Get price statistics for a specific timeframe.
 
-    Timeframes: 1m, 5m, 15m, 1h, 4h, 1d (day), 1w (week), 1mo (month), all (lifetime)
+    Timeframes: 1m, 5m, 15m, 1h, 4h, 1d (day), 1w (week), 1mo (month), 1y (year), all (lifetime)
     """
     # Map timeframe to timedelta
     timeframe_map = {
@@ -67,6 +67,7 @@ async def get_price_stats(
         "1d": timedelta(days=1),
         "1w": timedelta(weeks=1),
         "1mo": timedelta(days=30),
+        "1y": timedelta(days=365),
         "all": None,  # All time
     }
 
