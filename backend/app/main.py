@@ -14,6 +14,7 @@ from app.config import settings
 from app.database import init_db
 from app.api import predictions, signals, news, market, history, influencers, events
 from app.scheduler.jobs import (
+    backfill_historical_prices,
     collect_price_data,
     collect_news_data,
     collect_macro_data,
@@ -86,17 +87,21 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("TELEGRAM_BOT_TOKEN not set — bot disabled")
 
-    # Run initial data collection
-    asyncio.create_task(collect_price_data())
-    asyncio.create_task(collect_news_data())
+    # Backfill historical prices from Binance, then collect fresh data + predict
+    async def startup_data_pipeline():
+        # Step 1: Backfill historical data so charts work immediately
+        await backfill_historical_prices()
 
-    # Generate initial prediction after collecting enough price data (delay 6 min)
-    async def initial_prediction():
-        await asyncio.sleep(360)  # Wait 6 min for ≥5 price data points
+        # Step 2: Collect fresh data
+        await collect_price_data()
+        await collect_news_data()
+
+        # Step 3: Wait briefly for data to settle, then generate first prediction
+        await asyncio.sleep(30)
         await generate_prediction()
         await classify_news_events()
 
-    asyncio.create_task(initial_prediction())
+    asyncio.create_task(startup_data_pipeline())
 
     yield
 

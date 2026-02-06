@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
@@ -5,8 +6,26 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, Price, MacroData, OnChainData
+from app.collectors.market import MarketCollector
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/market", tags=["market"])
+
+# Shared collector for Binance API fallback
+_market_collector = MarketCollector()
+
+# Minimum candles needed per timeframe to consider local data sufficient
+_MIN_CANDLES = {"1m": 2, "5m": 2, "15m": 2, "1h": 5, "4h": 5, "1d": 10, "1w": 20, "1mo": 20, "1y": 50, "all": 50}
+
+# Binance interval + limit for each timeframe (used as fallback)
+_BINANCE_FALLBACK = {
+    "1d": ("1h", 24),
+    "1w": ("1h", 168),
+    "1mo": ("4h", 180),
+    "1y": ("1d", 365),
+    "all": ("1d", 1000),
+}
 
 
 @router.get("/price")
@@ -97,10 +116,65 @@ async def get_price_stats(
 
     prices = result_historical.scalars().all()
 
+    min_needed = _MIN_CANDLES.get(timeframe, 5)
+
+    # Fallback to Binance API if local data is insufficient
+    if len(prices) < min_needed and timeframe in _BINANCE_FALLBACK:
+        logger.info(f"Stats: Local data insufficient ({len(prices)} candles) for {timeframe}, fetching from Binance")
+        try:
+            binance_interval, binance_limit = _BINANCE_FALLBACK[timeframe]
+            klines = await _market_collector.get_historical_klines(
+                interval=binance_interval, limit=binance_limit
+            )
+            if klines and len(klines) > min_needed:
+                current_price = current.close
+                first_k = klines[0]
+                open_price = first_k["open"]
+                high_price = max(k["high"] for k in klines)
+                low_price = min(k["low"] for k in klines)
+                total_volume = sum(k["volume"] for k in klines)
+                last_k = klines[-1]
+
+                price_change = last_k["close"] - open_price
+                price_change_pct = (price_change / open_price * 100) if open_price else 0
+
+                max_candles = 500
+                step = max(1, len(klines) // max_candles)
+                candles = [
+                    {
+                        "timestamp": k["timestamp"].isoformat() if hasattr(k["timestamp"], "isoformat") else str(k["timestamp"]),
+                        "open": k["open"],
+                        "high": k["high"],
+                        "low": k["low"],
+                        "close": k["close"],
+                        "volume": k["volume"],
+                    }
+                    for k in klines[::step]
+                ]
+
+                return {
+                    "timeframe": timeframe,
+                    "current_price": current_price,
+                    "open": open_price,
+                    "high": high_price,
+                    "low": low_price,
+                    "volume": total_volume,
+                    "change": round(price_change, 2),
+                    "change_pct": round(price_change_pct, 2),
+                    "num_candles": len(klines),
+                    "candles": candles,
+                    "timestamp": current.timestamp.isoformat(),
+                    "period_start": candles[0]["timestamp"],
+                    "period_end": candles[-1]["timestamp"],
+                    "source": "binance_api",
+                }
+        except Exception as e:
+            logger.warning(f"Binance fallback failed: {e}")
+
     if not prices:
         return {"error": "No historical data available"}
 
-    # Calculate stats
+    # Calculate stats from local DB data
     first_price = prices[0]
     current_price = current.close
     open_price = first_price.close

@@ -50,6 +50,97 @@ def get_ensemble() -> EnsemblePredictor:
     return _ensemble
 
 
+async def backfill_historical_prices():
+    """Backfill historical BTC price data from Binance on startup.
+
+    Fetches hourly candles (1000 = ~41 days) and daily candles (1000 = ~2.7 years)
+    so that charts have data for all timeframes immediately.
+    Only runs if the DB has less than 7 days of data.
+    """
+    try:
+        # Check how much data we already have
+        async with async_session() as session:
+            result = await session.execute(
+                select(Price).order_by(Price.timestamp).limit(1)
+            )
+            oldest = result.scalar_one_or_none()
+
+            result = await session.execute(
+                select(Price).order_by(desc(Price.timestamp)).limit(1)
+            )
+            newest = result.scalar_one_or_none()
+
+        # If we already have >7 days of data, skip backfill
+        if oldest and newest:
+            span = (newest.timestamp - oldest.timestamp).total_seconds()
+            if span > 7 * 86400:
+                logger.info(f"Backfill: DB already has {span / 86400:.1f} days of data, skipping")
+                return
+
+        logger.info("Backfill: Starting historical price data fetch from Binance...")
+
+        # Fetch hourly klines (1000 = ~41 days) for short/medium timeframes
+        hourly_klines = await market_collector.get_historical_klines(
+            interval="1h", limit=1000
+        )
+        if hourly_klines:
+            count = await _insert_klines(hourly_klines, source="binance_backfill_1h")
+            logger.info(f"Backfill: Inserted {count} hourly candles")
+
+        # Fetch daily klines (1000 = ~2.7 years) for long timeframes
+        daily_klines = await market_collector.get_historical_klines(
+            interval="1d", limit=1000
+        )
+        if daily_klines:
+            count = await _insert_klines(daily_klines, source="binance_backfill_1d")
+            logger.info(f"Backfill: Inserted {count} daily candles")
+
+        total = (len(hourly_klines) if hourly_klines else 0) + (len(daily_klines) if daily_klines else 0)
+        logger.info(f"Backfill: Complete — {total} total candles loaded")
+
+    except Exception as e:
+        logger.error(f"Backfill error: {e}", exc_info=True)
+
+
+async def _insert_klines(klines: list[dict], source: str = "binance_backfill"):
+    """Insert kline data into the Price table, skipping duplicates by timestamp."""
+    async with async_session() as session:
+        # Build set of existing timestamps (rounded to minute) for dedup
+        result = await session.execute(select(Price.timestamp))
+        existing_ts_minutes = set()
+        for row in result.all():
+            ts = row[0]
+            # Round to nearest minute for comparison
+            existing_ts_minutes.add(ts.replace(second=0, microsecond=0))
+
+        inserted = 0
+        for k in klines:
+            ts = k["timestamp"]
+            # Make naive UTC if timezone-aware
+            if hasattr(ts, 'tzinfo') and ts.tzinfo is not None:
+                ts = ts.replace(tzinfo=None)
+
+            ts_minute = ts.replace(second=0, microsecond=0)
+            if ts_minute in existing_ts_minutes:
+                continue
+
+            price = Price(
+                timestamp=ts,
+                open=k["open"],
+                high=k["high"],
+                low=k["low"],
+                close=k["close"],
+                volume=k["volume"],
+                source=source,
+            )
+            session.add(price)
+            existing_ts_minutes.add(ts_minute)
+            inserted += 1
+
+        await session.commit()
+        return inserted
+
+
 async def collect_price_data():
     """Collect and store BTC price data (runs every minute)."""
     try:
