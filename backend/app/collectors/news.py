@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 
+import aiohttp
 import feedparser
 
 from app.collectors.base import BaseCollector
@@ -108,11 +109,15 @@ class NewsCollector(BaseCollector):
     async def _get_rss_feeds(self) -> list[dict]:
         """Parse RSS feeds for crypto news — all sources in parallel-ish loop."""
         all_news = []
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; BTCOracle/1.0; +https://btc-oracle.app)",
+            "Accept": "application/rss+xml, application/xml, text/xml, */*",
+        }
 
         for source, url in RSS_FEEDS.items():
             try:
                 session = await self.get_session()
-                async with session.get(url, timeout=15) as resp:
+                async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=20)) as resp:
                     if resp.status != 200:
                         logger.debug(f"RSS {source} returned HTTP {resp.status}")
                         continue
