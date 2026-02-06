@@ -48,6 +48,100 @@ async def get_current_price(session: AsyncSession = Depends(get_session)):
     }
 
 
+@router.get("/stats")
+async def get_price_stats(
+    timeframe: str = Query("1d", pattern="^(1m|5m|15m|1h|4h|1d|1w|1mo|all)$"),
+    session: AsyncSession = Depends(get_session),
+):
+    """Get price statistics for a specific timeframe.
+
+    Timeframes: 1m, 5m, 15m, 1h, 4h, 1d (day), 1w (week), 1mo (month), all (lifetime)
+    """
+    # Map timeframe to timedelta
+    timeframe_map = {
+        "1m": timedelta(minutes=1),
+        "5m": timedelta(minutes=5),
+        "15m": timedelta(minutes=15),
+        "1h": timedelta(hours=1),
+        "4h": timedelta(hours=4),
+        "1d": timedelta(days=1),
+        "1w": timedelta(weeks=1),
+        "1mo": timedelta(days=30),
+        "all": None,  # All time
+    }
+
+    # Get current price
+    result_current = await session.execute(
+        select(Price).order_by(desc(Price.timestamp)).limit(1)
+    )
+    current = result_current.scalar_one_or_none()
+
+    if not current:
+        return {"error": "No price data available"}
+
+    # Get historical data for timeframe
+    delta = timeframe_map[timeframe]
+    if delta:
+        since = current.timestamp - delta
+        result_historical = await session.execute(
+            select(Price)
+            .where(Price.timestamp >= since)
+            .order_by(Price.timestamp)
+        )
+    else:
+        # All time
+        result_historical = await session.execute(
+            select(Price).order_by(Price.timestamp)
+        )
+
+    prices = result_historical.scalars().all()
+
+    if not prices:
+        return {"error": "No historical data available"}
+
+    # Calculate stats
+    first_price = prices[0]
+    current_price = current.close
+    open_price = first_price.close
+    high_price = max(p.high for p in prices)
+    low_price = min(p.low for p in prices)
+    total_volume = sum(p.volume for p in prices)
+
+    price_change = current_price - open_price
+    price_change_pct = (price_change / open_price * 100) if open_price else 0
+
+    # Get candle data for chart (limit to reasonable number of points)
+    max_candles = 1000
+    step = max(1, len(prices) // max_candles)
+    candles = [
+        {
+            "timestamp": p.timestamp.isoformat(),
+            "open": p.open,
+            "high": p.high,
+            "low": p.low,
+            "close": p.close,
+            "volume": p.volume,
+        }
+        for p in prices[::step]
+    ]
+
+    return {
+        "timeframe": timeframe,
+        "current_price": current_price,
+        "open": open_price,
+        "high": high_price,
+        "low": low_price,
+        "volume": total_volume,
+        "change": round(price_change, 2),
+        "change_pct": round(price_change_pct, 2),
+        "num_candles": len(prices),
+        "candles": candles,
+        "timestamp": current.timestamp.isoformat(),
+        "period_start": first_price.timestamp.isoformat(),
+        "period_end": current.timestamp.isoformat(),
+    }
+
+
 @router.get("/candles")
 async def get_candles(
     hours: int = Query(168, ge=1, le=720),

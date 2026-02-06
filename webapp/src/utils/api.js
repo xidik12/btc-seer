@@ -27,6 +27,7 @@ export const api = {
 
   // Market
   getCurrentPrice: () => fetchAPI('/market/price'),
+  getPriceStats: (timeframe = '1d') => fetchAPI(`/market/stats?timeframe=${timeframe}`),
   getCandles: (hours = 168) => fetchAPI(`/market/candles?hours=${hours}`),
   getMacroData: () => fetchAPI('/market/macro'),
   getOnchainData: () => fetchAPI('/market/onchain'),
