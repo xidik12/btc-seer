@@ -8,12 +8,12 @@ from sqlalchemy import select, desc
 from app.config import settings
 from app.database import (
     async_session, Price, News, Feature, Prediction, Signal,
-    MacroData, OnChainData,
+    MacroData, OnChainData, InfluencerTweet,
 )
 from app.collectors import (
     MarketCollector, NewsCollector, FearGreedCollector,
     MacroCollector, OnChainCollector, RedditCollector,
-    BinanceNewsCollector,
+    BinanceNewsCollector, InfluencerCollector,
 )
 from app.features.builder import FeatureBuilder
 from app.features.sentiment import SentimentAnalyzer
@@ -30,6 +30,7 @@ macro_collector = MacroCollector()
 onchain_collector = OnChainCollector()
 reddit_collector = RedditCollector()
 binance_news_collector = BinanceNewsCollector()
+influencer_collector = InfluencerCollector()
 feature_builder = FeatureBuilder()
 signal_generator = SignalGenerator()
 
@@ -207,6 +208,76 @@ async def collect_onchain_data():
 
     except Exception as e:
         logger.error(f"On-chain collection error: {e}")
+
+
+async def collect_influencer_tweets():
+    """Collect tweets from influential crypto people (runs every 10 minutes).
+
+    Monitors Twitter/X feeds of key figures who affect BTC price:
+    - CEOs (Elon, Saylor, CZ, etc.)
+    - Investors (Cathie Wood, Raoul Pal, etc.)
+    - Regulators (SEC, Fed, politicians)
+    - Analysts and developers
+    """
+    try:
+        data = await influencer_collector.collect()
+        tweets = data.get("tweets", [])
+
+        if not tweets:
+            logger.debug("No new influencer tweets")
+            return
+
+        # Deduplicate by text (same tweet not stored twice in 24h)
+        async with async_session() as session:
+            since = datetime.utcnow() - timedelta(hours=24)
+            result = await session.execute(
+                select(InfluencerTweet.text)
+                .where(InfluencerTweet.timestamp >= since)
+            )
+            existing_texts = {row[0].lower().strip() for row in result.all()}
+
+        analyzer = SentimentAnalyzer()
+        new_count = 0
+
+        async with async_session() as session:
+            for tweet in tweets:
+                text = tweet.get("text", "").strip()
+                if not text or text.lower() in existing_texts:
+                    continue
+                existing_texts.add(text.lower())
+
+                # Analyze sentiment
+                sentiment = analyzer.analyze_text(text)
+                score = sentiment["combined_score"]
+
+                # Weight score by influencer's impact (1-10)
+                weight = tweet.get("weight", 5)
+                weighted_score = score * (weight / 5)  # Normalize around weight=5
+
+                tweet_record = InfluencerTweet(
+                    timestamp=datetime.utcnow(),
+                    influencer_name=tweet.get("influencer", "Unknown"),
+                    username=tweet.get("username", ""),
+                    role=tweet.get("role", ""),
+                    category=tweet.get("category", ""),
+                    weight=weight,
+                    text=text,
+                    url=tweet.get("url", ""),
+                    sentiment_score=weighted_score,
+                    published_at=tweet.get("published", ""),
+                )
+                session.add(tweet_record)
+                new_count += 1
+
+            await session.commit()
+
+        logger.info(
+            f"Influencer tweets: {len(tweets)} fetched, {new_count} new "
+            f"(failed: {len(data.get('failed_users', []))})"
+        )
+
+    except Exception as e:
+        logger.error(f"Influencer collection error: {e}")
 
 
 async def generate_prediction():

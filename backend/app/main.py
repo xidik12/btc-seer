@@ -12,12 +12,13 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import settings
 from app.database import init_db
-from app.api import predictions, signals, news, market, history
+from app.api import predictions, signals, news, market, history, influencers
 from app.scheduler.jobs import (
     collect_price_data,
     collect_news_data,
     collect_macro_data,
     collect_onchain_data,
+    collect_influencer_tweets,
     generate_prediction,
     evaluate_predictions,
     cleanup_old_data,
@@ -47,6 +48,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(collect_news_data, "interval", minutes=2, id="collect_news")
     scheduler.add_job(collect_macro_data, "interval", hours=1, id="collect_macro")
     scheduler.add_job(collect_onchain_data, "interval", hours=1, id="collect_onchain")
+    scheduler.add_job(collect_influencer_tweets, "interval", minutes=10, id="collect_influencers")
     scheduler.add_job(generate_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict")
     scheduler.add_job(evaluate_predictions, "interval", hours=1, id="evaluate")
     scheduler.add_job(cleanup_old_data, "interval", hours=24, id="cleanup")
@@ -120,6 +122,7 @@ app.include_router(signals.router)
 app.include_router(news.router)
 app.include_router(market.router)
 app.include_router(history.router)
+app.include_router(influencers.router)
 
 
 @app.get("/health")

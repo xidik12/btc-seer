@@ -107,6 +107,22 @@ class OnChainData(Base):
     large_tx_count: Mapped[int] = mapped_column(Integer, nullable=True)
 
 
+class InfluencerTweet(Base):
+    __tablename__ = "influencer_tweets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    influencer_name: Mapped[str] = mapped_column(String(100))
+    username: Mapped[str] = mapped_column(String(100), index=True)
+    role: Mapped[str] = mapped_column(String(200))
+    category: Mapped[str] = mapped_column(String(50))  # ceo, investor, analyst, etc.
+    weight: Mapped[int] = mapped_column(Integer)  # Influence weight 1-10
+    text: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(Text, nullable=True)
+    sentiment_score: Mapped[float] = mapped_column(Float, nullable=True)
+    published_at: Mapped[str] = mapped_column(String(100), nullable=True)
+
+
 class BotUser(Base):
     __tablename__ = "bot_users"
 
