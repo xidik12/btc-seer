@@ -123,6 +123,53 @@ class InfluencerTweet(Base):
     published_at: Mapped[str] = mapped_column(String(100), nullable=True)
 
 
+class EventImpact(Base):
+    """Tracks how specific news events impacted BTC price historically.
+
+    This is the system's 'memory' — it remembers what happened after similar events
+    and uses that knowledge to improve predictions.
+    """
+    __tablename__ = "event_impacts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    news_id: Mapped[int] = mapped_column(Integer, nullable=True)  # FK to news table
+    title: Mapped[str] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(String(100))
+
+    # Event classification
+    category: Mapped[str] = mapped_column(String(50), index=True)  # war, politics, regulation, etc.
+    subcategory: Mapped[str] = mapped_column(String(50), nullable=True)
+    keywords: Mapped[str] = mapped_column(Text, nullable=True)  # comma-separated matched keywords
+    severity: Mapped[int] = mapped_column(Integer, default=5)  # 1-10
+
+    # Sentiment at time of event
+    sentiment_score: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # BTC price at time of event
+    price_at_event: Mapped[float] = mapped_column(Float)
+
+    # Measured price impacts (filled in over time by evaluator)
+    price_1h: Mapped[float] = mapped_column(Float, nullable=True)
+    price_4h: Mapped[float] = mapped_column(Float, nullable=True)
+    price_24h: Mapped[float] = mapped_column(Float, nullable=True)
+    price_7d: Mapped[float] = mapped_column(Float, nullable=True)
+
+    change_pct_1h: Mapped[float] = mapped_column(Float, nullable=True)
+    change_pct_4h: Mapped[float] = mapped_column(Float, nullable=True)
+    change_pct_24h: Mapped[float] = mapped_column(Float, nullable=True)
+    change_pct_7d: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # Was the sentiment predictive of the direction?
+    sentiment_was_predictive: Mapped[bool] = mapped_column(Boolean, nullable=True)
+
+    # Evaluation status
+    evaluated_1h: Mapped[bool] = mapped_column(Boolean, default=False)
+    evaluated_4h: Mapped[bool] = mapped_column(Boolean, default=False)
+    evaluated_24h: Mapped[bool] = mapped_column(Boolean, default=False)
+    evaluated_7d: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
 class BotUser(Base):
     __tablename__ = "bot_users"
 

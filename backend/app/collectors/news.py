@@ -43,6 +43,23 @@ RSS_FEEDS = {
 
     # ── Bitcoin-specific feeds ──
     "bitcoin_optech": "https://bitcoinops.org/feed.xml",
+
+    # ── Politics, war, geopolitics ──
+    "google_news_war": "https://news.google.com/rss/search?q=war+OR+conflict+OR+military+OR+sanctions+bitcoin+OR+crypto&hl=en-US&gl=US&ceid=US:en",
+    "google_news_politics": "https://news.google.com/rss/search?q=congress+OR+senate+OR+regulation+cryptocurrency+OR+bitcoin&hl=en-US&gl=US&ceid=US:en",
+    "google_news_tariff": "https://news.google.com/rss/search?q=tariff+OR+trade+war+OR+sanctions+economy&hl=en-US&gl=US&ceid=US:en",
+
+    # ── Central banks & monetary policy ──
+    "google_news_fed": "https://news.google.com/rss/search?q=federal+reserve+OR+rate+decision+OR+FOMC+OR+powell&hl=en-US&gl=US&ceid=US:en",
+
+    # ── Stock market & corporate ──
+    "google_news_stocks": "https://news.google.com/rss/search?q=stock+market+OR+S%26P+500+OR+nasdaq+crash+OR+rally&hl=en-US&gl=US&ceid=US:en",
+    "google_news_tech": "https://news.google.com/rss/search?q=tesla+OR+apple+OR+nvidia+earnings+OR+stock&hl=en-US&gl=US&ceid=US:en",
+
+    # ── Financial news outlets ──
+    "reuters_business": "https://news.google.com/rss/search?q=site:reuters.com+bitcoin+OR+crypto+OR+federal+reserve&hl=en-US&gl=US&ceid=US:en",
+    "ft_crypto": "https://news.google.com/rss/search?q=site:ft.com+bitcoin+OR+cryptocurrency+OR+digital+asset&hl=en-US&gl=US&ceid=US:en",
+    "bloomberg_crypto": "https://news.google.com/rss/search?q=site:bloomberg.com+bitcoin+OR+crypto+OR+stablecoin&hl=en-US&gl=US&ceid=US:en",
 }
 
 CRYPTOPANIC_URL = "https://cryptopanic.com/api/v1/posts/"

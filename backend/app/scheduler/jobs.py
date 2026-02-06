@@ -8,7 +8,7 @@ from sqlalchemy import select, desc
 from app.config import settings
 from app.database import (
     async_session, Price, News, Feature, Prediction, Signal,
-    MacroData, OnChainData, InfluencerTweet,
+    MacroData, OnChainData, InfluencerTweet, EventImpact,
 )
 from app.collectors import (
     MarketCollector, NewsCollector, FearGreedCollector,
@@ -18,6 +18,7 @@ from app.collectors import (
 from app.features.builder import FeatureBuilder
 from app.features.sentiment import SentimentAnalyzer
 from app.models.ensemble import EnsemblePredictor
+from app.models.event_memory import EventClassifier, EventPatternMatcher
 from app.signals.generator import SignalGenerator
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,8 @@ binance_news_collector = BinanceNewsCollector()
 influencer_collector = InfluencerCollector()
 feature_builder = FeatureBuilder()
 signal_generator = SignalGenerator()
+event_classifier = EventClassifier()
+event_pattern_matcher = EventPatternMatcher()
 
 # Lazy-loaded ensemble predictor
 _ensemble: EnsemblePredictor | None = None
@@ -281,7 +284,12 @@ async def collect_influencer_tweets():
 
 
 async def generate_prediction():
-    """Generate ML prediction (runs every hour)."""
+    """Generate ML prediction (runs every hour).
+
+    Incorporates event memory: queries historical event impacts to understand
+    how similar past events affected BTC price, and feeds this as features
+    to the prediction model.
+    """
     try:
         # Get recent price data
         async with async_session() as session:
@@ -300,6 +308,72 @@ async def generate_prediction():
             )
             news = result.scalars().all()
 
+            # ── Event Memory: query recent events and historical patterns ──
+            event_memory_data = {}
+            try:
+                # Get active events from last hour
+                since_1h = datetime.utcnow() - timedelta(hours=1)
+                result = await session.execute(
+                    select(EventImpact)
+                    .where(EventImpact.timestamp >= since_1h)
+                    .order_by(desc(EventImpact.severity))
+                )
+                recent_events = result.scalars().all()
+
+                # Get all historical evaluated events for pattern matching
+                result = await session.execute(
+                    select(EventImpact)
+                    .where(EventImpact.evaluated_1h == True)
+                    .order_by(desc(EventImpact.timestamp))
+                    .limit(500)
+                )
+                historical_events = result.scalars().all()
+                historical_dicts = [
+                    {
+                        "category": e.category,
+                        "keywords": e.keywords,
+                        "severity": e.severity,
+                        "sentiment_score": e.sentiment_score,
+                        "change_pct_1h": e.change_pct_1h,
+                        "change_pct_4h": e.change_pct_4h,
+                        "change_pct_24h": e.change_pct_24h,
+                        "sentiment_was_predictive": e.sentiment_was_predictive,
+                    }
+                    for e in historical_events
+                ]
+
+                if recent_events:
+                    # Use the most severe recent event for pattern matching
+                    top_event = recent_events[0]
+                    similar = event_pattern_matcher.find_similar_events(
+                        category=top_event.category,
+                        keywords=top_event.keywords or "",
+                        past_events=historical_dicts,
+                    )
+                    expected = event_pattern_matcher.get_expected_impact(similar)
+
+                    event_memory_data = {
+                        "expected_1h": expected["expected_1h"],
+                        "expected_4h": expected["expected_4h"],
+                        "expected_24h": expected["expected_24h"],
+                        "confidence": expected["confidence"],
+                        "severity": top_event.severity / 10.0,  # Normalize to 0-1
+                        "avg_sentiment_predictive": expected["avg_sentiment_predictive"],
+                        "active_event_count": float(len(recent_events)),
+                        "sample_size": expected["sample_size"],
+                    }
+
+                    if expected["sample_size"] > 0:
+                        logger.info(
+                            f"Event memory: {top_event.category} "
+                            f"(severity={top_event.severity}) — "
+                            f"expected 1h={expected['expected_1h']:+.2f}%, "
+                            f"24h={expected['expected_24h']:+.2f}% "
+                            f"(from {expected['sample_size']} similar events)"
+                        )
+            except Exception as e:
+                logger.debug(f"Event memory query error: {e}")
+
         if len(prices) < 10:
             logger.warning("Not enough price data for prediction")
             return
@@ -316,11 +390,12 @@ async def generate_prediction():
             for p in prices
         ])
 
-        # Build features
+        # Build features (including event memory)
         news_data = [{"title": n.title, "source": n.source} for n in news]
         features = feature_builder.build_features(
             price_df=price_df,
             news_data=news_data,
+            event_memory=event_memory_data if event_memory_data else None,
         )
 
         # Build feature sequence for LSTM
@@ -438,8 +513,178 @@ async def evaluate_predictions():
         logger.error(f"Prediction evaluation error: {e}")
 
 
+async def classify_news_events():
+    """Classify recent news into event categories and record them (runs every 5 min).
+
+    This is the 'learning' step — it identifies significant events and starts
+    tracking their price impact. Over time, this builds a historical memory
+    of how different event types affect BTC.
+    """
+    try:
+        async with async_session() as session:
+            # Get news from last 10 minutes that haven't been classified yet
+            since = datetime.utcnow() - timedelta(minutes=10)
+            result = await session.execute(
+                select(News).where(News.timestamp >= since)
+            )
+            recent_news = result.scalars().all()
+
+            # Get already-classified news IDs (from last hour to avoid re-processing)
+            since_1h = datetime.utcnow() - timedelta(hours=1)
+            result = await session.execute(
+                select(EventImpact.news_id).where(
+                    EventImpact.timestamp >= since_1h
+                )
+            )
+            already_classified = {row[0] for row in result.all() if row[0]}
+
+            # Get current BTC price
+            result = await session.execute(
+                select(Price).order_by(desc(Price.timestamp)).limit(1)
+            )
+            current_price_row = result.scalar_one_or_none()
+            if not current_price_row:
+                return
+            current_price = current_price_row.close
+
+        new_events = 0
+
+        async with async_session() as session:
+            for news_item in recent_news:
+                if news_item.id in already_classified:
+                    continue
+
+                classification = event_classifier.classify(
+                    news_item.title,
+                    sentiment_score=news_item.sentiment_score or 0.0,
+                )
+
+                if classification is None:
+                    continue  # Not a significant event
+
+                event = EventImpact(
+                    timestamp=news_item.timestamp,
+                    news_id=news_item.id,
+                    title=news_item.title,
+                    source=news_item.source,
+                    category=classification["category"],
+                    subcategory=classification["subcategory"],
+                    keywords=classification["keywords"],
+                    severity=classification["severity"],
+                    sentiment_score=news_item.sentiment_score,
+                    price_at_event=current_price,
+                )
+                session.add(event)
+                new_events += 1
+
+            await session.commit()
+
+        if new_events > 0:
+            logger.info(f"Event memory: {new_events} new events classified")
+
+    except Exception as e:
+        logger.error(f"Event classification error: {e}")
+
+
+async def evaluate_event_impacts():
+    """Measure actual BTC price impact of past events (runs every 30 min).
+
+    For each event that hasn't been fully evaluated, check if enough time has
+    passed and record the actual price change. This builds the historical
+    'memory' that the pattern matcher uses.
+    """
+    try:
+        async with async_session() as session:
+            # Get events that need evaluation
+            result = await session.execute(
+                select(EventImpact).where(
+                    (EventImpact.evaluated_1h == False) |
+                    (EventImpact.evaluated_4h == False) |
+                    (EventImpact.evaluated_24h == False) |
+                    (EventImpact.evaluated_7d == False)
+                )
+            )
+            events = result.scalars().all()
+
+            if not events:
+                return
+
+            now = datetime.utcnow()
+            evaluated_count = 0
+
+            for event in events:
+                base_price = event.price_at_event
+                if not base_price:
+                    continue
+
+                # Evaluate 1h impact
+                if not event.evaluated_1h and now >= event.timestamp + timedelta(hours=1):
+                    price_1h = await _get_price_at(session, event.timestamp + timedelta(hours=1))
+                    if price_1h:
+                        event.price_1h = price_1h
+                        event.change_pct_1h = round((price_1h - base_price) / base_price * 100, 4)
+                        event.evaluated_1h = True
+                        evaluated_count += 1
+
+                        # Check if sentiment was predictive for 1h
+                        if event.sentiment_score is not None:
+                            sent_predicted_up = event.sentiment_score > 0
+                            actually_went_up = event.change_pct_1h > 0
+                            event.sentiment_was_predictive = (sent_predicted_up == actually_went_up)
+
+                # Evaluate 4h impact
+                if not event.evaluated_4h and now >= event.timestamp + timedelta(hours=4):
+                    price_4h = await _get_price_at(session, event.timestamp + timedelta(hours=4))
+                    if price_4h:
+                        event.price_4h = price_4h
+                        event.change_pct_4h = round((price_4h - base_price) / base_price * 100, 4)
+                        event.evaluated_4h = True
+                        evaluated_count += 1
+
+                # Evaluate 24h impact
+                if not event.evaluated_24h and now >= event.timestamp + timedelta(hours=24):
+                    price_24h = await _get_price_at(session, event.timestamp + timedelta(hours=24))
+                    if price_24h:
+                        event.price_24h = price_24h
+                        event.change_pct_24h = round((price_24h - base_price) / base_price * 100, 4)
+                        event.evaluated_24h = True
+                        evaluated_count += 1
+
+                # Evaluate 7d impact
+                if not event.evaluated_7d and now >= event.timestamp + timedelta(days=7):
+                    price_7d = await _get_price_at(session, event.timestamp + timedelta(days=7))
+                    if price_7d:
+                        event.price_7d = price_7d
+                        event.change_pct_7d = round((price_7d - base_price) / base_price * 100, 4)
+                        event.evaluated_7d = True
+                        evaluated_count += 1
+
+            await session.commit()
+
+        if evaluated_count > 0:
+            logger.info(f"Event memory: evaluated {evaluated_count} impact measurements")
+
+    except Exception as e:
+        logger.error(f"Event impact evaluation error: {e}")
+
+
+async def _get_price_at(session, target_time: datetime) -> float | None:
+    """Get BTC price closest to a target time (±10 min window)."""
+    result = await session.execute(
+        select(Price)
+        .where(Price.timestamp >= target_time - timedelta(minutes=10))
+        .where(Price.timestamp <= target_time + timedelta(minutes=10))
+        .order_by(Price.timestamp)
+        .limit(1)
+    )
+    price = result.scalar_one_or_none()
+    return price.close if price else None
+
+
 async def cleanup_old_data():
-    """Clean up data older than 90 days (runs daily)."""
+    """Clean up data older than 90 days (runs daily).
+    Note: EventImpact is kept indefinitely for long-term memory.
+    """
     try:
         cutoff = datetime.utcnow() - timedelta(days=90)
 

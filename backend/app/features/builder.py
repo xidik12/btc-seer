@@ -46,7 +46,17 @@ class FeatureBuilder:
         "tx_volume", "active_addresses",
     ]
 
-    ALL_FEATURES = TECHNICAL_FEATURES + SENTIMENT_FEATURES + MACRO_FEATURES + ONCHAIN_FEATURES
+    EVENT_MEMORY_FEATURES = [
+        "event_expected_impact_1h",  # Expected % change from similar past events
+        "event_expected_impact_4h",
+        "event_expected_impact_24h",
+        "event_memory_confidence",   # How confident the memory match is (0-1)
+        "event_severity",            # Current event severity (0-10)
+        "event_sentiment_predictive", # How often sentiment predicted direction correctly
+        "active_event_count",        # Number of significant events in last hour
+    ]
+
+    ALL_FEATURES = TECHNICAL_FEATURES + SENTIMENT_FEATURES + MACRO_FEATURES + ONCHAIN_FEATURES + EVENT_MEMORY_FEATURES
 
     def __init__(self):
         self.sentiment_analyzer = SentimentAnalyzer()
@@ -59,6 +69,7 @@ class FeatureBuilder:
         macro_data: dict = None,
         onchain_data: dict = None,
         fear_greed: dict = None,
+        event_memory: dict = None,
     ) -> dict:
         """Build complete feature vector from all data sources."""
 
@@ -94,6 +105,16 @@ class FeatureBuilder:
         # Fear & Greed
         if fear_greed:
             features["fear_greed_value"] = fear_greed.get("value", 50)
+
+        # Event memory features
+        if event_memory:
+            features["event_expected_impact_1h"] = event_memory.get("expected_1h", 0.0)
+            features["event_expected_impact_4h"] = event_memory.get("expected_4h", 0.0)
+            features["event_expected_impact_24h"] = event_memory.get("expected_24h", 0.0)
+            features["event_memory_confidence"] = event_memory.get("confidence", 0.0)
+            features["event_severity"] = event_memory.get("severity", 0.0)
+            features["event_sentiment_predictive"] = event_memory.get("avg_sentiment_predictive", 0.5)
+            features["active_event_count"] = event_memory.get("active_event_count", 0.0)
 
         # Normalize features
         features = self._normalize(features)
