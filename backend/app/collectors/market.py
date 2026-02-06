@@ -12,6 +12,9 @@ class MarketCollector(BaseCollector):
 
     BINANCE_TICKER_URL = "https://api.binance.com/api/v3/ticker/24hr"
     BINANCE_KLINES_URL = "https://api.binance.com/api/v3/klines"
+    BINANCE_FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate"
+    BINANCE_OI_URL = "https://fapi.binance.com/fapi/v1/openInterest"
+    BINANCE_PREMIUM_URL = "https://fapi.binance.com/fapi/v1/premiumIndex"
     COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price"
     SYMBOL = "BTCUSDT"
 
@@ -80,6 +83,40 @@ class MarketCollector(BaseCollector):
                 "include_24hr_change": "true",
             },
         )
+
+    async def get_funding_rate(self) -> dict | None:
+        """Get current and recent BTC perpetual funding rates from Binance Futures."""
+        try:
+            data = await self.fetch_json(
+                self.BINANCE_PREMIUM_URL,
+                params={"symbol": self.SYMBOL},
+            )
+            if data:
+                return {
+                    "funding_rate": float(data.get("lastFundingRate", 0)),
+                    "mark_price": float(data.get("markPrice", 0)),
+                    "index_price": float(data.get("indexPrice", 0)),
+                    "next_funding_time": data.get("nextFundingTime"),
+                }
+        except Exception as e:
+            logger.debug(f"Funding rate fetch error: {e}")
+        return None
+
+    async def get_open_interest(self) -> dict | None:
+        """Get BTC perpetual open interest from Binance Futures."""
+        try:
+            data = await self.fetch_json(
+                self.BINANCE_OI_URL,
+                params={"symbol": self.SYMBOL},
+            )
+            if data:
+                return {
+                    "open_interest": float(data.get("openInterest", 0)),
+                    "symbol": data.get("symbol"),
+                }
+        except Exception as e:
+            logger.debug(f"Open interest fetch error: {e}")
+        return None
 
     async def get_historical_klines(
         self,

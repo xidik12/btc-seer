@@ -19,6 +19,7 @@ export default {
           red: '#ff4d6a',
           yellow: '#ffb800',
           orange: '#ff8c42',
+          purple: '#a78bfa',
         },
         text: {
           primary: '#ffffff',

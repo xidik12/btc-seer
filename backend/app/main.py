@@ -12,7 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import settings
 from app.database import init_db
-from app.api import predictions, signals, news, market, history, influencers, events
+from app.api import predictions, signals, news, market, history, influencers, events, quant
 from app.scheduler.jobs import (
     backfill_historical_prices,
     collect_price_data,
@@ -21,6 +21,7 @@ from app.scheduler.jobs import (
     collect_onchain_data,
     collect_influencer_tweets,
     generate_prediction,
+    generate_quant_prediction,
     evaluate_predictions,
     classify_news_events,
     evaluate_event_impacts,
@@ -55,6 +56,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(generate_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict")
     scheduler.add_job(evaluate_predictions, "interval", hours=1, id="evaluate")
     scheduler.add_job(classify_news_events, "interval", minutes=5, id="classify_events")
+    scheduler.add_job(generate_quant_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict_quant")
     scheduler.add_job(evaluate_event_impacts, "interval", minutes=30, id="evaluate_events")
     scheduler.add_job(cleanup_old_data, "interval", hours=24, id="cleanup")
 
@@ -99,6 +101,7 @@ async def lifespan(app: FastAPI):
         # Step 3: Wait briefly for data to settle, then generate first prediction
         await asyncio.sleep(30)
         await generate_prediction()
+        await generate_quant_prediction()
         await classify_news_events()
 
     asyncio.create_task(startup_data_pipeline())
@@ -141,6 +144,7 @@ app.include_router(market.router)
 app.include_router(history.router)
 app.include_router(influencers.router)
 app.include_router(events.router)
+app.include_router(quant.router)
 
 
 @app.get("/health")

@@ -1,6 +1,7 @@
 import PriceWidget from '../components/PriceWidget'
 import PriceChart from '../components/PriceChart'
 import PredictionCard from '../components/PredictionCard'
+import QuantPredictionCard from '../components/QuantPredictionCard'
 import SignalPanel from '../components/SignalPanel'
 import SentimentGauge from '../components/SentimentGauge'
 import NewsCarousel from '../components/NewsCarousel'
@@ -19,7 +20,36 @@ export default function Dashboard() {
 
       <PriceWidget />
       <PriceChart />
-      <PredictionCard />
+
+      {/* Dual Prediction System */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <div className="h-px flex-1 bg-white/5" />
+          <span className="text-text-muted text-[10px] font-semibold tracking-widest">PREDICTIONS</span>
+          <div className="h-px flex-1 bg-white/5" />
+        </div>
+
+        {/* Prediction A: ML Ensemble (data-driven) */}
+        <div>
+          <div className="flex items-center gap-1.5 mb-1.5 px-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-blue" />
+            <span className="text-text-muted text-[10px] font-semibold tracking-wider">ML ENSEMBLE</span>
+            <span className="text-text-muted text-[9px] opacity-60">LSTM + XGBoost + Sentiment</span>
+          </div>
+          <PredictionCard />
+        </div>
+
+        {/* Prediction B: Quant Theory (formula-driven) */}
+        <div>
+          <div className="flex items-center gap-1.5 mb-1.5 px-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-purple" />
+            <span className="text-text-muted text-[10px] font-semibold tracking-wider">QUANT THEORY</span>
+            <span className="text-text-muted text-[9px] opacity-60">15 proven algorithms combined</span>
+          </div>
+          <QuantPredictionCard />
+        </div>
+      </div>
+
       <SignalPanel />
       <SentimentGauge />
       <NewsCarousel />

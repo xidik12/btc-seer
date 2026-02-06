@@ -8,7 +8,7 @@ from sqlalchemy import select, desc
 from app.config import settings
 from app.database import (
     async_session, Price, News, Feature, Prediction, Signal,
-    MacroData, OnChainData, InfluencerTweet, EventImpact,
+    MacroData, OnChainData, InfluencerTweet, EventImpact, QuantPrediction,
 )
 from app.collectors import (
     MarketCollector, NewsCollector, FearGreedCollector,
@@ -19,6 +19,7 @@ from app.features.builder import FeatureBuilder
 from app.features.sentiment import SentimentAnalyzer
 from app.models.ensemble import EnsemblePredictor
 from app.models.event_memory import EventClassifier, EventPatternMatcher
+from app.models.quant_predictor import QuantPredictor
 from app.signals.generator import SignalGenerator
 
 logger = logging.getLogger(__name__)
@@ -557,6 +558,139 @@ async def generate_prediction():
 
     except Exception as e:
         logger.error(f"Prediction generation error: {e}", exc_info=True)
+
+
+async def generate_quant_prediction():
+    """Generate quant theory-based prediction (runs every 30 min alongside ML).
+
+    Uses 15+ proven BTC prediction theories: Pi Cycle, Rainbow Chart,
+    Mayer Multiple, Halving Cycle, Mean Reversion, Momentum, Funding Rate, etc.
+    """
+    try:
+        # Get price history
+        async with async_session() as session:
+            result = await session.execute(
+                select(Price).order_by(desc(Price.timestamp)).limit(1000)
+            )
+            prices = list(reversed(result.scalars().all()))
+
+            # Get latest macro data
+            result = await session.execute(
+                select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
+            )
+            macro_row = result.scalar_one_or_none()
+
+            # Get latest on-chain data
+            result = await session.execute(
+                select(OnChainData).order_by(desc(OnChainData.timestamp)).limit(1)
+            )
+            onchain_row = result.scalar_one_or_none()
+
+        if len(prices) < 20:
+            logger.warning("Not enough price data for quant prediction (need at least 20)")
+            return
+
+        current_price = float(prices[-1].close)
+
+        # Build price DataFrame
+        price_df = pd.DataFrame([
+            {
+                "open": p.open,
+                "high": p.high,
+                "low": p.low,
+                "close": p.close,
+                "volume": p.volume,
+            }
+            for p in prices
+        ])
+
+        # Prepare macro data
+        macro_data = None
+        if macro_row:
+            # Calculate DXY 24h change (approximate from stored values)
+            macro_data = {
+                "dxy_change_24h": None,
+            }
+            if macro_row.dxy:
+                # Get DXY from 24h ago
+                async with async_session() as session:
+                    result = await session.execute(
+                        select(MacroData)
+                        .where(MacroData.timestamp <= datetime.utcnow() - timedelta(hours=23))
+                        .order_by(desc(MacroData.timestamp))
+                        .limit(1)
+                    )
+                    old_macro = result.scalar_one_or_none()
+                    if old_macro and old_macro.dxy and old_macro.dxy > 0:
+                        macro_data["dxy_change_24h"] = (macro_row.dxy - old_macro.dxy) / old_macro.dxy
+
+        # Fear & Greed value
+        fear_greed_value = float(macro_row.fear_greed_index) if macro_row and macro_row.fear_greed_index else None
+
+        # Funding rate from Binance
+        funding_rate = None
+        try:
+            fr_data = await market_collector.get_funding_rate()
+            if fr_data:
+                funding_rate = fr_data.get("funding_rate")
+        except Exception as e:
+            logger.debug(f"Funding rate fetch for quant: {e}")
+
+        # On-chain data
+        onchain_data = None
+        if onchain_row:
+            onchain_data = {
+                "tx_volume": onchain_row.tx_volume,
+                "hash_rate": onchain_row.hash_rate,
+                "active_addresses": onchain_row.active_addresses,
+            }
+
+        # Run quant predictor
+        quant = QuantPredictor()
+        result = quant.predict(
+            price_df=price_df,
+            current_price=current_price,
+            macro_data=macro_data,
+            fear_greed_value=fear_greed_value,
+            funding_rate=funding_rate,
+            onchain_data=onchain_data,
+        )
+
+        # Store in database
+        preds = result.get("predictions", {})
+        async with async_session() as session:
+            qp = QuantPrediction(
+                timestamp=datetime.utcnow(),
+                current_price=current_price,
+                composite_score=result.get("composite_score", 0),
+                action=result.get("action", "NEUTRAL"),
+                direction=result.get("direction", "neutral"),
+                confidence=result.get("confidence", 0),
+                pred_1h_price=preds.get("1h", {}).get("predicted_price"),
+                pred_1h_change_pct=preds.get("1h", {}).get("predicted_change_pct"),
+                pred_4h_price=preds.get("4h", {}).get("predicted_price"),
+                pred_4h_change_pct=preds.get("4h", {}).get("predicted_change_pct"),
+                pred_24h_price=preds.get("24h", {}).get("predicted_price"),
+                pred_24h_change_pct=preds.get("24h", {}).get("predicted_change_pct"),
+                active_signals=result.get("active_signals", 0),
+                bullish_signals=result.get("bullish_signals", 0),
+                bearish_signals=result.get("bearish_signals", 0),
+                agreement_ratio=result.get("agreement_ratio", 0),
+                signal_breakdown=result.get("signal_breakdown"),
+            )
+            session.add(qp)
+            await session.commit()
+
+        logger.info(
+            f"Quant prediction: {result.get('direction')} "
+            f"(score={result.get('composite_score'):.1f}, "
+            f"confidence={result.get('confidence'):.0f}%, "
+            f"action={result.get('action')}, "
+            f"{result.get('bullish_signals')}B/{result.get('bearish_signals')}S signals)"
+        )
+
+    except Exception as e:
+        logger.error(f"Quant prediction error: {e}", exc_info=True)
 
 
 async def evaluate_predictions():

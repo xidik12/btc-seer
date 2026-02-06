@@ -13,8 +13,12 @@ async function fetchAPI(endpoint, options = {}) {
 export const api = {
   // Predictions
   getCurrentPredictions: () => fetchAPI('/predictions/current'),
+  getQuantPrediction: () => fetchAPI('/predictions/quant'),
   getPredictionHistory: (timeframe = '1h', days = 7) =>
     fetchAPI(`/predictions/history?timeframe=${timeframe}&days=${days}`),
+
+  getQuantPrediction: () => fetchAPI('/predictions/quant'),
+  getQuantHistory: (days = 7) => fetchAPI(`/predictions/quant/history?days=${days}`),
 
   // Signals
   getCurrentSignals: () => fetchAPI('/signals/current'),

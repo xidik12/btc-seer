@@ -170,6 +170,42 @@ class EventImpact(Base):
     evaluated_7d: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class QuantPrediction(Base):
+    """Quant Theory-based predictions (separate from ML ensemble)."""
+    __tablename__ = "quant_predictions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    current_price: Mapped[float] = mapped_column(Float)
+    composite_score: Mapped[float] = mapped_column(Float)  # -100 to +100
+    action: Mapped[str] = mapped_column(String(20))  # STRONG_BUY, BUY, LEAN_BULLISH, etc.
+    direction: Mapped[str] = mapped_column(String(20))  # bullish / bearish
+    confidence: Mapped[float] = mapped_column(Float)
+
+    # Per-timeframe predictions
+    pred_1h_price: Mapped[float] = mapped_column(Float, nullable=True)
+    pred_1h_change_pct: Mapped[float] = mapped_column(Float, nullable=True)
+    pred_4h_price: Mapped[float] = mapped_column(Float, nullable=True)
+    pred_4h_change_pct: Mapped[float] = mapped_column(Float, nullable=True)
+    pred_24h_price: Mapped[float] = mapped_column(Float, nullable=True)
+    pred_24h_change_pct: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # Signal counts
+    active_signals: Mapped[int] = mapped_column(Integer, nullable=True)
+    bullish_signals: Mapped[int] = mapped_column(Integer, nullable=True)
+    bearish_signals: Mapped[int] = mapped_column(Integer, nullable=True)
+    agreement_ratio: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # Full breakdown stored as JSON
+    signal_breakdown: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+    # Evaluation (filled later)
+    actual_price_1h: Mapped[float] = mapped_column(Float, nullable=True)
+    actual_price_24h: Mapped[float] = mapped_column(Float, nullable=True)
+    was_correct_1h: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    was_correct_24h: Mapped[bool] = mapped_column(Boolean, nullable=True)
+
+
 class BotUser(Base):
     __tablename__ = "bot_users"
 

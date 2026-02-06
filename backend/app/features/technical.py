@@ -76,7 +76,62 @@ class TechnicalFeatures:
         df["upper_shadow"] = (df["high"] - df[["close", "open"]].max(axis=1)) / df["open"] * 100
         df["lower_shadow"] = (df[["close", "open"]].min(axis=1) - df["low"]) / df["open"] * 100
 
+        # ── Extended indicators for Quant Theory predictor ──
+
+        # Long SMAs for cycle indicators
+        df["sma_111"] = df["close"].rolling(111, min_periods=50).mean()
+        df["sma_200"] = df["close"].rolling(200, min_periods=100).mean()
+        df["sma_350"] = df["close"].rolling(350, min_periods=150).mean()
+
+        # Multi-timeframe RSI
+        df["rsi_7"] = TechnicalFeatures._rsi(df["close"], 7)
+        df["rsi_30"] = TechnicalFeatures._rsi(df["close"], 30)
+
+        # ADX (Average Directional Index) — regime detection
+        df["adx"] = TechnicalFeatures._adx(df, 14)
+
+        # Extra momentum
+        df["momentum_30"] = df["close"] - df["close"].shift(30)
+
+        # Mayer Multiple (price / SMA_200)
+        df["mayer_multiple"] = df["close"] / df["sma_200"]
+
+        # Pi Cycle Top: SMA_111 vs SMA_350 * 2
+        df["pi_cycle_ratio"] = df["sma_111"] / (df["sma_350"] * 2)
+
+        # Golden/Death cross: EMA_50 vs EMA_200
+        df["ema_cross"] = df["ema_50"] / df["ema_200"]
+
+        # Mean reversion Z-score: how far price is from 20-day SMA in std devs
+        df["zscore_20"] = (df["close"] - df["sma_20"]) / df["close"].rolling(20).std()
+
         return df
+
+    @staticmethod
+    def _adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
+        """Average Directional Index — measures trend strength (0-100)."""
+        high = df["high"]
+        low = df["low"]
+        close = df["close"]
+
+        plus_dm = high.diff()
+        minus_dm = -low.diff()
+        plus_dm = plus_dm.where((plus_dm > minus_dm) & (plus_dm > 0), 0.0)
+        minus_dm = minus_dm.where((minus_dm > plus_dm) & (minus_dm > 0), 0.0)
+
+        tr = pd.concat([
+            high - low,
+            (high - close.shift()).abs(),
+            (low - close.shift()).abs(),
+        ], axis=1).max(axis=1)
+
+        atr = tr.rolling(period).mean()
+        plus_di = 100 * (plus_dm.rolling(period).mean() / atr)
+        minus_di = 100 * (minus_dm.rolling(period).mean() / atr)
+
+        dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
+        adx = dx.rolling(period).mean()
+        return adx
 
     @staticmethod
     def _rsi(series: pd.Series, period: int = 14) -> pd.Series:
