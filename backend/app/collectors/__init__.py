@@ -4,6 +4,7 @@ from app.collectors.fear_greed import FearGreedCollector
 from app.collectors.macro import MacroCollector
 from app.collectors.onchain import OnChainCollector
 from app.collectors.reddit import RedditCollector
+from app.collectors.binance_news import BinanceNewsCollector
 
 __all__ = [
     "MarketCollector",
@@ -12,4 +13,5 @@ __all__ = [
     "MacroCollector",
     "OnChainCollector",
     "RedditCollector",
+    "BinanceNewsCollector",
 ]

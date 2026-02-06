@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     # Data collection intervals (seconds)
     price_collection_interval: int = 60
-    news_collection_interval: int = 300
+    news_collection_interval: int = 120  # every 2 minutes
     macro_collection_interval: int = 3600
     onchain_collection_interval: int = 3600
     fear_greed_collection_interval: int = 3600

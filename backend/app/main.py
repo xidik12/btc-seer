@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
 
     # Set up scheduled jobs
     scheduler.add_job(collect_price_data, "interval", seconds=60, id="collect_price")
-    scheduler.add_job(collect_news_data, "interval", minutes=5, id="collect_news")
+    scheduler.add_job(collect_news_data, "interval", minutes=2, id="collect_news")
     scheduler.add_job(collect_macro_data, "interval", hours=1, id="collect_macro")
     scheduler.add_job(collect_onchain_data, "interval", hours=1, id="collect_onchain")
     scheduler.add_job(generate_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict")

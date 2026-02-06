@@ -8,18 +8,47 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+# ──────────────────────────────────────────────────────────────
+# RSS / Atom feeds — crypto-native + mainstream financial press
+# ──────────────────────────────────────────────────────────────
 RSS_FEEDS = {
+    # ── Crypto-native outlets ──
     "coindesk": "https://www.coindesk.com/arc/outboundfeeds/rss/",
     "cointelegraph": "https://cointelegraph.com/rss",
     "bitcoin_magazine": "https://bitcoinmagazine.com/feed",
+    "theblock": "https://www.theblock.co/rss.xml",
+    "decrypt": "https://decrypt.co/feed",
+    "newsbtc": "https://www.newsbtc.com/feed/",
+    "bitcoinist": "https://bitcoinist.com/feed/",
+    "cryptoslate": "https://cryptoslate.com/feed/",
+    "utoday": "https://u.today/rss",
+    "beincrypto": "https://beincrypto.com/feed/",
+    "ambcrypto": "https://ambcrypto.com/feed/",
+    "cryptonews": "https://cryptonews.com/news/feed/",
+    "dailycoin": "https://dailycoin.com/feed/",
+    "cryptopotato": "https://cryptopotato.com/feed/",
+    "coingape": "https://coingape.com/feed/",
+    "blockonomi": "https://blockonomi.com/feed/",
+    "cryptobriefing": "https://cryptobriefing.com/feed/",
+    "protos": "https://protos.com/feed/",
+    "watcherguru": "https://watcher.guru/news/feed",
+    "binance_blog": "https://www.binance.com/en/feed/rss",
+
+    # ── Mainstream finance (crypto coverage) ──
     "google_news_btc": "https://news.google.com/rss/search?q=bitcoin+OR+BTC+OR+crypto&hl=en-US&gl=US&ceid=US:en",
+    "google_news_macro": "https://news.google.com/rss/search?q=federal+reserve+OR+interest+rate+OR+inflation+OR+tariff+crypto&hl=en-US&gl=US&ceid=US:en",
+    "yahoo_crypto": "https://finance.yahoo.com/news/topic/crypto-news/.rss",
+    "cnbc_crypto": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=33002080",
+
+    # ── Bitcoin-specific feeds ──
+    "bitcoin_optech": "https://bitcoinops.org/feed.xml",
 }
 
 CRYPTOPANIC_URL = "https://cryptopanic.com/api/v1/posts/"
 
 
 class NewsCollector(BaseCollector):
-    """Collects crypto news from CryptoPanic API and RSS feeds."""
+    """Collects crypto news from CryptoPanic API and 25+ RSS feeds."""
 
     async def collect(self) -> dict:
         """Collect news from all sources."""
@@ -77,20 +106,21 @@ class NewsCollector(BaseCollector):
         return news
 
     async def _get_rss_feeds(self) -> list[dict]:
-        """Parse RSS feeds for crypto news."""
+        """Parse RSS feeds for crypto news — all sources in parallel-ish loop."""
         all_news = []
 
         for source, url in RSS_FEEDS.items():
             try:
                 session = await self.get_session()
-                async with session.get(url) as resp:
+                async with session.get(url, timeout=15) as resp:
                     if resp.status != 200:
+                        logger.debug(f"RSS {source} returned HTTP {resp.status}")
                         continue
                     content = await resp.text()
 
                 feed = feedparser.parse(content)
 
-                for entry in feed.entries[:10]:  # Last 10 per source
+                for entry in feed.entries[:15]:  # Last 15 per source
                     published = ""
                     if hasattr(entry, "published"):
                         published = entry.published
@@ -102,11 +132,11 @@ class NewsCollector(BaseCollector):
                         "title": entry.get("title", ""),
                         "url": entry.get("link", ""),
                         "published": published,
-                        "sentiment_score": None,  # Will be scored by sentiment analyzer
+                        "sentiment_score": None,
                         "raw_sentiment": None,
                     })
 
             except Exception as e:
-                logger.error(f"Error parsing RSS feed {source}: {e}")
+                logger.debug(f"Error parsing RSS feed {source}: {e}")
 
         return all_news
