@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     reddit_client_secret: str = ""
     reddit_user_agent: str = "btc-oracle/1.0"
 
-    # Database
-    database_url: str = "sqlite+aiosqlite:///./btc_oracle.db"
+    # Database — /data/ path is a Railway persistent volume
+    database_url: str = "sqlite+aiosqlite:////data/btc_oracle.db"
 
     # Server
     host: str = "0.0.0.0"
