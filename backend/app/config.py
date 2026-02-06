@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # ML
     model_dir: str = "app/models/weights"
-    prediction_interval_minutes: int = 60
+    prediction_interval_minutes: int = 30  # Predict every 30 min for faster history buildup
 
     # Binance
     binance_base_url: str = "https://api.binance.com"
