@@ -71,12 +71,15 @@ class LSTMPredictor:
     def __init__(self, input_size: int = 50, model_path: str = None):
         self._torch_model = None
 
+        self.is_trained = False
+
         if TORCH_AVAILABLE:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self._torch_model = LSTMModel(input_size=input_size).to(self.device)
 
             if model_path and Path(model_path).exists():
                 self.load(model_path)
+                self.is_trained = True
                 logger.info(f"LSTM model loaded from {model_path}")
             else:
                 logger.warning("LSTM model weights not found, using random weights")

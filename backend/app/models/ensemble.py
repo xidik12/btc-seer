@@ -12,10 +12,15 @@ logger = logging.getLogger(__name__)
 class EnsemblePredictor:
     """Combines LSTM, XGBoost, and Sentiment models for final predictions."""
 
-    # Default weights (optimized via backtesting)
-    LSTM_WEIGHT = 0.45
-    XGBOOST_WEIGHT = 0.35
-    SENTIMENT_WEIGHT = 0.20
+    # Weights when LSTM is trained
+    LSTM_WEIGHT_TRAINED = 0.45
+    XGBOOST_WEIGHT_TRAINED = 0.35
+    SENTIMENT_WEIGHT_TRAINED = 0.20
+
+    # Weights when LSTM is untrained (random weights = noise)
+    LSTM_WEIGHT_UNTRAINED = 0.05
+    XGBOOST_WEIGHT_UNTRAINED = 0.60
+    SENTIMENT_WEIGHT_UNTRAINED = 0.35
 
     def __init__(
         self,
@@ -28,6 +33,10 @@ class EnsemblePredictor:
         self.xgboost = XGBoostPredictor(model_path=xgboost_model_path)
         self.sentiment_model = SentimentModel(use_finbert=use_finbert)
 
+        # Detect if models are trained
+        self.lstm_trained = getattr(self.lstm, 'is_trained', False)
+        self.xgboost_trained = self.xgboost.model is not None
+
     def predict(
         self,
         feature_sequence: np.ndarray,
@@ -35,22 +44,20 @@ class EnsemblePredictor:
         news_data: list[dict] = None,
         reddit_data: list[dict] = None,
     ) -> dict:
-        """
-        Generate ensemble prediction.
-
-        Args:
-            feature_sequence: (seq_len, features) array for LSTM
-            current_features: (features,) array for XGBoost
-            news_data: Recent news items
-            reddit_data: Recent Reddit posts
-
-        Returns:
-            Prediction dict with direction, confidence, and per-model outputs
-        """
-        # Get individual model predictions
+        """Generate ensemble prediction with adaptive model weighting."""
         lstm_pred = self.lstm.predict(feature_sequence)
         xgb_pred = self.xgboost.predict(current_features)
         sentiment = self.sentiment_model.get_sentiment_signal(news_data, reddit_data)
+
+        # Select weights based on model training status
+        if self.lstm_trained:
+            w_lstm = self.LSTM_WEIGHT_TRAINED
+            w_xgb = self.XGBOOST_WEIGHT_TRAINED
+            w_sent = self.SENTIMENT_WEIGHT_TRAINED
+        else:
+            w_lstm = self.LSTM_WEIGHT_UNTRAINED
+            w_xgb = self.XGBOOST_WEIGHT_UNTRAINED
+            w_sent = self.SENTIMENT_WEIGHT_UNTRAINED
 
         predictions = {}
 
@@ -63,9 +70,9 @@ class EnsemblePredictor:
 
             # Weighted ensemble
             base_prob = (
-                self.LSTM_WEIGHT * lstm_bullish
-                + self.XGBOOST_WEIGHT * xgb_bullish
-                + self.SENTIMENT_WEIGHT * (0.5 + sent_score / 2)
+                w_lstm * lstm_bullish
+                + w_xgb * xgb_bullish
+                + w_sent * (0.5 + sent_score / 2)
             )
 
             # Apply sentiment modifier (amplify or dampen)
@@ -73,22 +80,36 @@ class EnsemblePredictor:
             adjusted_prob = 0.5 + (base_prob - 0.5) * modifier
             adjusted_prob = max(0.05, min(0.95, adjusted_prob))
 
-            # Confidence = agreement between models
-            probs = [lstm_bullish, xgb_bullish, 0.5 + sent_score / 2]
-            agreement = 1 - np.std(probs) * 2  # Higher agreement = higher confidence
-            confidence = float(abs(adjusted_prob - 0.5) * 200 * max(agreement, 0.3))
-            confidence = min(confidence, 95)
+            # Confidence based on signal strength and model agreement
+            xgb_conf = xgb_pred.get("confidence", 0)
+            signal_strength = abs(adjusted_prob - 0.5) * 2  # 0-1 scale
 
-            # Direction
-            if adjusted_prob > 0.6:
-                direction = "bullish"
-            elif adjusted_prob < 0.4:
-                direction = "bearish"
-            else:
-                direction = "neutral"
+            # Base confidence from how far the probability is from 0.5
+            base_confidence = signal_strength * 100  # 0-100
 
-            # Magnitude (from LSTM)
-            magnitude = lstm_tf.get("magnitude_pct", 0)
+            # Model agreement bonus
+            probs = [xgb_bullish, 0.5 + sent_score / 2]
+            if self.lstm_trained:
+                probs.append(lstm_bullish)
+            all_agree = all(p > 0.5 for p in probs) or all(p < 0.5 for p in probs)
+            agreement_bonus = 15 if all_agree else -5
+
+            confidence = base_confidence + agreement_bonus
+            # Minimum 15% if there's any signal, cap at 85% for heuristic models
+            max_conf = 95 if self.lstm_trained and self.xgboost_trained else 85
+            confidence = float(np.clip(confidence, 15 if signal_strength > 0.01 else 5, max_conf))
+
+            # Direction — NO neutral. Any signal, however small, picks a side.
+            direction = "bullish" if adjusted_prob >= 0.5 else "bearish"
+
+            # Magnitude estimation based on probability distance from 0.5
+            tf_multiplier = {"1h": 1.0, "4h": 2.5, "24h": 5.0}.get(timeframe, 1.0)
+            magnitude = (adjusted_prob - 0.5) * 2 * tf_multiplier
+
+            # Use LSTM magnitude if trained and available
+            lstm_mag = lstm_tf.get("magnitude_pct", 0)
+            if self.lstm_trained and abs(lstm_mag) > 0.01:
+                magnitude = lstm_mag
 
             predictions[timeframe] = {
                 "direction": direction,
@@ -103,7 +124,7 @@ class EnsemblePredictor:
                     },
                     "xgboost": {
                         "bullish_prob": float(xgb_bullish),
-                        "confidence": float(xgb_pred.get("confidence", 0)),
+                        "confidence": float(xgb_conf),
                     },
                     "sentiment": {
                         "score": float(sent_score),

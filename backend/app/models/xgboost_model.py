@@ -51,46 +51,139 @@ class XGBoostPredictor:
             return self._heuristic_predict(features)
 
     def _heuristic_predict(self, features: np.ndarray) -> dict:
-        """Simple heuristic fallback when no trained model is available.
+        """Smart heuristic fallback using all available technical + sentiment features.
 
-        Uses RSI, MACD, and momentum from the feature vector.
+        Feature indices match FeatureBuilder.ALL_FEATURES order:
+          0-4: ema_9, ema_21, ema_50, ema_200, sma_20
+          5: rsi, 6: macd, 7: macd_signal, 8: macd_hist
+          9: bb_upper, 10: bb_lower, 11: bb_width, 12: bb_position
+          13: atr, 14: obv, 15: vwap
+          16-19: roc_1, roc_6, roc_12, roc_24
+          20-21: momentum_10, momentum_20
+          22: volume_ratio, 23: volatility_24h
+          24-26: price_vs_ema9, price_vs_ema21, price_vs_ema50
+          27-29: body_size, upper_shadow, lower_shadow
+          30-32: news_sentiment_1h, 4h, 24h
+          33-35: news_volume_1h, news_bullish_pct, news_bearish_pct
+          36: reddit_sentiment, 37: reddit_volume
+          38: fear_greed_value
         """
-        # Feature indices (must match FeatureBuilder.ALL_FEATURES order)
-        # RSI is at index 5, MACD at 6, MACD hist at 8, ROC_1 at 16
+        n = len(features)
+        # Weighted signals: (probability, weight)
         signals = []
 
-        if len(features) > 5:
+        # ── RSI (weight 3) — strongest mean-reversion signal ──
+        if n > 5 and features[5] != 0:
             rsi = features[5]
-            if rsi < 30:
-                signals.append(0.7)  # Oversold → bullish
+            if rsi < 20:
+                signals.append((0.85, 3.0))
+            elif rsi < 30:
+                signals.append((0.75, 3.0))
+            elif rsi < 40:
+                signals.append((0.60, 2.0))
+            elif rsi > 80:
+                signals.append((0.15, 3.0))
             elif rsi > 70:
-                signals.append(0.3)  # Overbought → bearish
+                signals.append((0.25, 3.0))
+            elif rsi > 60:
+                signals.append((0.40, 2.0))
             else:
-                signals.append(0.5)
+                signals.append((0.50, 1.0))
 
-        if len(features) > 8:
-            macd_hist = features[8]
-            if macd_hist > 0:
-                signals.append(0.6)
+        # ── MACD histogram (weight 2.5) — trend momentum ──
+        if n > 8 and features[8] != 0:
+            macd_h = features[8]
+            # Normalize MACD by price scale (feature may be raw or normalized)
+            sig = np.clip(macd_h * 50, -1, 1)  # Scale to -1..+1
+            signals.append((0.5 + sig * 0.3, 2.5))
+
+        # ── Bollinger position (weight 2) — mean reversion ──
+        if n > 12 and features[12] != 0:
+            bb_pos = features[12]  # 0 = lower band, 1 = upper band
+            if bb_pos < 0.1:
+                signals.append((0.80, 2.0))
+            elif bb_pos < 0.25:
+                signals.append((0.65, 1.5))
+            elif bb_pos > 0.9:
+                signals.append((0.20, 2.0))
+            elif bb_pos > 0.75:
+                signals.append((0.35, 1.5))
             else:
-                signals.append(0.4)
+                signals.append((0.50, 0.5))
 
-        if len(features) > 16:
-            roc = features[16]
-            if roc > 0:
-                signals.append(0.55)
-            else:
-                signals.append(0.45)
+        # ── Rate of Change — momentum across timeframes (weight 2) ──
+        roc_weights = {16: 1.5, 17: 2.0, 18: 2.0, 19: 2.5}  # roc_1, roc_6, roc_12, roc_24
+        for idx, w in roc_weights.items():
+            if n > idx and features[idx] != 0:
+                roc = features[idx]
+                sig = np.clip(roc * 10, -1, 1)
+                signals.append((0.5 + sig * 0.25, w))
 
+        # ── Price vs EMAs (weight 2) — trend alignment ──
+        ema_bullish = 0
+        ema_count = 0
+        for idx in [24, 25, 26]:  # price_vs_ema9, ema21, ema50
+            if n > idx:
+                val = features[idx]
+                if val > 0:
+                    ema_bullish += 1
+                ema_count += 1
+        if ema_count > 0:
+            ema_ratio = ema_bullish / ema_count
+            signals.append((0.35 + ema_ratio * 0.30, 2.0))
+
+        # ── Momentum (weight 1.5) ──
+        for idx in [20, 21]:  # momentum_10, momentum_20
+            if n > idx and features[idx] != 0:
+                sig = np.clip(features[idx] * 5, -1, 1)
+                signals.append((0.5 + sig * 0.2, 1.5))
+
+        # ── Volume ratio (weight 1) — confirms moves ──
+        if n > 22 and features[22] != 0:
+            vol_ratio = features[22]
+            if vol_ratio > 1.5:
+                signals.append((0.55, 1.0))  # High volume slightly bullish (buying pressure)
+            elif vol_ratio < 0.5:
+                signals.append((0.45, 0.5))
+
+        # ── News sentiment (weight 2.5) — very impactful ──
+        if n > 30 and features[30] != 0:
+            sent = features[30]  # news_sentiment_1h
+            sig = np.clip(sent * 2, -1, 1)
+            signals.append((0.5 + sig * 0.3, 2.5))
+
+        # ── Fear & Greed (weight 1.5) — contrarian signal ──
+        if n > 38 and features[38] != 0:
+            fg = features[38]
+            if fg < 20:
+                signals.append((0.70, 1.5))  # Extreme fear → contrarian bullish
+            elif fg < 35:
+                signals.append((0.60, 1.0))
+            elif fg > 80:
+                signals.append((0.30, 1.5))  # Extreme greed → contrarian bearish
+            elif fg > 65:
+                signals.append((0.40, 1.0))
+
+        # ── Event memory expected impact (weight 2) ──
+        if n > 52 and features[52] != 0:
+            expected_1h = features[52]
+            sig = np.clip(expected_1h, -1, 1)
+            signals.append((0.5 + sig * 0.25, 2.0))
+
+        # ── Compute weighted average ──
         if not signals:
             prob = 0.5
         else:
-            prob = float(np.mean(signals))
+            total_weight = sum(w for _, w in signals)
+            prob = sum(p * w for p, w in signals) / total_weight
+
+        # Clamp to reasonable range
+        prob = float(np.clip(prob, 0.10, 0.90))
 
         return {
             "bullish_prob": prob,
             "bearish_prob": 1 - prob,
-            "direction": "bullish" if prob > 0.5 else "bearish",
+            "direction": "bullish" if prob >= 0.5 else "bearish",
             "confidence": float(abs(prob - 0.5) * 200),
         }
 

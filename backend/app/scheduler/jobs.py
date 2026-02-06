@@ -512,17 +512,8 @@ async def generate_prediction():
         # Store predictions and signals
         async with async_session() as session:
             for timeframe, pred in predictions.items():
-                # Always compute a numeric predicted price
+                # Ensemble now always produces a meaningful magnitude
                 magnitude = pred.get("magnitude_pct", 0) or 0
-                bullish_prob = pred.get("bullish_prob", 0.5)
-
-                # If magnitude is 0 (heuristic fallback), estimate from probability
-                if abs(magnitude) < 0.01:
-                    # Map probability to a % change estimate:
-                    # 0.0 → -3%, 0.5 → 0%, 1.0 → +3%
-                    tf_multiplier = {"1h": 0.5, "4h": 1.5, "24h": 3.0}.get(timeframe, 1.0)
-                    magnitude = (bullish_prob - 0.5) * 2 * tf_multiplier
-
                 predicted_price = current_price * (1 + magnitude / 100)
 
                 prediction = Prediction(
