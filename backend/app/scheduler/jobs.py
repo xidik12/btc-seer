@@ -374,8 +374,8 @@ async def generate_prediction():
             except Exception as e:
                 logger.debug(f"Event memory query error: {e}")
 
-        if len(prices) < 10:
-            logger.warning("Not enough price data for prediction")
+        if len(prices) < 5:
+            logger.warning("Not enough price data for prediction (need at least 5)")
             return
 
         # Build price DataFrame

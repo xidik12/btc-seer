@@ -90,9 +90,9 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(collect_price_data())
     asyncio.create_task(collect_news_data())
 
-    # Generate initial prediction after collecting some data (delay 3 min)
+    # Generate initial prediction after collecting enough price data (delay 6 min)
     async def initial_prediction():
-        await asyncio.sleep(180)  # Wait 3 min for enough price data
+        await asyncio.sleep(360)  # Wait 6 min for ≥5 price data points
         await generate_prediction()
         await classify_news_events()
 
