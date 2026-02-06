@@ -80,24 +80,25 @@ class EnsemblePredictor:
             adjusted_prob = 0.5 + (base_prob - 0.5) * modifier
             adjusted_prob = max(0.05, min(0.95, adjusted_prob))
 
-            # Confidence based on signal strength and model agreement
+            # Confidence scoring: combines signal strength + model confidence + agreement
             xgb_conf = xgb_pred.get("confidence", 0)
             signal_strength = abs(adjusted_prob - 0.5) * 2  # 0-1 scale
 
-            # Base confidence from how far the probability is from 0.5
-            base_confidence = signal_strength * 100  # 0-100
+            # Base: 30% just for having data + indicators running
+            # Signal contribution: up to +35% based on how decisive the probability is
+            # XGBoost confidence: up to +15% from the heuristic's own confidence
+            base_confidence = 30 + signal_strength * 70 + min(xgb_conf, 30) * 0.5
 
             # Model agreement bonus
             probs = [xgb_bullish, 0.5 + sent_score / 2]
             if self.lstm_trained:
                 probs.append(lstm_bullish)
             all_agree = all(p > 0.5 for p in probs) or all(p < 0.5 for p in probs)
-            agreement_bonus = 15 if all_agree else -5
+            agreement_bonus = 10 if all_agree else -5
 
             confidence = base_confidence + agreement_bonus
-            # Minimum 15% if there's any signal, cap at 85% for heuristic models
             max_conf = 95 if self.lstm_trained and self.xgboost_trained else 85
-            confidence = float(np.clip(confidence, 15 if signal_strength > 0.01 else 5, max_conf))
+            confidence = float(np.clip(confidence, 25, max_conf))
 
             # Direction — NO neutral. Any signal, however small, picks a side.
             direction = "bullish" if adjusted_prob >= 0.5 else "bearish"
