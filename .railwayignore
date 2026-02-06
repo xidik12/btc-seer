@@ -1,0 +1,9 @@
+backend/venv/
+backend/ml/data/
+backend/__pycache__/
+backend/**/__pycache__/
+webapp/node_modules/
+webapp/dist/
+.git/
+*.pyc
+.env

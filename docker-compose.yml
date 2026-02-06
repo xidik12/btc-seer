@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./backend
+    container_name: btc-oracle-backend
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./backend/app/models/weights:/app/app/models/weights
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  webapp:
+    build: ./webapp
+    container_name: btc-oracle-webapp
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
