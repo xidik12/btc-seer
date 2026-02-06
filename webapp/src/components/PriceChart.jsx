@@ -196,9 +196,13 @@ export default function PriceChart() {
       ) : (
         <>
           {/* Price area chart */}
-          <div className="h-[190px] px-1">
+          <div className="h-[210px] px-1 relative">
+            {/* Timeframe label overlay */}
+            <div className="absolute top-2 left-14 z-10 text-[10px] text-[#3a3a55] font-semibold tracking-wider">
+              BTC/USDT {timeframe.label}
+            </div>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={candles} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
+              <AreaChart data={candles} margin={{ top: 8, right: 56, left: 4, bottom: 0 }}>
                 <defs>
                   <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={accentColor} stopOpacity={0.20} />
@@ -217,27 +221,49 @@ export default function PriceChart() {
                     stroke="#3a3a55"
                     strokeDasharray="4 4"
                     strokeWidth={0.5}
+                    label={{ value: 'AVG', position: 'insideTopLeft', fill: '#3a3a55', fontSize: 8 }}
+                  />
+                )}
+                {stats?.price && (
+                  <ReferenceLine
+                    y={stats.price}
+                    stroke={accentColor}
+                    strokeDasharray="2 3"
+                    strokeWidth={0.8}
+                    label={{ value: formatPrice(stats.price), position: 'right', fill: accentColor, fontSize: 9 }}
                   />
                 )}
                 <XAxis
                   dataKey="time"
                   tickFormatter={formatXTick}
                   tick={{ fill: '#4a4a66', fontSize: 9 }}
-                  axisLine={false}
+                  axisLine={{ stroke: '#1e1e30' }}
                   tickLine={false}
-                  minTickGap={50}
+                  minTickGap={40}
                 />
                 <YAxis
+                  yAxisId="left"
                   domain={yDomain}
-                  tickFormatter={(v) => formatPrice(v)}
+                  tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`}
                   tick={{ fill: '#4a4a66', fontSize: 9 }}
                   axisLine={false}
                   tickLine={false}
-                  width={58}
+                  width={48}
+                  orientation="left"
+                />
+                <YAxis
+                  yAxisId="right"
+                  domain={yDomain}
+                  tickFormatter={(v) => formatPrice(v)}
+                  tick={{ fill: '#5a5a77', fontSize: 9 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={54}
                   orientation="right"
                 />
                 <Tooltip content={<ChartTooltip />} />
                 <Area
+                  yAxisId="left"
                   type="monotone"
                   dataKey="close"
                   stroke={accentColor}
@@ -256,13 +282,25 @@ export default function PriceChart() {
           </div>
 
           {/* Volume bar chart */}
-          <div className="h-[36px] px-1 mb-2">
+          <div className="h-[40px] px-1 mb-2">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={candles} margin={{ top: 0, right: 8, left: 4, bottom: 0 }}>
+              <BarChart data={candles} margin={{ top: 0, right: 56, left: 4, bottom: 0 }}>
                 <XAxis dataKey="time" hide />
-                <YAxis hide domain={[0, 'auto']} />
+                <YAxis
+                  yAxisId="vol-left"
+                  orientation="left"
+                  width={48}
+                  tickFormatter={(v) => v > 1000 ? `${(v/1000).toFixed(0)}k` : v.toFixed(0)}
+                  tick={{ fill: '#3a3a55', fontSize: 8 }}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={[0, 'auto']}
+                  tickCount={2}
+                />
+                <YAxis yAxisId="vol-right" orientation="right" width={54} hide domain={[0, 'auto']} />
                 <Tooltip content={<VolumeTooltip />} />
                 <Bar
+                  yAxisId="vol-left"
                   dataKey="volume"
                   fill="#4a9eff"
                   opacity={0.25}
