@@ -18,7 +18,7 @@ if TORCH_AVAILABLE:
     class LSTMModel(nn.Module):
         """LSTM model for time-series BTC price prediction."""
 
-        def __init__(self, input_size: int = 50, hidden_size: int = 128, num_layers: int = 2, dropout: float = 0.2):
+        def __init__(self, input_size: int = 74, hidden_size: int = 128, num_layers: int = 2, dropout: float = 0.2):
             super().__init__()
 
             self.hidden_size = hidden_size
@@ -68,7 +68,7 @@ if TORCH_AVAILABLE:
 class LSTMPredictor:
     """Wrapper for LSTM model inference. Falls back to heuristics if torch is unavailable."""
 
-    def __init__(self, input_size: int = 50, model_path: str = None):
+    def __init__(self, input_size: int = 74, model_path: str = None):
         self._torch_model = None
 
         self.is_trained = False

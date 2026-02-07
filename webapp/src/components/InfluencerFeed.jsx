@@ -3,15 +3,21 @@ import { api } from '../utils/api.js'
 import { formatTimeAgo } from '../utils/format.js'
 
 const CATEGORY_STYLES = {
+  // Backend categories
+  ceo: { label: 'CEO', bg: 'bg-amber-500/10', text: 'text-amber-400' },
+  investor: { label: 'Investor', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
+  government: { label: 'Gov', bg: 'bg-red-500/10', text: 'text-red-400' },
+  regulator: { label: 'Regulator', bg: 'bg-orange-500/10', text: 'text-orange-400' },
+  analyst: { label: 'Analyst', bg: 'bg-cyan-500/10', text: 'text-cyan-400' },
+  developer: { label: 'Dev', bg: 'bg-green-500/10', text: 'text-green-400' },
+  economist: { label: 'Economist', bg: 'bg-purple-500/10', text: 'text-purple-400' },
+  // Legacy/alternate categories
   billionaire: { label: 'Billionaire', bg: 'bg-amber-500/10', text: 'text-amber-400' },
   exchange_ceo: { label: 'Exchange CEO', bg: 'bg-blue-500/10', text: 'text-blue-400' },
   founder: { label: 'Founder', bg: 'bg-purple-500/10', text: 'text-purple-400' },
   politician: { label: 'Politician', bg: 'bg-red-500/10', text: 'text-red-400' },
-  analyst: { label: 'Analyst', bg: 'bg-cyan-500/10', text: 'text-cyan-400' },
   vc: { label: 'VC', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
   media: { label: 'Media', bg: 'bg-pink-500/10', text: 'text-pink-400' },
-  developer: { label: 'Dev', bg: 'bg-green-500/10', text: 'text-green-400' },
-  regulator: { label: 'Regulator', bg: 'bg-orange-500/10', text: 'text-orange-400' },
 }
 
 function getCategoryStyle(cat) {

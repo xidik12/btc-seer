@@ -56,7 +56,24 @@ class FeatureBuilder:
         "active_event_count",        # Number of significant events in last hour
     ]
 
-    ALL_FEATURES = TECHNICAL_FEATURES + SENTIMENT_FEATURES + MACRO_FEATURES + ONCHAIN_FEATURES + EVENT_MEMORY_FEATURES
+    DERIVATIVES_FEATURES = [
+        "funding_rate",        # Binance perpetual funding rate
+        "open_interest",       # Open interest in BTC
+        "mark_index_spread",   # mark_price - index_price (premium)
+    ]
+
+    DOMINANCE_FEATURES = [
+        "btc_dominance",       # BTC market cap %
+        "eth_dominance",       # ETH market cap %
+        "total_market_cap",    # Total crypto market cap USD (log-scaled)
+        "market_cap_change",   # 24h market cap change %
+    ]
+
+    ALL_FEATURES = (
+        TECHNICAL_FEATURES + SENTIMENT_FEATURES + MACRO_FEATURES
+        + ONCHAIN_FEATURES + EVENT_MEMORY_FEATURES
+        + DERIVATIVES_FEATURES + DOMINANCE_FEATURES
+    )
 
     def __init__(self):
         self.sentiment_analyzer = SentimentAnalyzer()
@@ -70,6 +87,8 @@ class FeatureBuilder:
         onchain_data: dict = None,
         fear_greed: dict = None,
         event_memory: dict = None,
+        funding_data: dict = None,
+        dominance_data: dict = None,
     ) -> dict:
         """Build complete feature vector from all data sources."""
 
@@ -115,6 +134,23 @@ class FeatureBuilder:
             features["event_severity"] = event_memory.get("severity", 0.0)
             features["event_sentiment_predictive"] = event_memory.get("avg_sentiment_predictive", 0.5)
             features["active_event_count"] = event_memory.get("active_event_count", 0.0)
+
+        # Derivatives features (funding rate, open interest)
+        if funding_data:
+            features["funding_rate"] = float(funding_data.get("funding_rate", 0) or 0)
+            features["open_interest"] = float(funding_data.get("open_interest", 0) or 0)
+            mark = float(funding_data.get("mark_price", 0) or 0)
+            index = float(funding_data.get("index_price", 0) or 0)
+            features["mark_index_spread"] = (mark - index) if mark and index else 0.0
+
+        # Dominance features (BTC dominance, market cap)
+        if dominance_data:
+            features["btc_dominance"] = float(dominance_data.get("btc_dominance", 0) or 0)
+            features["eth_dominance"] = float(dominance_data.get("eth_dominance", 0) or 0)
+            total_mcap = float(dominance_data.get("total_market_cap", 0) or 0)
+            # Log-scale total market cap to keep it in a reasonable range
+            features["total_market_cap"] = float(np.log10(total_mcap)) if total_mcap > 0 else 0.0
+            features["market_cap_change"] = float(dominance_data.get("market_cap_change_24h", 0) or 0)
 
         # Normalize features
         features = self._normalize(features)

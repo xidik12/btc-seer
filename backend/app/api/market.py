@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_session, Price, MacroData, OnChainData
+from app.database import get_session, Price, MacroData, OnChainData, FundingRate, BtcDominance, IndicatorSnapshot
 from app.collectors.market import MarketCollector
 
 logger = logging.getLogger(__name__)
@@ -217,6 +217,140 @@ async def get_price_stats(
     }
 
 
+@router.get("/indicators")
+async def get_indicators(
+    session: AsyncSession = Depends(get_session),
+):
+    """Get current technical indicators calculated from recent price data."""
+    import pandas as pd
+    from app.features.technical import TechnicalFeatures
+
+    # Need at least 350 candles for long SMAs
+    since = datetime.utcnow() - timedelta(hours=400)
+    result = await session.execute(
+        select(Price).where(Price.timestamp >= since).order_by(Price.timestamp)
+    )
+    prices = result.scalars().all()
+
+    if len(prices) < 30:
+        return {"error": "Not enough price data for indicators", "candle_count": len(prices)}
+
+    df = pd.DataFrame([
+        {"open": p.open, "high": p.high, "low": p.low, "close": p.close, "volume": p.volume}
+        for p in prices
+    ])
+
+    df = TechnicalFeatures.calculate_all(df)
+
+    # Get latest row
+    latest = df.iloc[-1]
+
+    def safe(val):
+        if pd.isna(val):
+            return None
+        return round(float(val), 4)
+
+    current_price = safe(latest["close"])
+
+    # Fetch BTC dominance
+    btc_dom = None
+    try:
+        btc_dom = await _market_collector.get_btc_dominance()
+    except Exception:
+        pass
+
+    return {
+        "timestamp": prices[-1].timestamp.isoformat(),
+        "current_price": current_price,
+        "candle_count": len(prices),
+        "btc_dominance": btc_dom,
+        "moving_averages": {
+            "ema_9": safe(latest.get("ema_9")),
+            "ema_21": safe(latest.get("ema_21")),
+            "ema_50": safe(latest.get("ema_50")),
+            "ema_200": safe(latest.get("ema_200")),
+            "sma_20": safe(latest.get("sma_20")),
+            "sma_111": safe(latest.get("sma_111")),
+            "sma_200": safe(latest.get("sma_200")),
+            "sma_350": safe(latest.get("sma_350")),
+        },
+        "momentum": {
+            "rsi": safe(latest.get("rsi")),
+            "rsi_7": safe(latest.get("rsi_7")),
+            "rsi_30": safe(latest.get("rsi_30")),
+            "macd": safe(latest.get("macd")),
+            "macd_signal": safe(latest.get("macd_signal")),
+            "macd_histogram": safe(latest.get("macd_hist")),
+            "adx": safe(latest.get("adx")),
+            "momentum_10": safe(latest.get("momentum_10")),
+            "momentum_20": safe(latest.get("momentum_20")),
+            "roc_1": safe(latest.get("roc_1")),
+            "roc_6": safe(latest.get("roc_6")),
+            "roc_12": safe(latest.get("roc_12")),
+            "roc_24": safe(latest.get("roc_24")),
+        },
+        "volatility": {
+            "bb_upper": safe(latest.get("bb_upper")),
+            "bb_middle": safe(latest.get("bb_middle")),
+            "bb_lower": safe(latest.get("bb_lower")),
+            "bb_width": safe(latest.get("bb_width")),
+            "bb_position": safe(latest.get("bb_position")),
+            "atr": safe(latest.get("atr")),
+            "volatility_24h": safe(latest.get("volatility_24h")),
+        },
+        "volume": {
+            "obv": safe(latest.get("obv")),
+            "vwap": safe(latest.get("vwap")),
+            "volume_sma_20": safe(latest.get("volume_sma_20")),
+            "volume_ratio": safe(latest.get("volume_ratio")),
+        },
+        "levels": {
+            "pivot": safe(latest.get("pivot")),
+            "support_1": safe(latest.get("support_1")),
+            "resistance_1": safe(latest.get("resistance_1")),
+        },
+        "advanced": {
+            "mayer_multiple": safe(latest.get("mayer_multiple")),
+            "pi_cycle_ratio": safe(latest.get("pi_cycle_ratio")),
+            "ema_cross": safe(latest.get("ema_cross")),
+            "zscore_20": safe(latest.get("zscore_20")),
+            "price_vs_ema9": safe(latest.get("price_vs_ema9")),
+            "price_vs_ema21": safe(latest.get("price_vs_ema21")),
+            "price_vs_ema50": safe(latest.get("price_vs_ema50")),
+        },
+        "candle": {
+            "body_size": safe(latest.get("body_size")),
+            "upper_shadow": safe(latest.get("upper_shadow")),
+            "lower_shadow": safe(latest.get("lower_shadow")),
+        },
+        "stochastic_rsi": {
+            "k": safe(latest.get("stoch_rsi_k")),
+            "d": safe(latest.get("stoch_rsi_d")),
+        },
+        "williams_r": safe(latest.get("williams_r")),
+        "ichimoku": {
+            "tenkan": safe(latest.get("ichimoku_tenkan")),
+            "kijun": safe(latest.get("ichimoku_kijun")),
+            "senkou_a": safe(latest.get("ichimoku_senkou_a")),
+            "senkou_b": safe(latest.get("ichimoku_senkou_b")),
+        },
+        "candlestick_patterns": {
+            "doji": int(latest.get("candle_doji", 0)),
+            "hammer": int(latest.get("candle_hammer", 0)),
+            "inverted_hammer": int(latest.get("candle_inverted_hammer", 0)),
+            "bullish_engulfing": int(latest.get("candle_bullish_engulfing", 0)),
+            "bearish_engulfing": int(latest.get("candle_bearish_engulfing", 0)),
+            "morning_star": int(latest.get("candle_morning_star", 0)),
+            "evening_star": int(latest.get("candle_evening_star", 0)),
+        },
+        "trend": {
+            "short_term": int(latest.get("trend_short", 0)),
+            "medium_term": int(latest.get("trend_medium", 0)),
+            "long_term": int(latest.get("trend_long", 0)),
+        },
+    }
+
+
 @router.get("/candles")
 async def get_candles(
     hours: int = Query(168, ge=1, le=720),
@@ -250,7 +384,7 @@ async def get_candles(
 
 @router.get("/macro")
 async def get_macro_data(session: AsyncSession = Depends(get_session)):
-    """Get latest macro market data."""
+    """Get latest macro market data with price changes."""
     result = await session.execute(
         select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
     )
@@ -259,11 +393,56 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
     if not macro:
         return {"macro": None, "message": "No macro data available"}
 
+    # Get macro data from ~1 hour ago for change calculation
+    prev_result = await session.execute(
+        select(MacroData)
+        .where(MacroData.timestamp <= macro.timestamp - timedelta(minutes=50))
+        .order_by(desc(MacroData.timestamp))
+        .limit(1)
+    )
+    prev_macro = prev_result.scalar_one_or_none()
+
+    # Get macro data from ~24 hours ago for daily change
+    daily_result = await session.execute(
+        select(MacroData)
+        .where(MacroData.timestamp <= macro.timestamp - timedelta(hours=23))
+        .order_by(desc(MacroData.timestamp))
+        .limit(1)
+    )
+    daily_macro = daily_result.scalar_one_or_none()
+
+    def build_macro_item(current_val, prev_val, daily_val):
+        """Build macro item with price and change data."""
+        if current_val is None:
+            return None
+        item = {"price": current_val}
+        if prev_val and prev_val > 0:
+            item["change_1h"] = round((current_val - prev_val) / prev_val * 100, 4)
+        if daily_val and daily_val > 0:
+            item["change_24h"] = round((current_val - daily_val) / daily_val * 100, 4)
+        return item
+
     return {
-        "dxy": macro.dxy,
-        "gold": macro.gold,
-        "sp500": macro.sp500,
-        "treasury_10y": macro.treasury_10y,
+        "dxy": build_macro_item(
+            macro.dxy,
+            prev_macro.dxy if prev_macro else None,
+            daily_macro.dxy if daily_macro else None,
+        ),
+        "gold": build_macro_item(
+            macro.gold,
+            prev_macro.gold if prev_macro else None,
+            daily_macro.gold if daily_macro else None,
+        ),
+        "sp500": build_macro_item(
+            macro.sp500,
+            prev_macro.sp500 if prev_macro else None,
+            daily_macro.sp500 if daily_macro else None,
+        ),
+        "treasury_10y": build_macro_item(
+            macro.treasury_10y,
+            prev_macro.treasury_10y if prev_macro else None,
+            daily_macro.treasury_10y if daily_macro else None,
+        ),
         "fear_greed_index": macro.fear_greed_index,
         "fear_greed_label": macro.fear_greed_label,
         "timestamp": macro.timestamp.isoformat(),
@@ -291,4 +470,117 @@ async def get_onchain_data(session: AsyncSession = Depends(get_session)):
         "exchange_reserve": onchain.exchange_reserve,
         "large_tx_count": onchain.large_tx_count,
         "timestamp": onchain.timestamp.isoformat(),
+    }
+
+
+@router.get("/funding")
+async def get_funding_data(
+    hours: int = Query(168, ge=1, le=720),
+    session: AsyncSession = Depends(get_session),
+):
+    """Get historical funding rate and open interest data."""
+    since = datetime.utcnow() - timedelta(hours=hours)
+
+    result = await session.execute(
+        select(FundingRate)
+        .where(FundingRate.timestamp >= since)
+        .order_by(FundingRate.timestamp)
+    )
+    records = result.scalars().all()
+
+    if not records:
+        return {"funding": None, "message": "No funding data available"}
+
+    latest = records[-1]
+
+    return {
+        "current": {
+            "funding_rate": latest.funding_rate,
+            "mark_price": latest.mark_price,
+            "index_price": latest.index_price,
+            "open_interest": latest.open_interest,
+            "timestamp": latest.timestamp.isoformat(),
+        },
+        "history": [
+            {
+                "timestamp": r.timestamp.isoformat(),
+                "funding_rate": r.funding_rate,
+                "open_interest": r.open_interest,
+            }
+            for r in records
+        ],
+        "count": len(records),
+    }
+
+
+@router.get("/dominance")
+async def get_dominance_data(
+    days: int = Query(30, ge=1, le=180),
+    session: AsyncSession = Depends(get_session),
+):
+    """Get historical BTC dominance data."""
+    since = datetime.utcnow() - timedelta(days=days)
+
+    result = await session.execute(
+        select(BtcDominance)
+        .where(BtcDominance.timestamp >= since)
+        .order_by(BtcDominance.timestamp)
+    )
+    records = result.scalars().all()
+
+    if not records:
+        return {"dominance": None, "message": "No dominance data available"}
+
+    latest = records[-1]
+
+    return {
+        "current": {
+            "btc_dominance": latest.btc_dominance,
+            "eth_dominance": latest.eth_dominance,
+            "total_market_cap": latest.total_market_cap,
+            "total_volume": latest.total_volume,
+            "market_cap_change_24h": latest.market_cap_change_24h,
+            "timestamp": latest.timestamp.isoformat(),
+        },
+        "history": [
+            {
+                "timestamp": r.timestamp.isoformat(),
+                "btc_dominance": r.btc_dominance,
+                "eth_dominance": r.eth_dominance,
+                "total_market_cap": r.total_market_cap,
+            }
+            for r in records
+        ],
+        "count": len(records),
+    }
+
+
+@router.get("/indicator-history")
+async def get_indicator_history(
+    hours: int = Query(168, ge=1, le=720),
+    session: AsyncSession = Depends(get_session),
+):
+    """Get historical indicator snapshots for trend analysis."""
+    since = datetime.utcnow() - timedelta(hours=hours)
+
+    result = await session.execute(
+        select(IndicatorSnapshot)
+        .where(IndicatorSnapshot.timestamp >= since)
+        .order_by(IndicatorSnapshot.timestamp)
+    )
+    snapshots = result.scalars().all()
+
+    if not snapshots:
+        return {"snapshots": [], "count": 0}
+
+    return {
+        "snapshots": [
+            {
+                "timestamp": s.timestamp.isoformat(),
+                "price": s.price,
+                "indicators": s.indicators,
+            }
+            for s in snapshots
+        ],
+        "count": len(snapshots),
     }

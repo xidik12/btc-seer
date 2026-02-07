@@ -1,3 +1,4 @@
+import { Component } from 'react'
 import PriceWidget from '../components/PriceWidget'
 import PriceChart from '../components/PriceChart'
 import PredictionCard from '../components/PredictionCard'
@@ -7,6 +8,35 @@ import SentimentGauge from '../components/SentimentGauge'
 import NewsCarousel from '../components/NewsCarousel'
 import InfluencerFeed from '../components/InfluencerFeed'
 import MacroDashboard from '../components/MacroDashboard'
+
+class SafeWrap extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+  componentDidCatch(error, info) {
+    console.error(`[${this.props.name}] crashed:`, error, info)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/20">
+          <p className="text-accent-red text-xs">{this.props.name} failed to load</p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            className="text-accent-blue text-[10px] mt-1 underline"
+          >
+            Retry
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 export default function Dashboard() {
   return (
@@ -18,43 +48,43 @@ export default function Dashboard() {
         <span className="text-text-muted text-xs pulse-glow">LIVE</span>
       </header>
 
-      <PriceWidget />
-      <PriceChart />
+      <SafeWrap name="PriceWidget">
+        <PriceWidget />
+      </SafeWrap>
 
-      {/* Dual Prediction System */}
+      <SafeWrap name="PriceChart">
+        <PriceChart />
+      </SafeWrap>
+
+      {/* Dual Predictions */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 px-1">
-          <div className="h-px flex-1 bg-white/5" />
-          <span className="text-text-muted text-[10px] font-semibold tracking-widest">PREDICTIONS</span>
-          <div className="h-px flex-1 bg-white/5" />
-        </div>
-
-        {/* Prediction A: ML Ensemble (data-driven) */}
-        <div>
-          <div className="flex items-center gap-1.5 mb-1.5 px-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-blue" />
-            <span className="text-text-muted text-[10px] font-semibold tracking-wider">ML ENSEMBLE</span>
-            <span className="text-text-muted text-[9px] opacity-60">LSTM + XGBoost + Sentiment</span>
-          </div>
+        <SafeWrap name="AI Prediction">
           <PredictionCard />
-        </div>
-
-        {/* Prediction B: Quant Theory (formula-driven) */}
-        <div>
-          <div className="flex items-center gap-1.5 mb-1.5 px-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-purple" />
-            <span className="text-text-muted text-[10px] font-semibold tracking-wider">QUANT THEORY</span>
-            <span className="text-text-muted text-[9px] opacity-60">15 proven algorithms combined</span>
-          </div>
+        </SafeWrap>
+        <SafeWrap name="Quant Prediction">
           <QuantPredictionCard />
-        </div>
+        </SafeWrap>
       </div>
 
-      <SignalPanel />
-      <SentimentGauge />
-      <NewsCarousel />
-      <InfluencerFeed />
-      <MacroDashboard />
+      <SafeWrap name="SignalPanel">
+        <SignalPanel />
+      </SafeWrap>
+
+      <SafeWrap name="SentimentGauge">
+        <SentimentGauge />
+      </SafeWrap>
+
+      <SafeWrap name="NewsCarousel">
+        <NewsCarousel />
+      </SafeWrap>
+
+      <SafeWrap name="InfluencerFeed">
+        <InfluencerFeed />
+      </SafeWrap>
+
+      <SafeWrap name="MacroDashboard">
+        <MacroDashboard />
+      </SafeWrap>
 
       <p className="text-text-muted text-[10px] text-center pb-4 leading-relaxed">
         This is not financial advice. Predictions are ML-generated and may be incorrect.

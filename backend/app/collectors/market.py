@@ -118,6 +118,23 @@ class MarketCollector(BaseCollector):
             logger.debug(f"Open interest fetch error: {e}")
         return None
 
+    async def get_btc_dominance(self) -> dict | None:
+        """Get BTC dominance from CoinGecko global endpoint."""
+        try:
+            data = await self.fetch_json("https://api.coingecko.com/api/v3/global")
+            if data and "data" in data:
+                gd = data["data"]
+                return {
+                    "btc_dominance": gd.get("market_cap_percentage", {}).get("bitcoin"),
+                    "eth_dominance": gd.get("market_cap_percentage", {}).get("ethereum"),
+                    "total_market_cap": gd.get("total_market_cap", {}).get("usd"),
+                    "total_volume": gd.get("total_volume", {}).get("usd"),
+                    "market_cap_change_24h": gd.get("market_cap_change_percentage_24h_usd"),
+                }
+        except Exception as e:
+            logger.debug(f"BTC dominance fetch error: {e}")
+        return None
+
     async def get_historical_klines(
         self,
         interval: str = "1h",

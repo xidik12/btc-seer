@@ -3,12 +3,14 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 
 from app.config import settings
 from app.database import (
     async_session, Price, News, Feature, Prediction, Signal,
     MacroData, OnChainData, InfluencerTweet, EventImpact, QuantPrediction,
+    FundingRate, BtcDominance, IndicatorSnapshot, AlertLog, ModelVersion,
+    PortfolioState, TradeAdvice, TradeResult, BotUser,
 )
 from app.collectors import (
     MarketCollector, NewsCollector, FearGreedCollector,
@@ -46,6 +48,7 @@ def get_ensemble() -> EnsemblePredictor:
     global _ensemble
     if _ensemble is None:
         _ensemble = EnsemblePredictor(
+            model_dir=settings.model_dir,
             num_features=len(feature_builder.ALL_FEATURES),
         )
     return _ensemble
@@ -482,18 +485,74 @@ async def generate_prediction():
             for p in prices
         ])
 
-        # Build features (including event memory)
+        # Get latest funding rate data
+        funding_data = None
+        try:
+            async with async_session() as sess:
+                result = await sess.execute(
+                    select(FundingRate).order_by(desc(FundingRate.timestamp)).limit(1)
+                )
+                fr_row = result.scalar_one_or_none()
+                if fr_row:
+                    funding_data = {
+                        "funding_rate": fr_row.funding_rate,
+                        "open_interest": fr_row.open_interest,
+                        "mark_price": fr_row.mark_price,
+                        "index_price": fr_row.index_price,
+                    }
+        except Exception as e:
+            logger.debug(f"Funding data query error: {e}")
+
+        # Get latest dominance data
+        dominance_data = None
+        try:
+            async with async_session() as sess:
+                result = await sess.execute(
+                    select(BtcDominance).order_by(desc(BtcDominance.timestamp)).limit(1)
+                )
+                dom_row = result.scalar_one_or_none()
+                if dom_row:
+                    dominance_data = {
+                        "btc_dominance": dom_row.btc_dominance,
+                        "eth_dominance": dom_row.eth_dominance,
+                        "total_market_cap": dom_row.total_market_cap,
+                        "market_cap_change_24h": dom_row.market_cap_change_24h,
+                    }
+        except Exception as e:
+            logger.debug(f"Dominance data query error: {e}")
+
+        # Build features (including event memory, funding, dominance)
         news_data = [{"title": n.title, "source": n.source} for n in news]
         features = feature_builder.build_features(
             price_df=price_df,
             news_data=news_data,
             event_memory=event_memory_data if event_memory_data else None,
+            funding_data=funding_data,
+            dominance_data=dominance_data,
         )
 
-        # Build feature sequence for LSTM
+        # Build REAL feature sequence from Feature table history
         feature_array = feature_builder.features_to_array(features)
-        sequence = np.tile(feature_array, (168, 1))  # Simplified: repeat current features
-        # In production, we'd use historical feature snapshots
+
+        async with async_session() as sess:
+            result = await sess.execute(
+                select(Feature)
+                .order_by(desc(Feature.timestamp))
+                .limit(168)
+            )
+            feature_history = list(reversed(result.scalars().all()))
+
+        if len(feature_history) >= 10:
+            # Use real historical feature snapshots
+            sequence = feature_builder.build_sequence(
+                [f.feature_data for f in feature_history], lookback=168
+            )
+        else:
+            # Fallback: tile current features (first few hours after startup)
+            sequence = np.tile(feature_array, (168, 1))
+
+        # Collect price history for TimesFM (last 512 hours)
+        price_history = [float(p.close) for p in prices[-512:]]
 
         # Run ensemble prediction
         ensemble = get_ensemble()
@@ -501,6 +560,7 @@ async def generate_prediction():
             feature_sequence=sequence,
             current_features=feature_array,
             news_data=news_data,
+            price_history=price_history,
         )
 
         current_price = float(prices[-1].close)
@@ -705,6 +765,7 @@ async def evaluate_predictions():
             )
             predictions = result.scalars().all()
 
+            evaluated_count = 0
             for pred in predictions:
                 # Determine evaluation time based on timeframe
                 hours = {"1h": 1, "4h": 4, "24h": 24}.get(pred.timeframe, 1)
@@ -713,15 +774,30 @@ async def evaluate_predictions():
                 if datetime.utcnow() < eval_time:
                     continue
 
-                # Get actual price at evaluation time
+                # Use wider window for finding price: ±30 min, pick closest to target
+                window = timedelta(minutes=30)
                 price_result = await session.execute(
                     select(Price)
-                    .where(Price.timestamp >= eval_time - timedelta(minutes=5))
-                    .where(Price.timestamp <= eval_time + timedelta(minutes=5))
-                    .order_by(Price.timestamp)
+                    .where(Price.timestamp >= eval_time - window)
+                    .where(Price.timestamp <= eval_time + window)
+                    .order_by(
+                        func.abs(
+                            func.julianday(Price.timestamp) - func.julianday(eval_time)
+                        )
+                    )
                     .limit(1)
                 )
                 actual_price_record = price_result.scalar_one_or_none()
+
+                if not actual_price_record:
+                    # Fallback: if no price in ±30min, get the latest price before eval_time + 1h
+                    fallback_result = await session.execute(
+                        select(Price)
+                        .where(Price.timestamp <= eval_time + timedelta(hours=1))
+                        .order_by(desc(Price.timestamp))
+                        .limit(1)
+                    )
+                    actual_price_record = fallback_result.scalar_one_or_none()
 
                 if not actual_price_record:
                     continue
@@ -734,10 +810,11 @@ async def evaluate_predictions():
                 pred.was_correct = (pred.direction == actual_direction) or (
                     pred.direction == "neutral" and abs(actual_price - pred.current_price) / pred.current_price < 0.005
                 )
+                evaluated_count += 1
 
             await session.commit()
 
-        logger.info(f"Evaluated {len(predictions)} predictions")
+        logger.info(f"Evaluated {evaluated_count}/{len(predictions)} predictions")
 
     except Exception as e:
         logger.error(f"Prediction evaluation error: {e}")
@@ -899,33 +976,609 @@ async def evaluate_event_impacts():
 
 
 async def _get_price_at(session, target_time: datetime) -> float | None:
-    """Get BTC price closest to a target time (±10 min window)."""
+    """Get BTC price closest to a target time (±30 min window, then fallback)."""
+    # Try ±30 min window first, pick closest
     result = await session.execute(
         select(Price)
-        .where(Price.timestamp >= target_time - timedelta(minutes=10))
-        .where(Price.timestamp <= target_time + timedelta(minutes=10))
-        .order_by(Price.timestamp)
+        .where(Price.timestamp >= target_time - timedelta(minutes=30))
+        .where(Price.timestamp <= target_time + timedelta(minutes=30))
+        .order_by(
+            func.abs(
+                func.julianday(Price.timestamp) - func.julianday(target_time)
+            )
+        )
+        .limit(1)
+    )
+    price = result.scalar_one_or_none()
+    if price:
+        return price.close
+
+    # Fallback: get latest price before target_time + 1h
+    result = await session.execute(
+        select(Price)
+        .where(Price.timestamp <= target_time + timedelta(hours=1))
+        .order_by(desc(Price.timestamp))
         .limit(1)
     )
     price = result.scalar_one_or_none()
     return price.close if price else None
 
 
-async def cleanup_old_data():
-    """Clean up data older than 90 days (runs daily).
-    Note: EventImpact is kept indefinitely for long-term memory.
-    """
+async def collect_funding_data():
+    """Collect and persist Binance perpetual funding rate & open interest (runs every 30 min)."""
     try:
-        cutoff = datetime.utcnow() - timedelta(days=90)
+        funding = await market_collector.get_funding_rate()
+        oi_data = await market_collector.get_open_interest()
+
+        if not funding and not oi_data:
+            logger.debug("No funding/OI data received")
+            return
 
         async with async_session() as session:
-            for model in [Price, News, Feature]:
-                await session.execute(
-                    model.__table__.delete().where(model.timestamp < cutoff)
-                )
+            record = FundingRate(
+                timestamp=datetime.utcnow(),
+                funding_rate=funding.get("funding_rate") if funding else None,
+                mark_price=funding.get("mark_price") if funding else None,
+                index_price=funding.get("index_price") if funding else None,
+                next_funding_time=funding.get("next_funding_time") if funding else None,
+                open_interest=oi_data.get("open_interest") if oi_data else None,
+            )
+            session.add(record)
             await session.commit()
 
-        logger.info("Old data cleaned up")
+        fr = funding.get("funding_rate", 0) if funding else 0
+        oi = oi_data.get("open_interest", 0) if oi_data else 0
+        logger.info(f"Funding data collected: rate={fr:.6f}, OI={oi:.2f} BTC")
+
+    except Exception as e:
+        logger.error(f"Funding data collection error: {e}")
+
+
+async def collect_dominance_data():
+    """Collect and persist BTC dominance & global market data (runs every hour)."""
+    try:
+        data = await market_collector.get_btc_dominance()
+
+        if not data:
+            logger.debug("No dominance data received")
+            return
+
+        async with async_session() as session:
+            record = BtcDominance(
+                timestamp=datetime.utcnow(),
+                btc_dominance=data.get("btc_dominance"),
+                eth_dominance=data.get("eth_dominance"),
+                total_market_cap=data.get("total_market_cap"),
+                total_volume=data.get("total_volume"),
+                market_cap_change_24h=data.get("market_cap_change_24h"),
+            )
+            session.add(record)
+            await session.commit()
+
+        logger.info(f"BTC dominance collected: {data.get('btc_dominance', 0):.2f}%")
+
+    except Exception as e:
+        logger.error(f"Dominance collection error: {e}")
+
+
+async def save_indicator_snapshot():
+    """Compute and persist a full technical indicator snapshot (runs every hour).
+
+    This saves the complete indicator state so historical indicator values
+    are available for backtesting, model training, and trend analysis.
+    """
+    try:
+        from app.features.technical import TechnicalFeatures
+
+        async with async_session() as session:
+            since = datetime.utcnow() - timedelta(hours=400)
+            result = await session.execute(
+                select(Price).where(Price.timestamp >= since).order_by(Price.timestamp)
+            )
+            prices = result.scalars().all()
+
+        if len(prices) < 30:
+            logger.debug(f"Not enough price data for indicator snapshot ({len(prices)} candles)")
+            return
+
+        df = pd.DataFrame([
+            {"open": p.open, "high": p.high, "low": p.low, "close": p.close, "volume": p.volume}
+            for p in prices
+        ])
+
+        df = TechnicalFeatures.calculate_all(df)
+        latest = df.iloc[-1]
+
+        def safe(val):
+            if pd.isna(val):
+                return None
+            v = float(val)
+            return round(v, 6) if abs(v) < 1e12 else v
+
+        indicators = {
+            # Moving averages
+            "ema_9": safe(latest.get("ema_9")),
+            "ema_21": safe(latest.get("ema_21")),
+            "ema_50": safe(latest.get("ema_50")),
+            "ema_200": safe(latest.get("ema_200")),
+            "sma_20": safe(latest.get("sma_20")),
+            "sma_111": safe(latest.get("sma_111")),
+            "sma_200": safe(latest.get("sma_200")),
+            "sma_350": safe(latest.get("sma_350")),
+            # Momentum
+            "rsi": safe(latest.get("rsi")),
+            "rsi_7": safe(latest.get("rsi_7")),
+            "rsi_30": safe(latest.get("rsi_30")),
+            "macd": safe(latest.get("macd")),
+            "macd_signal": safe(latest.get("macd_signal")),
+            "macd_hist": safe(latest.get("macd_hist")),
+            "adx": safe(latest.get("adx")),
+            "stoch_rsi_k": safe(latest.get("stoch_rsi_k")),
+            "stoch_rsi_d": safe(latest.get("stoch_rsi_d")),
+            "williams_r": safe(latest.get("williams_r")),
+            "momentum_10": safe(latest.get("momentum_10")),
+            "momentum_20": safe(latest.get("momentum_20")),
+            # Volatility
+            "bb_upper": safe(latest.get("bb_upper")),
+            "bb_middle": safe(latest.get("bb_middle")),
+            "bb_lower": safe(latest.get("bb_lower")),
+            "bb_width": safe(latest.get("bb_width")),
+            "bb_position": safe(latest.get("bb_position")),
+            "atr": safe(latest.get("atr")),
+            "volatility_24h": safe(latest.get("volatility_24h")),
+            # Volume
+            "obv": safe(latest.get("obv")),
+            "vwap": safe(latest.get("vwap")),
+            "volume_sma_20": safe(latest.get("volume_sma_20")),
+            "volume_ratio": safe(latest.get("volume_ratio")),
+            # Levels
+            "pivot": safe(latest.get("pivot")),
+            "support_1": safe(latest.get("support_1")),
+            "resistance_1": safe(latest.get("resistance_1")),
+            # Advanced
+            "mayer_multiple": safe(latest.get("mayer_multiple")),
+            "pi_cycle_ratio": safe(latest.get("pi_cycle_ratio")),
+            "ema_cross": safe(latest.get("ema_cross")),
+            "zscore_20": safe(latest.get("zscore_20")),
+            # Ichimoku
+            "ichimoku_tenkan": safe(latest.get("ichimoku_tenkan")),
+            "ichimoku_kijun": safe(latest.get("ichimoku_kijun")),
+            "ichimoku_senkou_a": safe(latest.get("ichimoku_senkou_a")),
+            "ichimoku_senkou_b": safe(latest.get("ichimoku_senkou_b")),
+            # Trend
+            "trend_short": int(latest.get("trend_short", 0)),
+            "trend_medium": int(latest.get("trend_medium", 0)),
+            "trend_long": int(latest.get("trend_long", 0)),
+            # ROC
+            "roc_1": safe(latest.get("roc_1")),
+            "roc_6": safe(latest.get("roc_6")),
+            "roc_12": safe(latest.get("roc_12")),
+            "roc_24": safe(latest.get("roc_24")),
+            # Candlestick patterns
+            "candle_doji": int(latest.get("candle_doji", 0)),
+            "candle_hammer": int(latest.get("candle_hammer", 0)),
+            "candle_inverted_hammer": int(latest.get("candle_inverted_hammer", 0)),
+            "candle_bullish_engulfing": int(latest.get("candle_bullish_engulfing", 0)),
+            "candle_bearish_engulfing": int(latest.get("candle_bearish_engulfing", 0)),
+            "candle_morning_star": int(latest.get("candle_morning_star", 0)),
+            "candle_evening_star": int(latest.get("candle_evening_star", 0)),
+        }
+
+        current_price = float(prices[-1].close)
+
+        async with async_session() as session:
+            snapshot = IndicatorSnapshot(
+                timestamp=datetime.utcnow(),
+                price=current_price,
+                indicators=indicators,
+            )
+            session.add(snapshot)
+            await session.commit()
+
+        logger.info(f"Indicator snapshot saved (RSI={indicators.get('rsi')}, MACD={indicators.get('macd')})")
+
+    except Exception as e:
+        logger.error(f"Indicator snapshot error: {e}")
+
+
+async def evaluate_quant_predictions():
+    """Evaluate past quant predictions against actual prices (runs every hour)."""
+    try:
+        async with async_session() as session:
+            # Find unevaluated quant predictions (check both 1h and 24h)
+            result = await session.execute(
+                select(QuantPrediction)
+                .where(
+                    (QuantPrediction.was_correct_1h.is_(None)) |
+                    (QuantPrediction.was_correct_24h.is_(None))
+                )
+                .where(QuantPrediction.timestamp < datetime.utcnow() - timedelta(hours=1))
+            )
+            predictions = result.scalars().all()
+
+            evaluated = 0
+            for qp in predictions:
+                # Evaluate 1h prediction
+                if qp.was_correct_1h is None:
+                    eval_time = qp.timestamp + timedelta(hours=1)
+                    if datetime.utcnow() >= eval_time:
+                        actual = await _get_price_at(session, eval_time)
+                        if actual:
+                            qp.actual_price_1h = actual
+                            actual_dir = "bullish" if actual > qp.current_price else "bearish"
+                            qp.was_correct_1h = (qp.direction == actual_dir) or (
+                                qp.direction == "neutral" and abs(actual - qp.current_price) / qp.current_price < 0.005
+                            )
+                            evaluated += 1
+
+                # Evaluate 24h prediction
+                if qp.was_correct_24h is None:
+                    eval_time = qp.timestamp + timedelta(hours=24)
+                    if datetime.utcnow() >= eval_time:
+                        actual = await _get_price_at(session, eval_time)
+                        if actual:
+                            qp.actual_price_24h = actual
+                            actual_dir = "bullish" if actual > qp.current_price else "bearish"
+                            qp.was_correct_24h = (qp.direction == actual_dir) or (
+                                qp.direction == "neutral" and abs(actual - qp.current_price) / qp.current_price < 0.005
+                            )
+                            evaluated += 1
+
+            await session.commit()
+
+        if evaluated > 0:
+            logger.info(f"Evaluated {evaluated} quant predictions")
+
+    except Exception as e:
+        logger.error(f"Quant prediction evaluation error: {e}")
+
+
+async def cleanup_old_data():
+    """Clean up old data with tiered retention policy (runs daily).
+
+    Retention:
+    - Predictions, Signals, QuantPredictions: NEVER deleted (core history)
+    - EventImpacts: NEVER deleted (long-term memory)
+    - Price, News, Features: 90 days
+    - Funding rates, Dominance, Indicators: 180 days
+    - MacroData, OnChainData: 180 days
+    - InfluencerTweets: 90 days
+    - AlertLogs: 90 days
+    """
+    try:
+        cutoff_90d = datetime.utcnow() - timedelta(days=90)
+        cutoff_180d = datetime.utcnow() - timedelta(days=180)
+
+        async with async_session() as session:
+            # 90-day retention
+            for model in [Price, News, Feature, InfluencerTweet, AlertLog]:
+                await session.execute(
+                    model.__table__.delete().where(model.timestamp < cutoff_90d)
+                )
+
+            # 180-day retention for less frequent data
+            for model in [MacroData, OnChainData, FundingRate, BtcDominance, IndicatorSnapshot]:
+                await session.execute(
+                    model.__table__.delete().where(model.timestamp < cutoff_180d)
+                )
+
+            await session.commit()
+
+        logger.info("Old data cleaned up (90d: price/news/features, 180d: macro/indicators)")
 
     except Exception as e:
         logger.error(f"Cleanup error: {e}")
+
+
+async def auto_retrain_models():
+    """Auto-retrain models when accuracy degrades or enough new data exists (runs daily).
+
+    Triggers:
+    - Accuracy dropped below 52%
+    - More than 24 hours since last training
+    - Never trained but have enough data (168+ feature snapshots)
+    """
+    try:
+        from app.models.trainer import ModelTrainer
+        trainer = ModelTrainer(model_dir=settings.model_dir)
+
+        result = await trainer.evaluate_and_retrain_if_needed()
+
+        if result.get("retrain"):
+            # Hot-swap: reset ensemble so it reloads with new weights
+            global _ensemble
+            _ensemble = None  # Will reload on next prediction
+            logger.info(f"Models retrained and ensemble reset: {result}")
+        else:
+            logger.info(f"Retrain check: {result.get('status')} (accuracy={result.get('accuracy', 'N/A')})")
+
+    except Exception as e:
+        logger.error(f"Auto-retrain error: {e}", exc_info=True)
+
+
+# ────────────────────────────────────────────────────────────────
+#  ADVISOR JOBS
+# ────────────────────────────────────────────────────────────────
+
+async def run_advisor_check():
+    """Run advisor check after each prediction cycle (every 30 min).
+
+    Fetches latest prediction, signal, quant, indicators, and price,
+    then for each advisor user: detect new entries, size, plan, save, alert.
+    """
+    if not settings.advisor_enabled:
+        return
+
+    try:
+        from app.advisor.entry_detector import check_entry
+        from app.advisor.trade_planner import build_trade_plan, format_trade_plan_message
+        from app.advisor.portfolio import get_or_create_portfolio
+
+        # Fetch latest data
+        async with async_session() as session:
+            # Latest prediction (1h)
+            result = await session.execute(
+                select(Prediction)
+                .where(Prediction.timeframe == "1h")
+                .order_by(desc(Prediction.timestamp))
+                .limit(1)
+            )
+            pred_row = result.scalar_one_or_none()
+
+            # Latest signal (1h)
+            result = await session.execute(
+                select(Signal)
+                .where(Signal.timeframe == "1h")
+                .order_by(desc(Signal.timestamp))
+                .limit(1)
+            )
+            signal_row = result.scalar_one_or_none()
+
+            # Latest quant prediction
+            result = await session.execute(
+                select(QuantPrediction).order_by(desc(QuantPrediction.timestamp)).limit(1)
+            )
+            quant_row = result.scalar_one_or_none()
+
+            # Latest indicator snapshot
+            result = await session.execute(
+                select(IndicatorSnapshot).order_by(desc(IndicatorSnapshot.timestamp)).limit(1)
+            )
+            ind_row = result.scalar_one_or_none()
+
+            # Current price
+            result = await session.execute(
+                select(Price).order_by(desc(Price.timestamp)).limit(1)
+            )
+            price_row = result.scalar_one_or_none()
+
+            # Recent high-severity events
+            since_1h = datetime.utcnow() - timedelta(hours=1)
+            result = await session.execute(
+                select(EventImpact)
+                .where(EventImpact.timestamp >= since_1h)
+                .where(EventImpact.severity >= 7)
+            )
+            events = [
+                {"severity": e.severity, "sentiment_score": e.sentiment_score, "category": e.category}
+                for e in result.scalars().all()
+            ]
+
+        if not pred_row or not signal_row or not price_row:
+            logger.debug("Advisor: missing prediction/signal/price data")
+            return
+
+        current_price = float(price_row.close)
+        atr_value = ind_row.indicators.get("atr", current_price * 0.02) if ind_row else current_price * 0.02
+
+        # Build prediction dict
+        prediction = {
+            "direction": pred_row.direction,
+            "confidence": pred_row.confidence,
+            "model_outputs": pred_row.model_outputs or {},
+            "magnitude_pct": pred_row.predicted_change_pct,
+        }
+
+        # Build signal dict
+        signal = {
+            "action": signal_row.action,
+            "entry_price": signal_row.entry_price,
+            "target_price": signal_row.target_price,
+            "stop_loss": signal_row.stop_loss,
+            "risk_rating": signal_row.risk_rating,
+            "risk_reward_ratio": round(
+                abs(signal_row.target_price - signal_row.entry_price)
+                / max(abs(signal_row.entry_price - signal_row.stop_loss), 0.01), 2
+            ),
+        }
+
+        # Build quant dict
+        quant = None
+        if quant_row:
+            quant = {
+                "direction": quant_row.direction,
+                "confidence": quant_row.confidence,
+                "composite_score": quant_row.composite_score,
+                "action": quant_row.action,
+                "agreement_ratio": quant_row.agreement_ratio or 0,
+            }
+
+        indicators = ind_row.indicators if ind_row else None
+
+        # Get all advisor users (all portfolios)
+        async with async_session() as session:
+            result = await session.execute(select(PortfolioState).where(PortfolioState.is_active == True))
+            portfolios = result.scalars().all()
+
+        if not portfolios:
+            logger.debug("Advisor: no active portfolios")
+            return
+
+        # For each user with a portfolio, check for entry
+        new_plans = 0
+        for portfolio in portfolios:
+            try:
+                # Get user's open trades
+                async with async_session() as session:
+                    result = await session.execute(
+                        select(TradeAdvice).where(
+                            TradeAdvice.telegram_id == portfolio.telegram_id,
+                            TradeAdvice.status.in_(["opened", "partial_tp", "pending"]),
+                        )
+                    )
+                    open_trades = result.scalars().all()
+
+                # Check for entry
+                entry = check_entry(
+                    portfolio=portfolio,
+                    prediction=prediction,
+                    signal=signal,
+                    quant=quant,
+                    indicators=indicators,
+                    open_trades=open_trades,
+                    events=events,
+                )
+
+                if not entry:
+                    continue
+
+                # Build trade plan
+                plan = build_trade_plan(
+                    entry=entry,
+                    portfolio=portfolio,
+                    current_price=current_price,
+                    atr=atr_value,
+                )
+
+                # Save trade advice
+                async with async_session() as session:
+                    trade_advice = TradeAdvice(
+                        telegram_id=portfolio.telegram_id,
+                        direction=plan["direction"],
+                        entry_price=plan["entry_price"],
+                        entry_zone_low=plan["entry_zone_low"],
+                        entry_zone_high=plan["entry_zone_high"],
+                        stop_loss=plan["stop_loss"],
+                        take_profit_1=plan["take_profit_1"],
+                        take_profit_2=plan["take_profit_2"],
+                        take_profit_3=plan["take_profit_3"],
+                        leverage=plan["leverage"],
+                        position_size_usdt=plan["position_size_usdt"],
+                        position_size_pct=plan["position_size_pct"],
+                        risk_amount_usdt=plan["risk_amount_usdt"],
+                        risk_reward_ratio=plan["risk_reward_ratio"],
+                        confidence=plan["confidence"],
+                        risk_rating=plan["risk_rating"],
+                        reasoning=plan["reasoning"],
+                        models_agreeing=plan["models_agreeing"],
+                        urgency=plan["urgency"],
+                        timeframe=plan["timeframe"],
+                        prediction_id=pred_row.id,
+                        signal_id=signal_row.id,
+                        quant_prediction_id=quant_row.id if quant_row else None,
+                        status="pending",
+                    )
+                    session.add(trade_advice)
+                    await session.commit()
+                    await session.refresh(trade_advice)
+
+                # Send Telegram alert
+                try:
+                    from app.advisor.trade_planner import format_trade_plan_message
+                    from app.bot.keyboards import trade_action_keyboard
+
+                    msg = format_trade_plan_message(trade_advice)
+                    await _send_advisor_alert(
+                        portfolio.telegram_id,
+                        msg,
+                        reply_markup=trade_action_keyboard(trade_advice.id),
+                    )
+                except Exception as e:
+                    logger.error(f"Advisor alert send error: {e}")
+
+                new_plans += 1
+
+            except Exception as e:
+                logger.error(f"Advisor check error for user {portfolio.telegram_id}: {e}")
+
+        if new_plans > 0:
+            logger.info(f"Advisor: generated {new_plans} new trade plans")
+
+    except Exception as e:
+        logger.error(f"Advisor check error: {e}", exc_info=True)
+
+
+async def run_trade_management():
+    """Monitor open trades for SL/TP/reversal alerts (runs every 5 min)."""
+    if not settings.advisor_enabled:
+        return
+
+    try:
+        from app.advisor.trade_manager import check_open_trades
+
+        # Get current price
+        async with async_session() as session:
+            result = await session.execute(
+                select(Price).order_by(desc(Price.timestamp)).limit(1)
+            )
+            price_row = result.scalar_one_or_none()
+
+            # Latest 1h prediction for reversal detection
+            result = await session.execute(
+                select(Prediction)
+                .where(Prediction.timeframe == "1h")
+                .order_by(desc(Prediction.timestamp))
+                .limit(1)
+            )
+            pred_row = result.scalar_one_or_none()
+
+        if not price_row:
+            return
+
+        current_price = float(price_row.close)
+        prediction = None
+        if pred_row:
+            prediction = {
+                "direction": pred_row.direction,
+                "confidence": pred_row.confidence,
+            }
+
+        alerts = await check_open_trades(current_price, prediction)
+
+        for alert in alerts:
+            try:
+                await _send_advisor_alert(
+                    alert["telegram_id"],
+                    alert["message"],
+                )
+            except Exception as e:
+                logger.error(f"Trade management alert error: {e}")
+
+        if alerts:
+            logger.info(f"Trade management: sent {len(alerts)} alerts")
+
+    except Exception as e:
+        logger.error(f"Trade management error: {e}", exc_info=True)
+
+
+async def _send_advisor_alert(telegram_id: int, text: str, reply_markup=None):
+    """Send an advisor alert via Telegram bot."""
+    try:
+        if not settings.telegram_bot_token:
+            logger.debug("No bot token, skipping advisor alert")
+            return
+
+        from aiogram import Bot
+        bot = Bot(token=settings.telegram_bot_token)
+        try:
+            await bot.send_message(
+                telegram_id,
+                text,
+                parse_mode="HTML",
+                reply_markup=reply_markup,
+            )
+        finally:
+            await bot.session.close()
+
+    except Exception as e:
+        logger.error(f"Advisor alert send error for {telegram_id}: {e}")

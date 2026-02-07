@@ -1,7 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 
 const tabs = [
-  { path: '/', label: 'Dashboard', icon: '📊' },
+  { path: '/', label: 'Home', icon: '📊' },
+  { path: '/technical', label: 'Technical', icon: '📉' },
   { path: '/signals', label: 'Signals', icon: '📈' },
   { path: '/news', label: 'News', icon: '📰' },
   { path: '/history', label: 'History', icon: '🎯' },

@@ -35,6 +35,16 @@ class Settings(BaseSettings):
     onchain_collection_interval: int = 3600
     fear_greed_collection_interval: int = 3600
 
+    # Advisor settings
+    advisor_enabled: bool = True
+    advisor_default_balance: float = 10.0
+    advisor_min_confidence: int = 70
+    advisor_min_models_agreeing: int = 3
+    advisor_min_risk_reward: float = 2.0
+    advisor_max_leverage: int = 20
+    advisor_kelly_fraction: float = 0.25
+    advisor_cooldown_hours: int = 4
+
     @property
     def model_path(self) -> Path:
         return Path(self.model_dir)

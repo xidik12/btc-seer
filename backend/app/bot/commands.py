@@ -5,8 +5,11 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
 from sqlalchemy import select, desc
 
-from app.database import async_session, BotUser, Prediction, Signal, News
-from app.bot.keyboards import main_keyboard, settings_keyboard, back_keyboard
+from app.database import (
+    async_session, BotUser, Prediction, Signal, News,
+    PortfolioState, TradeAdvice, TradeResult, Price,
+)
+from app.bot.keyboards import main_keyboard, settings_keyboard, back_keyboard, advisor_keyboard, trade_close_keyboard
 from app.signals.generator import DISCLAIMER
 
 logger = logging.getLogger(__name__)
@@ -212,3 +215,223 @@ async def cmd_settings(message: Message):
         parse_mode="HTML",
         reply_markup=settings_keyboard(interval),
     )
+
+
+# ────────────────────────────────────────────────────────────────
+#  ADVISOR COMMANDS
+# ────────────────────────────────────────────────────────────────
+
+@router.message(Command("advisor"))
+async def cmd_advisor(message: Message):
+    """Show advisor status, balance, open trades, and $10K progress."""
+    from app.advisor.portfolio import get_or_create_portfolio, get_stats
+
+    telegram_id = message.from_user.id
+    portfolio = await get_or_create_portfolio(telegram_id)
+    stats = await get_stats(telegram_id)
+
+    # Open trades count
+    async with async_session() as session:
+        result = await session.execute(
+            select(TradeAdvice).where(
+                TradeAdvice.telegram_id == telegram_id,
+                TradeAdvice.status.in_(["opened", "partial_tp"]),
+            )
+        )
+        open_trades = result.scalars().all()
+
+    # Progress bar
+    progress = stats.get("progress_to_10k", 0)
+    bar_filled = int(progress / 5)  # 20 chars total
+    bar = "█" * bar_filled + "░" * (20 - bar_filled)
+
+    cooldown = ""
+    if stats.get("cooldown_until"):
+        cooldown = f"\nCooldown active until {stats['cooldown_until']}"
+
+    text = (
+        f"<b>Trading Advisor</b>\n\n"
+        f"<b>Balance:</b> ${stats['balance']:.2f}\n"
+        f"<b>Total PnL:</b> ${stats['total_pnl']:+.2f} ({stats['total_pnl_pct']:+.1f}%)\n\n"
+        f"<b>Trades:</b> {stats['total_trades']} total | "
+        f"{stats['winning_trades']}W / {stats['losing_trades']}L\n"
+        f"<b>Win Rate:</b> {stats['win_rate']:.1f}%\n"
+        f"<b>Profit Factor:</b> {stats['profit_factor']:.2f}\n\n"
+        f"<b>Open Trades:</b> {len(open_trades)}\n"
+        f"<b>Streak:</b> {stats['consecutive_wins']}W / {stats['consecutive_losses']}L\n\n"
+        f"<b>$10K Progress:</b> {progress:.1f}%\n"
+        f"[{bar}]\n"
+        f"${stats['balance']:.2f} / $10,000.00"
+        f"{cooldown}"
+    )
+
+    await message.answer(text, parse_mode="HTML", reply_markup=advisor_keyboard())
+
+
+@router.message(Command("balance"))
+async def cmd_balance(message: Message):
+    """Show balance and PnL summary."""
+    from app.advisor.portfolio import get_or_create_portfolio, get_stats
+
+    telegram_id = message.from_user.id
+    stats = await get_stats(telegram_id)
+
+    if stats.get("error"):
+        await get_or_create_portfolio(telegram_id)
+        stats = await get_stats(telegram_id)
+
+    text = (
+        f"<b>Portfolio Balance</b>\n\n"
+        f"Balance: <code>${stats['balance']:.4f}</code>\n"
+        f"Initial: <code>${stats['initial_balance']:.2f}</code>\n\n"
+        f"Total PnL: <code>${stats['total_pnl']:+.4f}</code>\n"
+        f"Total PnL %: <code>{stats['total_pnl_pct']:+.2f}%</code>\n\n"
+        f"Best Trade: <code>${stats.get('best_trade', 0):+.4f}</code>\n"
+        f"Worst Trade: <code>${stats.get('worst_trade', 0):+.4f}</code>\n"
+        f"Avg Win: <code>${stats.get('avg_win', 0):+.4f}</code>\n"
+        f"Avg Loss: <code>${stats.get('avg_loss', 0):+.4f}</code>"
+    )
+
+    await message.answer(text, parse_mode="HTML", reply_markup=back_keyboard())
+
+
+@router.message(Command("setbalance"))
+async def cmd_setbalance(message: Message):
+    """Set balance manually: /setbalance <amount>"""
+    from app.advisor.portfolio import update_balance
+
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer("Usage: /setbalance <amount>\nExample: /setbalance 25.50")
+        return
+
+    try:
+        amount = float(parts[1])
+    except ValueError:
+        await message.answer("Invalid amount. Use a number like: /setbalance 25.50")
+        return
+
+    if amount < 0:
+        await message.answer("Amount must be positive.")
+        return
+
+    portfolio = await update_balance(message.from_user.id, amount)
+
+    await message.answer(
+        f"Balance updated to <code>${portfolio.balance_usdt:.4f}</code>",
+        parse_mode="HTML",
+        reply_markup=back_keyboard(),
+    )
+
+
+@router.message(Command("trades"))
+async def cmd_trades(message: Message):
+    """Show open trade advices with current status."""
+    telegram_id = message.from_user.id
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(TradeAdvice).where(
+                TradeAdvice.telegram_id == telegram_id,
+                TradeAdvice.status.in_(["pending", "opened", "partial_tp"]),
+            ).order_by(desc(TradeAdvice.timestamp))
+        )
+        trades = result.scalars().all()
+
+        # Get current price
+        result = await session.execute(
+            select(Price).order_by(desc(Price.timestamp)).limit(1)
+        )
+        price_row = result.scalar_one_or_none()
+
+    if not trades:
+        await message.answer("No open trades.", reply_markup=advisor_keyboard())
+        return
+
+    current_price = price_row.close if price_row else 0
+
+    lines = ["<b>Open Trades</b>\n"]
+    for t in trades:
+        if t.direction == "LONG":
+            pnl_pct = ((current_price - t.entry_price) / t.entry_price * 100) * t.leverage
+        else:
+            pnl_pct = ((t.entry_price - current_price) / t.entry_price * 100) * t.leverage
+
+        emoji = "🟢" if pnl_pct >= 0 else "🔴"
+        lines.append(
+            f"#{t.id} {t.direction} {t.leverage}x | {t.status}\n"
+            f"   Entry: ${t.entry_price:,.0f} | Now: ${current_price:,.0f}\n"
+            f"   {emoji} PnL: {pnl_pct:+.2f}%\n"
+            f"   SL: ${t.stop_loss:,.0f} | TP1: ${t.take_profit_1:,.0f}\n"
+        )
+
+    await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=advisor_keyboard())
+
+
+@router.message(Command("history"))
+async def cmd_history(message: Message):
+    """Show trade result history with W/L stats."""
+    telegram_id = message.from_user.id
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(TradeResult)
+            .where(TradeResult.telegram_id == telegram_id)
+            .order_by(desc(TradeResult.timestamp))
+            .limit(10)
+        )
+        results = result.scalars().all()
+
+    if not results:
+        await message.answer("No trade history yet.", reply_markup=advisor_keyboard())
+        return
+
+    lines = ["<b>Trade History (last 10)</b>\n"]
+    for r in results:
+        emoji = "✅" if r.was_winner else "❌"
+        lines.append(
+            f"{emoji} #{r.trade_advice_id} {r.direction} {r.leverage}x\n"
+            f"   ${r.entry_price:,.0f} -> ${r.exit_price:,.0f}\n"
+            f"   PnL: ${r.pnl_usdt:+.4f} ({r.pnl_pct_leveraged:+.2f}%)\n"
+            f"   {r.close_reason} | {r.duration_minutes}min\n"
+        )
+
+    await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=advisor_keyboard())
+
+
+@router.message(Command("close"))
+async def cmd_close(message: Message):
+    """Record trade close: /close <trade_id> <exit_price>"""
+    from app.advisor.portfolio import record_trade_result
+
+    parts = message.text.split()
+    if len(parts) < 3:
+        await message.answer("Usage: /close <trade_id> <exit_price>\nExample: /close 5 98500")
+        return
+
+    try:
+        trade_id = int(parts[1])
+        exit_price = float(parts[2])
+    except ValueError:
+        await message.answer("Invalid arguments. Example: /close 5 98500")
+        return
+
+    result = await record_trade_result(
+        telegram_id=message.from_user.id,
+        trade_id=trade_id,
+        exit_price=exit_price,
+        reason="manual_close",
+    )
+
+    if not result:
+        await message.answer("Trade not found or already closed.")
+        return
+
+    emoji = "✅" if result.was_winner else "❌"
+    text = (
+        f"{emoji} <b>Trade #{trade_id} Closed</b>\n\n"
+        f"PnL: <code>${result.pnl_usdt:+.4f}</code> ({result.pnl_pct_leveraged:+.2f}%)\n"
+        f"Balance: ${result.balance_before:.4f} -> ${result.balance_after:.4f}"
+    )
+
+    await message.answer(text, parse_mode="HTML", reply_markup=advisor_keyboard())

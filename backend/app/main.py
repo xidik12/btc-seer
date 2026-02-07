@@ -13,6 +13,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.config import settings
 from app.database import init_db
 from app.api import predictions, signals, news, market, history, influencers, events, quant
+from app.api import advisor as advisor_api
 from app.scheduler.jobs import (
     backfill_historical_prices,
     collect_price_data,
@@ -20,12 +21,19 @@ from app.scheduler.jobs import (
     collect_macro_data,
     collect_onchain_data,
     collect_influencer_tweets,
+    collect_funding_data,
+    collect_dominance_data,
+    save_indicator_snapshot,
     generate_prediction,
     generate_quant_prediction,
     evaluate_predictions,
+    evaluate_quant_predictions,
     classify_news_events,
     evaluate_event_impacts,
     cleanup_old_data,
+    auto_retrain_models,
+    run_advisor_check,
+    run_trade_management,
 )
 
 logging.basicConfig(
@@ -48,17 +56,35 @@ async def lifespan(app: FastAPI):
     logger.info("Database initialized")
 
     # Set up scheduled jobs
+    # Data collection jobs
     scheduler.add_job(collect_price_data, "interval", seconds=60, id="collect_price")
     scheduler.add_job(collect_news_data, "interval", minutes=2, id="collect_news")
     scheduler.add_job(collect_macro_data, "interval", hours=1, id="collect_macro")
     scheduler.add_job(collect_onchain_data, "interval", hours=1, id="collect_onchain")
     scheduler.add_job(collect_influencer_tweets, "interval", minutes=10, id="collect_influencers")
+    scheduler.add_job(collect_funding_data, "interval", minutes=30, id="collect_funding")
+    scheduler.add_job(collect_dominance_data, "interval", hours=1, id="collect_dominance")
+    scheduler.add_job(save_indicator_snapshot, "interval", hours=1, id="save_indicators")
+
+    # Prediction jobs
     scheduler.add_job(generate_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict")
-    scheduler.add_job(evaluate_predictions, "interval", hours=1, id="evaluate")
-    scheduler.add_job(classify_news_events, "interval", minutes=5, id="classify_events")
     scheduler.add_job(generate_quant_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict_quant")
+
+    # Evaluation jobs
+    scheduler.add_job(evaluate_predictions, "interval", hours=1, id="evaluate")
+    scheduler.add_job(evaluate_quant_predictions, "interval", hours=1, id="evaluate_quant")
+    scheduler.add_job(classify_news_events, "interval", minutes=5, id="classify_events")
     scheduler.add_job(evaluate_event_impacts, "interval", minutes=30, id="evaluate_events")
+
+    # Cleanup
     scheduler.add_job(cleanup_old_data, "interval", hours=24, id="cleanup")
+
+    # Auto-retrain: check daily if models need retraining
+    scheduler.add_job(auto_retrain_models, "interval", hours=24, id="auto_retrain")
+
+    # Advisor jobs
+    scheduler.add_job(run_advisor_check, "interval", minutes=settings.prediction_interval_minutes, id="advisor_check")
+    scheduler.add_job(run_trade_management, "interval", minutes=5, id="trade_management")
 
     scheduler.start()
     logger.info("Scheduler started")
@@ -94,15 +120,18 @@ async def lifespan(app: FastAPI):
         # Step 1: Backfill historical data so charts work immediately
         await backfill_historical_prices()
 
-        # Step 2: Collect fresh data
+        # Step 2: Collect fresh data from all sources
         await collect_price_data()
         await collect_news_data()
+        await collect_funding_data()
+        await collect_dominance_data()
 
         # Step 3: Wait briefly for data to settle, then generate first prediction
         await asyncio.sleep(30)
         await generate_prediction()
         await generate_quant_prediction()
         await classify_news_events()
+        await save_indicator_snapshot()
 
     asyncio.create_task(startup_data_pipeline())
 
@@ -145,6 +174,7 @@ app.include_router(history.router)
 app.include_router(influencers.router)
 app.include_router(events.router)
 app.include_router(quant.router)
+app.include_router(advisor_api.router)
 
 
 @app.get("/health")

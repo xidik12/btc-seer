@@ -1,5 +1,7 @@
 import logging
+import re
 from datetime import datetime
+import aiohttp
 import feedparser
 
 from app.collectors.base import BaseCollector
@@ -17,7 +19,11 @@ logger = logging.getLogger(__name__)
 #   4. Crypto Analysts & Educators
 #   5. Developers & Protocol Leaders
 #
-# We monitor their Twitter/X feeds via Nitter RSS (free, no API limits)
+# Since Nitter is dead, we use multiple alternative sources:
+#   - RSS feeds from aggregators that track crypto influencer activity
+#   - Google News filtered for specific influencer names
+#   - CryptoQuant, Santiment, Glassnode social feeds
+#   - Crypto-specific social monitoring RSS feeds
 # ══════════════════════════════════════════════════════════════════════════════
 
 INFLUENCERS = {
@@ -26,7 +32,7 @@ INFLUENCERS = {
         "name": "Elon Musk",
         "role": "Tesla/SpaceX CEO",
         "category": "ceo",
-        "weight": 10,  # Highest impact
+        "weight": 10,
     },
     "saylor": {
         "name": "Michael Saylor",
@@ -104,12 +110,6 @@ INFLUENCERS = {
         "category": "government",
         "weight": 9,
     },
-    "JayClaytonCBDC": {
-        "name": "Jay Clayton",
-        "role": "Former SEC Chair",
-        "category": "regulator",
-        "weight": 5,
-    },
 
     # ── Crypto Analysts & Educators ──
     "maxkeiser": {
@@ -130,24 +130,6 @@ INFLUENCERS = {
         "category": "analyst",
         "weight": 5,
     },
-    "WhalePanda": {
-        "name": "Whale Panda",
-        "role": "Crypto Analyst",
-        "category": "analyst",
-        "weight": 5,
-    },
-    "CryptoCobain": {
-        "name": "Crypto Cobain",
-        "role": "Trader & Analyst",
-        "category": "analyst",
-        "weight": 5,
-    },
-    "TheMoonCarl": {
-        "name": "The Moon",
-        "role": "Crypto YouTuber",
-        "category": "analyst",
-        "weight": 4,
-    },
 
     # ── Developers & Protocol Leaders ──
     "VitalikButerin": {
@@ -156,25 +138,13 @@ INFLUENCERS = {
         "category": "developer",
         "weight": 8,
     },
-    "aeyakovenko": {
-        "name": "Anatoly Yakovenko",
-        "role": "Solana Co-Founder",
-        "category": "developer",
-        "weight": 6,
-    },
-    "gavinandresen": {
-        "name": "Gavin Andresen",
-        "role": "Bitcoin Core Dev",
-        "category": "developer",
-        "weight": 5,
-    },
 
     # ── Economists & Macro Analysts ──
     "PeterSchiff": {
         "name": "Peter Schiff",
         "role": "Economist (BTC Critic)",
-        "category": "economist",
-        "weight": 5,  # Contrarian view
+        "category": "analyst",
+        "weight": 5,
     },
     "LynAldenContact": {
         "name": "Lyn Alden",
@@ -184,105 +154,163 @@ INFLUENCERS = {
     },
 }
 
-# Nitter instances (Twitter mirrors with RSS support)
-# These rotate if one goes down
-NITTER_INSTANCES = [
-    "https://nitter.poast.org",
-    "https://nitter.privacydev.net",
-    "https://nitter.net",
-]
+# Influencer name variants for matching in news titles
+INFLUENCER_NAME_PATTERNS = {
+    "Elon Musk": ("elonmusk", 10, "ceo"),
+    "Musk": ("elonmusk", 10, "ceo"),
+    "Michael Saylor": ("saylor", 9, "ceo"),
+    "Saylor": ("saylor", 9, "ceo"),
+    "MicroStrategy": ("saylor", 9, "ceo"),
+    "Brian Armstrong": ("brian_armstrong", 8, "ceo"),
+    "Coinbase CEO": ("brian_armstrong", 8, "ceo"),
+    "CZ": ("cz_binance", 8, "ceo"),
+    "Changpeng Zhao": ("cz_binance", 8, "ceo"),
+    "Binance CEO": ("cz_binance", 8, "ceo"),
+    "Jack Dorsey": ("jack", 7, "ceo"),
+    "Cathie Wood": ("cathiedwood", 8, "investor"),
+    "ARK Invest": ("cathiedwood", 8, "investor"),
+    "Pompliano": ("APompliano", 7, "investor"),
+    "Raoul Pal": ("RaoulGMI", 7, "investor"),
+    "Barry Silbert": ("BarrySilbert", 6, "investor"),
+    "Novogratz": ("novogratz", 6, "investor"),
+    "Galaxy Digital": ("novogratz", 6, "investor"),
+    "Trump": ("realDonaldTrump", 10, "government"),
+    "Gensler": ("GaryGensler", 9, "regulator"),
+    "SEC Chair": ("GaryGensler", 9, "regulator"),
+    "Federal Reserve": ("federalreserve", 9, "government"),
+    "Jerome Powell": ("federalreserve", 9, "government"),
+    "Powell": ("federalreserve", 9, "government"),
+    "Vitalik": ("VitalikButerin", 8, "developer"),
+    "Buterin": ("VitalikButerin", 8, "developer"),
+    "Peter Schiff": ("PeterSchiff", 5, "analyst"),
+    "Lyn Alden": ("LynAldenContact", 7, "analyst"),
+    "Max Keiser": ("maxkeiser", 6, "analyst"),
+    "Larry Fink": ("blackrock", 9, "investor"),
+    "BlackRock": ("blackrock", 9, "investor"),
+    "Grayscale": ("grayscale", 7, "investor"),
+}
+
+# RSS feeds that aggregate crypto influencer activity / social signals
+SOCIAL_SIGNAL_FEEDS = {
+    # Crypto Twitter aggregators via Google News
+    "influencer_btc": "https://news.google.com/rss/search?q=%22Elon+Musk%22+OR+%22Michael+Saylor%22+OR+%22CZ%22+OR+%22Cathie+Wood%22+bitcoin+OR+crypto&hl=en-US&gl=US&ceid=US:en",
+    "influencer_macro": "https://news.google.com/rss/search?q=%22Trump%22+OR+%22Powell%22+OR+%22Gensler%22+OR+%22SEC%22+bitcoin+OR+crypto+OR+regulation&hl=en-US&gl=US&ceid=US:en",
+    "influencer_dev": "https://news.google.com/rss/search?q=%22Vitalik+Buterin%22+OR+%22Jack+Dorsey%22+crypto+OR+bitcoin+OR+ethereum&hl=en-US&gl=US&ceid=US:en",
+    "influencer_investor": "https://news.google.com/rss/search?q=%22BlackRock%22+OR+%22Larry+Fink%22+OR+%22Grayscale%22+OR+%22ARK+Invest%22+bitcoin+OR+crypto+OR+ETF&hl=en-US&gl=US&ceid=US:en",
+
+    # Crypto social aggregators
+    "whale_alert": "https://news.google.com/rss/search?q=%22whale+alert%22+OR+%22whale+transaction%22+bitcoin+OR+BTC&hl=en-US&gl=US&ceid=US:en",
+
+    # Specific influencer news
+    "saylor_news": "https://news.google.com/rss/search?q=%22MicroStrategy%22+OR+%22Michael+Saylor%22+bitcoin&hl=en-US&gl=US&ceid=US:en",
+}
 
 
 class InfluencerCollector(BaseCollector):
-    """Monitors Twitter/X feeds of influential crypto people via Nitter RSS.
+    """Monitors crypto influencer activity via news RSS feeds.
 
-    Tracks tweets about Bitcoin, crypto, regulations, macro economics from
-    key figures who move markets. Sentiment and influence weighting applied.
+    Since Nitter/Twitter RSS is dead, this collector uses Google News RSS
+    filtered for specific influencer names and crypto keywords. It extracts
+    mentions of key figures from headlines and attributes them properly.
     """
 
-    def __init__(self):
-        super().__init__()
-        self.nitter_instance = NITTER_INSTANCES[0]
-        self.instance_index = 0
-
     async def collect(self) -> dict:
-        """Collect latest tweets from all influential people."""
+        """Collect latest influencer-related news and social signals."""
         all_tweets = []
-        failed_users = []
+        failed_feeds = []
 
-        for username, info in INFLUENCERS.items():
-            tweets = await self._get_user_tweets(username, info)
-            if tweets:
-                all_tweets.extend(tweets)
-            else:
-                failed_users.append(username)
-
-        # Rotate Nitter instance if many failures
-        if len(failed_users) > len(INFLUENCERS) * 0.3:
-            self._rotate_nitter_instance()
-            logger.warning(f"Rotated Nitter instance to {self.nitter_instance}")
-
-        return {
-            "tweets": all_tweets,
-            "count": len(all_tweets),
-            "failed_users": failed_users,
-            "timestamp": self.now().isoformat(),
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; BTCOracle/1.0)",
+            "Accept": "application/rss+xml, application/xml, text/xml, */*",
         }
 
-    async def _get_user_tweets(self, username: str, info: dict) -> list[dict] | None:
-        """Get recent tweets from a user via Nitter RSS."""
-        try:
-            # Nitter RSS format: https://nitter.instance/username/rss
-            rss_url = f"{self.nitter_instance}/{username}/rss"
+        for feed_name, feed_url in SOCIAL_SIGNAL_FEEDS.items():
+            try:
+                session = await self.get_session()
+                async with session.get(
+                    feed_url,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=20),
+                ) as resp:
+                    if resp.status != 200:
+                        logger.debug(f"Social feed {feed_name} returned HTTP {resp.status}")
+                        failed_feeds.append(feed_name)
+                        continue
+                    content = await resp.text()
 
-            session = await self.get_session()
-            async with session.get(rss_url, timeout=10) as resp:
-                if resp.status != 200:
-                    logger.debug(f"Nitter {resp.status} for @{username}")
-                    return None
+                feed = feedparser.parse(content)
 
-                content = await resp.text()
+                for entry in feed.entries[:10]:
+                    title = entry.get("title", "")
+                    link = entry.get("link", "")
+                    published = getattr(entry, "published", "") or getattr(entry, "updated", "")
 
-            # Parse RSS feed
-            feed = feedparser.parse(content)
+                    if not title:
+                        continue
 
-            tweets = []
-            for entry in feed.entries[:5]:  # Last 5 tweets per user
-                # Extract tweet text (Nitter puts it in title)
-                text = entry.get("title", "")
-                link = entry.get("link", "")
-                published = entry.get("published", "")
+                    # Match influencer names in the title
+                    matched_influencer = self._match_influencer(title)
+                    if not matched_influencer:
+                        continue
 
-                # Filter: only tweets mentioning crypto-related keywords
-                crypto_keywords = [
-                    "bitcoin", "btc", "crypto", "ethereum", "eth",
-                    "regulation", "sec", "fed", "inflation", "interest",
-                    "market", "price", "tariff", "economy"
-                ]
-                text_lower = text.lower()
-                is_relevant = any(kw in text_lower for kw in crypto_keywords)
+                    username, info = matched_influencer
 
-                if is_relevant:
-                    tweets.append({
-                        "source": f"twitter_{username}",
+                    all_tweets.append({
+                        "source": f"news_{feed_name}",
                         "influencer": info["name"],
                         "username": username,
                         "role": info["role"],
                         "category": info["category"],
                         "weight": info["weight"],
-                        "text": text,
+                        "text": title,
                         "url": link,
                         "published": published,
-                        "sentiment_score": None,  # Will be scored
+                        "sentiment_score": None,  # Will be scored by job
                     })
 
-            return tweets
+            except Exception as e:
+                logger.debug(f"Error fetching social feed {feed_name}: {e}")
+                failed_feeds.append(feed_name)
 
-        except Exception as e:
-            logger.debug(f"Error fetching @{username}: {e}")
+        return {
+            "tweets": all_tweets,
+            "count": len(all_tweets),
+            "failed_users": failed_feeds,
+            "timestamp": self.now().isoformat(),
+        }
+
+    def _match_influencer(self, title: str) -> tuple | None:
+        """Match an influencer name in a news title.
+
+        Returns (username, info_dict) or None if no match.
+        """
+        title_lower = title.lower()
+
+        # Must be crypto-related
+        crypto_keywords = [
+            "bitcoin", "btc", "crypto", "ethereum", "eth", "blockchain",
+            "regulation", "sec", "fed", "inflation", "interest rate",
+            "tariff", "economy", "etf", "stablecoin", "digital asset",
+            "token", "defi", "mining", "halving", "bull", "bear",
+        ]
+        is_crypto = any(kw in title_lower for kw in crypto_keywords)
+        if not is_crypto:
             return None
 
-    def _rotate_nitter_instance(self):
-        """Rotate to next Nitter instance if current one fails."""
-        self.instance_index = (self.instance_index + 1) % len(NITTER_INSTANCES)
-        self.nitter_instance = NITTER_INSTANCES[self.instance_index]
+        # Try to match influencer names (longest match first to avoid false positives)
+        for name_pattern, (username, weight, category) in sorted(
+            INFLUENCER_NAME_PATTERNS.items(),
+            key=lambda x: len(x[0]),
+            reverse=True,
+        ):
+            if name_pattern.lower() in title_lower:
+                # Get full info from INFLUENCERS dict, or build from pattern
+                info = INFLUENCERS.get(username, {
+                    "name": name_pattern,
+                    "role": category.title(),
+                    "category": category,
+                    "weight": weight,
+                })
+                return (username, info)
+
+        return None

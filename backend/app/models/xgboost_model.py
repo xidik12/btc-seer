@@ -67,6 +67,11 @@ class XGBoostPredictor:
           33-35: news_volume_1h, news_bullish_pct, news_bearish_pct
           36: reddit_sentiment, 37: reddit_volume
           38: fear_greed_value
+          39-46: macro features (dxy, gold, sp500, treasury)
+          47-51: onchain features (hash_rate, mempool, tx_volume, addresses)
+          52-58: event memory features
+          59-61: derivatives (funding_rate, open_interest, mark_index_spread)
+          62-65: dominance (btc_dom, eth_dom, total_mcap, mcap_change)
         """
         n = len(features)
         # Weighted signals: (probability, weight)
@@ -169,6 +174,35 @@ class XGBoostPredictor:
             expected_1h = features[52]
             sig = np.clip(expected_1h, -1, 1)
             signals.append((0.5 + sig * 0.25, 2.0))
+
+        # ── Funding rate (weight 2) — derivatives signal ──
+        # Index 59 = funding_rate
+        if n > 59 and features[59] != 0:
+            fr = features[59]
+            # Extreme positive funding = overleveraged longs → bearish
+            # Extreme negative funding = overleveraged shorts → bullish
+            if fr > 0.001:
+                signals.append((0.35, 2.0))
+            elif fr > 0.0005:
+                signals.append((0.42, 1.5))
+            elif fr < -0.001:
+                signals.append((0.65, 2.0))
+            elif fr < -0.0005:
+                signals.append((0.58, 1.5))
+
+        # ── Mark-index spread (weight 1.5) — premium/discount ──
+        # Index 61 = mark_index_spread
+        if n > 61 and features[61] != 0:
+            spread = features[61]
+            sig = np.clip(spread * 0.1, -1, 1)
+            signals.append((0.5 + sig * 0.15, 1.5))
+
+        # ── BTC dominance change (weight 1) ──
+        # Index 65 = market_cap_change (24h)
+        if n > 65 and features[65] != 0:
+            mcap_chg = features[65]
+            sig = np.clip(mcap_chg * 2, -1, 1)
+            signals.append((0.5 + sig * 0.15, 1.0))
 
         # ── Compute weighted average ──
         if not signals:

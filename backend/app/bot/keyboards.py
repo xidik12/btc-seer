@@ -76,3 +76,37 @@ def back_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="« Back", callback_data="back_to_main")],
     ])
+
+
+def advisor_keyboard() -> InlineKeyboardMarkup:
+    """Advisor menu keyboard."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Portfolio", callback_data="advisor_portfolio"),
+            InlineKeyboardButton(text="Open Trades", callback_data="advisor_trades"),
+        ],
+        [
+            InlineKeyboardButton(text="History", callback_data="advisor_history"),
+            InlineKeyboardButton(text="Risk Settings", callback_data="advisor_risk"),
+        ],
+        [InlineKeyboardButton(text="« Back", callback_data="back_to_main")],
+    ])
+
+
+def trade_action_keyboard(trade_id: int) -> InlineKeyboardMarkup:
+    """Trade action keyboard for new trade plans."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="I Opened This", callback_data=f"trade_opened:{trade_id}"),
+            InlineKeyboardButton(text="Skip", callback_data=f"trade_cancel:{trade_id}"),
+        ],
+    ])
+
+
+def trade_close_keyboard(trade_id: int) -> InlineKeyboardMarkup:
+    """Trade close keyboard for open trades."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Close Trade", callback_data=f"trade_close:{trade_id}"),
+        ],
+    ])

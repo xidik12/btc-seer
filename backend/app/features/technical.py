@@ -105,7 +105,93 @@ class TechnicalFeatures:
         # Mean reversion Z-score: how far price is from 20-day SMA in std devs
         df["zscore_20"] = (df["close"] - df["sma_20"]) / df["close"].rolling(20).std()
 
+        # ── New indicators ──
+
+        # Stochastic RSI
+        rsi_14 = df["rsi"]
+        rsi_min = rsi_14.rolling(14).min()
+        rsi_max = rsi_14.rolling(14).max()
+        stoch_rsi_k = ((rsi_14 - rsi_min) / (rsi_max - rsi_min)) * 100
+        df["stoch_rsi_k"] = stoch_rsi_k.rolling(3).mean()
+        df["stoch_rsi_d"] = df["stoch_rsi_k"].rolling(3).mean()
+
+        # Williams %R
+        high_14 = df["high"].rolling(14).max()
+        low_14 = df["low"].rolling(14).min()
+        df["williams_r"] = ((high_14 - df["close"]) / (high_14 - low_14)) * -100
+
+        # Ichimoku Cloud
+        high_9 = df["high"].rolling(9).max()
+        low_9 = df["low"].rolling(9).min()
+        df["ichimoku_tenkan"] = (high_9 + low_9) / 2
+
+        high_26 = df["high"].rolling(26).max()
+        low_26 = df["low"].rolling(26).min()
+        df["ichimoku_kijun"] = (high_26 + low_26) / 2
+
+        df["ichimoku_senkou_a"] = ((df["ichimoku_tenkan"] + df["ichimoku_kijun"]) / 2).shift(26)
+        high_52 = df["high"].rolling(52).max()
+        low_52 = df["low"].rolling(52).min()
+        df["ichimoku_senkou_b"] = ((high_52 + low_52) / 2).shift(26)
+
+        df["ichimoku_chikou"] = df["close"].shift(-26)
+
+        # Candlestick patterns
+        df["candle_doji"] = (df["body_size"] < 0.1).astype(int)
+
+        body = df["close"] - df["open"]
+        body_abs = body.abs()
+        lower = df[["close", "open"]].min(axis=1) - df["low"]
+        upper = df["high"] - df[["close", "open"]].max(axis=1)
+
+        df["candle_hammer"] = ((lower > body_abs * 2) & (upper < body_abs * 0.5) & (body_abs > 0)).astype(int)
+        df["candle_inverted_hammer"] = ((upper > body_abs * 2) & (lower < body_abs * 0.5) & (body_abs > 0)).astype(int)
+
+        prev_body = body.shift(1)
+        df["candle_bullish_engulfing"] = (
+            (prev_body < 0) & (body > 0) &
+            (df["open"] <= df["close"].shift(1)) &
+            (df["close"] >= df["open"].shift(1))
+        ).astype(int)
+        df["candle_bearish_engulfing"] = (
+            (prev_body > 0) & (body < 0) &
+            (df["open"] >= df["close"].shift(1)) &
+            (df["close"] <= df["open"].shift(1))
+        ).astype(int)
+
+        # Morning/Evening star (3-candle)
+        body_2ago = body.shift(2)
+        body_1ago = body.shift(1)
+        df["candle_morning_star"] = (
+            (body_2ago < 0) &
+            (body_1ago.abs() < body_2ago.abs() * 0.3) &
+            (body > 0) &
+            (df["close"] > (df["open"].shift(2) + df["close"].shift(2)) / 2)
+        ).astype(int)
+        df["candle_evening_star"] = (
+            (body_2ago > 0) &
+            (body_1ago.abs() < body_2ago.abs() * 0.3) &
+            (body < 0) &
+            (df["close"] < (df["open"].shift(2) + df["close"].shift(2)) / 2)
+        ).astype(int)
+
+        # Trend identification
+        df["trend_short"] = TechnicalFeatures._classify_trend(df["close"], 20)
+        df["trend_medium"] = TechnicalFeatures._classify_trend(df["close"], 50)
+        df["trend_long"] = TechnicalFeatures._classify_trend(df["close"], 100)
+
         return df
+
+    @staticmethod
+    def _classify_trend(series: pd.Series, period: int) -> pd.Series:
+        """Classify trend as 1 (up), -1 (down), 0 (sideways)."""
+        slope = series.rolling(period).apply(
+            lambda x: np.polyfit(range(len(x)), x, 1)[0] if len(x) >= 2 else 0,
+            raw=True,
+        )
+        mean_price = series.rolling(period).mean()
+        threshold = mean_price * 0.0002  # 0.02% per candle
+        return slope.apply(lambda s: 1 if s > 0 else (-1 if s < 0 else 0) if not pd.isna(s) else 0)
 
     @staticmethod
     def _adx(df: pd.DataFrame, period: int = 14) -> pd.Series:

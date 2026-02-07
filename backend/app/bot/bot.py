@@ -5,9 +5,9 @@ from aiogram.types import CallbackQuery
 from sqlalchemy import select
 
 from app.config import settings
-from app.database import async_session, BotUser
+from app.database import async_session, BotUser, TradeAdvice, Price
 from app.bot.commands import router as commands_router
-from app.bot.keyboards import main_keyboard, settings_keyboard
+from app.bot.keyboards import main_keyboard, settings_keyboard, advisor_keyboard, trade_close_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +101,141 @@ async def cb_unsubscribe(callback: CallbackQuery):
         parse_mode="HTML",
         reply_markup=main_keyboard(),
     )
+
+
+# ────────────────────────────────────────────────────────────────
+#  ADVISOR CALLBACKS
+# ────────────────────────────────────────────────────────────────
+
+@callback_router.callback_query(lambda c: c.data == "advisor_portfolio")
+async def cb_advisor_portfolio(callback: CallbackQuery):
+    from app.bot.commands import cmd_advisor
+    await callback.answer()
+    await cmd_advisor(callback.message)
+
+
+@callback_router.callback_query(lambda c: c.data == "advisor_trades")
+async def cb_advisor_trades(callback: CallbackQuery):
+    from app.bot.commands import cmd_trades
+    await callback.answer()
+    await cmd_trades(callback.message)
+
+
+@callback_router.callback_query(lambda c: c.data == "advisor_history")
+async def cb_advisor_history(callback: CallbackQuery):
+    from app.bot.commands import cmd_history
+    await callback.answer()
+    await cmd_history(callback.message)
+
+
+@callback_router.callback_query(lambda c: c.data == "advisor_risk")
+async def cb_advisor_risk(callback: CallbackQuery):
+    """Show risk settings for the advisor."""
+    await callback.answer()
+
+    from app.advisor.portfolio import get_or_create_portfolio
+    portfolio = await get_or_create_portfolio(callback.from_user.id)
+
+    text = (
+        "<b>Risk Settings</b>\n\n"
+        f"Max risk per trade: {portfolio.max_risk_per_trade_pct:.1f}%\n"
+        f"Max leverage: {portfolio.max_leverage}x\n"
+        f"Max open trades: {portfolio.max_open_trades}\n"
+        f"Daily max loss: {portfolio.daily_max_loss_pct:.1f}%\n\n"
+        "<i>Risk settings auto-adjust based on performance.\n"
+        "Use /setbalance to update your balance.</i>"
+    )
+
+    await callback.message.edit_text(text, parse_mode="HTML", reply_markup=advisor_keyboard())
+
+
+@callback_router.callback_query(lambda c: c.data and c.data.startswith("trade_opened:"))
+async def cb_trade_opened(callback: CallbackQuery):
+    """User confirms they opened the trade."""
+    trade_id = int(callback.data.split(":")[1])
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(TradeAdvice).where(
+                TradeAdvice.id == trade_id,
+                TradeAdvice.telegram_id == callback.from_user.id,
+            )
+        )
+        trade = result.scalar_one_or_none()
+
+        if trade and trade.status == "pending":
+            from datetime import datetime
+            trade.status = "opened"
+            trade.opened_at = datetime.utcnow()
+            await session.commit()
+
+    await callback.answer("Trade marked as opened!")
+    await callback.message.edit_reply_markup(reply_markup=trade_close_keyboard(trade_id))
+
+
+@callback_router.callback_query(lambda c: c.data and c.data.startswith("trade_cancel:"))
+async def cb_trade_cancel(callback: CallbackQuery):
+    """User skips the trade plan."""
+    trade_id = int(callback.data.split(":")[1])
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(TradeAdvice).where(
+                TradeAdvice.id == trade_id,
+                TradeAdvice.telegram_id == callback.from_user.id,
+            )
+        )
+        trade = result.scalar_one_or_none()
+
+        if trade and trade.status == "pending":
+            trade.status = "cancelled"
+            trade.close_reason = "skipped"
+            await session.commit()
+
+    await callback.answer("Trade skipped.")
+    await callback.message.edit_reply_markup(reply_markup=None)
+
+
+@callback_router.callback_query(lambda c: c.data and c.data.startswith("trade_close:"))
+async def cb_trade_close(callback: CallbackQuery):
+    """User wants to close an open trade at current price."""
+    trade_id = int(callback.data.split(":")[1])
+
+    # Get current price
+    async with async_session() as session:
+        result = await session.execute(
+            select(Price).order_by(Price.timestamp.desc()).limit(1)
+        )
+        price_row = result.scalar_one_or_none()
+
+    if not price_row:
+        await callback.answer("No current price available.")
+        return
+
+    from app.advisor.portfolio import record_trade_result
+
+    result = await record_trade_result(
+        telegram_id=callback.from_user.id,
+        trade_id=trade_id,
+        exit_price=price_row.close,
+        reason="manual_close",
+    )
+
+    if not result:
+        await callback.answer("Trade not found or already closed.")
+        return
+
+    emoji = "✅" if result.was_winner else "❌"
+    text = (
+        f"{emoji} <b>Trade #{trade_id} Closed</b>\n\n"
+        f"Exit: <code>${result.exit_price:,.0f}</code>\n"
+        f"PnL: <code>${result.pnl_usdt:+.4f}</code> ({result.pnl_pct_leveraged:+.2f}%)\n"
+        f"Balance: ${result.balance_before:.4f} -> ${result.balance_after:.4f}"
+    )
+
+    await callback.answer("Trade closed!")
+    await callback.message.answer(text, parse_mode="HTML", reply_markup=advisor_keyboard())
+    await callback.message.edit_reply_markup(reply_markup=None)
 
 
 def create_bot() -> tuple[Bot, Dispatcher]:

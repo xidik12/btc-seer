@@ -14,11 +14,9 @@ export const api = {
   // Predictions
   getCurrentPredictions: () => fetchAPI('/predictions/current'),
   getQuantPrediction: () => fetchAPI('/predictions/quant'),
+  getQuantHistory: (days = 7) => fetchAPI(`/predictions/quant/history?days=${days}`),
   getPredictionHistory: (timeframe = '1h', days = 7) =>
     fetchAPI(`/predictions/history?timeframe=${timeframe}&days=${days}`),
-
-  getQuantPrediction: () => fetchAPI('/predictions/quant'),
-  getQuantHistory: (days = 7) => fetchAPI(`/predictions/quant/history?days=${days}`),
 
   // Signals
   getCurrentSignals: () => fetchAPI('/signals/current'),
@@ -33,6 +31,7 @@ export const api = {
   getCurrentPrice: () => fetchAPI('/market/price'),
   getPriceStats: (timeframe = '1d') => fetchAPI(`/market/stats?timeframe=${timeframe}`),
   getCandles: (hours = 168) => fetchAPI(`/market/candles?hours=${hours}`),
+  getIndicators: () => fetchAPI('/market/indicators'),
   getMacroData: () => fetchAPI('/market/macro'),
   getOnchainData: () => fetchAPI('/market/onchain'),
 

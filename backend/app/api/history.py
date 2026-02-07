@@ -82,12 +82,19 @@ async def get_accuracy(
         for day, d in sorted(daily.items())
     ]
 
+    overall_pct = round(correct / total * 100, 1)
+
     return {
         "days": days,
         "total": total,
         "correct": correct,
-        "accuracy_pct": round(correct / total * 100, 1),
+        "accuracy_pct": overall_pct,
+        "overall": overall_pct,
+        "total_predictions": total,
         "by_timeframe": by_timeframe,
         "by_confidence": by_confidence,
-        "daily_trend": daily_trend,
+        "daily_trend": [
+            {**d, "accuracy": d["accuracy_pct"]}
+            for d in daily_trend
+        ],
     }

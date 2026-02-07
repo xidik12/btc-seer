@@ -206,6 +206,82 @@ class QuantPrediction(Base):
     was_correct_24h: Mapped[bool] = mapped_column(Boolean, nullable=True)
 
 
+class FundingRate(Base):
+    """Persists Binance perpetual funding rates and open interest."""
+    __tablename__ = "funding_rates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    funding_rate: Mapped[float] = mapped_column(Float, nullable=True)
+    mark_price: Mapped[float] = mapped_column(Float, nullable=True)
+    index_price: Mapped[float] = mapped_column(Float, nullable=True)
+    next_funding_time: Mapped[int] = mapped_column(Integer, nullable=True)  # Unix ms
+    open_interest: Mapped[float] = mapped_column(Float, nullable=True)  # BTC
+
+
+class BtcDominance(Base):
+    """Persists BTC dominance and global crypto market data."""
+    __tablename__ = "btc_dominance"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    btc_dominance: Mapped[float] = mapped_column(Float, nullable=True)
+    eth_dominance: Mapped[float] = mapped_column(Float, nullable=True)
+    total_market_cap: Mapped[float] = mapped_column(Float, nullable=True)  # USD
+    total_volume: Mapped[float] = mapped_column(Float, nullable=True)  # USD 24h
+    market_cap_change_24h: Mapped[float] = mapped_column(Float, nullable=True)  # %
+
+
+class IndicatorSnapshot(Base):
+    """Hourly snapshot of all computed technical indicators."""
+    __tablename__ = "indicator_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    price: Mapped[float] = mapped_column(Float)
+    indicators: Mapped[dict] = mapped_column(JSON)  # Full indicator dict
+
+
+class AlertLog(Base):
+    """Logs every alert sent to users for audit and debugging."""
+    __tablename__ = "alert_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    telegram_id: Mapped[int] = mapped_column(Integer, index=True)
+    alert_type: Mapped[str] = mapped_column(String(30))  # hourly, breaking
+    status: Mapped[str] = mapped_column(String(20))  # sent, failed
+    error: Mapped[str] = mapped_column(Text, nullable=True)
+
+
+class ModelVersion(Base):
+    """Tracks trained model versions, training metrics, and weights paths."""
+    __tablename__ = "model_versions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    model_type: Mapped[str] = mapped_column(String(30))  # tft, lstm, xgboost
+    version: Mapped[int] = mapped_column(Integer)
+
+    # Training metrics
+    train_accuracy: Mapped[float] = mapped_column(Float, nullable=True)
+    val_accuracy: Mapped[float] = mapped_column(Float, nullable=True)
+    test_accuracy: Mapped[float] = mapped_column(Float, nullable=True)
+    train_loss: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # Dataset info
+    train_samples: Mapped[int] = mapped_column(Integer, nullable=True)
+    feature_count: Mapped[int] = mapped_column(Integer, nullable=True)
+
+    # Weights path
+    weights_path: Mapped[str] = mapped_column(String(200))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Post-deployment accuracy (updated after running in prod)
+    live_accuracy_1h: Mapped[float] = mapped_column(Float, nullable=True)
+    live_accuracy_24h: Mapped[float] = mapped_column(Float, nullable=True)
+
+
 class BotUser(Base):
     __tablename__ = "bot_users"
 
@@ -215,6 +291,119 @@ class BotUser(Base):
     subscribed: Mapped[bool] = mapped_column(Boolean, default=True)
     alert_interval: Mapped[str] = mapped_column(String(10), default="1h")  # 1h, 4h, 24h
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class PortfolioState(Base):
+    """Tracks user portfolio balance, risk settings, and trading stats."""
+    __tablename__ = "portfolio_states"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+
+    # Balance
+    balance_usdt: Mapped[float] = mapped_column(Float, default=10.0)
+    initial_balance: Mapped[float] = mapped_column(Float, default=10.0)
+    total_pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    total_pnl_pct: Mapped[float] = mapped_column(Float, default=0.0)
+
+    # Risk settings
+    max_risk_per_trade_pct: Mapped[float] = mapped_column(Float, default=10.0)
+    max_leverage: Mapped[int] = mapped_column(Integer, default=20)
+    max_open_trades: Mapped[int] = mapped_column(Integer, default=2)
+    daily_max_loss_pct: Mapped[float] = mapped_column(Float, default=30.0)
+
+    # Stats
+    consecutive_losses: Mapped[int] = mapped_column(Integer, default=0)
+    consecutive_wins: Mapped[int] = mapped_column(Integer, default=0)
+    total_trades: Mapped[int] = mapped_column(Integer, default=0)
+    winning_trades: Mapped[int] = mapped_column(Integer, default=0)
+    losing_trades: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Daily loss tracking & cooldown
+    daily_loss_today: Mapped[float] = mapped_column(Float, default=0.0)
+    daily_loss_date: Mapped[str] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD
+    cooldown_until: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class TradeAdvice(Base):
+    """A complete trade plan generated by the advisor."""
+    __tablename__ = "trade_advices"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(Integer, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+
+    # Plan
+    direction: Mapped[str] = mapped_column(String(10))  # LONG / SHORT
+    entry_price: Mapped[float] = mapped_column(Float)
+    entry_zone_low: Mapped[float] = mapped_column(Float, nullable=True)
+    entry_zone_high: Mapped[float] = mapped_column(Float, nullable=True)
+    stop_loss: Mapped[float] = mapped_column(Float)
+    take_profit_1: Mapped[float] = mapped_column(Float)
+    take_profit_2: Mapped[float] = mapped_column(Float, nullable=True)
+    take_profit_3: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # Sizing
+    leverage: Mapped[int] = mapped_column(Integer)
+    position_size_usdt: Mapped[float] = mapped_column(Float)
+    position_size_pct: Mapped[float] = mapped_column(Float)
+    risk_amount_usdt: Mapped[float] = mapped_column(Float)
+
+    # Metrics
+    risk_reward_ratio: Mapped[float] = mapped_column(Float)
+    confidence: Mapped[float] = mapped_column(Float)
+    risk_rating: Mapped[int] = mapped_column(Integer, nullable=True)
+
+    # Context
+    reasoning: Mapped[str] = mapped_column(Text, nullable=True)
+    models_agreeing: Mapped[str] = mapped_column(Text, nullable=True)
+    urgency: Mapped[str] = mapped_column(String(30), default="enter_now")  # enter_now, limit_order, wait_for_pullback
+    timeframe: Mapped[str] = mapped_column(String(10), default="1h")
+
+    # References
+    prediction_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    signal_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    quant_prediction_id: Mapped[int] = mapped_column(Integer, nullable=True)
+
+    # Lifecycle
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, opened, partial_tp, closed, cancelled, expired
+    opened_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    closed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    close_reason: Mapped[str] = mapped_column(String(50), nullable=True)
+
+    # Alert flags
+    breakeven_alert_sent: Mapped[bool] = mapped_column(Boolean, default=False)
+    partial_tp_alert_sent: Mapped[bool] = mapped_column(Boolean, default=False)
+    close_alert_sent: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class TradeResult(Base):
+    """Final result of a completed trade."""
+    __tablename__ = "trade_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    trade_advice_id: Mapped[int] = mapped_column(Integer, index=True)
+    telegram_id: Mapped[int] = mapped_column(Integer, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+    direction: Mapped[str] = mapped_column(String(10))
+    entry_price: Mapped[float] = mapped_column(Float)
+    exit_price: Mapped[float] = mapped_column(Float)
+    leverage: Mapped[int] = mapped_column(Integer)
+    position_size_usdt: Mapped[float] = mapped_column(Float)
+
+    pnl_usdt: Mapped[float] = mapped_column(Float)
+    pnl_pct: Mapped[float] = mapped_column(Float)
+    pnl_pct_leveraged: Mapped[float] = mapped_column(Float)
+    was_winner: Mapped[bool] = mapped_column(Boolean)
+
+    close_reason: Mapped[str] = mapped_column(String(50), nullable=True)
+    duration_minutes: Mapped[int] = mapped_column(Integer, nullable=True)
+    balance_before: Mapped[float] = mapped_column(Float, nullable=True)
+    balance_after: Mapped[float] = mapped_column(Float, nullable=True)
 
 
 async def init_db():
