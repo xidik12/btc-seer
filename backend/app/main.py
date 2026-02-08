@@ -4,10 +4,12 @@ from pathlib import Path
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import settings
@@ -211,29 +213,29 @@ _local_dist = Path(__file__).parent.parent.parent / "webapp" / "dist"
 _docker_dist = Path("/webapp/dist")
 WEBAPP_DIST = _local_dist if _local_dist.exists() else _docker_dist
 
+# Serve webapp
+@app.get("/")
+async def serve_root():
+    """Serve the React SPA root or API info."""
+    if WEBAPP_DIST.exists():
+        return FileResponse(WEBAPP_DIST / "index.html")
+    return {
+        "name": "BTC Oracle",
+        "version": "1.0.0",
+        "status": "running",
+        "description": "Bitcoin Price Prediction System",
+    }
+
+
 if WEBAPP_DIST.exists():
+    # Mount static assets
     app.mount("/assets", StaticFiles(directory=WEBAPP_DIST / "assets"), name="static")
 
-    @app.get("/{full_path:path}")
-    async def serve_spa(request: Request, full_path: str):
-        """Serve the React SPA — all non-API routes return index.html."""
-        # Skip API and health routes (handled by routers above)
-        if full_path.startswith("api/") or full_path == "health":
-            # This should never be reached if routers are registered correctly,
-            # but return 404 just in case
-            from fastapi import HTTPException
-            raise HTTPException(status_code=404, detail="API route not found")
-
-        file_path = WEBAPP_DIST / full_path
-        if full_path and file_path.exists() and file_path.is_file():
-            return FileResponse(file_path)
-        return FileResponse(WEBAPP_DIST / "index.html")
-else:
-    @app.get("/")
-    async def root():
-        return {
-            "name": "BTC Oracle",
-            "version": "1.0.0",
-            "status": "running",
-            "description": "Bitcoin Price Prediction System",
-        }
+    # Handle 404s by serving the SPA (for client-side routing)
+    @app.exception_handler(StarletteHTTPException)
+    async def spa_404_handler(request: Request, exc: StarletteHTTPException):
+        """Serve SPA for 404s on non-API routes."""
+        if exc.status_code == 404 and not request.url.path.startswith("/api"):
+            return FileResponse(WEBAPP_DIST / "index.html")
+        # Re-raise the exception for API routes
+        raise exc
