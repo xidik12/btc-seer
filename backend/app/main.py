@@ -217,6 +217,13 @@ if WEBAPP_DIST.exists():
     @app.get("/{full_path:path}")
     async def serve_spa(request: Request, full_path: str):
         """Serve the React SPA — all non-API routes return index.html."""
+        # Skip API and health routes (handled by routers above)
+        if full_path.startswith("api/") or full_path == "health":
+            # This should never be reached if routers are registered correctly,
+            # but return 404 just in case
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="API route not found")
+
         file_path = WEBAPP_DIST / full_path
         if full_path and file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
