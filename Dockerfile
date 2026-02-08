@@ -29,8 +29,8 @@ COPY backend/app/models/weights/ app/models/weights/
 # Copy built frontend
 COPY --from=frontend-build /webapp/dist /webapp/dist
 
-# Create data directories
-RUN mkdir -p ml/data /data
+# Create data directories (Railway volume mounts at /data)
+RUN mkdir -p ml/data /data /data/weights
 
 # Railway provides PORT env var
 ENV PORT=8000

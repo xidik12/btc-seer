@@ -391,7 +391,10 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
     macro = result.scalar_one_or_none()
 
     if not macro:
-        return {"macro": None, "message": "No macro data available"}
+        return {
+            "dxy": None, "gold": None, "sp500": None, "treasury_10y": None,
+            "fear_greed_index": None, "fear_greed_label": None, "timestamp": None,
+        }
 
     # Get macro data from ~1 hour ago for change calculation
     prev_result = await session.execute(

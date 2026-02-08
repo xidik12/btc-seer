@@ -264,20 +264,32 @@ async def collect_macro_data():
         macro_data = await macro_collector.collect()
         fear_greed = await fear_greed_collector.collect()
 
+        dxy = macro_data.get("dxy", {}).get("price") if isinstance(macro_data.get("dxy"), dict) else None
+        gold = macro_data.get("gold", {}).get("price") if isinstance(macro_data.get("gold"), dict) else None
+        sp500 = macro_data.get("sp500", {}).get("price") if isinstance(macro_data.get("sp500"), dict) else None
+        treasury_10y = macro_data.get("treasury_10y", {}).get("price") if isinstance(macro_data.get("treasury_10y"), dict) else None
+        fear_greed_index = fear_greed.get("value")
+        fear_greed_label = fear_greed.get("label")
+
+        # Don't save a row where ALL values are None
+        if dxy is None and gold is None and sp500 is None and treasury_10y is None and fear_greed_index is None:
+            logger.warning("Macro collection returned all None values, skipping DB save")
+            return
+
         async with async_session() as session:
             macro = MacroData(
                 timestamp=datetime.utcnow(),
-                dxy=macro_data.get("dxy", {}).get("price") if isinstance(macro_data.get("dxy"), dict) else None,
-                gold=macro_data.get("gold", {}).get("price") if isinstance(macro_data.get("gold"), dict) else None,
-                sp500=macro_data.get("sp500", {}).get("price") if isinstance(macro_data.get("sp500"), dict) else None,
-                treasury_10y=macro_data.get("treasury_10y", {}).get("price") if isinstance(macro_data.get("treasury_10y"), dict) else None,
-                fear_greed_index=fear_greed.get("value"),
-                fear_greed_label=fear_greed.get("label"),
+                dxy=dxy,
+                gold=gold,
+                sp500=sp500,
+                treasury_10y=treasury_10y,
+                fear_greed_index=fear_greed_index,
+                fear_greed_label=fear_greed_label,
             )
             session.add(macro)
             await session.commit()
 
-        logger.info("Macro data collected")
+        logger.info(f"Macro data collected: DXY={dxy}, Gold={gold}, SP500={sp500}, 10Y={treasury_10y}")
 
     except Exception as e:
         logger.error(f"Macro collection error: {e}")

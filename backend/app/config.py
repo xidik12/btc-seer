@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     port: int = 8000
     debug: bool = False
 
-    # ML
-    model_dir: str = "app/models/weights"
+    # ML — /data/weights persists on Railway volume, fallback to bundled weights
+    model_dir: str = "/data/weights"
     prediction_interval_minutes: int = 30  # Predict every 30 min for faster history buildup
 
     # Binance

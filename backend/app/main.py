@@ -55,6 +55,19 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("Database initialized")
 
+    # Ensure model weights dir exists on persistent volume
+    # Copy bundled weights if persistent dir is empty
+    import shutil
+    weights_dir = Path(settings.model_dir)
+    bundled_weights = Path("app/models/weights")
+    weights_dir.mkdir(parents=True, exist_ok=True)
+    if bundled_weights.exists() and not any(weights_dir.glob("*.pt")):
+        for f in bundled_weights.iterdir():
+            if f.is_file():
+                shutil.copy2(f, weights_dir / f.name)
+                logger.info(f"Copied bundled weight: {f.name} -> {weights_dir}")
+    logger.info(f"Model weights dir: {weights_dir}")
+
     # Set up scheduled jobs
     # Data collection jobs
     scheduler.add_job(collect_price_data, "interval", seconds=60, id="collect_price")
@@ -116,22 +129,32 @@ async def lifespan(app: FastAPI):
         logger.warning("TELEGRAM_BOT_TOKEN not set — bot disabled")
 
     # Backfill historical prices from Binance, then collect fresh data + predict
+    async def _safe_run(coro, name):
+        """Run a coroutine safely — log errors but don't kill the pipeline."""
+        try:
+            await coro
+            logger.info(f"Startup: {name} completed")
+        except Exception as e:
+            logger.error(f"Startup: {name} failed: {e}", exc_info=True)
+
     async def startup_data_pipeline():
         # Step 1: Backfill historical data so charts work immediately
-        await backfill_historical_prices()
+        await _safe_run(backfill_historical_prices(), "backfill_historical_prices")
 
-        # Step 2: Collect fresh data from all sources
-        await collect_price_data()
-        await collect_news_data()
-        await collect_funding_data()
-        await collect_dominance_data()
+        # Step 2: Collect fresh data from all sources (each isolated)
+        await _safe_run(collect_price_data(), "collect_price_data")
+        await _safe_run(collect_news_data(), "collect_news_data")
+        await _safe_run(collect_macro_data(), "collect_macro_data")
+        await _safe_run(collect_influencer_tweets(), "collect_influencer_tweets")
+        await _safe_run(collect_funding_data(), "collect_funding_data")
+        await _safe_run(collect_dominance_data(), "collect_dominance_data")
 
         # Step 3: Wait briefly for data to settle, then generate first prediction
         await asyncio.sleep(30)
-        await generate_prediction()
-        await generate_quant_prediction()
-        await classify_news_events()
-        await save_indicator_snapshot()
+        await _safe_run(generate_prediction(), "generate_prediction")
+        await _safe_run(generate_quant_prediction(), "generate_quant_prediction")
+        await _safe_run(classify_news_events(), "classify_news_events")
+        await _safe_run(save_indicator_snapshot(), "save_indicator_snapshot")
 
     asyncio.create_task(startup_data_pipeline())
 
