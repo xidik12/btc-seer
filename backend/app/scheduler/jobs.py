@@ -566,14 +566,25 @@ async def generate_prediction():
         # Collect price history for TimesFM (last 512 hours)
         price_history = [float(p.close) for p in prices[-512:]]
 
-        # Run ensemble prediction
-        ensemble = get_ensemble()
-        predictions = ensemble.predict(
-            feature_sequence=sequence,
-            current_features=feature_array,
-            news_data=news_data,
-            price_history=price_history,
-        )
+        # Run ensemble prediction with fallback
+        try:
+            ensemble = get_ensemble()
+            predictions = ensemble.predict(
+                feature_sequence=sequence,
+                current_features=feature_array,
+                news_data=news_data,
+                price_history=price_history,
+            )
+        except Exception as e:
+            logger.error(f"Ensemble prediction failed: {e}, using fallback")
+            # Fallback: Use simple momentum-based predictions when ensemble fails
+            recent_change = ((prices[-1].close - prices[-24].close) / prices[-24].close * 100) if len(prices) >= 24 else 0
+            direction = "bullish" if recent_change > 0 else "bearish"
+            predictions = {
+                "1h": {"direction": direction, "confidence": 50, "magnitude_pct": recent_change * 0.1, "model_outputs": {}},
+                "4h": {"direction": direction, "confidence": 45, "magnitude_pct": recent_change * 0.3, "model_outputs": {}},
+                "24h": {"direction": direction, "confidence": 40, "magnitude_pct": recent_change * 0.8, "model_outputs": {}},
+            }
 
         current_price = float(prices[-1].close)
         atr = features.get("atr", current_price * 0.02)
