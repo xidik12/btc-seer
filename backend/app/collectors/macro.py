@@ -7,69 +7,95 @@ logger = logging.getLogger(__name__)
 
 
 class MacroCollector(BaseCollector):
-    """Collects macro market data: DXY, Gold, S&P 500, Treasury yields via yfinance."""
+    """Collects macro market data: DXY, Gold, S&P 500, Treasury yields via Yahoo Finance API."""
 
-    # Primary and fallback symbols for each metric
-    ALT_SYMBOLS = {
-        "dxy": ["DX-Y.NYB", "UUP"],
-        "gold": ["GC=F", "GLD"],
-        "sp500": ["ES=F", "^GSPC", "SPY"],
-        "treasury_10y": ["^TNX", "TLT"],
+    # Yahoo Finance symbols for macro indicators
+    SYMBOLS = {
+        "dxy": "DX-Y.NYB",      # US Dollar Index
+        "gold": "GC=F",         # Gold Futures
+        "sp500": "^GSPC",       # S&P 500 Index
+        "treasury_10y": "^TNX", # 10-Year Treasury Yield
     }
 
-    # Cache last successful values so we never return all-None
+    # Fallback symbols if primary fails
+    FALLBACK_SYMBOLS = {
+        "dxy": "UUP",
+        "gold": "GLD",
+        "sp500": "SPY",
+        "treasury_10y": "TLT",
+    }
+
+    # Cache last successful values
     _last_good: dict = {}
 
     async def collect(self) -> dict:
-        """Collect macro data using yfinance (sync, run in executor)."""
-        import asyncio
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self._collect_sync)
+        """Collect macro data using Yahoo Finance quote API."""
+        result = {
+            "dxy": None,
+            "gold": None,
+            "sp500": None,
+            "treasury_10y": None,
+            "timestamp": self.now().isoformat(),
+        }
 
-    def _collect_sync(self) -> dict:
-        """Synchronous collection using yfinance with fallback symbols."""
+        # Try to fetch all symbols in one request
+        symbols_list = list(self.SYMBOLS.values())
+        quotes = await self._fetch_quotes(symbols_list)
+
+        # Map responses to our keys
+        for key, symbol in self.SYMBOLS.items():
+            if symbol in quotes:
+                result[key] = quotes[symbol]
+                MacroCollector._last_good[key] = result[key]
+            elif key in self.FALLBACK_SYMBOLS:
+                # Try fallback symbol
+                fallback = self.FALLBACK_SYMBOLS[key]
+                fallback_quotes = await self._fetch_quotes([fallback])
+                if fallback in fallback_quotes:
+                    result[key] = fallback_quotes[fallback]
+                    MacroCollector._last_good[key] = result[key]
+
+        # Use cached values for any that failed
+        for key in result.keys():
+            if result[key] is None and key in MacroCollector._last_good:
+                result[key] = MacroCollector._last_good[key]
+                logger.info(f"Using cached value for {key}")
+
+        return result
+
+    async def _fetch_quotes(self, symbols: list) -> dict:
+        """Fetch current quotes from Yahoo Finance API."""
         try:
-            import yfinance as yf
+            symbols_param = ",".join(symbols)
+            url = f"https://query1.finance.yahoo.com/v7/finance/quote?symbols={symbols_param}"
 
-            result = {
-                "dxy": None,
-                "gold": None,
-                "sp500": None,
-                "treasury_10y": None,
-                "timestamp": self.now().isoformat(),
-            }
+            data = await self.fetch_json(url)
 
-            for key, symbols in self.ALT_SYMBOLS.items():
-                for symbol in symbols:
-                    try:
-                        ticker = yf.Ticker(symbol)
-                        # Use 5d period for reliability on weekends/after-hours
-                        hist = ticker.history(period="5d", interval="1h")
-                        if not hist.empty and len(hist) >= 2:
-                            result[key] = {
-                                "price": float(hist["Close"].iloc[-1]),
-                                "change_1h": float(
-                                    (hist["Close"].iloc[-1] - hist["Close"].iloc[-2])
-                                    / hist["Close"].iloc[-2] * 100
-                                ),
-                                "change_24h": float(
-                                    (hist["Close"].iloc[-1] - hist["Close"].iloc[0])
-                                    / hist["Close"].iloc[0] * 100
-                                ),
-                            }
-                            MacroCollector._last_good[key] = result[key]
-                            break  # Got data, skip fallback symbols
-                    except Exception as e:
-                        logger.warning(f"Error fetching {key} via {symbol}: {e}")
-                        continue
+            if not data or "quoteResponse" not in data:
+                return {}
 
-                # If all symbols failed, use cached value
-                if result[key] is None and key in MacroCollector._last_good:
-                    result[key] = MacroCollector._last_good[key]
-                    logger.info(f"Using cached value for {key}")
+            quotes = {}
+            for quote in data["quoteResponse"].get("result", []):
+                symbol = quote.get("symbol")
+                if not symbol:
+                    continue
 
-            return result
+                price = quote.get("regularMarketPrice")
+                prev_close = quote.get("regularMarketPreviousClose")
 
-        except ImportError:
-            logger.error("yfinance not installed")
-            return {"error": "yfinance not installed", "timestamp": self.now().isoformat()}
+                if price is not None:
+                    change_pct = 0
+                    if prev_close and prev_close > 0:
+                        change_pct = ((price - prev_close) / prev_close) * 100
+
+                    quotes[symbol] = {
+                        "price": float(price),
+                        "change_1h": round(change_pct, 4),  # Using daily change as approximation
+                        "change_24h": round(change_pct, 4),
+                    }
+
+            return quotes
+
+        except Exception as e:
+            logger.error(f"Error fetching quotes: {e}")
+            return {}

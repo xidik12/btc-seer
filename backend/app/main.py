@@ -58,16 +58,27 @@ async def lifespan(app: FastAPI):
     logger.info("Database initialized")
 
     # Ensure model weights dir exists on persistent volume
-    # Copy bundled weights if persistent dir is empty
     import shutil
+    import os
     weights_dir = Path(settings.model_dir)
     bundled_weights = Path("app/models/weights")
     weights_dir.mkdir(parents=True, exist_ok=True)
+
+    # Check if we should force retrain (env var FORCE_RETRAIN=1)
+    force_retrain = os.getenv("FORCE_RETRAIN", "0") == "1"
+    if force_retrain:
+        logger.warning("FORCE_RETRAIN=1: Deleting existing model weights")
+        for f in weights_dir.glob("*.pt"):
+            f.unlink()
+            logger.info(f"Deleted incompatible weight: {f.name}")
+
+    # Copy bundled weights if persistent dir is empty
     if bundled_weights.exists() and not any(weights_dir.glob("*.pt")):
         for f in bundled_weights.iterdir():
             if f.is_file():
                 shutil.copy2(f, weights_dir / f.name)
                 logger.info(f"Copied bundled weight: {f.name} -> {weights_dir}")
+
     logger.info(f"Model weights dir: {weights_dir}")
 
     # Set up scheduled jobs
