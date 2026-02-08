@@ -31,6 +31,8 @@ class FeatureBuilder:
         "news_sentiment_1h", "news_sentiment_4h", "news_sentiment_24h",
         "news_volume_1h", "news_bullish_pct", "news_bearish_pct",
         "reddit_sentiment", "reddit_volume",
+        "social_sentiment_1h", "social_volume_1h",  # Influencer social media
+        "social_bullish_pct", "social_bearish_pct",
         "fear_greed_value",
     ]
 
@@ -83,6 +85,7 @@ class FeatureBuilder:
         price_df: pd.DataFrame,
         news_data: list[dict] = None,
         reddit_data: list[dict] = None,
+        influencer_data: list[dict] = None,  # Social media from influencers
         macro_data: dict = None,
         onchain_data: dict = None,
         fear_greed: dict = None,
@@ -90,7 +93,7 @@ class FeatureBuilder:
         funding_data: dict = None,
         dominance_data: dict = None,
     ) -> dict:
-        """Build complete feature vector from all data sources."""
+        """Build complete feature vector from all data sources (including social media)."""
 
         features = {}
 
@@ -106,8 +109,8 @@ class FeatureBuilder:
             features["current_price"] = float(latest["close"])
             features["current_volume"] = float(latest["volume"])
 
-        # Sentiment features
-        features.update(self._build_sentiment_features(news_data, reddit_data))
+        # Sentiment features (news + reddit + influencer social media)
+        features.update(self._build_sentiment_features(news_data, reddit_data, influencer_data))
 
         # Macro features
         if macro_data:
@@ -161,8 +164,9 @@ class FeatureBuilder:
         self,
         news_data: list[dict] = None,
         reddit_data: list[dict] = None,
+        influencer_data: list[dict] = None,
     ) -> dict:
-        """Build sentiment features from news and social data."""
+        """Build sentiment features from news, reddit, and influencer social media."""
         result = {feat: 0.0 for feat in self.SENTIMENT_FEATURES}
 
         if news_data:
@@ -185,6 +189,17 @@ class FeatureBuilder:
                 agg = self.sentiment_analyzer.get_aggregate_sentiment(titles)
                 result["reddit_sentiment"] = agg["mean_score"]
                 result["reddit_volume"] = float(agg["volume"])
+
+        # Influencer social media (tweets/posts from key crypto figures)
+        if influencer_data:
+            texts = [t.get("text", "") for t in influencer_data if t.get("text")]
+
+            if texts:
+                agg = self.sentiment_analyzer.get_aggregate_sentiment(texts)
+                result["social_sentiment_1h"] = agg["mean_score"]
+                result["social_volume_1h"] = float(agg["volume"])
+                result["social_bullish_pct"] = agg["bullish_pct"]
+                result["social_bearish_pct"] = agg["bearish_pct"]
 
         return result
 

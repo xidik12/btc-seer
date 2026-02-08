@@ -105,8 +105,8 @@ async def lifespan(app: FastAPI):
     # Cleanup
     scheduler.add_job(cleanup_old_data, "interval", hours=24, id="cleanup")
 
-    # Auto-retrain: check daily if models need retraining
-    scheduler.add_job(auto_retrain_models, "interval", hours=24, id="auto_retrain")
+    # Auto-retrain: check every 6 hours if models need retraining (more frequent continuous learning)
+    scheduler.add_job(auto_retrain_models, "interval", hours=6, id="auto_retrain")
 
     # Advisor jobs
     scheduler.add_job(run_advisor_check, "interval", minutes=settings.prediction_interval_minutes, id="advisor_check")

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     telegram_webapp_url: str = ""
 
     # API Keys
+    alpha_vantage_api_key: str = ""  # Free key from https://www.alphavantage.co/support/#api-key
     cryptopanic_api_key: str = ""
     reddit_client_id: str = ""
     reddit_client_secret: str = ""

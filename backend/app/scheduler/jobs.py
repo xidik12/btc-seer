@@ -533,11 +533,35 @@ async def generate_prediction():
         except Exception as e:
             logger.debug(f"Dominance data query error: {e}")
 
-        # Build features (including event memory, funding, dominance)
+        # Get latest influencer social media data
+        influencer_data = None
+        try:
+            async with async_session() as sess:
+                result = await sess.execute(
+                    select(InfluencerTweet)
+                    .where(InfluencerTweet.timestamp >= datetime.utcnow() - timedelta(hours=1))
+                    .order_by(desc(InfluencerTweet.timestamp))
+                    .limit(50)
+                )
+                tweets = result.scalars().all()
+                if tweets:
+                    influencer_data = [
+                        {
+                            "text": t.text,
+                            "influencer": t.influencer,
+                            "category": t.category,
+                        }
+                        for t in tweets
+                    ]
+        except Exception as e:
+            logger.debug(f"Influencer data query error: {e}")
+
+        # Build features (including social media, event memory, funding, dominance)
         news_data = [{"title": n.title, "source": n.source} for n in news]
         features = feature_builder.build_features(
             price_df=price_df,
             news_data=news_data,
+            influencer_data=influencer_data,
             event_memory=event_memory_data if event_memory_data else None,
             funding_data=funding_data,
             dominance_data=dominance_data,
@@ -1294,12 +1318,13 @@ async def cleanup_old_data():
 
 
 async def auto_retrain_models():
-    """Auto-retrain models when accuracy degrades or enough new data exists (runs daily).
+    """Auto-retrain models when accuracy degrades or enough new data exists (runs every 6h).
 
-    Triggers:
-    - Accuracy dropped below 52%
-    - More than 24 hours since last training
+    Triggers (more aggressive for continuous learning):
+    - Accuracy dropped below 55% (was 52%)
+    - More than 12 hours since last training (was 24h)
     - Never trained but have enough data (168+ feature snapshots)
+    - Significant new data: 50+ new evaluated predictions since last train
     """
     try:
         from app.models.trainer import ModelTrainer
