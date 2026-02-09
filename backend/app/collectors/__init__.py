@@ -6,6 +6,8 @@ from app.collectors.onchain import OnChainCollector
 from app.collectors.reddit import RedditCollector
 from app.collectors.binance_news import BinanceNewsCollector
 from app.collectors.influencers import InfluencerCollector
+from app.collectors.coins import CoinCollector
+from app.collectors.coin_search import CoinSearchService
 
 __all__ = [
     "MarketCollector",
@@ -16,4 +18,6 @@ __all__ = [
     "RedditCollector",
     "BinanceNewsCollector",
     "InfluencerCollector",
+    "CoinCollector",
+    "CoinSearchService",
 ]

@@ -489,6 +489,49 @@ class FeatureImportanceLog(Base):
     top_features: Mapped[dict] = mapped_column(JSON, nullable=True)
 
 
+class CoinInfo(Base):
+    """Tracked cryptocurrency coins (BTC, ETH, SOL, XRP, etc.)."""
+    __tablename__ = "coin_info"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    coin_id: Mapped[str] = mapped_column(String(100), unique=True, index=True)  # "ethereum", "solana"
+    symbol: Mapped[str] = mapped_column(String(20))  # "ETH", "SOL"
+    name: Mapped[str] = mapped_column(String(200))  # "Ethereum", "Solana"
+    image_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    coingecko_id: Mapped[str] = mapped_column(String(100))
+    is_tracked: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class CoinPrice(Base):
+    """Price snapshots for tracked coins."""
+    __tablename__ = "coin_prices"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    coin_id: Mapped[str] = mapped_column(String(100), index=True)
+    price_usd: Mapped[float] = mapped_column(Float)
+    market_cap: Mapped[float] = mapped_column(Float, nullable=True)
+    volume_24h: Mapped[float] = mapped_column(Float, nullable=True)
+    change_1h: Mapped[float] = mapped_column(Float, nullable=True)
+    change_24h: Mapped[float] = mapped_column(Float, nullable=True)
+    change_7d: Mapped[float] = mapped_column(Float, nullable=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+
+
+class CoinReport(Base):
+    """Cached reports for coin contract address lookups."""
+    __tablename__ = "coin_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    address: Mapped[str] = mapped_column(String(200), index=True)
+    chain: Mapped[str] = mapped_column(String(50))  # "ethereum", "solana", "bsc"
+    coin_id: Mapped[str] = mapped_column(String(100), nullable=True)
+    symbol: Mapped[str] = mapped_column(String(20), nullable=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=True)
+    report_data: Mapped[str] = mapped_column(Text, nullable=True)  # JSON blob
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
 class ApiKey(Base):
     """API keys for monetization."""
     __tablename__ = "api_keys"

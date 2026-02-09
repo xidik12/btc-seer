@@ -34,6 +34,8 @@ export const api = {
   getIndicators: () => fetchAPI('/market/indicators'),
   getMacroData: () => fetchAPI('/market/macro'),
   getOnchainData: () => fetchAPI('/market/onchain'),
+  getFundingHistory: (hours = 168) => fetchAPI(`/market/funding?hours=${hours}`),
+  getDominanceData: (days = 30) => fetchAPI(`/market/dominance?days=${days}`),
 
   // Influencers
   getInfluencerTweets: (limit = 20, category = null) => {
@@ -56,6 +58,32 @@ export const api = {
   getLiquidationLevels: () => fetchAPI('/liquidations/levels'),
   getLiquidationStats: () => fetchAPI('/liquidations/stats'),
 
+  // Events
+  getRecentEvents: (hours = 24) => fetchAPI(`/events/recent?hours=${hours}`),
+  getEventCategoryStats: () => fetchAPI('/events/category-stats'),
+  getEventMemory: () => fetchAPI('/events/memory'),
+
+  // Advisor
+  getPortfolio: (telegramId) => fetchAPI(`/advisor/portfolio/${telegramId}`),
+  getActiveTrades: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}`),
+  getTradeHistory: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}/history`),
+  openTrade: (tradeId) => fetchAPI(`/advisor/trades/${tradeId}/opened`, { method: 'POST' }),
+  closeTrade: (tradeId) => fetchAPI(`/advisor/trades/${tradeId}/close`, { method: 'POST' }),
+
+  // Indicator History
+  getIndicatorHistory: () => fetchAPI('/market/indicator-history'),
+
   // Public API
   getApiUsage: (apiKey) => fetchAPI('/v1/usage', { headers: { 'X-API-Key': apiKey } }),
+
+  // Coins
+  getTrackedCoins: () => fetchAPI('/coins/tracked'),
+  getCoinDetail: (coinId) => fetchAPI(`/coins/${coinId}/detail`),
+  getCoinChart: (coinId, days = 7) => fetchAPI(`/coins/${coinId}/chart?days=${days}`),
+  searchCoins: (query) => fetchAPI(`/coins/search?q=${encodeURIComponent(query)}`),
+  searchCoinByAddress: (address) => fetchAPI('/coins/search-address', {
+    method: 'POST',
+    body: JSON.stringify({ address }),
+  }),
+  getCoinReport: (address) => fetchAPI(`/coins/report/${address}`),
 }

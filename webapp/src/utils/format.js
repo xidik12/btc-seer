@@ -79,3 +79,26 @@ export function getActionBg(action) {
   if (action?.includes('sell')) return 'bg-accent-red/10 border-accent-red/30'
   return 'bg-accent-yellow/10 border-accent-yellow/30'
 }
+
+export function formatCoinPrice(price) {
+  if (!price && price !== 0) return '--'
+  if (price >= 1000) return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price)
+  if (price >= 1) return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price)
+  if (price >= 0.01) return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(price)
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(price)
+}
+
+export function formatMarketCap(value) {
+  if (!value && value !== 0) return '--'
+  if (value >= 1e12) return `$${(value / 1e12).toFixed(1)}T`
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`
+  if (value >= 1e3) return `$${(value / 1e3).toFixed(1)}K`
+  return `$${value.toFixed(0)}`
+}
+
+export function formatSupply(value, symbol) {
+  if (!value && value !== 0) return '--'
+  const formatted = formatNumber(value)
+  return symbol ? `${formatted} ${symbol}` : formatted
+}

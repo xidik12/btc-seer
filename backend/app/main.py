@@ -14,7 +14,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import settings
 from app.database import init_db
-from app.api import predictions, signals, news, market, history, influencers, events, quant
+from app.api import predictions, signals, news, market, history, influencers, events, quant, coins
 from app.api import advisor as advisor_api
 from app.api import powerlaw, public_api, liquidations
 from app.scheduler.jobs import (
@@ -39,6 +39,7 @@ from app.scheduler.jobs import (
     run_trade_management,
     check_subscription_expiry,
 )
+from app.collectors.coins import collect_coin_prices, seed_tracked_coins
 from app.models.phrase_analyzer import analyze_news_phrases
 from app.models.continuous_learner import run_continuous_learning
 from app.models.ab_tester import evaluate_candidates
@@ -61,6 +62,9 @@ async def lifespan(app: FastAPI):
     # Initialize database
     await init_db()
     logger.info("Database initialized")
+
+    # Seed tracked coins (BTC, ETH, SOL, XRP)
+    await seed_tracked_coins()
 
     # Ensure model weights dir exists on persistent volume
     import shutil
@@ -96,6 +100,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(collect_funding_data, "interval", minutes=30, id="collect_funding")
     scheduler.add_job(collect_dominance_data, "interval", hours=1, id="collect_dominance")
     scheduler.add_job(save_indicator_snapshot, "interval", hours=1, id="save_indicators")
+    scheduler.add_job(collect_coin_prices, "interval", minutes=2, id="collect_coins")
 
     # Prediction jobs
     scheduler.add_job(generate_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict")
@@ -178,6 +183,7 @@ async def lifespan(app: FastAPI):
         await _safe_run(collect_influencer_tweets(), "collect_influencer_tweets")
         await _safe_run(collect_funding_data(), "collect_funding_data")
         await _safe_run(collect_dominance_data(), "collect_dominance_data")
+        await _safe_run(collect_coin_prices(), "collect_coin_prices")
 
         # Step 3: Wait briefly for data to settle, then generate first prediction
         await asyncio.sleep(30)
@@ -234,6 +240,7 @@ app.include_router(quant.router)
 app.include_router(advisor_api.router)
 app.include_router(powerlaw.router)
 app.include_router(liquidations.router)
+app.include_router(coins.router)
 app.include_router(public_api.router)
 
 

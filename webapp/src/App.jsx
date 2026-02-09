@@ -1,5 +1,5 @@
 import { Component } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { useTelegram } from './hooks/useTelegram'
 import Dashboard from './pages/Dashboard'
 import Technical from './pages/Technical'
@@ -9,6 +9,14 @@ import History from './pages/History'
 import PowerLaw from './pages/PowerLaw'
 import Liquidations from './pages/Liquidations'
 import About from './pages/About'
+import EventMemory from './pages/EventMemory'
+import Advisor from './pages/Advisor'
+import More from './pages/More'
+import Settings from './pages/Settings'
+import Coins from './pages/Coins'
+import CoinDetail from './pages/CoinDetail'
+import CoinSearch from './pages/CoinSearch'
+import CoinReport from './pages/CoinReport'
 import NavBar from './components/NavBar'
 
 class ErrorBoundary extends Component {
@@ -53,20 +61,36 @@ class ErrorBoundary extends Component {
 
 export default function App() {
   useTelegram()
+  const location = useLocation()
 
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-bg-primary text-text-primary pb-20">
+        <div key={location.pathname} className="page-enter">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          {/* Analysis group */}
           <Route path="/technical" element={<Technical />} />
           <Route path="/signals" element={<Signals />} />
-          <Route path="/news" element={<News />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/powerlaw" element={<PowerLaw />} />
+          {/* Markets group */}
           <Route path="/liquidations" element={<Liquidations />} />
+          <Route path="/powerlaw" element={<PowerLaw />} />
+          <Route path="/events" element={<EventMemory />} />
+          {/* Coins */}
+          <Route path="/coins" element={<Coins />} />
+          <Route path="/coins/search" element={<CoinSearch />} />
+          <Route path="/coins/report/:address" element={<CoinReport />} />
+          <Route path="/coins/:coinId" element={<CoinDetail />} />
+          {/* History */}
+          <Route path="/history" element={<History />} />
+          {/* More group */}
+          <Route path="/more" element={<More />} />
+          <Route path="/news" element={<News />} />
+          <Route path="/advisor" element={<Advisor />} />
           <Route path="/about" element={<About />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
+        </div>
         <NavBar />
       </div>
     </ErrorBoundary>
