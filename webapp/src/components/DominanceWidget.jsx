@@ -57,9 +57,13 @@ export default function DominanceWidget() {
     )
   }
 
-  const current = data?.current ?? data?.dominance
-  const change24h = data?.change_24h
-  const history = data?.history || []
+  const current = data?.current?.btc_dominance ?? data?.dominance ?? data?.current
+  const change24h = data?.current?.market_cap_change_24h ?? data?.change_24h
+  const rawHistory = data?.history || []
+  const history = rawHistory.map(h => ({
+    date: h.timestamp?.slice(0, 10) || h.date,
+    dominance: h.btc_dominance ?? h.dominance,
+  })).filter(h => h.dominance != null)
   const isUp = change24h >= 0
   const { data: visibleHistory, bindGestures, isZoomed, resetZoom } = useChartZoom(history)
 

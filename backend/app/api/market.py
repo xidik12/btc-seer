@@ -463,6 +463,21 @@ async def get_onchain_data(session: AsyncSession = Depends(get_session)):
     if not onchain:
         return {"onchain": None, "message": "No on-chain data available"}
 
+    # Compute 24h reserve change
+    reserve_change_24h = None
+    if onchain.exchange_reserve is not None:
+        prev_result = await session.execute(
+            select(OnChainData)
+            .where(OnChainData.timestamp <= onchain.timestamp - timedelta(hours=23))
+            .order_by(desc(OnChainData.timestamp))
+            .limit(1)
+        )
+        prev = prev_result.scalar_one_or_none()
+        if prev and prev.exchange_reserve and prev.exchange_reserve > 0:
+            reserve_change_24h = round(
+                (onchain.exchange_reserve - prev.exchange_reserve) / prev.exchange_reserve * 100, 2
+            )
+
     return {
         "hash_rate": onchain.hash_rate,
         "difficulty": onchain.difficulty,
@@ -471,6 +486,7 @@ async def get_onchain_data(session: AsyncSession = Depends(get_session)):
         "tx_volume": onchain.tx_volume,
         "active_addresses": onchain.active_addresses,
         "exchange_reserve": onchain.exchange_reserve,
+        "reserve_change_24h": reserve_change_24h,
         "large_tx_count": onchain.large_tx_count,
         "timestamp": onchain.timestamp.isoformat(),
     }

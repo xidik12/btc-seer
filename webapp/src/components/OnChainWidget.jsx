@@ -41,7 +41,7 @@ export default function OnChainWidget() {
     )
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 slide-up">
         <h3 className="text-text-primary font-semibold text-sm mb-2">On-Chain Metrics</h3>

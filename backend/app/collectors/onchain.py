@@ -35,6 +35,7 @@ class OnChainCollector(BaseCollector):
             result["hash_rate"] = blockchain_stats.get("hash_rate")
             result["difficulty"] = blockchain_stats.get("difficulty")
             result["tx_volume"] = blockchain_stats.get("estimated_btc_sent")
+            # blockchain.info doesn't provide exchange reserves directly
 
         if mempool_data:
             result["mempool_size"] = mempool_data.get("count")
@@ -42,8 +43,11 @@ class OnChainCollector(BaseCollector):
 
         if blockchair_data:
             data = blockchair_data.get("data", {})
-            result["active_addresses"] = data.get("nodes")
-            result["large_tx_count"] = data.get("largest_transaction_24h")
+            result["active_addresses"] = data.get("hodling_addresses") or data.get("nodes")
+            result["large_tx_count"] = data.get("transactions_24h") or data.get("largest_transaction_24h")
+            # Blockchair may provide mempool tx count if missing
+            if result["mempool_size"] is None:
+                result["mempool_size"] = data.get("mempool_transactions")
 
         return result
 
