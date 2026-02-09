@@ -20,6 +20,13 @@ export default function DominanceWidget() {
     try {
       setError(null)
       const res = await api.getDominanceData(30)
+      // Check if response actually has dominance data
+      const hasCurrent = res?.current?.btc_dominance != null
+      const hasDominance = res?.dominance != null
+      if (!hasCurrent && !hasDominance && !res?.current) {
+        // API returned 200 but with no data — retry in 30s
+        setTimeout(fetchData, 30_000)
+      }
       setData(res)
     } catch (err) {
       setError(err.message)

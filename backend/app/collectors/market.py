@@ -10,6 +10,11 @@ logger = logging.getLogger(__name__)
 class MarketCollector(BaseCollector):
     """Collects BTC market data from Binance and CoinGecko."""
 
+    CG_HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json",
+    }
+
     BINANCE_TICKER_URL = "https://api.binance.com/api/v3/ticker/24hr"
     BINANCE_KLINES_URL = "https://api.binance.com/api/v3/klines"
     BINANCE_FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate"
@@ -85,6 +90,7 @@ class MarketCollector(BaseCollector):
                 "include_24hr_vol": "true",
                 "include_24hr_change": "true",
             },
+            headers=self.CG_HEADERS,
         )
 
     async def get_funding_rate(self) -> dict | None:
@@ -122,21 +128,42 @@ class MarketCollector(BaseCollector):
         return None
 
     async def get_btc_dominance(self) -> dict | None:
-        """Get BTC dominance from CoinGecko global endpoint."""
+        """Get BTC dominance from CoinGecko (primary) or CoinCap (fallback)."""
+        # Primary: CoinGecko
         try:
-            data = await self.fetch_json("https://api.coingecko.com/api/v3/global")
+            data = await self.fetch_json(
+                "https://api.coingecko.com/api/v3/global",
+                headers=self.CG_HEADERS,
+            )
             if data and "data" in data:
                 gd = data["data"]
                 mcap_pct = gd.get("market_cap_percentage", {})
-                return {
+                result = {
                     "btc_dominance": mcap_pct.get("btc") or mcap_pct.get("bitcoin"),
                     "eth_dominance": mcap_pct.get("eth") or mcap_pct.get("ethereum"),
                     "total_market_cap": gd.get("total_market_cap", {}).get("usd"),
                     "total_volume": gd.get("total_volume", {}).get("usd"),
                     "market_cap_change_24h": gd.get("market_cap_change_percentage_24h_usd"),
                 }
+                if result["btc_dominance"]:
+                    return result
         except Exception as e:
-            logger.debug(f"BTC dominance fetch error: {e}")
+            logger.debug(f"CoinGecko dominance error: {e}")
+
+        # Fallback: CoinPaprika (free, no API key, reliable)
+        try:
+            data = await self.fetch_json("https://api.coinpaprika.com/v1/global")
+            if data and "bitcoin_dominance_percentage" in data:
+                return {
+                    "btc_dominance": data.get("bitcoin_dominance_percentage"),
+                    "eth_dominance": None,
+                    "total_market_cap": data.get("market_cap_usd"),
+                    "total_volume": data.get("volume_24h_usd"),
+                    "market_cap_change_24h": data.get("market_cap_change_24h"),
+                }
+        except Exception as e:
+            logger.debug(f"CoinPaprika dominance fallback error: {e}")
+
         return None
 
     async def get_long_short_ratio(self, period: str = "1h", limit: int = 1) -> dict | None:

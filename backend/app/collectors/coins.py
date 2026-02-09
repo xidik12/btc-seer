@@ -22,6 +22,11 @@ COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 class CoinCollector(BaseCollector):
     """Collects price data for multiple tracked coins via CoinGecko."""
 
+    CG_HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json",
+    }
+
     async def collect(self) -> dict:
         """Fetch market data for all tracked coins in a single API call."""
         ids = ",".join(c["coingecko_id"] for c in TRACKED_COINS)
@@ -36,7 +41,7 @@ class CoinCollector(BaseCollector):
             "price_change_percentage": "1h,24h,7d",
         }
 
-        data = await self.fetch_json(url, params=params)
+        data = await self.fetch_json(url, params=params, headers=self.CG_HEADERS)
         if not data:
             logger.warning("CoinCollector: No data from CoinGecko markets endpoint")
             return {"coins": []}
