@@ -1655,3 +1655,74 @@ async def _send_advisor_alert(telegram_id: int, text: str, reply_markup=None):
 
     except Exception as e:
         logger.error(f"Advisor alert send error for {telegram_id}: {e}")
+
+
+# ────────────────────────────────────────────────────────────────
+#  SUBSCRIPTION EXPIRY CHECK
+# ────────────────────────────────────────────────────────────────
+
+async def check_subscription_expiry():
+    """Notify users whose trial or subscription has expired (runs daily)."""
+    if not settings.subscription_enabled:
+        return
+
+    try:
+        from app.bot.subscription import is_premium
+
+        now = datetime.utcnow()
+
+        async with async_session() as session:
+            # Users who had a trial or subscription that recently expired (last 25h)
+            # and haven't renewed
+            yesterday = now - timedelta(hours=25)
+
+            result = await session.execute(
+                select(BotUser).where(BotUser.subscribed == True)
+            )
+            users = result.scalars().all()
+
+        expired_users = []
+        for user in users:
+            if is_premium(user):
+                continue
+            # Check if trial or sub expired recently (within last 25h)
+            trial_just_expired = (
+                user.trial_end
+                and user.trial_end <= now
+                and user.trial_end >= yesterday
+            )
+            sub_just_expired = (
+                user.subscription_end
+                and user.subscription_end <= now
+                and user.subscription_end >= yesterday
+            )
+            if trial_just_expired or sub_just_expired:
+                expired_users.append(user)
+
+        if not expired_users:
+            return
+
+        if not settings.telegram_bot_token:
+            return
+
+        from aiogram import Bot
+        bot = Bot(token=settings.telegram_bot_token)
+        try:
+            for user in expired_users:
+                try:
+                    await bot.send_message(
+                        user.telegram_id,
+                        "Your BTC Seer Premium access has expired.\n\n"
+                        "Use /subscribe to continue getting AI predictions, "
+                        "trading signals, and alerts.",
+                        parse_mode="HTML",
+                    )
+                except Exception as e:
+                    logger.debug(f"Expiry notification failed for {user.telegram_id}: {e}")
+        finally:
+            await bot.session.close()
+
+        logger.info(f"Subscription expiry: notified {len(expired_users)} users")
+
+    except Exception as e:
+        logger.error(f"Subscription expiry check error: {e}")

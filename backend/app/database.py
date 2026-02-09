@@ -307,6 +307,12 @@ class BotUser(Base):
     alert_interval: Mapped[str] = mapped_column(String(10), default="1h")  # 1h, 4h, 24h
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
+    # Subscription fields
+    subscription_tier: Mapped[str] = mapped_column(String(20), nullable=True, default="free")
+    trial_end: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    subscription_end: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    stars_payment_id: Mapped[str] = mapped_column(String(200), nullable=True)
+
 
 class PortfolioState(Base):
     """Tracks user portfolio balance, risk settings, and trading stats."""

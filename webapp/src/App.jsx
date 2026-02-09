@@ -7,6 +7,8 @@ import Signals from './pages/Signals'
 import News from './pages/News'
 import History from './pages/History'
 import PowerLaw from './pages/PowerLaw'
+import Liquidations from './pages/Liquidations'
+import About from './pages/About'
 import NavBar from './components/NavBar'
 
 class ErrorBoundary extends Component {
@@ -62,6 +64,8 @@ export default function App() {
           <Route path="/news" element={<News />} />
           <Route path="/history" element={<History />} />
           <Route path="/powerlaw" element={<PowerLaw />} />
+          <Route path="/liquidations" element={<Liquidations />} />
+          <Route path="/about" element={<About />} />
         </Routes>
         <NavBar />
       </div>

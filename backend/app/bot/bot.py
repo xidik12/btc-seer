@@ -1,13 +1,14 @@
 import logging
 
-from aiogram import Bot, Dispatcher, Router
-from aiogram.types import CallbackQuery
+from aiogram import Bot, Dispatcher, F, Router
+from aiogram.types import CallbackQuery, Message, PreCheckoutQuery
 from sqlalchemy import select
 
 from app.config import settings
 from app.database import async_session, BotUser, TradeAdvice, Price
 from app.bot.commands import router as commands_router
 from app.bot.keyboards import main_keyboard, settings_keyboard, advisor_keyboard, trade_close_keyboard
+from app.bot.subscription import require_premium, activate_premium, get_status_text
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,7 @@ callback_router = Router()
 
 
 @callback_router.callback_query(lambda c: c.data == "predict")
+@require_premium
 async def cb_predict(callback: CallbackQuery):
     from app.bot.commands import cmd_predict
     await callback.answer()
@@ -23,6 +25,7 @@ async def cb_predict(callback: CallbackQuery):
 
 
 @callback_router.callback_query(lambda c: c.data == "signal")
+@require_premium
 async def cb_signal(callback: CallbackQuery):
     from app.bot.commands import cmd_signal
     await callback.answer()
@@ -30,6 +33,7 @@ async def cb_signal(callback: CallbackQuery):
 
 
 @callback_router.callback_query(lambda c: c.data == "news")
+@require_premium
 async def cb_news(callback: CallbackQuery):
     from app.bot.commands import cmd_news
     await callback.answer()
@@ -37,6 +41,7 @@ async def cb_news(callback: CallbackQuery):
 
 
 @callback_router.callback_query(lambda c: c.data == "accuracy")
+@require_premium
 async def cb_accuracy(callback: CallbackQuery):
     from app.bot.commands import cmd_accuracy
     await callback.answer()
@@ -108,6 +113,7 @@ async def cb_unsubscribe(callback: CallbackQuery):
 # ────────────────────────────────────────────────────────────────
 
 @callback_router.callback_query(lambda c: c.data == "advisor_portfolio")
+@require_premium
 async def cb_advisor_portfolio(callback: CallbackQuery):
     from app.bot.commands import cmd_advisor
     await callback.answer()
@@ -115,6 +121,7 @@ async def cb_advisor_portfolio(callback: CallbackQuery):
 
 
 @callback_router.callback_query(lambda c: c.data == "advisor_trades")
+@require_premium
 async def cb_advisor_trades(callback: CallbackQuery):
     from app.bot.commands import cmd_trades
     await callback.answer()
@@ -122,6 +129,7 @@ async def cb_advisor_trades(callback: CallbackQuery):
 
 
 @callback_router.callback_query(lambda c: c.data == "advisor_history")
+@require_premium
 async def cb_advisor_history(callback: CallbackQuery):
     from app.bot.commands import cmd_history
     await callback.answer()
@@ -129,6 +137,7 @@ async def cb_advisor_history(callback: CallbackQuery):
 
 
 @callback_router.callback_query(lambda c: c.data == "advisor_risk")
+@require_premium
 async def cb_advisor_risk(callback: CallbackQuery):
     """Show risk settings for the advisor."""
     await callback.answer()
@@ -238,11 +247,67 @@ async def cb_trade_close(callback: CallbackQuery):
     await callback.message.edit_reply_markup(reply_markup=None)
 
 
+@callback_router.callback_query(lambda c: c.data == "subscribe")
+async def cb_subscribe(callback: CallbackQuery):
+    """Handle subscribe button — trigger /subscribe command."""
+    from app.bot.commands import cmd_subscribe
+    await callback.answer()
+    await cmd_subscribe(callback.message)
+
+
+# ────────────────────────────────────────────────────────────────
+#  PAYMENT HANDLERS
+# ────────────────────────────────────────────────────────────────
+
+payment_router = Router()
+
+
+@payment_router.pre_checkout_query()
+async def on_pre_checkout(query: PreCheckoutQuery):
+    """Approve Telegram Stars pre-checkout."""
+    await query.answer(ok=True)
+
+
+@payment_router.message(F.successful_payment)
+async def on_payment_success(message: Message):
+    """Handle successful Telegram Stars payment."""
+    payment = message.successful_payment
+    telegram_id = message.from_user.id
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(BotUser).where(BotUser.telegram_id == telegram_id)
+        )
+        user = result.scalar_one_or_none()
+
+        if not user:
+            user = BotUser(
+                telegram_id=telegram_id,
+                username=message.from_user.username,
+                subscribed=True,
+            )
+            session.add(user)
+            await session.flush()
+
+        await activate_premium(user, payment.telegram_payment_charge_id, session)
+        status = get_status_text(user)
+
+    await message.answer(
+        f"<b>Payment successful!</b>\n\n"
+        f"You now have <b>BTC Seer Premium</b> access.\n"
+        f"Status: {status}\n\n"
+        f"All predictions, signals, advisor & alerts are unlocked.",
+        parse_mode="HTML",
+        reply_markup=main_keyboard(),
+    )
+
+
 def create_bot() -> tuple[Bot, Dispatcher]:
     """Create and configure the Telegram bot."""
     bot = Bot(token=settings.telegram_bot_token)
     dp = Dispatcher()
 
+    dp.include_router(payment_router)  # Payment handlers first (pre_checkout must be fast)
     dp.include_router(commands_router)
     dp.include_router(callback_router)
 

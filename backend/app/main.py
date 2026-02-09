@@ -16,7 +16,7 @@ from app.config import settings
 from app.database import init_db
 from app.api import predictions, signals, news, market, history, influencers, events, quant
 from app.api import advisor as advisor_api
-from app.api import powerlaw, public_api
+from app.api import powerlaw, public_api, liquidations
 from app.scheduler.jobs import (
     backfill_historical_prices,
     collect_price_data,
@@ -37,6 +37,7 @@ from app.scheduler.jobs import (
     auto_retrain_models,
     run_advisor_check,
     run_trade_management,
+    check_subscription_expiry,
 )
 from app.models.phrase_analyzer import analyze_news_phrases
 from app.models.continuous_learner import run_continuous_learning
@@ -124,6 +125,9 @@ async def lifespan(app: FastAPI):
     # Advisor jobs
     scheduler.add_job(run_advisor_check, "interval", minutes=settings.prediction_interval_minutes, id="advisor_check")
     scheduler.add_job(run_trade_management, "interval", minutes=5, id="trade_management")
+
+    # Subscription expiry check (daily)
+    scheduler.add_job(check_subscription_expiry, "interval", hours=24, id="check_subs")
 
     scheduler.start()
     logger.info("Scheduler started")
@@ -229,6 +233,7 @@ app.include_router(events.router)
 app.include_router(quant.router)
 app.include_router(advisor_api.router)
 app.include_router(powerlaw.router)
+app.include_router(liquidations.router)
 app.include_router(public_api.router)
 
 

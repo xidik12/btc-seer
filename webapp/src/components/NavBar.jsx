@@ -7,6 +7,8 @@ const tabs = [
   { path: '/news', label: 'News', icon: '📰' },
   { path: '/history', label: 'History', icon: '🎯' },
   { path: '/powerlaw', label: 'Power Law', icon: '📐' },
+  { path: '/liquidations', label: 'Liquids', icon: '💥' },
+  { path: '/about', label: 'About', icon: 'ℹ️' },
 ]
 
 export default function NavBar() {

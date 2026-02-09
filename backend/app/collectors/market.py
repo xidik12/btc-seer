@@ -15,6 +15,9 @@ class MarketCollector(BaseCollector):
     BINANCE_FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate"
     BINANCE_OI_URL = "https://fapi.binance.com/fapi/v1/openInterest"
     BINANCE_PREMIUM_URL = "https://fapi.binance.com/fapi/v1/premiumIndex"
+    BINANCE_LONG_SHORT_RATIO_URL = "https://fapi.binance.com/futures/data/globalLongShortAccountRatio"
+    BINANCE_TOP_POSITION_RATIO_URL = "https://fapi.binance.com/futures/data/topLongShortPositionRatio"
+    BINANCE_FUTURES_KLINES_URL = "https://fapi.binance.com/fapi/v1/klines"
     COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price"
     SYMBOL = "BTCUSDT"
 
@@ -134,6 +137,64 @@ class MarketCollector(BaseCollector):
         except Exception as e:
             logger.debug(f"BTC dominance fetch error: {e}")
         return None
+
+    async def get_long_short_ratio(self, period: str = "1h", limit: int = 1) -> dict | None:
+        """Get global long/short account ratio from Binance Futures."""
+        try:
+            data = await self.fetch_json(
+                self.BINANCE_LONG_SHORT_RATIO_URL,
+                params={"symbol": self.SYMBOL, "period": period, "limit": limit},
+            )
+            if data and len(data) > 0:
+                latest = data[0]
+                return {
+                    "long_short_ratio": float(latest.get("longShortRatio", 1.0)),
+                    "long_account": float(latest.get("longAccount", 0.5)),
+                    "short_account": float(latest.get("shortAccount", 0.5)),
+                    "timestamp": latest.get("timestamp"),
+                }
+        except Exception as e:
+            logger.debug(f"Long/short ratio fetch error: {e}")
+        return None
+
+    async def get_top_position_ratio(self, period: str = "1h", limit: int = 1) -> dict | None:
+        """Get top trader long/short position ratio from Binance Futures."""
+        try:
+            data = await self.fetch_json(
+                self.BINANCE_TOP_POSITION_RATIO_URL,
+                params={"symbol": self.SYMBOL, "period": period, "limit": limit},
+            )
+            if data and len(data) > 0:
+                latest = data[0]
+                return {
+                    "long_short_ratio": float(latest.get("longShortRatio", 1.0)),
+                    "long_account": float(latest.get("longAccount", 0.5)),
+                    "short_account": float(latest.get("shortAccount", 0.5)),
+                    "timestamp": latest.get("timestamp"),
+                }
+        except Exception as e:
+            logger.debug(f"Top position ratio fetch error: {e}")
+        return None
+
+    async def get_futures_klines(self, interval: str = "1h", limit: int = 168) -> list[dict] | None:
+        """Get BTCUSDT perpetual futures klines for volume profile."""
+        data = await self.fetch_json(
+            self.BINANCE_FUTURES_KLINES_URL,
+            params={"symbol": self.SYMBOL, "interval": interval, "limit": limit},
+        )
+        if not data:
+            return None
+        return [
+            {
+                "open": float(k[1]),
+                "high": float(k[2]),
+                "low": float(k[3]),
+                "close": float(k[4]),
+                "volume": float(k[5]),
+                "quote_volume": float(k[7]),
+            }
+            for k in data
+        ]
 
     async def get_historical_klines(
         self,

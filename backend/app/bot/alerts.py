@@ -5,6 +5,7 @@ from aiogram import Bot
 from sqlalchemy import select
 
 from app.database import async_session, BotUser, Price, Prediction, Signal, AlertLog
+from app.bot.subscription import is_premium
 from app.signals.generator import DISCLAIMER
 from sqlalchemy import desc
 
@@ -78,6 +79,9 @@ class AlertSender:
         predictions = list(predictions_by_tf.values())
         message = self._format_alert(predictions, signal, current_price)
 
+        # Only send to users with active subscription or trial
+        users = [u for u in users if is_premium(u)]
+
         sent = 0
         failed = 0
         for user in users:
@@ -113,6 +117,9 @@ class AlertSender:
                 select(BotUser).where(BotUser.subscribed == True)
             )
             users = result.scalars().all()
+
+        # Only send to users with active subscription or trial
+        users = [u for u in users if is_premium(u)]
 
         for user in users:
             try:

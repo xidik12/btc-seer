@@ -51,6 +51,11 @@ export const api = {
   getPowerLawCurrent: () => fetchAPI('/powerlaw/current'),
   getPowerLawHistorical: (days = 365) => fetchAPI(`/powerlaw/historical?days=${days}`),
 
+  // Liquidations
+  getLiquidationMap: () => fetchAPI('/liquidations/map'),
+  getLiquidationLevels: () => fetchAPI('/liquidations/levels'),
+  getLiquidationStats: () => fetchAPI('/liquidations/stats'),
+
   // Public API
   getApiUsage: (apiKey) => fetchAPI('/v1/usage', { headers: { 'X-API-Key': apiKey } }),
 }

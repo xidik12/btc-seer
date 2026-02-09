@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     advisor_kelly_fraction: float = 0.25
     advisor_cooldown_hours: int = 4
 
+    # Telegram Stars Subscription (disabled by default — all free during beta)
+    subscription_enabled: bool = False       # Master switch — False = everything free
+    trial_days: int = 7                      # Free trial duration
+    premium_price_stars: int = 500           # ~$9.99 in Telegram Stars
+
     # API Monetization (disabled by default — all free)
     api_key_enabled: bool = False
     api_free_rate_limit: int = 60       # requests/hr

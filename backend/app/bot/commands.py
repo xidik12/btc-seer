@@ -1,15 +1,18 @@
 import logging
+from datetime import datetime
 
 from aiogram import Router
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message
+from aiogram.types import Message, LabeledPrice
 from sqlalchemy import select, desc
 
+from app.config import settings
 from app.database import (
     async_session, BotUser, Prediction, Signal, News,
     PortfolioState, TradeAdvice, TradeResult, Price, ApiKey, ApiUsageLog,
 )
-from app.bot.keyboards import main_keyboard, settings_keyboard, back_keyboard, advisor_keyboard, trade_close_keyboard
+from app.bot.keyboards import main_keyboard, settings_keyboard, back_keyboard, advisor_keyboard, trade_close_keyboard, subscribe_keyboard
+from app.bot.subscription import require_premium, is_premium, get_status_text, grant_trial
 from app.signals.generator import DISCLAIMER
 
 logger = logging.getLogger(__name__)
@@ -19,6 +22,7 @@ router = Router()
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     """Handle /start command — subscribe and show main menu."""
+    is_new = False
     async with async_session() as session:
         result = await session.execute(
             select(BotUser).where(BotUser.telegram_id == message.from_user.id)
@@ -32,7 +36,25 @@ async def cmd_start(message: Message):
                 subscribed=True,
             )
             session.add(user)
+            await session.flush()
+            is_new = True
+
+            # Grant free trial for new users
+            if settings.subscription_enabled:
+                await grant_trial(user, session)
+            else:
+                await session.commit()
+        else:
             await session.commit()
+
+    # Build status line
+    status_line = ""
+    if settings.subscription_enabled:
+        status = get_status_text(user)
+        if is_new and user.trial_end:
+            status_line = f"\n\nYou have {settings.trial_days} days of free Premium access!"
+        else:
+            status_line = f"\n\nStatus: <b>{status}</b>"
 
     await message.answer(
         "🔮 <b>BTC Oracle</b> — Bitcoin Price Prediction System\n\n"
@@ -41,7 +63,8 @@ async def cmd_start(message: Message):
         "📊 Hourly predictions with confidence scores\n"
         "📈 Full trading signals (entry, target, stop-loss)\n"
         "📰 Real-time news sentiment analysis\n"
-        "🎯 Transparent accuracy tracking\n\n"
+        "🎯 Transparent accuracy tracking"
+        f"{status_line}\n\n"
         f"<i>{DISCLAIMER}</i>",
         parse_mode="HTML",
         reply_markup=main_keyboard(),
@@ -49,6 +72,7 @@ async def cmd_start(message: Message):
 
 
 @router.message(Command("predict"))
+@require_premium
 async def cmd_predict(message: Message):
     """Handle /predict command — show current prediction."""
     async with async_session() as session:
@@ -84,6 +108,7 @@ async def cmd_predict(message: Message):
 
 
 @router.message(Command("signal"))
+@require_premium
 async def cmd_signal(message: Message):
     """Handle /signal command — show current trading signal."""
     async with async_session() as session:
@@ -125,6 +150,7 @@ async def cmd_signal(message: Message):
 
 
 @router.message(Command("news"))
+@require_premium
 async def cmd_news(message: Message):
     """Handle /news command — show latest news summary."""
     async with async_session() as session:
@@ -160,6 +186,7 @@ async def cmd_news(message: Message):
 
 
 @router.message(Command("accuracy"))
+@require_premium
 async def cmd_accuracy(message: Message):
     """Handle /accuracy command — show prediction track record."""
     async with async_session() as session:
@@ -222,6 +249,7 @@ async def cmd_settings(message: Message):
 # ────────────────────────────────────────────────────────────────
 
 @router.message(Command("advisor"))
+@require_premium
 async def cmd_advisor(message: Message):
     """Show advisor status, balance, open trades, and $10K progress."""
     from app.advisor.portfolio import get_or_create_portfolio, get_stats
@@ -269,6 +297,7 @@ async def cmd_advisor(message: Message):
 
 
 @router.message(Command("balance"))
+@require_premium
 async def cmd_balance(message: Message):
     """Show balance and PnL summary."""
     from app.advisor.portfolio import get_or_create_portfolio, get_stats
@@ -296,6 +325,7 @@ async def cmd_balance(message: Message):
 
 
 @router.message(Command("setbalance"))
+@require_premium
 async def cmd_setbalance(message: Message):
     """Set balance manually: /setbalance <amount>"""
     from app.advisor.portfolio import update_balance
@@ -325,6 +355,7 @@ async def cmd_setbalance(message: Message):
 
 
 @router.message(Command("trades"))
+@require_premium
 async def cmd_trades(message: Message):
     """Show open trade advices with current status."""
     telegram_id = message.from_user.id
@@ -369,6 +400,7 @@ async def cmd_trades(message: Message):
 
 
 @router.message(Command("history"))
+@require_premium
 async def cmd_history(message: Message):
     """Show trade result history with W/L stats."""
     telegram_id = message.from_user.id
@@ -489,22 +521,35 @@ async def cmd_revokekey(message: Message):
     )
 
 
-@router.message(Command("upgrade"))
-async def cmd_upgrade(message: Message):
-    """Show API tier pricing."""
-    await message.answer(
-        "<b>API Subscription Tiers</b>\n\n"
-        "<b>Free</b> — $0/mo\n"
-        "  60 req/hr | Price + Power Law\n\n"
-        "<b>Basic</b> — $9.99/mo\n"
-        "  300 req/hr | + Predictions + Market data\n\n"
-        "<b>Pro</b> — $29.99/mo\n"
-        "  1,000 req/hr | All endpoints\n\n"
-        "<b>Enterprise</b> — $99.99/mo\n"
-        "  5,000 req/hr | All + priority support\n\n"
-        "<i>All tiers are currently FREE during beta!</i>\n"
-        "Contact @your_username to upgrade.",
-        parse_mode="HTML",
+@router.message(Command("subscribe"))
+async def cmd_subscribe(message: Message):
+    """Send a Telegram Stars invoice for premium subscription."""
+    if not settings.subscription_enabled:
+        await message.answer(
+            "All features are currently <b>free</b> during beta!",
+            parse_mode="HTML",
+        )
+        return
+
+    # Check current status
+    async with async_session() as session:
+        result = await session.execute(
+            select(BotUser).where(BotUser.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+
+    status = get_status_text(user) if user else "Free"
+    renewal_note = ""
+    if user and user.subscription_end and user.subscription_end > datetime.utcnow():
+        renewal_note = "\n\nYour current subscription will be extended by 30 days."
+
+    await message.answer_invoice(
+        title="BTC Seer Premium",
+        description=f"30 days of AI predictions, signals, advisor & alerts.{renewal_note}\n\nCurrent status: {status}",
+        payload="premium_30d",
+        provider_token="",
+        currency="XTR",
+        prices=[LabeledPrice(label="Premium (30 days)", amount=settings.premium_price_stars)],
     )
 
 
@@ -566,6 +611,7 @@ async def cmd_usage(message: Message):
 
 
 @router.message(Command("close"))
+@require_premium
 async def cmd_close(message: Message):
     """Record trade close: /close <trade_id> <exit_price>"""
     from app.advisor.portfolio import record_trade_result

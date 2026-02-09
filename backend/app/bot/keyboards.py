@@ -110,3 +110,12 @@ def trade_close_keyboard(trade_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="Close Trade", callback_data=f"trade_close:{trade_id}"),
         ],
     ])
+
+
+def subscribe_keyboard() -> InlineKeyboardMarkup:
+    """Subscribe prompt keyboard."""
+    from app.config import settings
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"Subscribe ({settings.premium_price_stars} Stars)", callback_data="subscribe")],
+        [InlineKeyboardButton(text="Back", callback_data="back_to_main")],
+    ])
