@@ -12,12 +12,15 @@ router = APIRouter(prefix="/api/predictions", tags=["predictions"])
 @router.get("/quant")
 async def get_quant_prediction(session: AsyncSession = Depends(get_session)):
     """Get the latest quant theory-based prediction with signal breakdown."""
-    result = await session.execute(
-        select(QuantPrediction)
-        .order_by(desc(QuantPrediction.timestamp))
-        .limit(1)
-    )
-    qp = result.scalar_one_or_none()
+    try:
+        result = await session.execute(
+            select(QuantPrediction)
+            .order_by(desc(QuantPrediction.timestamp))
+            .limit(1)
+        )
+        qp = result.scalar_one_or_none()
+    except Exception:
+        return {"prediction": None, "message": "Quant prediction data initializing"}
 
     if not qp:
         return {"prediction": None, "message": "No quant predictions available yet"}

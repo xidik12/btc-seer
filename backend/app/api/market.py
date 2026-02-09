@@ -389,10 +389,14 @@ async def get_candles(
 @router.get("/macro")
 async def get_macro_data(session: AsyncSession = Depends(get_session)):
     """Get latest macro market data with price changes."""
-    result = await session.execute(
-        select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
-    )
-    macro = result.scalar_one_or_none()
+    macro = None
+    try:
+        result = await session.execute(
+            select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
+        )
+        macro = result.scalar_one_or_none()
+    except Exception as e:
+        logger.warning(f"Macro DB query failed: {e}")
 
     if not macro:
         # Live fallback: fetch directly from APIs when DB is empty
@@ -473,10 +477,14 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
 @router.get("/onchain")
 async def get_onchain_data(session: AsyncSession = Depends(get_session)):
     """Get latest on-chain metrics."""
-    result = await session.execute(
-        select(OnChainData).order_by(desc(OnChainData.timestamp)).limit(1)
-    )
-    onchain = result.scalar_one_or_none()
+    onchain = None
+    try:
+        result = await session.execute(
+            select(OnChainData).order_by(desc(OnChainData.timestamp)).limit(1)
+        )
+        onchain = result.scalar_one_or_none()
+    except Exception as e:
+        logger.warning(f"OnChain DB query failed: {e}")
 
     if not onchain:
         # Live fallback: fetch directly from blockchain APIs when DB is empty
@@ -575,12 +583,16 @@ async def get_dominance_data(
     """Get historical BTC dominance data."""
     since = datetime.utcnow() - timedelta(days=days)
 
-    result = await session.execute(
-        select(BtcDominance)
-        .where(BtcDominance.timestamp >= since)
-        .order_by(BtcDominance.timestamp)
-    )
-    records = result.scalars().all()
+    records = []
+    try:
+        result = await session.execute(
+            select(BtcDominance)
+            .where(BtcDominance.timestamp >= since)
+            .order_by(BtcDominance.timestamp)
+        )
+        records = result.scalars().all()
+    except Exception as e:
+        logger.warning(f"Dominance DB query failed: {e}")
 
     if not records:
         # Live fallback: fetch directly from CoinGecko when DB is empty

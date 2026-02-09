@@ -1,7 +1,10 @@
+import logging
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Text, Float, Integer, String, JSON, DateTime, Boolean, func
+from sqlalchemy import Text, Float, Integer, String, JSON, DateTime, Boolean, func, text, inspect
 from datetime import datetime
+
+_db_logger = logging.getLogger(__name__)
 
 from app.config import settings
 
@@ -563,9 +566,34 @@ class ApiUsageLog(Base):
     tier: Mapped[str] = mapped_column(String(20), nullable=True)
 
 
+def _add_missing_columns(connection):
+    """Add any columns defined in models but missing from existing SQLite tables."""
+    inspector = inspect(connection)
+    for table in Base.metadata.sorted_tables:
+        if not inspector.has_table(table.name):
+            continue  # Table doesn't exist yet — create_all will handle it
+        existing_cols = {c["name"] for c in inspector.get_columns(table.name)}
+        for col in table.columns:
+            if col.name not in existing_cols:
+                col_type = col.type.compile(connection.dialect)
+                nullable = "NULL" if col.nullable else "NOT NULL DEFAULT ''"
+                if col.nullable:
+                    nullable = "NULL"
+                else:
+                    nullable = "NOT NULL DEFAULT ''"
+                try:
+                    connection.execute(
+                        text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col_type} {nullable}')
+                    )
+                    _db_logger.info(f"Added missing column: {table.name}.{col.name} ({col_type})")
+                except Exception as e:
+                    _db_logger.debug(f"Column add skipped {table.name}.{col.name}: {e}")
+
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_add_missing_columns)
 
 
 async def get_session() -> AsyncSession:
