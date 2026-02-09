@@ -20,6 +20,7 @@ import CoinSearch from './pages/CoinSearch'
 import CoinReport from './pages/CoinReport'
 import Tools from './pages/Tools'
 import Resources from './pages/Resources'
+import Learn from './pages/Learn'
 import NavBar from './components/NavBar'
 
 class ErrorBoundary extends Component {
@@ -82,6 +83,7 @@ export default function App() {
           <Route path="/elliott-wave" element={<ElliottWave />} />
           <Route path="/tools" element={<Tools />} />
           <Route path="/resources" element={<Resources />} />
+          <Route path="/learn" element={<Learn />} />
           {/* Coins */}
           <Route path="/coins" element={<Coins />} />
           <Route path="/coins/search" element={<CoinSearch />} />

@@ -7,6 +7,7 @@ const MARKET_TABS = [
   { path: '/elliott-wave', label: 'Elliott Wave' },
   { path: '/events', label: 'Events' },
   { path: '/tools', label: 'Tools' },
+  { path: '/learn', label: 'Learn' },
 ]
 
 function PositionSizeCalc() {

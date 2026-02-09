@@ -9,6 +9,7 @@ const MARKET_TABS = [
   { path: '/elliott-wave', label: 'Elliott Wave' },
   { path: '/events', label: 'Events' },
   { path: '/tools', label: 'Tools' },
+  { path: '/learn', label: 'Learn' },
 ]
 
 const TIMEFRAMES = ['1h', '4h', '24h', '7d']

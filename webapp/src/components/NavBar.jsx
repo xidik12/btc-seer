@@ -39,7 +39,7 @@ const icons = {
 const tabs = [
   { path: '/', label: 'Home', icon: 'home', matchPaths: ['/'] },
   { path: '/technical', label: 'Analysis', icon: 'analysis', matchPaths: ['/technical', '/signals'] },
-  { path: '/liquidations', label: 'Markets', icon: 'markets', matchPaths: ['/liquidations', '/powerlaw', '/elliott-wave', '/events', '/tools', '/resources'] },
+  { path: '/liquidations', label: 'Markets', icon: 'markets', matchPaths: ['/liquidations', '/powerlaw', '/elliott-wave', '/events', '/tools', '/resources', '/learn'] },
   { path: '/coins', label: 'Coins', icon: 'coins', matchPaths: ['/coins'] },
   { path: '/advisor', label: 'Advisor', icon: 'advisor', matchPaths: ['/advisor', '/news', '/history', '/about', '/settings'] },
 ]
