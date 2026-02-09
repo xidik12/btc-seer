@@ -193,6 +193,7 @@ function ChartSection({ chart, chartLoading, chartColor, period, setPeriod }) {
       ) : (
         <div className="h-40 flex items-center justify-center text-text-muted text-xs">No chart data</div>
       )}
+      <p className="text-text-muted text-[9px] text-center mt-1.5">Pinch to zoom &middot; Drag to pan</p>
     </div>
   )
 }

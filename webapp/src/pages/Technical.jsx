@@ -256,6 +256,7 @@ function IndicatorHistory() {
           <span className="w-3 h-0.5 bg-accent-purple inline-block rounded" /> MACD
         </span>
       </div>
+      <p className="text-text-muted text-[9px] text-center mt-1">Pinch to zoom &middot; Drag to pan</p>
     </Section>
   )
 }

@@ -265,6 +265,7 @@ function LiquidationHeatmap({ data }) {
           <span className="text-[10px] text-text-muted">Short Liq (above price)</span>
         </div>
       </div>
+      <p className="text-text-muted text-[9px] text-center mt-2">Pinch to zoom &middot; Drag to pan</p>
     </div>
   )
 }
@@ -586,6 +587,7 @@ function FundingOIChart({ fundingData }) {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+      <p className="text-text-muted text-[9px] text-center mt-2">Pinch to zoom &middot; Drag to pan</p>
     </div>
   )
 }

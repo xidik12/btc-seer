@@ -182,6 +182,7 @@ function WaveChart({ historicalData }) {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+      <p className="text-text-muted text-[9px] text-center mt-2">Pinch to zoom &middot; Drag to pan</p>
     </div>
   )
 }

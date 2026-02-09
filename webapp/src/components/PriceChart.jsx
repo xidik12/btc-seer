@@ -562,6 +562,7 @@ export default function PriceChart() {
               </div>
             </div>
           )}
+          <p className="text-text-muted text-[9px] text-center py-1.5">Pinch to zoom &middot; Drag to pan</p>
         </>
       )}
     </div>

@@ -117,6 +117,9 @@ export default function DominanceWidget() {
           </ResponsiveContainer>
         </div>
       )}
+      {history.length > 2 && (
+        <p className="text-text-muted text-[9px] text-center mt-1.5">Pinch to zoom &middot; Drag to pan</p>
+      )}
 
       <p className="text-text-muted text-[10px] mt-2">
         {current > 55
