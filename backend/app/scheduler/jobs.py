@@ -534,6 +534,47 @@ async def generate_prediction():
         except Exception as e:
             logger.debug(f"Dominance data query error: {e}")
 
+        # Get latest on-chain data for features
+        onchain_raw = None
+        try:
+            async with async_session() as sess:
+                result = await sess.execute(
+                    select(OnChainData).order_by(desc(OnChainData.timestamp)).limit(1)
+                )
+                oc = result.scalar_one_or_none()
+                if oc:
+                    onchain_raw = {
+                        "hash_rate": oc.hash_rate,
+                        "mempool_size": oc.mempool_size,
+                        "mempool_fees": oc.mempool_fees,
+                        "tx_volume": oc.tx_volume,
+                        "active_addresses": oc.active_addresses,
+                    }
+        except Exception as e:
+            logger.debug(f"OnChain data query error: {e}")
+
+        # Get supply/mining data from blockchain.info
+        supply_data = None
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as http_sess:
+                async with http_sess.get(
+                    "https://api.blockchain.info/stats",
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as resp:
+                    if resp.status == 200:
+                        stats = await resp.json(content_type=None)
+                        total_btc = stats.get("totalbc", 0) / 1e8
+                        n_blocks = stats.get("n_blocks_total", 0)
+                        supply_data = {
+                            "total_mined": total_btc if total_btc > 0 else 19_800_000,
+                            "percent_mined": (total_btc / 21_000_000) * 100 if total_btc > 0 else 94.3,
+                            "btc_mined_per_day": 144 * 3.125,
+                            "blocks_until_halving": max(0, 1_050_000 - n_blocks) if n_blocks > 0 else 169_000,
+                        }
+        except Exception as e:
+            logger.debug(f"Supply data fetch error: {e}")
+
         # Get latest influencer social media data
         influencer_data = None
         try:
@@ -566,6 +607,8 @@ async def generate_prediction():
             event_memory=event_memory_data if event_memory_data else None,
             funding_data=funding_data,
             dominance_data=dominance_data,
+            onchain_data=onchain_raw,
+            supply_data=supply_data,
         )
 
         # Build REAL feature sequence from Feature table history

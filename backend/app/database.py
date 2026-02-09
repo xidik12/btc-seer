@@ -316,6 +316,10 @@ class BotUser(Base):
     subscription_end: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     stars_payment_id: Mapped[str] = mapped_column(String(200), nullable=True)
 
+    # Admin / ban
+    is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
+    ban_reason: Mapped[str] = mapped_column(String(500), nullable=True)
+
 
 class PortfolioState(Base):
     """Tracks user portfolio balance, risk settings, and trading stats."""
@@ -397,6 +401,9 @@ class TradeAdvice(Base):
     opened_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     closed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     close_reason: Mapped[str] = mapped_column(String(50), nullable=True)
+
+    # Mock/Paper trading flag
+    is_mock: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Alert flags
     breakeven_alert_sent: Mapped[bool] = mapped_column(Boolean, default=False)

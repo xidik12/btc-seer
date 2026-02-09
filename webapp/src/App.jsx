@@ -12,6 +12,8 @@ import About from './pages/About'
 import EventMemory from './pages/EventMemory'
 import ElliottWave from './pages/ElliottWave'
 import Advisor from './pages/Advisor'
+import MockTrading from './pages/MockTrading'
+import AdminDashboard from './pages/AdminDashboard'
 import More from './pages/More'
 import Settings from './pages/Settings'
 import Coins from './pages/Coins'
@@ -95,8 +97,10 @@ export default function App() {
           <Route path="/more" element={<More />} />
           <Route path="/news" element={<News />} />
           <Route path="/advisor" element={<Advisor />} />
+          <Route path="/mock-trading" element={<MockTrading />} />
           <Route path="/about" element={<About />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
         </div>
         <NavBar />

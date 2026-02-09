@@ -41,7 +41,7 @@ const tabs = [
   { path: '/technical', label: 'Analysis', icon: 'analysis', matchPaths: ['/technical', '/signals'] },
   { path: '/liquidations', label: 'Markets', icon: 'markets', matchPaths: ['/liquidations', '/powerlaw', '/elliott-wave', '/events', '/tools', '/resources', '/learn'] },
   { path: '/coins', label: 'Coins', icon: 'coins', matchPaths: ['/coins'] },
-  { path: '/advisor', label: 'Advisor', icon: 'advisor', matchPaths: ['/advisor', '/news', '/history', '/about', '/settings'] },
+  { path: '/advisor', label: 'Advisor', icon: 'advisor', matchPaths: ['/advisor', '/mock-trading', '/news', '/history', '/about', '/settings'] },
 ]
 
 export default function NavBar() {

@@ -1,7 +1,15 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 import { useTelegram } from '../hooks/useTelegram'
 import { formatPrice, formatPercent, formatTimeAgo } from '../utils/format'
+import SubTabBar from '../components/SubTabBar'
+
+const ADVISOR_TABS = [
+  { path: '/advisor', label: 'AI Advisor' },
+  { path: '/mock-trading', label: 'Paper Trading' },
+  { path: '/history', label: 'History' },
+]
 
 function PortfolioCard({ portfolio }) {
   if (!portfolio) return null
@@ -83,17 +91,18 @@ function TPProgress({ currentPrice, entry, targets, stopLoss }) {
   )
 }
 
-function TradeCard({ trade, onOpen, onClose }) {
-  const isActive = trade.status === 'active' || trade.status === 'open'
+function TradeCard({ trade, onOpen, onClose, currentPrice }) {
+  const isActive = trade.status === 'active' || trade.status === 'open' || trade.status === 'opened'
   const isPending = trade.status === 'pending' || trade.status === 'suggested'
-  const isLong = trade.direction === 'long' || trade.action?.includes('buy')
+  const isLong = trade.direction === 'LONG' || trade.direction === 'long' || trade.action?.includes('buy')
+  const price = trade.current_price || currentPrice || 0
   const pnl = trade.unrealized_pnl || trade.pnl || 0
-  const pnlPct = trade.pnl_pct || (trade.entry_price ? ((trade.current_price - trade.entry_price) / trade.entry_price * 100 * (isLong ? 1 : -1)) : 0)
+  const pnlPct = trade.unrealized_pnl_pct || trade.pnl_pct || (trade.entry_price ? ((price - trade.entry_price) / trade.entry_price * 100 * (isLong ? 1 : -1) * (trade.leverage || 1)) : 0)
 
   return (
     <div className={`bg-bg-card rounded-xl border p-3 slide-up ${
       isActive
-        ? pnl >= 0 ? 'border-accent-green/20' : 'border-accent-red/20'
+        ? pnlPct >= 0 ? 'border-accent-green/20' : 'border-accent-red/20'
         : 'border-white/5'
     }`}>
       <div className="flex items-center justify-between mb-2">
@@ -106,6 +115,7 @@ function TradeCard({ trade, onOpen, onClose }) {
             {isLong ? 'LONG' : 'SHORT'}
           </span>
           <span className="text-text-primary text-sm font-semibold">BTC/USDT</span>
+          {trade.leverage && <span className="text-text-muted text-[9px]">{trade.leverage}x</span>}
         </div>
         <span className={`text-[10px] px-2 py-0.5 rounded-full ${
           isActive ? 'bg-accent-blue/15 text-accent-blue' :
@@ -123,21 +133,20 @@ function TradeCard({ trade, onOpen, onClose }) {
         </div>
         <div>
           <div className="text-text-muted text-[9px]">Current</div>
-          <div className="font-mono tabular-nums">{formatPrice(trade.current_price)}</div>
+          <div className="font-mono tabular-nums">{formatPrice(price)}</div>
         </div>
         <div className="text-right">
           <div className="text-text-muted text-[9px]">P&L</div>
-          <div className={`font-bold tabular-nums ${pnl >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-            {pnl >= 0 ? '+' : ''}{formatPrice(pnl)}
-            <span className="text-[9px] ml-1">({pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%)</span>
+          <div className={`font-bold tabular-nums ${pnlPct >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+            {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%
           </div>
         </div>
       </div>
 
       <TPProgress
-        currentPrice={trade.current_price}
+        currentPrice={price}
         entry={trade.entry_price}
-        targets={trade.targets || [trade.tp1, trade.tp2, trade.tp3].filter(Boolean)}
+        targets={trade.targets || [trade.take_profit_1, trade.take_profit_2, trade.take_profit_3].filter(Boolean)}
         stopLoss={trade.stop_loss}
       />
 
@@ -158,7 +167,7 @@ function TradeCard({ trade, onOpen, onClose }) {
           )}
           {isActive && onClose && (
             <button
-              onClick={(e) => { e.stopPropagation(); onClose(trade.id) }}
+              onClick={(e) => { e.stopPropagation(); onClose(trade.id, price) }}
               className="text-[10px] px-3 py-1 rounded-lg bg-accent-red/15 text-accent-red font-medium hover:bg-accent-red/25 transition-colors"
             >
               Close
@@ -171,9 +180,9 @@ function TradeCard({ trade, onOpen, onClose }) {
 }
 
 function ClosedTradeRow({ trade }) {
-  const isLong = trade.direction === 'long' || trade.action?.includes('buy')
-  const pnl = trade.pnl || trade.realized_pnl || 0
-  const won = pnl > 0
+  const isLong = trade.direction === 'LONG' || trade.direction === 'long' || trade.action?.includes('buy')
+  const pnl = trade.pnl_usdt || trade.pnl || trade.realized_pnl || 0
+  const won = trade.was_winner || pnl > 0
 
   return (
     <div className={`bg-bg-card rounded-xl border p-3 ${won ? 'border-accent-green/10' : 'border-accent-red/10'}`}>
@@ -182,21 +191,27 @@ function ClosedTradeRow({ trade }) {
           <span className={`text-[9px] w-5 h-5 rounded-full flex items-center justify-center ${
             won ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red'
           }`}>
-            {won ? '✓' : '✗'}
+            {won ? '\u2713' : '\u2717'}
           </span>
           <span className={`text-[10px] font-bold ${isLong ? 'text-accent-green' : 'text-accent-red'}`}>
             {isLong ? 'LONG' : 'SHORT'}
           </span>
+          {trade.leverage && <span className="text-text-muted text-[9px]">{trade.leverage}x</span>}
         </div>
         <div className="text-right">
           <span className={`text-xs font-bold tabular-nums ${pnl >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
             {pnl >= 0 ? '+' : ''}{formatPrice(pnl)}
           </span>
+          {trade.pnl_pct_leveraged != null && (
+            <span className={`text-[9px] ml-1 ${pnl >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+              ({trade.pnl_pct_leveraged >= 0 ? '+' : ''}{trade.pnl_pct_leveraged.toFixed(1)}%)
+            </span>
+          )}
         </div>
       </div>
       <div className="flex items-center justify-between mt-1 text-[9px] text-text-muted">
-        <span>{formatPrice(trade.entry_price)} → {formatPrice(trade.exit_price || trade.close_price)}</span>
-        <span>{formatTimeAgo(trade.closed_at || trade.timestamp)}</span>
+        <span>{formatPrice(trade.entry_price)} &rarr; {formatPrice(trade.exit_price || trade.close_price)}</span>
+        <span>{trade.close_reason || ''} {formatTimeAgo(trade.closed_at || trade.timestamp)}</span>
       </div>
     </div>
   )
@@ -204,11 +219,13 @@ function ClosedTradeRow({ trade }) {
 
 export default function Advisor() {
   const { user } = useTelegram()
+  const navigate = useNavigate()
   const telegramId = user?.id
 
   const [portfolio, setPortfolio] = useState(null)
   const [activeTrades, setActiveTrades] = useState([])
-  const [history, setHistory] = useState([])
+  const [historyTrades, setHistoryTrades] = useState([])
+  const [currentPrice, setCurrentPrice] = useState(0)
   const [tab, setTab] = useState('active')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -227,7 +244,8 @@ export default function Advisor() {
       ])
       setPortfolio(p)
       setActiveTrades(trades?.trades || trades || [])
-      setHistory(hist?.trades || hist || [])
+      setHistoryTrades(hist?.results || hist?.trades || hist || [])
+      if (trades?.current_price) setCurrentPrice(trades.current_price)
     } catch (err) {
       setError(err.message || 'Failed to load advisor data')
     } finally {
@@ -246,9 +264,12 @@ export default function Advisor() {
     }
   }
 
-  const handleClose = async (tradeId) => {
+  const handleClose = async (tradeId, price) => {
+    const exitPrice = price || currentPrice
+    if (!exitPrice) return
+    if (!window.confirm(`Close trade #${tradeId} at $${exitPrice.toLocaleString()}?`)) return
     try {
-      await api.closeTrade(tradeId)
+      await api.closeTrade(tradeId, exitPrice, 'manual_close')
       fetchData()
     } catch (err) {
       console.error('Close trade error:', err)
@@ -259,12 +280,24 @@ export default function Advisor() {
     return (
       <div className="px-4 pt-4 space-y-4">
         <h1 className="text-lg font-bold">Trading Advisor</h1>
-        <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
-          <p className="text-text-secondary text-sm mb-2">Telegram Login Required</p>
-          <p className="text-text-muted text-xs">
+        <SubTabBar tabs={ADVISOR_TABS} />
+        <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center space-y-3">
+          <div className="w-12 h-12 mx-auto rounded-full bg-accent-blue/10 flex items-center justify-center">
+            <svg className="w-6 h-6 text-accent-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+          </div>
+          <p className="text-text-secondary text-sm font-medium">Telegram Login Required</p>
+          <p className="text-text-muted text-xs leading-relaxed">
             Open BTC Seer from the Telegram bot to access your personalized trading advisor with
             AI-generated trade plans, portfolio tracking, and performance history.
           </p>
+          <button
+            onClick={() => navigate('/mock-trading')}
+            className="mt-2 text-xs px-4 py-2 rounded-lg bg-accent-blue/15 text-accent-blue font-medium hover:bg-accent-blue/25 transition-colors"
+          >
+            Try Paper Trading Instead
+          </button>
         </div>
       </div>
     )
@@ -274,6 +307,7 @@ export default function Advisor() {
     return (
       <div className="px-4 pt-4 space-y-4">
         <h1 className="text-lg font-bold">Trading Advisor</h1>
+        <SubTabBar tabs={ADVISOR_TABS} />
         <div className="animate-pulse space-y-3">
           <div className="h-32 bg-bg-card rounded-2xl" />
           <div className="h-20 bg-bg-card rounded-2xl" />
@@ -287,6 +321,7 @@ export default function Advisor() {
     return (
       <div className="px-4 pt-4 space-y-4">
         <h1 className="text-lg font-bold">Trading Advisor</h1>
+        <SubTabBar tabs={ADVISOR_TABS} />
         <div className="bg-bg-card rounded-2xl p-6 border border-accent-red/20 text-center">
           <p className="text-accent-red text-sm mb-2">Failed to load</p>
           <p className="text-text-muted text-xs mb-3">{error}</p>
@@ -300,6 +335,8 @@ export default function Advisor() {
     <div className="px-4 pt-4 space-y-3 pb-20">
       <h1 className="text-lg font-bold">Trading Advisor</h1>
 
+      <SubTabBar tabs={ADVISOR_TABS} />
+
       <PortfolioCard portfolio={portfolio} />
 
       <div className="flex gap-1 bg-bg-secondary/50 rounded-lg p-0.5">
@@ -311,7 +348,7 @@ export default function Advisor() {
               tab === t ? 'bg-accent-blue text-white shadow-sm' : 'text-text-muted hover:text-text-secondary'
             }`}
           >
-            {t === 'active' ? `Active (${Array.isArray(activeTrades) ? activeTrades.length : 0})` : `History (${Array.isArray(history) ? history.length : 0})`}
+            {t === 'active' ? `Active (${Array.isArray(activeTrades) ? activeTrades.length : 0})` : `History (${Array.isArray(historyTrades) ? historyTrades.length : 0})`}
           </button>
         ))}
       </div>
@@ -320,7 +357,7 @@ export default function Advisor() {
         Array.isArray(activeTrades) && activeTrades.length > 0 ? (
           <div className="space-y-2">
             {activeTrades.map((t, i) => (
-              <TradeCard key={t.id || i} trade={t} onOpen={handleOpen} onClose={handleClose} />
+              <TradeCard key={t.id || i} trade={t} onOpen={handleOpen} onClose={handleClose} currentPrice={currentPrice} />
             ))}
           </div>
         ) : (
@@ -330,9 +367,9 @@ export default function Advisor() {
           </div>
         )
       ) : (
-        Array.isArray(history) && history.length > 0 ? (
+        Array.isArray(historyTrades) && historyTrades.length > 0 ? (
           <div className="space-y-2">
-            {history.map((t, i) => (
+            {historyTrades.map((t, i) => (
               <ClosedTradeRow key={t.id || i} trade={t} />
             ))}
           </div>

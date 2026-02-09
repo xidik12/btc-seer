@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     # Telegram
     telegram_bot_token: str = ""
     telegram_webapp_url: str = ""
+    admin_telegram_id: int = 0
 
     # API Keys
     alpha_vantage_api_key: str = ""  # Free key from https://www.alphavantage.co/support/#api-key
@@ -50,6 +51,9 @@ class Settings(BaseSettings):
     subscription_enabled: bool = False       # Master switch — False = everything free
     trial_days: int = 7                      # Free trial duration
     premium_price_stars: int = 500           # ~$9.99 in Telegram Stars
+    premium_price_stars_monthly: int = 500      # 30 days
+    premium_price_stars_quarterly: int = 1250   # 90 days (save 17%)
+    premium_price_stars_yearly: int = 4500      # 365 days (save 25%)
 
     # API Monetization (disabled by default — all free)
     api_key_enabled: bool = False

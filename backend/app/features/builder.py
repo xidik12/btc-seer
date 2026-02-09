@@ -77,11 +77,18 @@ class FeatureBuilder:
         "phrase_sentiment_signal",     # Net phrase-based sentiment signal
     ]
 
+    SUPPLY_FEATURES = [
+        "btc_mined_pct",         # % of 21M mined (94.3 → 0.943)
+        "daily_issuance_rate",   # daily new BTC / circulating supply
+        "blocks_until_halving",  # normalized: blocks_left / 210_000
+        "halving_cycle_pct",     # % through current halving cycle (0-1)
+    ]
+
     ALL_FEATURES = (
         TECHNICAL_FEATURES + SENTIMENT_FEATURES + MACRO_FEATURES
         + ONCHAIN_FEATURES + EVENT_MEMORY_FEATURES
         + DERIVATIVES_FEATURES + DOMINANCE_FEATURES
-        + PHRASE_FEATURES
+        + PHRASE_FEATURES + SUPPLY_FEATURES
     )
 
     def __init__(self):
@@ -100,6 +107,7 @@ class FeatureBuilder:
         funding_data: dict = None,
         dominance_data: dict = None,
         phrase_data: dict = None,
+        supply_data: dict = None,
     ) -> dict:
         """Build complete feature vector from all data sources (including social media)."""
 
@@ -168,6 +176,14 @@ class FeatureBuilder:
             features["top_bullish_phrase_score"] = float(phrase_data.get("top_bullish_score", 0))
             features["top_bearish_phrase_score"] = float(phrase_data.get("top_bearish_score", 0))
             features["phrase_sentiment_signal"] = float(phrase_data.get("net_signal", 0))
+
+        # Supply/mining features
+        if supply_data:
+            features["btc_mined_pct"] = supply_data.get("percent_mined", 94.0) / 100.0
+            features["daily_issuance_rate"] = supply_data.get("btc_mined_per_day", 450) / max(supply_data.get("total_mined", 19_800_000), 1)
+            blocks_left = supply_data.get("blocks_until_halving", 169_000)
+            features["blocks_until_halving"] = blocks_left / 210_000
+            features["halving_cycle_pct"] = 1.0 - (blocks_left / 210_000)
 
         # Normalize features
         features = self._normalize(features)

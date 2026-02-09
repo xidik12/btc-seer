@@ -3,7 +3,7 @@ from datetime import datetime
 
 from aiogram import Router
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, LabeledPrice
+from aiogram.types import Message
 from sqlalchemy import select, desc
 
 from app.config import settings
@@ -46,6 +46,14 @@ async def cmd_start(message: Message):
                 await session.commit()
         else:
             await session.commit()
+
+    # Check if user is banned
+    if user.is_banned:
+        ban_msg = "Your account has been suspended."
+        if user.ban_reason:
+            ban_msg += f"\nReason: {user.ban_reason}"
+        await message.answer(ban_msg)
+        return
 
     # Build status line
     status_line = ""
@@ -523,7 +531,7 @@ async def cmd_revokekey(message: Message):
 
 @router.message(Command("subscribe"))
 async def cmd_subscribe(message: Message):
-    """Send a Telegram Stars invoice for premium subscription."""
+    """Show subscription tier options."""
     if not settings.subscription_enabled:
         await message.answer(
             "All features are currently <b>free</b> during beta!",
@@ -539,17 +547,16 @@ async def cmd_subscribe(message: Message):
         user = result.scalar_one_or_none()
 
     status = get_status_text(user) if user else "Free"
-    renewal_note = ""
-    if user and user.subscription_end and user.subscription_end > datetime.utcnow():
-        renewal_note = "\n\nYour current subscription will be extended by 30 days."
 
-    await message.answer_invoice(
-        title="BTC Seer Premium",
-        description=f"30 days of AI predictions, signals, advisor & alerts.{renewal_note}\n\nCurrent status: {status}",
-        payload="premium_30d",
-        provider_token="",
-        currency="XTR",
-        prices=[LabeledPrice(label="Premium (30 days)", amount=settings.premium_price_stars)],
+    from app.bot.keyboards import subscription_tiers_keyboard
+
+    await message.answer(
+        "<b>BTC Seer Premium</b>\n\n"
+        "Unlock AI predictions, trading signals, advisor & alerts.\n\n"
+        f"Current status: <b>{status}</b>\n\n"
+        "Choose your plan:",
+        parse_mode="HTML",
+        reply_markup=subscription_tiers_keyboard(),
     )
 
 

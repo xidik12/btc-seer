@@ -12,7 +12,7 @@ import MacroDashboard from '../components/MacroDashboard'
 import OnChainWidget from '../components/OnChainWidget'
 import DominanceWidget from '../components/DominanceWidget'
 import FearGreedWidget from '../components/FearGreedWidget'
-import HalvingWidget from '../components/HalvingWidget'
+import SupplyWidget from '../components/SupplyWidget'
 
 class SafeWrap extends Component {
   constructor(props) {
@@ -151,6 +151,7 @@ const QUICK_LINKS = [
   { path: '/events', label: 'Events', icon: 'events' },
   { path: '/coins', label: 'Coins', icon: 'coins' },
   { path: '/advisor', label: 'Advisor', icon: 'advisor' },
+  { path: '/mock-trading', label: 'Paper Trade', icon: 'advisor' },
   { path: '/tools', label: 'Tools', icon: 'tools' },
   { path: '/resources', label: 'Resources', icon: 'resources' },
   { path: '/learn', label: 'Learn', icon: 'learn' },
@@ -158,6 +159,7 @@ const QUICK_LINKS = [
   { path: '/news', label: 'News', icon: 'news' },
   { path: '/settings', label: 'Settings', icon: 'settings' },
   { path: '/about', label: 'About', icon: 'about' },
+  { path: '/admin', label: 'Admin', icon: 'settings' },
 ]
 
 function QuickAccessGrid() {
@@ -232,8 +234,8 @@ export default function Dashboard() {
         <FearGreedWidget />
       </SafeWrap>
 
-      <SafeWrap name="HalvingWidget">
-        <HalvingWidget />
+      <SafeWrap name="SupplyWidget">
+        <SupplyWidget />
       </SafeWrap>
 
       <SafeWrap name="DominanceWidget">

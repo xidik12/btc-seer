@@ -1,7 +1,7 @@
 import logging
 
 from aiogram import Bot, Dispatcher, F, Router
-from aiogram.types import CallbackQuery, Message, PreCheckoutQuery
+from aiogram.types import CallbackQuery, Message, PreCheckoutQuery, LabeledPrice
 from sqlalchemy import select
 
 from app.config import settings
@@ -256,6 +256,36 @@ async def cb_subscribe(callback: CallbackQuery):
 
 
 # ────────────────────────────────────────────────────────────────
+#  SUBSCRIPTION TIER CALLBACKS
+# ────────────────────────────────────────────────────────────────
+
+TIER_CONFIG = {
+    "monthly":   {"days": 30,  "stars": settings.premium_price_stars_monthly, "label": "Premium (30 days)"},
+    "quarterly": {"days": 90,  "stars": settings.premium_price_stars_quarterly, "label": "Premium (90 days)"},
+    "yearly":    {"days": 365, "stars": settings.premium_price_stars_yearly, "label": "Premium (365 days)"},
+}
+
+
+@callback_router.callback_query(lambda c: c.data and c.data.startswith("sub_tier:"))
+async def cb_sub_tier(callback: CallbackQuery):
+    """Handle subscription tier selection — send Stars invoice."""
+    tier = callback.data.split(":")[1]
+    cfg = TIER_CONFIG.get(tier)
+    if not cfg:
+        await callback.answer("Invalid tier")
+        return
+    await callback.answer()
+    await callback.message.answer_invoice(
+        title="BTC Seer Premium",
+        description=f"{cfg['label']} — AI predictions, signals, advisor & alerts.",
+        payload=f"premium_{cfg['days']}d",
+        provider_token="",
+        currency="XTR",
+        prices=[LabeledPrice(label=cfg["label"], amount=cfg["stars"])],
+    )
+
+
+# ────────────────────────────────────────────────────────────────
 #  PAYMENT HANDLERS
 # ────────────────────────────────────────────────────────────────
 
@@ -274,6 +304,15 @@ async def on_payment_success(message: Message):
     payment = message.successful_payment
     telegram_id = message.from_user.id
 
+    # Parse days from payload: "premium_30d", "premium_90d", "premium_365d"
+    payload = payment.invoice_payload
+    days = 30
+    if payload and "premium_" in payload:
+        try:
+            days = int(payload.replace("premium_", "").replace("d", ""))
+        except ValueError:
+            days = 30
+
     async with async_session() as session:
         result = await session.execute(
             select(BotUser).where(BotUser.telegram_id == telegram_id)
@@ -289,12 +328,12 @@ async def on_payment_success(message: Message):
             session.add(user)
             await session.flush()
 
-        await activate_premium(user, payment.telegram_payment_charge_id, session)
+        await activate_premium(user, payment.telegram_payment_charge_id, session, days=days)
         status = get_status_text(user)
 
     await message.answer(
         f"<b>Payment successful!</b>\n\n"
-        f"You now have <b>BTC Seer Premium</b> access.\n"
+        f"You now have <b>BTC Seer Premium</b> access for {days} days.\n"
         f"Status: {status}\n\n"
         f"All predictions, signals, advisor & alerts are unlocked.",
         parse_mode="HTML",

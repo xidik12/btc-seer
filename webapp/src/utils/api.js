@@ -36,6 +36,7 @@ export const api = {
   getOnchainData: () => fetchAPI('/market/onchain'),
   getFundingHistory: (hours = 168) => fetchAPI(`/market/funding?hours=${hours}`),
   getDominanceData: (days = 30) => fetchAPI(`/market/dominance?days=${days}`),
+  getBtcSupply: () => fetchAPI('/market/supply'),
 
   // Influencers
   getInfluencerTweets: (limit = 20, category = null) => {
@@ -68,7 +69,45 @@ export const api = {
   getActiveTrades: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}`),
   getTradeHistory: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}/history`),
   openTrade: (tradeId) => fetchAPI(`/advisor/trades/${tradeId}/opened`, { method: 'POST' }),
-  closeTrade: (tradeId) => fetchAPI(`/advisor/trades/${tradeId}/close`, { method: 'POST' }),
+  closeTrade: (tradeId, exitPrice, reason = 'manual_close') =>
+    fetchAPI(`/advisor/trades/${tradeId}/close`, {
+      method: 'POST',
+      body: JSON.stringify({ exit_price: exitPrice, reason }),
+    }),
+
+  // Mock/Paper Trading
+  getMockTrades: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}?mock=true`),
+  getMockHistory: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}/history?mock=true`),
+  createMockTrade: (telegramId, trade) =>
+    fetchAPI(`/advisor/trades/${telegramId}/mock`, {
+      method: 'POST',
+      body: JSON.stringify(trade),
+    }),
+
+  // Admin
+  getAdminStats: (initData) => fetchAPI('/admin/stats', { headers: { 'X-Telegram-Init-Data': initData } }),
+  getAdminUsers: (initData, page = 1, search = '') =>
+    fetchAPI(`/admin/users?page=${page}&search=${encodeURIComponent(search)}`, { headers: { 'X-Telegram-Init-Data': initData } }),
+  adminBanUser: (initData, telegramId, reason) =>
+    fetchAPI(`/admin/users/${telegramId}/ban`, {
+      method: 'POST',
+      headers: { 'X-Telegram-Init-Data': initData },
+      body: JSON.stringify({ reason }),
+    }),
+  adminUnbanUser: (initData, telegramId) =>
+    fetchAPI(`/admin/users/${telegramId}/unban`, {
+      method: 'POST',
+      headers: { 'X-Telegram-Init-Data': initData },
+    }),
+  adminGrantPremium: (initData, telegramId, days) =>
+    fetchAPI(`/admin/users/${telegramId}/grant-premium`, {
+      method: 'POST',
+      headers: { 'X-Telegram-Init-Data': initData },
+      body: JSON.stringify({ days }),
+    }),
+  getAdminPredictions: (initData, limit = 50) =>
+    fetchAPI(`/admin/predictions?limit=${limit}`, { headers: { 'X-Telegram-Init-Data': initData } }),
+  getAdminSystem: (initData) => fetchAPI('/admin/system', { headers: { 'X-Telegram-Init-Data': initData } }),
 
   // Fear & Greed
   getFearGreed: (days = 30) => fetchAPI(`/market/fear-greed?days=${days}`),

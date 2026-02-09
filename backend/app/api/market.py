@@ -710,3 +710,62 @@ async def get_indicator_history(
         ],
         "count": len(snapshots),
     }
+
+
+@router.get("/supply")
+async def get_btc_supply():
+    """Get Bitcoin supply data: total mined, remaining, halving info, milestones."""
+    import aiohttp
+
+    MAX_SUPPLY = 21_000_000
+    BLOCK_REWARD = 3.125
+    BLOCKS_PER_DAY = 144
+    NEXT_HALVING_BLOCK = 1_050_000
+
+    # Defaults
+    total_mined = 19_800_000
+    current_block_height = None
+    blocks_until_halving = None
+
+    # Fetch live data from blockchain.info
+    try:
+        async with aiohttp.ClientSession() as sess:
+            async with sess.get(
+                "https://api.blockchain.info/stats",
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status == 200:
+                    stats = await resp.json(content_type=None)
+                    total_btc = stats.get("totalbc", 0) / 1e8
+                    if total_btc > 0:
+                        total_mined = total_btc
+                    n_blocks = stats.get("n_blocks_total", 0)
+                    if n_blocks > 0:
+                        current_block_height = n_blocks
+                        blocks_until_halving = max(0, NEXT_HALVING_BLOCK - n_blocks)
+    except Exception as e:
+        logger.debug(f"blockchain.info supply fetch error: {e}")
+
+    remaining = MAX_SUPPLY - total_mined
+    percent_mined = round(total_mined / MAX_SUPPLY * 100, 2)
+    btc_mined_per_day = BLOCKS_PER_DAY * BLOCK_REWARD
+
+    return {
+        "total_mined": round(total_mined, 2),
+        "max_supply": MAX_SUPPLY,
+        "remaining": round(remaining, 2),
+        "percent_mined": percent_mined,
+        "block_reward": BLOCK_REWARD,
+        "blocks_per_day": BLOCKS_PER_DAY,
+        "btc_mined_per_day": btc_mined_per_day,
+        "next_halving_block": NEXT_HALVING_BLOCK,
+        "current_block_height": current_block_height,
+        "blocks_until_halving": blocks_until_halving,
+        "estimated_halving_date": "2028-04-23",
+        "supply_schedule": [
+            {"year": 2028, "reward": 1.5625, "total_mined_approx": 20_475_000},
+            {"year": 2032, "reward": 0.78125, "total_mined_approx": 20_737_500},
+            {"year": 2036, "reward": 0.390625, "total_mined_approx": 20_868_750},
+            {"year": 2140, "reward": 0, "total_mined_approx": 21_000_000},
+        ],
+    }

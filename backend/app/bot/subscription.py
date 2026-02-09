@@ -70,20 +70,20 @@ async def grant_trial(user: BotUser, session):
     logger.info(f"Trial granted to user {user.telegram_id}")
 
 
-async def activate_premium(user: BotUser, payment_id: str, session):
-    """Activate or extend premium subscription by 30 days."""
+async def activate_premium(user: BotUser, payment_id: str, session, days: int = 30):
+    """Activate or extend premium subscription by N days."""
     now = datetime.utcnow()
 
     # If already has active subscription, extend from current end
     if user.subscription_end and user.subscription_end > now:
-        user.subscription_end = user.subscription_end + timedelta(days=30)
+        user.subscription_end = user.subscription_end + timedelta(days=days)
     else:
-        user.subscription_end = now + timedelta(days=30)
+        user.subscription_end = now + timedelta(days=days)
 
     user.subscription_tier = "premium"
     user.stars_payment_id = payment_id
     await session.commit()
-    logger.info(f"Premium activated for user {user.telegram_id} until {user.subscription_end}")
+    logger.info(f"Premium activated for user {user.telegram_id} for {days}d until {user.subscription_end}")
 
 
 def require_premium(handler):
@@ -111,6 +111,17 @@ def require_premium(handler):
                 select(BotUser).where(BotUser.telegram_id == telegram_id)
             )
             user = result.scalar_one_or_none()
+
+        # Check ban
+        if user and user.is_banned:
+            ban_text = "Your account has been suspended."
+            if user.ban_reason:
+                ban_text += f"\nReason: {user.ban_reason}"
+            if isinstance(event, CallbackQuery):
+                await event.answer(ban_text, show_alert=True)
+            else:
+                await event.answer(ban_text)
+            return
 
         if user and is_premium(user):
             return await handler(event, *args, **kwargs)

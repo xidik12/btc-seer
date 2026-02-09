@@ -112,10 +112,28 @@ def trade_close_keyboard(trade_id: int) -> InlineKeyboardMarkup:
     ])
 
 
-def subscribe_keyboard() -> InlineKeyboardMarkup:
-    """Subscribe prompt keyboard."""
-    from app.config import settings
+def subscription_tiers_keyboard() -> InlineKeyboardMarkup:
+    """Subscription tier selection keyboard."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"Subscribe ({settings.premium_price_stars} Stars)", callback_data="subscribe")],
+        [InlineKeyboardButton(
+            text=f"Monthly — {settings.premium_price_stars_monthly} Stars ($9.99)",
+            callback_data="sub_tier:monthly",
+        )],
+        [InlineKeyboardButton(
+            text=f"3 Months — {settings.premium_price_stars_quarterly} Stars (save 17%)",
+            callback_data="sub_tier:quarterly",
+        )],
+        [InlineKeyboardButton(
+            text=f"Yearly — {settings.premium_price_stars_yearly} Stars (save 25%)",
+            callback_data="sub_tier:yearly",
+        )],
+        [InlineKeyboardButton(text="Back", callback_data="back_to_main")],
+    ])
+
+
+def subscribe_keyboard() -> InlineKeyboardMarkup:
+    """Subscribe prompt keyboard (quick single button)."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="View Plans", callback_data="subscribe")],
         [InlineKeyboardButton(text="Back", callback_data="back_to_main")],
     ])
