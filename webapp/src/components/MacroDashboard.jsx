@@ -136,7 +136,7 @@ export default function MacroDashboard() {
             </div>
           ))}
         </div>
-      ) : error && !macroData ? (
+      ) : error ? (
         <div className="flex flex-col items-center justify-center py-8 gap-2">
           <p className="text-accent-red text-sm">Failed to load macro data</p>
           <button

@@ -127,9 +127,10 @@ class MarketCollector(BaseCollector):
             data = await self.fetch_json("https://api.coingecko.com/api/v3/global")
             if data and "data" in data:
                 gd = data["data"]
+                mcap_pct = gd.get("market_cap_percentage", {})
                 return {
-                    "btc_dominance": gd.get("market_cap_percentage", {}).get("bitcoin"),
-                    "eth_dominance": gd.get("market_cap_percentage", {}).get("ethereum"),
+                    "btc_dominance": mcap_pct.get("btc") or mcap_pct.get("bitcoin"),
+                    "eth_dominance": mcap_pct.get("eth") or mcap_pct.get("ethereum"),
                     "total_market_cap": gd.get("total_market_cap", {}).get("usd"),
                     "total_volume": gd.get("total_volume", {}).get("usd"),
                     "market_cap_change_24h": gd.get("market_cap_change_percentage_24h_usd"),

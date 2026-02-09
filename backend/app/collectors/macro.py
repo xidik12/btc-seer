@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class MacroCollector(BaseCollector):
-    """Collects macro market data via Alpha Vantage (primary) and Yahoo Finance (fallback)."""
+    """Collects macro market data via Alpha Vantage (primary) and Yahoo Finance v8 (fallback)."""
 
     # Alpha Vantage symbols
     AV_SYMBOLS = {
@@ -18,7 +18,7 @@ class MacroCollector(BaseCollector):
         "treasury_10y": "TNX",
     }
 
-    # Yahoo Finance fallback symbols
+    # Yahoo Finance v8 chart symbols (v7 quote API is deprecated/blocked)
     YF_SYMBOLS = {
         "dxy": ["DX-Y.NYB", "UUP"],
         "gold": ["GC=F", "GLD"],
@@ -47,18 +47,18 @@ class MacroCollector(BaseCollector):
                     result[key] = value
                     MacroCollector._last_good[key] = value
 
-        # For any missing data, try Yahoo Finance
+        # For any missing data, try Yahoo Finance v8 chart API
         for key in ["dxy", "gold", "sp500", "treasury_10y"]:
             if result[key] is None:
                 for symbol in self.YF_SYMBOLS.get(key, []):
-                    yf_quote = await self._fetch_yahoo_quote(symbol)
+                    yf_quote = await self._fetch_yahoo_v8(symbol)
                     if yf_quote:
                         result[key] = yf_quote
                         MacroCollector._last_good[key] = yf_quote
                         break
 
         # Use cached values for any still missing
-        for key in result.keys():
+        for key in list(result.keys()):
             if result[key] is None and key in MacroCollector._last_good:
                 result[key] = MacroCollector._last_good[key]
                 logger.info(f"Using cached value for {key}")
@@ -70,7 +70,6 @@ class MacroCollector(BaseCollector):
         result = {}
 
         try:
-            # Fetch each symbol individually (Alpha Vantage requires separate calls)
             for key, symbol in self.AV_SYMBOLS.items():
                 try:
                     url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={settings.alpha_vantage_api_key}"
@@ -96,25 +95,24 @@ class MacroCollector(BaseCollector):
 
         return result
 
-    async def _fetch_yahoo_quote(self, symbol: str) -> dict | None:
-        """Fetch a single quote from Yahoo Finance."""
+    async def _fetch_yahoo_v8(self, symbol: str) -> dict | None:
+        """Fetch a quote via Yahoo Finance v8 chart API (v7 is deprecated)."""
         try:
-            url = f"https://query1.finance.yahoo.com/v7/finance/quote?symbols={symbol}"
-
+            url = f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}"
+            params = {"interval": "1d", "range": "2d"}
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Accept": "application/json",
-                "Referer": "https://finance.yahoo.com",
             }
 
-            data = await self.fetch_json(url, headers=headers)
+            data = await self.fetch_json(url, params=params, headers=headers)
 
-            if data and "quoteResponse" in data:
-                results = data["quoteResponse"].get("result", [])
+            if data and "chart" in data:
+                results = data["chart"].get("result", [])
                 if results:
-                    quote = results[0]
-                    price = quote.get("regularMarketPrice")
-                    prev_close = quote.get("regularMarketPreviousClose")
+                    meta = results[0].get("meta", {})
+                    price = meta.get("regularMarketPrice")
+                    prev_close = meta.get("chartPreviousClose")
 
                     if price:
                         change_pct = 0
@@ -128,6 +126,6 @@ class MacroCollector(BaseCollector):
                         }
 
         except Exception as e:
-            logger.debug(f"Yahoo Finance error for {symbol}: {e}")
+            logger.debug(f"Yahoo Finance v8 error for {symbol}: {e}")
 
         return None
