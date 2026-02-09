@@ -6,23 +6,26 @@ export default function News() {
   const [news, setNews] = useState([])
   const [sentiment, setSentiment] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [newsData, sentData] = await Promise.all([
-          api.getLatestNews(50),
-          api.getNewsSentiment(24),
-        ])
-        setNews(newsData.news || [])
-        setSentiment(sentData)
-      } catch {
-        setNews([])
-      }
-      setLoading(false)
+  const loadNews = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [newsData, sentData] = await Promise.all([
+        api.getLatestNews(50),
+        api.getNewsSentiment(24),
+      ])
+      setNews(newsData.news || [])
+      setSentiment(sentData)
+    } catch (err) {
+      setError(err.message || 'Failed to load news')
+      setNews([])
     }
-    load()
-  }, [])
+    setLoading(false)
+  }
+
+  useEffect(() => { loadNews() }, [])
 
   function getSentimentDot(score) {
     if (score == null) return '⚪'
@@ -67,9 +70,36 @@ export default function News() {
       )}
 
       {loading ? (
-        <div className="text-center text-text-secondary py-10">Loading...</div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-bg-card rounded-xl p-3 border border-white/5">
+              <div className="flex items-start gap-2">
+                <div className="w-5 h-5 skeleton rounded-full shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 skeleton w-full" />
+                  <div className="h-4 skeleton w-3/4" />
+                  <div className="flex gap-2">
+                    <div className="h-3 skeleton w-16" />
+                    <div className="h-3 skeleton w-12" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="bg-bg-card rounded-2xl p-6 border border-accent-red/20 text-center">
+          <p className="text-accent-red text-sm mb-2">Failed to load news</p>
+          <p className="text-text-muted text-xs mb-3">{error}</p>
+          <button onClick={loadNews} className="text-accent-blue text-xs hover:underline">Retry</button>
+        </div>
       ) : news.length === 0 ? (
-        <div className="text-center text-text-secondary py-10">No news collected yet</div>
+        <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
+          <div className="text-3xl mb-2">&#x1F4F0;</div>
+          <p className="text-text-secondary text-sm font-medium">No News Yet</p>
+          <p className="text-text-muted text-xs mt-1">News articles will appear here as they are collected and analyzed for sentiment.</p>
+          <button onClick={loadNews} className="text-accent-blue text-xs mt-3 hover:underline">Refresh</button>
+        </div>
       ) : (
         <div className="space-y-2">
           {news.map((n, i) => (

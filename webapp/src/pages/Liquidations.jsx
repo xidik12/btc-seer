@@ -1,10 +1,20 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api } from '../utils/api'
 import { formatPrice, formatNumber } from '../utils/format'
+import { useChartZoom } from '../hooks/useChartZoom'
+import SubTabBar from '../components/SubTabBar'
+
+const MARKET_TABS = [
+  { path: '/liquidations', label: 'Liquidations' },
+  { path: '/powerlaw', label: 'Power Law' },
+  { path: '/events', label: 'Events' },
+]
 import {
   ResponsiveContainer,
   BarChart,
+  ComposedChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -484,24 +494,117 @@ function TradingInsight({ data, stats }) {
   )
 }
 
+// ── Funding Rate + OI History ──
+
+function FundingOIChart({ fundingData }) {
+  if (!fundingData?.history?.length) return null
+
+  const chartData = fundingData.history.map((d) => ({
+    time: d.time || d.timestamp,
+    funding: d.funding_rate != null ? d.funding_rate * 100 : null,
+    oi: d.open_interest || d.oi,
+  }))
+
+  const { data: visibleData, bindGestures, isZoomed, resetZoom } = useChartZoom(chartData)
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-text-secondary text-xs font-semibold">FUNDING RATE & OPEN INTEREST</h3>
+        {isZoomed && (
+          <button onClick={resetZoom} className="text-[10px] text-accent-blue">Reset</button>
+        )}
+      </div>
+      <p className="text-text-muted text-[9px] mb-3">
+        Extreme positive funding = crash risk. Negative = squeeze potential.
+      </p>
+      <div className="h-[220px]" {...bindGestures}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={visibleData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 6" stroke="#1e1e30" vertical={false} />
+            <XAxis
+              dataKey="time"
+              tick={{ fontSize: 9, fill: '#5a5a70' }}
+              tickFormatter={(v) => v?.slice(11, 16) || v?.slice(5, 10) || ''}
+              axisLine={false}
+              tickLine={false}
+              minTickGap={40}
+            />
+            <YAxis
+              yAxisId="funding"
+              tick={{ fontSize: 9, fill: '#5a5a70' }}
+              tickFormatter={(v) => `${v.toFixed(3)}%`}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              yAxisId="oi"
+              orientation="right"
+              tick={{ fontSize: 9, fill: '#5a5a70' }}
+              tickFormatter={(v) => `${(v / 1e9).toFixed(1)}B`}
+              axisLine={false}
+              tickLine={false}
+            />
+            <Tooltip
+              contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
+              formatter={(v, name) => {
+                if (name === 'funding') return [`${v.toFixed(4)}%`, 'Funding Rate']
+                if (name === 'oi') return [`$${formatNumber(v)}`, 'Open Interest']
+                return [v, name]
+              }}
+              labelFormatter={(v) => v}
+            />
+            <ReferenceLine yAxisId="funding" y={0} stroke="#5a5a70" strokeDasharray="3 3" strokeWidth={0.5} />
+            <Bar
+              yAxisId="funding"
+              dataKey="funding"
+              name="funding"
+              radius={[2, 2, 0, 0]}
+            >
+              {chartData.map((entry, i) => (
+                <Cell
+                  key={i}
+                  fill={entry.funding >= 0 ? 'rgba(0, 214, 143, 0.6)' : 'rgba(255, 77, 106, 0.6)'}
+                />
+              ))}
+            </Bar>
+            <Line
+              yAxisId="oi"
+              type="monotone"
+              dataKey="oi"
+              name="oi"
+              stroke="#4a9eff"
+              strokeWidth={1.5}
+              dot={false}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ──
 
 export default function Liquidations() {
   const [mapData, setMapData] = useState(null)
   const [levels, setLevels] = useState(null)
   const [stats, setStats] = useState(null)
+  const [fundingData, setFundingData] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
     try {
-      const [map, lvl, st] = await Promise.all([
+      const [map, lvl, st, fd] = await Promise.all([
         api.getLiquidationMap(),
         api.getLiquidationLevels(),
         api.getLiquidationStats(),
+        api.getFundingHistory(168).catch(() => null),
       ])
       setMapData(map)
       setLevels(lvl)
       setStats(st)
+      setFundingData(fd)
     } catch (err) {
       console.error('Liquidation fetch error:', err)
     } finally {
@@ -535,12 +638,14 @@ export default function Liquidations() {
 
   return (
     <div className="px-4 pt-4 space-y-3 pb-20">
+      <SubTabBar tabs={MARKET_TABS} />
       <h1 className="text-lg font-bold">Liquidation Map</h1>
 
       <SummaryCard data={mapData} />
       <RiskMeter longPct={longPct} shortPct={shortPct} fundingRate={fundingRate} />
       <LiquidationHeatmap data={mapData} />
       <KeyLevels data={mapData} />
+      <FundingOIChart fundingData={fundingData} />
       <TradingInsight data={mapData} stats={stats} />
       <LeverageTable levels={levels} currentPrice={mapData?.current_price} />
       <StatsGrid stats={stats} />

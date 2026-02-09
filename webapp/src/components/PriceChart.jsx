@@ -11,7 +11,6 @@ import {
   CartesianGrid,
   ReferenceLine,
   LineChart,
-  Brush,
 } from 'recharts'
 import { api } from '../utils/api.js'
 import {
@@ -21,6 +20,7 @@ import {
   formatTime,
   formatDate,
 } from '../utils/format.js'
+import { useChartZoom } from '../hooks/useChartZoom'
 
 const TIMEFRAMES = [
   { label: '24H', value: '1d' },
@@ -230,6 +230,8 @@ export default function PriceChart() {
     }))
   }, [candles])
 
+  const { data: visibleChartData, bindGestures, isZoomed, resetZoom } = useChartZoom(chartData)
+
   const isPositive = (stats?.change ?? 0) >= 0
   const accentColor = isPositive ? '#00d68f' : '#ff4d6a'
 
@@ -242,13 +244,13 @@ export default function PriceChart() {
     return new Date(tick).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
   }
 
-  // Y domain with padding
-  const closePrices = chartData.map((c) => c.close).filter((v) => v > 0)
+  // Y domain with padding (use visible data for correct domain)
+  const closePrices = visibleChartData.map((c) => c.close).filter((v) => v > 0)
   const allPrices = overlays.bb
     ? [
         ...closePrices,
-        ...chartData.map((c) => c.bbUpper).filter(Boolean),
-        ...chartData.map((c) => c.bbLower).filter(Boolean),
+        ...visibleChartData.map((c) => c.bbUpper).filter(Boolean),
+        ...visibleChartData.map((c) => c.bbLower).filter(Boolean),
       ]
     : closePrices
 
@@ -316,6 +318,14 @@ export default function PriceChart() {
               {o.label}
             </button>
           ))}
+          {isZoomed && (
+            <button
+              onClick={resetZoom}
+              className="ml-auto px-2 py-0.5 rounded text-[10px] font-semibold text-accent-blue border border-accent-blue/30"
+            >
+              Reset
+            </button>
+          )}
         </div>
       </div>
 
@@ -338,7 +348,7 @@ export default function PriceChart() {
       ) : (
         <>
           {/* Main price chart with overlays */}
-          <div className="h-[250px] px-1 relative">
+          <div className="h-[250px] px-1 relative" {...bindGestures}>
             <div className="absolute top-2 left-14 z-10 text-[10px] text-[#3a3a55] font-semibold tracking-wider">
               BTC/USDT {timeframe.label}
             </div>
@@ -353,7 +363,7 @@ export default function PriceChart() {
             )}
 
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
+              <ComposedChart data={visibleChartData} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
                 <defs>
                   <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={accentColor} stopOpacity={0.15} />
@@ -468,14 +478,6 @@ export default function PriceChart() {
                   </>
                 )}
 
-                <Brush
-                  dataKey="time"
-                  height={20}
-                  stroke="#4a9eff"
-                  fill="#0f0f14"
-                  tickFormatter={formatXTick}
-                  startIndex={Math.max(0, chartData.length - Math.floor(chartData.length * 0.75))}
-                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -484,7 +486,7 @@ export default function PriceChart() {
           {overlays.vol && (
             <div className="h-[36px] px-1">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={{ top: 0, right: 8, left: 4, bottom: 0 }}>
+                <ComposedChart data={visibleChartData} margin={{ top: 0, right: 8, left: 4, bottom: 0 }}>
                   <XAxis dataKey="time" hide />
                   <YAxis
                     yAxisId="vol"
@@ -507,7 +509,7 @@ export default function PriceChart() {
             <div className="h-[60px] px-1 border-t border-[#1e1e30]">
               <div className="absolute right-14 mt-0.5 text-[8px] text-[#aa88ff] font-semibold z-10">RSI(14)</div>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
+                <LineChart data={visibleChartData} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
                   <XAxis dataKey="time" hide />
                   <YAxis
                     width={48}

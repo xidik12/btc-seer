@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../utils/api'
 import { formatPrice } from '../utils/format'
+import { useChartZoom } from '../hooks/useChartZoom'
+import SubTabBar from '../components/SubTabBar'
+
+const MARKET_TABS = [
+  { path: '/liquidations', label: 'Liquidations' },
+  { path: '/powerlaw', label: 'Power Law' },
+  { path: '/events', label: 'Events' },
+]
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -10,7 +18,6 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Brush,
 } from 'recharts'
 
 const POLL_INTERVAL = 60_000
@@ -86,11 +93,19 @@ function PowerLawChart({ historicalData }) {
       actualPrice: p.actual_price,
     }))
 
+  const { data: visibleData, bindGestures, isZoomed, resetZoom } = useChartZoom(chartData)
+
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">POWER LAW CORRIDOR</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-text-secondary text-xs font-semibold">POWER LAW CORRIDOR</h3>
+        {isZoomed && (
+          <button onClick={resetZoom} className="text-[10px] text-accent-blue">Reset</button>
+        )}
+      </div>
+      <div {...bindGestures}>
       <ResponsiveContainer width="100%" height={310}>
-        <ComposedChart data={chartData}>
+        <ComposedChart data={visibleData}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
           <XAxis
             dataKey="date"
@@ -156,16 +171,9 @@ function PowerLawChart({ historicalData }) {
             name="BTC Price"
             connectNulls
           />
-          <Brush
-            dataKey="date"
-            height={20}
-            stroke="#4a9eff"
-            fill="#0f0f14"
-            tickFormatter={(v) => v?.slice(5, 10)}
-            startIndex={Math.max(0, chartData.length - Math.floor(chartData.length * 0.5))}
-          />
         </ComposedChart>
       </ResponsiveContainer>
+      </div>
     </div>
   )
 }
@@ -174,9 +182,11 @@ export default function PowerLaw() {
   const [current, setCurrent] = useState(null)
   const [historical, setHistorical] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   const fetchData = useCallback(async () => {
     try {
+      setError(null)
       const [curr, hist] = await Promise.all([
         api.getPowerLawCurrent(),
         api.getPowerLawHistorical(365),
@@ -185,6 +195,7 @@ export default function PowerLaw() {
       setHistorical(hist)
     } catch (err) {
       console.error('Power Law fetch error:', err)
+      setError(err.message || 'Failed to load power law data')
     } finally {
       setLoading(false)
     }
@@ -209,10 +220,24 @@ export default function PowerLaw() {
     )
   }
 
+  if (error && !current) {
+    return (
+      <div className="px-4 pt-4 space-y-4">
+        <h1 className="text-lg font-bold">Power Law Analysis</h1>
+        <div className="bg-bg-card rounded-2xl p-6 border border-accent-red/20 text-center">
+          <p className="text-accent-red text-sm mb-2">Failed to load data</p>
+          <p className="text-text-muted text-xs mb-3">{error}</p>
+          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">Retry</button>
+        </div>
+      </div>
+    )
+  }
+
   const valStyle = VALUATION_COLORS[current?.valuation] || VALUATION_COLORS['Above Fair Value']
 
   return (
-    <div className="px-4 pt-4 space-y-3 pb-4">
+    <div className="px-4 pt-4 space-y-3 pb-20">
+      <SubTabBar tabs={MARKET_TABS} />
       <h1 className="text-lg font-bold">Power Law Analysis</h1>
 
       {/* Valuation Card */}

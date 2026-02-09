@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../utils/api'
 import { formatCoinPrice, formatPercent, formatMarketCap, formatSupply, formatDate } from '../utils/format'
+import { useChartZoom } from '../hooks/useChartZoom'
 
 const CHART_PERIODS = [
   { label: '1D', days: 1 },
@@ -96,48 +97,8 @@ export default function CoinDetail() {
       </div>
 
       {/* Chart */}
-      <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-        <div className="flex gap-2 mb-3">
-          {CHART_PERIODS.map(p => (
-            <button
-              key={p.days}
-              onClick={() => setPeriod(p.days)}
-              className={`px-3 py-1 rounded-full text-[10px] font-medium transition-colors ${
-                period === p.days
-                  ? 'bg-accent-blue text-white'
-                  : 'bg-white/5 text-text-muted hover:text-text-secondary'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+      <ChartSection chart={chart} chartLoading={chartLoading} chartColor={chartColor} period={period} setPeriod={setPeriod} />
 
-        {chartLoading ? (
-          <div className="h-40 flex items-center justify-center text-text-muted text-xs">Loading chart...</div>
-        ) : chart.length > 0 ? (
-          <ResponsiveContainer width="100%" height={160}>
-            <AreaChart data={chart}>
-              <defs>
-                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={chartColor} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="timestamp" hide />
-              <YAxis domain={['auto', 'auto']} hide />
-              <Tooltip
-                contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
-                labelFormatter={v => new Date(v).toLocaleDateString()}
-                formatter={v => [formatCoinPrice(v), 'Price']}
-              />
-              <Area type="monotone" dataKey="price" stroke={chartColor} fill="url(#chartGrad)" strokeWidth={2} dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="h-40 flex items-center justify-center text-text-muted text-xs">No chart data</div>
-        )}
-      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3">
@@ -177,6 +138,60 @@ export default function CoinDetail() {
             ))}
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+function ChartSection({ chart, chartLoading, chartColor, period, setPeriod }) {
+  const { data: visibleChart, bindGestures, isZoomed, resetZoom } = useChartZoom(chart)
+
+  return (
+    <div className="bg-bg-card rounded-xl p-3 border border-white/5">
+      <div className="flex items-center gap-2 mb-3">
+        {CHART_PERIODS.map(p => (
+          <button
+            key={p.days}
+            onClick={() => setPeriod(p.days)}
+            className={`px-3 py-1 rounded-full text-[10px] font-medium transition-colors ${
+              period === p.days
+                ? 'bg-accent-blue text-white'
+                : 'bg-white/5 text-text-muted hover:text-text-secondary'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+        {isZoomed && (
+          <button onClick={resetZoom} className="ml-auto text-[10px] text-accent-blue">Reset</button>
+        )}
+      </div>
+
+      {chartLoading ? (
+        <div className="h-40 flex items-center justify-center text-text-muted text-xs">Loading chart...</div>
+      ) : chart.length > 0 ? (
+        <div {...bindGestures}>
+          <ResponsiveContainer width="100%" height={160}>
+            <AreaChart data={visibleChart}>
+              <defs>
+                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={chartColor} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="timestamp" hide />
+              <YAxis domain={['auto', 'auto']} hide />
+              <Tooltip
+                contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
+                labelFormatter={v => new Date(v).toLocaleDateString()}
+                formatter={v => [formatCoinPrice(v), 'Price']}
+              />
+              <Area type="monotone" dataKey="price" stroke={chartColor} fill="url(#chartGrad)" strokeWidth={2} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <div className="h-40 flex items-center justify-center text-text-muted text-xs">No chart data</div>
       )}
     </div>
   )

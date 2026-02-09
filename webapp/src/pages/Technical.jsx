@@ -1,6 +1,23 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../utils/api'
 import { formatPricePrecise, formatPrice, formatTimeAgo } from '../utils/format'
+import { useChartZoom } from '../hooks/useChartZoom'
+import SubTabBar from '../components/SubTabBar'
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Line,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from 'recharts'
+
+const ANALYSIS_TABS = [
+  { path: '/technical', label: 'Technical' },
+  { path: '/signals', label: 'Signals' },
+]
 
 const POLL_INTERVAL = 60_000
 
@@ -142,6 +159,107 @@ function bbExplain(pos, width) {
   return posText
 }
 
+// ── Indicator History Chart ──
+
+function IndicatorHistory() {
+  const [histData, setHistData] = useState(null)
+  const [histLoading, setHistLoading] = useState(true)
+
+  useEffect(() => {
+    api.getIndicatorHistory()
+      .then(d => setHistData(d))
+      .catch(() => {})
+      .finally(() => setHistLoading(false))
+  }, [])
+
+  if (histLoading) {
+    return (
+      <div className="bg-bg-card rounded-2xl p-4 border border-white/5 animate-pulse">
+        <div className="h-5 w-40 bg-bg-hover rounded mb-4" />
+        <div className="h-[180px] bg-bg-hover rounded" />
+      </div>
+    )
+  }
+
+  const points = histData?.history || histData?.points || []
+  if (!points.length) return null
+
+  const chartData = points.map(p => ({
+    time: p.timestamp || p.time,
+    rsi: p.rsi,
+    macd: p.macd_histogram || p.macd,
+  }))
+
+  const { data: visibleData, bindGestures, isZoomed, resetZoom } = useChartZoom(chartData)
+
+  return (
+    <Section
+      title="Indicator History"
+      color="text-accent-blue"
+      explain="How key indicators have changed over time. RSI trending from 30 to 72 tells a story that a single snapshot at 72 misses."
+    >
+      {isZoomed && (
+        <button onClick={resetZoom} className="text-[10px] text-accent-blue mb-2">Reset zoom</button>
+      )}
+      <div className="h-[200px]" {...bindGestures}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={visibleData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 6" stroke="#1e1e30" vertical={false} />
+            <XAxis
+              dataKey="time"
+              tick={{ fontSize: 9, fill: '#5a5a70' }}
+              tickFormatter={(v) => v?.slice(11, 16) || v?.slice(5, 10) || ''}
+              axisLine={false}
+              tickLine={false}
+              minTickGap={40}
+            />
+            <YAxis
+              yAxisId="rsi"
+              domain={[0, 100]}
+              tick={{ fontSize: 9, fill: '#5a5a70' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis yAxisId="macd" orientation="right" hide />
+            <Tooltip
+              contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
+              formatter={(v, name) => [v?.toFixed(2), name === 'rsi' ? 'RSI' : 'MACD']}
+              labelFormatter={(v) => v}
+            />
+            <Area
+              yAxisId="rsi"
+              type="monotone"
+              dataKey="rsi"
+              stroke="#4a9eff"
+              strokeWidth={1.5}
+              fill="rgba(74, 158, 255, 0.1)"
+              dot={false}
+              name="rsi"
+            />
+            <Line
+              yAxisId="macd"
+              type="monotone"
+              dataKey="macd"
+              stroke="#a78bfa"
+              strokeWidth={1}
+              dot={false}
+              name="macd"
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex justify-center gap-4 mt-2 text-[9px]">
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-0.5 bg-accent-blue inline-block rounded" /> RSI
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-0.5 bg-accent-purple inline-block rounded" /> MACD
+        </span>
+      </div>
+    </Section>
+  )
+}
+
 // ── Main Component ──
 
 export default function Technical() {
@@ -242,6 +360,7 @@ export default function Technical() {
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
+      <SubTabBar tabs={ANALYSIS_TABS} />
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">Technical Analysis</h1>
         {data?.timestamp && (
@@ -741,6 +860,8 @@ export default function Technical() {
           />
         ))}
       </Section>
+
+      <IndicatorHistory />
 
       <p className="text-text-muted text-[10px] text-center pb-4 leading-relaxed">
         Technical indicators update every minute. These are mathematical tools, not crystal balls.

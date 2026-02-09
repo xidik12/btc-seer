@@ -8,6 +8,8 @@ import SentimentGauge from '../components/SentimentGauge'
 import NewsCarousel from '../components/NewsCarousel'
 import InfluencerFeed from '../components/InfluencerFeed'
 import MacroDashboard from '../components/MacroDashboard'
+import OnChainWidget from '../components/OnChainWidget'
+import DominanceWidget from '../components/DominanceWidget'
 
 class SafeWrap extends Component {
   constructor(props) {
@@ -80,6 +82,14 @@ export default function Dashboard() {
 
       <SafeWrap name="InfluencerFeed">
         <InfluencerFeed />
+      </SafeWrap>
+
+      <SafeWrap name="OnChainWidget">
+        <OnChainWidget />
+      </SafeWrap>
+
+      <SafeWrap name="DominanceWidget">
+        <DominanceWidget />
       </SafeWrap>
 
       <SafeWrap name="MacroDashboard">
