@@ -6,6 +6,7 @@ import SubTabBar from '../components/SubTabBar'
 const MARKET_TABS = [
   { path: '/liquidations', label: 'Liquidations' },
   { path: '/powerlaw', label: 'Power Law' },
+  { path: '/elliott-wave', label: 'Elliott Wave' },
   { path: '/events', label: 'Events' },
 ]
 
@@ -101,7 +102,7 @@ function EventCard({ event }) {
         <div className="mt-3 pt-2 border-t border-white/5">
           <div className="grid grid-cols-4 gap-1">
             {TIMEFRAMES.map(tf => {
-              const impact = event[`impact_${tf}`] ?? event[`price_change_${tf}`]
+              const impact = event[`change_pct_${tf}`] ?? event[`impact_${tf}`] ?? event[`price_change_${tf}`]
               return (
                 <div key={tf} className={`rounded-lg p-2 text-center ${getImpactColor(impact)}`}>
                   <div className="text-[9px] text-text-muted">{tf}</div>

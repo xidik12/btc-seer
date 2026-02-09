@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PriceWidget from '../components/PriceWidget'
 import PriceChart from '../components/PriceChart'
 import PredictionCard from '../components/PredictionCard'
@@ -40,6 +41,35 @@ class SafeWrap extends Component {
   }
 }
 
+const QUICK_LINKS = [
+  { path: '/technical', label: 'Technical', icon: '\u{1F4CA}' },
+  { path: '/signals', label: 'Signals', icon: '\u{1F4E1}' },
+  { path: '/liquidations', label: 'Liquidations', icon: '\u{1F525}' },
+  { path: '/powerlaw', label: 'Power Law', icon: '\u{1F4CF}' },
+  { path: '/elliott-wave', label: 'Elliott Wave', icon: '\u{1F30A}' },
+  { path: '/events', label: 'Events', icon: '\u{26A1}' },
+  { path: '/coins', label: 'Coins', icon: '\u{1FA99}' },
+  { path: '/advisor', label: 'Advisor', icon: '\u{1F9E0}' },
+]
+
+function QuickAccessGrid() {
+  const navigate = useNavigate()
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {QUICK_LINKS.map((link) => (
+        <button
+          key={link.path}
+          onClick={() => navigate(link.path)}
+          className="bg-bg-card rounded-xl border border-white/5 p-3 flex flex-col items-center gap-1.5 hover:border-white/15 active:scale-95 transition-all"
+        >
+          <span className="text-lg">{link.icon}</span>
+          <span className="text-[10px] text-text-secondary font-medium leading-tight text-center">{link.label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export default function Dashboard() {
   return (
     <div className="px-4 pt-4 space-y-4">
@@ -49,6 +79,8 @@ export default function Dashboard() {
         </h1>
         <span className="text-text-muted text-xs pulse-glow">LIVE</span>
       </header>
+
+      <QuickAccessGrid />
 
       <SafeWrap name="PriceWidget">
         <PriceWidget />

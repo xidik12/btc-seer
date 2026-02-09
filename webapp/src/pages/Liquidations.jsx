@@ -7,6 +7,7 @@ import SubTabBar from '../components/SubTabBar'
 const MARKET_TABS = [
   { path: '/liquidations', label: 'Liquidations' },
   { path: '/powerlaw', label: 'Power Law' },
+  { path: '/elliott-wave', label: 'Elliott Wave' },
   { path: '/events', label: 'Events' },
 ]
 import {

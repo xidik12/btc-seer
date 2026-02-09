@@ -41,7 +41,7 @@ const icons = {
 const tabs = [
   { path: '/', label: 'Home', icon: 'home', matchPaths: ['/'] },
   { path: '/technical', label: 'Analysis', icon: 'analysis', matchPaths: ['/technical', '/signals'] },
-  { path: '/liquidations', label: 'Markets', icon: 'markets', matchPaths: ['/liquidations', '/powerlaw', '/events'] },
+  { path: '/liquidations', label: 'Markets', icon: 'markets', matchPaths: ['/liquidations', '/powerlaw', '/elliott-wave', '/events'] },
   { path: '/coins', label: 'Coins', icon: 'coins', matchPaths: ['/coins'] },
   { path: '/more', label: 'More', icon: 'more', matchPaths: ['/more', '/news', '/advisor', '/about', '/settings', '/history'] },
 ]

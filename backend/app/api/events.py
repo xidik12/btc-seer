@@ -81,9 +81,23 @@ async def get_category_stats(
 
     stats = pattern_matcher.get_category_stats(event_dicts)
 
+    # Transform dict → array with frontend-expected field names
+    categories_list = []
+    if isinstance(stats, dict):
+        for cat_name, cat_data in stats.items():
+            entry = {"category": cat_name, "count": cat_data.get("count", 0)}
+            for key in ("avg_1h", "avg_4h", "avg_24h", "avg_7d"):
+                tf = key.replace("avg_", "")
+                entry[f"avg_impact_{tf}"] = cat_data.get(key, 0.0)
+            categories_list.append(entry)
+    elif isinstance(stats, list):
+        categories_list = stats
+    else:
+        categories_list = []
+
     return {
         "total_events_evaluated": len(events),
-        "categories": stats,
+        "categories": categories_list,
     }
 
 
@@ -114,7 +128,20 @@ async def get_event_memory_status(
         .group_by(EventImpact.category)
         .order_by(desc("count"))
     )
-    categories = {row.category: row.count for row in result.all()}
+    cat_rows = result.all()
+    num_categories = len(cat_rows)
+    most_impactful = cat_rows[0].category if cat_rows else None
+
+    # Compute avg_per_day
+    first_event = await session.execute(
+        select(EventImpact.timestamp).order_by(EventImpact.timestamp).limit(1)
+    )
+    first_ts = first_event.scalar()
+    if first_ts and total_count:
+        days_span = max((datetime.utcnow() - first_ts).days, 1)
+        avg_per_day = round(total_count / days_span, 2)
+    else:
+        avg_per_day = 0.0
 
     return {
         "total_events": total_count,
@@ -123,5 +150,7 @@ async def get_event_memory_status(
         "sentiment_accuracy": round(
             (predictive_count / evaluated_count * 100) if evaluated_count > 0 else 0, 1
         ),
-        "categories": categories,
+        "categories": num_categories,
+        "avg_per_day": avg_per_day,
+        "most_impactful_category": most_impactful,
     }

@@ -16,7 +16,7 @@ from app.config import settings
 from app.database import init_db
 from app.api import predictions, signals, news, market, history, influencers, events, quant, coins
 from app.api import advisor as advisor_api
-from app.api import powerlaw, public_api, liquidations
+from app.api import powerlaw, public_api, liquidations, elliott_wave
 from app.scheduler.jobs import (
     backfill_historical_prices,
     collect_price_data,
@@ -241,6 +241,7 @@ app.include_router(advisor_api.router)
 app.include_router(powerlaw.router)
 app.include_router(liquidations.router)
 app.include_router(coins.router)
+app.include_router(elliott_wave.router)
 app.include_router(public_api.router)
 
 

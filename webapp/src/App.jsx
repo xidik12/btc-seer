@@ -10,6 +10,7 @@ import PowerLaw from './pages/PowerLaw'
 import Liquidations from './pages/Liquidations'
 import About from './pages/About'
 import EventMemory from './pages/EventMemory'
+import ElliottWave from './pages/ElliottWave'
 import Advisor from './pages/Advisor'
 import More from './pages/More'
 import Settings from './pages/Settings'
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/liquidations" element={<Liquidations />} />
           <Route path="/powerlaw" element={<PowerLaw />} />
           <Route path="/events" element={<EventMemory />} />
+          <Route path="/elliott-wave" element={<ElliottWave />} />
           {/* Coins */}
           <Route path="/coins" element={<Coins />} />
           <Route path="/coins/search" element={<CoinSearch />} />
