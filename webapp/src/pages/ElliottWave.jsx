@@ -25,6 +25,32 @@ import {
 
 const POLL_INTERVAL = 60_000
 
+const TIMEFRAMES = [
+  { key: '1h', label: '1H', days: 30 },
+  { key: '4h', label: '4H', days: 90 },
+  { key: '1d', label: '1D', days: 365 },
+]
+
+function TimeframeSelector({ selected, onChange }) {
+  return (
+    <div className="flex gap-1 bg-bg-card rounded-xl p-1 border border-white/5">
+      {TIMEFRAMES.map((tf) => (
+        <button
+          key={tf.key}
+          onClick={() => onChange(tf.key)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            selected === tf.key
+              ? 'bg-accent-blue/20 text-accent-blue border border-accent-blue/30'
+              : 'text-text-muted hover:text-text-secondary'
+          }`}
+        >
+          {tf.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function DirectionBadge({ direction, pattern, confidence }) {
   const isBullish = direction === 'bullish'
   const color = isBullish ? 'accent-green' : direction === 'bearish' ? 'accent-red' : 'accent-yellow'
@@ -298,13 +324,16 @@ export default function ElliottWave() {
   const [historical, setHistorical] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [timeframe, setTimeframe] = useState('4h')
+
+  const tfConfig = TIMEFRAMES.find((t) => t.key === timeframe) || TIMEFRAMES[1]
 
   const fetchData = useCallback(async () => {
     try {
       setError(null)
       const [curr, hist] = await Promise.all([
-        api.getElliottWaveCurrent(),
-        api.getElliottWaveHistorical(90),
+        api.getElliottWaveCurrent(timeframe),
+        api.getElliottWaveHistorical(tfConfig.days, timeframe),
       ])
       setCurrent(curr)
       setHistorical(hist)
@@ -314,9 +343,10 @@ export default function ElliottWave() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [timeframe, tfConfig.days])
 
   useEffect(() => {
+    setLoading(true)
     fetchData()
     const interval = setInterval(fetchData, POLL_INTERVAL)
     return () => clearInterval(interval)
@@ -351,7 +381,10 @@ export default function ElliottWave() {
   return (
     <div className="px-4 pt-4 space-y-3 pb-20">
       <SubTabBar tabs={MARKET_TABS} />
-      <h1 className="text-lg font-bold">Elliott Wave Analysis</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-bold">Elliott Wave Analysis</h1>
+        <TimeframeSelector selected={timeframe} onChange={setTimeframe} />
+      </div>
 
       <WaveStatusCard data={current} />
       <WaveChart historicalData={historical} />

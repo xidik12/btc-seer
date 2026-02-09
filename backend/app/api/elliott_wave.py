@@ -433,7 +433,7 @@ def detect_divergences(
 # ── Build analysis from price data ──
 
 
-def _analyze(df: pd.DataFrame) -> dict:
+def _analyze(df: pd.DataFrame, lookback: int = 5) -> dict:
     """Run full Elliott Wave analysis on a price DataFrame."""
     if df.empty or len(df) < 30:
         return {
@@ -453,7 +453,7 @@ def _analyze(df: pd.DataFrame) -> dict:
     rsi_vals = _rsi(df["close"], 14)
     _, _, macd_hist_vals = _macd(df["close"])
 
-    swings = find_swing_points(df["high"], df["low"], df["close"], atr_vals, lookback=5)
+    swings = find_swing_points(df["high"], df["low"], df["close"], atr_vals, lookback=lookback)
     wave_count = label_waves(swings)
     fib_targets = calculate_fib_targets(wave_count["waves"], wave_count["direction"])
     divergences_raw = detect_divergences(df["close"], rsi_vals, macd_hist_vals, swings)
@@ -511,10 +511,21 @@ def _analyze(df: pd.DataFrame) -> dict:
 # ── Endpoints ──
 
 
+TIMEFRAME_CONFIG = {
+    "1h": {"resample": "1h", "days": 30, "lookback": 3},
+    "4h": {"resample": "4h", "days": 120, "lookback": 5},
+    "1d": {"resample": "1D", "days": 365, "lookback": 5},
+}
+
+
 @router.get("/current")
-async def get_elliott_wave_current(session: AsyncSession = Depends(get_session)):
+async def get_elliott_wave_current(
+    timeframe: str = Query("4h", regex="^(1h|4h|1d)$"),
+    session: AsyncSession = Depends(get_session),
+):
     """Current Elliott Wave analysis for BTC."""
-    since = datetime.utcnow() - timedelta(days=120)
+    cfg = TIMEFRAME_CONFIG[timeframe]
+    since = datetime.utcnow() - timedelta(days=cfg["days"])
     result = await session.execute(
         select(Price)
         .where(Price.timestamp >= since)
@@ -525,6 +536,7 @@ async def get_elliott_wave_current(session: AsyncSession = Depends(get_session))
     if not prices:
         return {
             "current_price": None,
+            "timeframe": timeframe,
             "wave_count": {"pattern": "no_data", "current_wave": "?", "direction": "neutral", "waves": []},
             "fibonacci_targets": {"support_levels": [], "resistance_levels": []},
             "divergences": [],
@@ -537,20 +549,20 @@ async def get_elliott_wave_current(session: AsyncSession = Depends(get_session))
         for p in prices
     ])
 
-    # Resample to 4h candles for cleaner swings
     df["timestamp"] = pd.to_datetime(df["timestamp"])
-    df = df.set_index("timestamp").resample("4h").agg({
+    df = df.set_index("timestamp").resample(cfg["resample"]).agg({
         "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
     }).dropna().reset_index()
 
     current_price = float(df["close"].iloc[-1]) if len(df) > 0 else None
-    analysis = _analyze(df)
+    analysis = _analyze(df, lookback=cfg["lookback"])
 
     # Remove internal swings from response
     analysis.pop("swings", None)
 
     return {
         "current_price": current_price,
+        "timeframe": timeframe,
         **analysis,
     }
 
@@ -558,9 +570,11 @@ async def get_elliott_wave_current(session: AsyncSession = Depends(get_session))
 @router.get("/historical")
 async def get_elliott_wave_historical(
     days: int = Query(90, ge=7, le=365),
+    timeframe: str = Query("4h", regex="^(1h|4h|1d)$"),
     session: AsyncSession = Depends(get_session),
 ):
     """Historical wave data for charting."""
+    cfg = TIMEFRAME_CONFIG[timeframe]
     since = datetime.utcnow() - timedelta(days=days)
     result = await session.execute(
         select(Price)
@@ -570,18 +584,18 @@ async def get_elliott_wave_historical(
     prices = result.scalars().all()
 
     if not prices:
-        return {"days": days, "points": [], "waves": [], "fib_levels": []}
+        return {"days": days, "timeframe": timeframe, "points": [], "waves": [], "fib_levels": []}
 
     df = pd.DataFrame([
         {"timestamp": p.timestamp, "open": p.open, "high": p.high, "low": p.low, "close": p.close, "volume": p.volume}
         for p in prices
     ])
     df["timestamp"] = pd.to_datetime(df["timestamp"])
-    df = df.set_index("timestamp").resample("4h").agg({
+    df = df.set_index("timestamp").resample(cfg["resample"]).agg({
         "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
     }).dropna().reset_index()
 
-    analysis = _analyze(df)
+    analysis = _analyze(df, lookback=cfg["lookback"])
     swings = analysis.pop("swings", [])
 
     # Build swing set for quick lookup

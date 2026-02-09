@@ -77,8 +77,8 @@ export const api = {
   getApiUsage: (apiKey) => fetchAPI('/v1/usage', { headers: { 'X-API-Key': apiKey } }),
 
   // Elliott Wave
-  getElliottWaveCurrent: () => fetchAPI('/elliott-wave/current'),
-  getElliottWaveHistorical: (days = 90) => fetchAPI(`/elliott-wave/historical?days=${days}`),
+  getElliottWaveCurrent: (timeframe = '4h') => fetchAPI(`/elliott-wave/current?timeframe=${timeframe}`),
+  getElliottWaveHistorical: (days = 90, timeframe = '4h') => fetchAPI(`/elliott-wave/historical?days=${days}&timeframe=${timeframe}`),
 
   // Coins
   getTrackedCoins: () => fetchAPI('/coins/tracked'),
