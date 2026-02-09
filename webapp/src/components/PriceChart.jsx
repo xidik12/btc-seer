@@ -11,6 +11,7 @@ import {
   CartesianGrid,
   ReferenceLine,
   LineChart,
+  Brush,
 } from 'recharts'
 import { api } from '../utils/api.js'
 import {
@@ -337,7 +338,7 @@ export default function PriceChart() {
       ) : (
         <>
           {/* Main price chart with overlays */}
-          <div className="h-[220px] px-1 relative">
+          <div className="h-[250px] px-1 relative">
             <div className="absolute top-2 left-14 z-10 text-[10px] text-[#3a3a55] font-semibold tracking-wider">
               BTC/USDT {timeframe.label}
             </div>
@@ -466,6 +467,15 @@ export default function PriceChart() {
                     <Line yAxisId="price" type="monotone" dataKey="ema50" stroke="#ff66aa" strokeWidth={0.8} dot={false} isAnimationActive={false} strokeDasharray="3 3" />
                   </>
                 )}
+
+                <Brush
+                  dataKey="time"
+                  height={20}
+                  stroke="#4a9eff"
+                  fill="#0f0f14"
+                  tickFormatter={formatXTick}
+                  startIndex={Math.max(0, chartData.length - Math.floor(chartData.length * 0.75))}
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>

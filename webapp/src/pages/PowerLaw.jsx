@@ -10,6 +10,7 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  Brush,
 } from 'recharts'
 
 const POLL_INTERVAL = 60_000
@@ -88,7 +89,7 @@ function PowerLawChart({ historicalData }) {
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <h3 className="text-text-secondary text-xs font-semibold mb-3">POWER LAW CORRIDOR</h3>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={310}>
         <ComposedChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
           <XAxis
@@ -154,6 +155,14 @@ function PowerLawChart({ historicalData }) {
             dot={false}
             name="BTC Price"
             connectNulls
+          />
+          <Brush
+            dataKey="date"
+            height={20}
+            stroke="#4a9eff"
+            fill="#0f0f14"
+            tickFormatter={(v) => v?.slice(5, 10)}
+            startIndex={Math.max(0, chartData.length - Math.floor(chartData.length * 0.5))}
           />
         </ComposedChart>
       </ResponsiveContainer>

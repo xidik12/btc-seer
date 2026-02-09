@@ -6,6 +6,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  Brush,
 } from 'recharts'
 import { api } from '../utils/api.js'
 import { formatDate, formatPercent } from '../utils/format.js'
@@ -154,7 +155,7 @@ export default function AccuracyTracker() {
               <p className="text-text-secondary text-xs mb-2">
                 Daily Trend (30d)
               </p>
-              <div className="h-[80px] -mx-2">
+              <div className="h-[120px] -mx-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={dailyTrend}
@@ -185,6 +186,13 @@ export default function AccuracyTracker() {
                         stroke: '#0f0f14',
                         strokeWidth: 2,
                       }}
+                    />
+                    <Brush
+                      dataKey="date"
+                      height={16}
+                      stroke="#4a9eff"
+                      fill="#0f0f14"
+                      tickFormatter={(d) => formatDate(d)}
                     />
                   </LineChart>
                 </ResponsiveContainer>

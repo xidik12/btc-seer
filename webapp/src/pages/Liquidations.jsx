@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api } from '../utils/api'
 import { formatPrice, formatNumber } from '../utils/format'
 import {
@@ -10,14 +10,94 @@ import {
   Tooltip,
   ReferenceLine,
   Cell,
+  Brush,
+  CartesianGrid,
 } from 'recharts'
 
 const POLL_INTERVAL = 60_000
 
+// ── Color helpers ──
+
+function liqIntensityColor(volume, maxVolume, type) {
+  const ratio = Math.min(volume / (maxVolume || 1), 1)
+  if (type === 'long') {
+    // Red gradient: darker = more volume
+    const alpha = 0.25 + ratio * 0.75
+    return `rgba(255, 50, 80, ${alpha})`
+  }
+  // Short: cyan-green gradient
+  const alpha = 0.25 + ratio * 0.75
+  return `rgba(0, 220, 130, ${alpha})`
+}
+
+// ── Risk Meter ──
+
+function RiskMeter({ longPct, shortPct, fundingRate }) {
+  // Determine overall market risk direction
+  const isLongHeavy = longPct > shortPct
+  const imbalance = Math.abs(longPct - shortPct)
+  const fundingBias = fundingRate > 0 ? 'long' : fundingRate < 0 ? 'short' : 'neutral'
+
+  let riskLabel, riskColor, riskDesc
+  if (imbalance < 3) {
+    riskLabel = 'BALANCED'
+    riskColor = 'text-accent-yellow'
+    riskDesc = 'Market is balanced. No strong liquidation bias.'
+  } else if (isLongHeavy) {
+    riskLabel = 'LONG HEAVY'
+    riskColor = 'text-accent-red'
+    riskDesc = `${longPct.toFixed(1)}% longs — a dip could trigger cascading long liquidations.`
+  } else {
+    riskLabel = 'SHORT HEAVY'
+    riskColor = 'text-accent-green'
+    riskDesc = `${shortPct.toFixed(1)}% shorts — a pump could trigger a short squeeze.`
+  }
+
+  const needlePos = longPct // 0-100, 50 = balanced
+  const needlePct = Math.max(5, Math.min(95, needlePos))
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-text-secondary text-xs font-semibold">MARKET RISK METER</h3>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+          riskColor === 'text-accent-red' ? 'bg-accent-red/10 border-accent-red/30' :
+          riskColor === 'text-accent-green' ? 'bg-accent-green/10 border-accent-green/30' :
+          'bg-accent-yellow/10 border-accent-yellow/30'
+        } ${riskColor}`}>{riskLabel}</span>
+      </div>
+
+      {/* Gradient bar */}
+      <div className="relative h-3 rounded-full bg-gradient-to-r from-accent-green via-accent-yellow to-accent-red mb-1">
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg border-2 border-bg-primary transition-all duration-500"
+          style={{ left: `calc(${needlePct}% - 6px)` }}
+        />
+      </div>
+      <div className="flex justify-between text-[9px] text-text-muted mb-2">
+        <span>Short Heavy</span>
+        <span>Balanced</span>
+        <span>Long Heavy</span>
+      </div>
+      <p className="text-text-muted text-[10px]">{riskDesc}</p>
+      {fundingRate != null && (
+        <div className="flex items-center gap-2 mt-2 text-[10px]">
+          <span className="text-text-muted">Funding confirms:</span>
+          <span className={fundingRate >= 0 ? 'text-accent-green font-medium' : 'text-accent-red font-medium'}>
+            {fundingBias === 'long' ? 'Longs paying shorts' : fundingBias === 'short' ? 'Shorts paying longs' : 'Neutral'}
+            {' '}({(fundingRate * 100).toFixed(4)}%)
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Summary Card ──
+
 function SummaryCard({ data }) {
   if (!data) return null
   const { current_price, summary } = data
-  const moreShorts = (summary.short_pct || 0) > (summary.long_pct || 0)
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
@@ -29,37 +109,44 @@ function SummaryCard({ data }) {
           </div>
         </div>
         <div className="text-right">
-          <div className="text-text-muted text-[10px] font-medium">OPEN INTEREST</div>
+          <div className="text-text-muted text-[10px] font-medium">TOTAL OPEN INTEREST</div>
           <div className="text-text-primary text-xl font-bold tabular-nums">
             ${formatNumber(summary.total_oi_usd)}
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <span className={`text-xs font-bold px-2 py-1 rounded border ${
-          moreShorts
-            ? 'bg-accent-green/10 border-accent-green/30 text-accent-green'
-            : 'bg-accent-red/10 border-accent-red/30 text-accent-red'
-        }`}>
-          {moreShorts ? 'More Shorts at Risk' : 'More Longs at Risk'}
-        </span>
-        <span className="text-text-muted text-[10px]">
-          L {summary.long_pct?.toFixed(1)}% / S {summary.short_pct?.toFixed(1)}%
-        </span>
-        {summary.funding_rate != null && (
-          <span className={`text-[10px] font-mono ${summary.funding_rate >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-            FR: {(summary.funding_rate * 100).toFixed(4)}%
+
+      {/* OI Split Bar */}
+      <div className="mb-2">
+        <div className="flex h-2 rounded-full overflow-hidden">
+          <div
+            className="bg-accent-green transition-all duration-500"
+            style={{ width: `${summary.long_pct || 50}%` }}
+          />
+          <div
+            className="bg-accent-red transition-all duration-500"
+            style={{ width: `${summary.short_pct || 50}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-1 text-[9px]">
+          <span className="text-accent-green font-medium">
+            Long {summary.long_pct?.toFixed(1)}% (${formatNumber(summary.long_oi_usd)})
           </span>
-        )}
+          <span className="text-accent-red font-medium">
+            Short {summary.short_pct?.toFixed(1)}% (${formatNumber(summary.short_oi_usd)})
+          </span>
+        </div>
       </div>
     </div>
   )
 }
 
+// ── Heatmap with intensity colors ──
+
 function LiquidationHeatmap({ data }) {
   if (!data?.bins?.length) {
     return (
-      <div className="bg-bg-card rounded-2xl p-4 border border-white/5 h-[400px] flex items-center justify-center">
+      <div className="bg-bg-card rounded-2xl p-4 border border-white/5 h-[420px] flex items-center justify-center">
         <span className="text-text-muted text-sm">No liquidation data</span>
       </div>
     )
@@ -67,7 +154,9 @@ function LiquidationHeatmap({ data }) {
 
   const { bins, current_price } = data
 
-  // Transform: long liquidations go negative (left), short positive (right)
+  const maxLong = Math.max(...bins.map(b => b.long_liq_volume), 1)
+  const maxShort = Math.max(...bins.map(b => b.short_liq_volume), 1)
+
   const chartData = bins.map((b) => ({
     price: `$${(b.price / 1000).toFixed(1)}k`,
     priceRaw: b.price,
@@ -81,104 +170,142 @@ function LiquidationHeatmap({ data }) {
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">LIQUIDATION HEATMAP</h3>
-      <ResponsiveContainer width="100%" height={400}>
-        <BarChart data={chartData} layout="vertical" barGap={0}>
-          <XAxis
-            type="number"
-            tick={{ fontSize: 9, fill: '#888' }}
-            tickFormatter={(v) => `${v >= 0 ? '' : '-'}$${formatNumber(Math.abs(v))}`}
-          />
-          <YAxis
-            type="category"
-            dataKey="price"
-            tick={{ fontSize: 9, fill: '#888' }}
-            width={55}
-          />
-          <Tooltip
-            contentStyle={{
-              background: '#1a1a2e',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8,
-              fontSize: 11,
-            }}
-            formatter={(v, name) => {
-              const label = name === 'longLiq' ? 'Long Liquidations' : 'Short Liquidations'
-              return [`$${formatNumber(Math.abs(v))}`, label]
-            }}
-          />
-          <ReferenceLine
-            y={currentPriceLabel}
-            stroke="#4a9eff"
-            strokeWidth={2}
-            strokeDasharray="4 4"
-            label={{ value: 'Price', fill: '#4a9eff', fontSize: 10 }}
-          />
-          <Bar dataKey="longLiq" name="longLiq" stackId="a" radius={[4, 0, 0, 4]}>
-            {chartData.map((entry, i) => (
-              <Cell key={i} fill="rgba(255,77,106,0.7)" />
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-text-secondary text-xs font-semibold">LIQUIDATION HEATMAP</h3>
+        <span className="text-text-muted text-[9px]">Drag bottom bar to zoom</span>
+      </div>
+      <div className="h-[420px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} layout="vertical" barGap={0} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 6" stroke="#1a1a28" horizontal={false} />
+            <XAxis
+              type="number"
+              tick={{ fontSize: 9, fill: '#5a5a70' }}
+              tickFormatter={(v) => `${v >= 0 ? '' : '-'}$${formatNumber(Math.abs(v))}`}
+              axisLine={false} tickLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="price"
+              tick={{ fontSize: 9, fill: '#8b8b9e' }}
+              width={55}
+              axisLine={false} tickLine={false}
+            />
+            <Tooltip
+              contentStyle={{
+                background: '#1a1a2e',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 10,
+                fontSize: 11,
+                padding: '8px 12px',
+              }}
+              formatter={(v, name) => {
+                const label = name === 'longLiq' ? 'Long Liquidations' : 'Short Liquidations'
+                return [`$${formatNumber(Math.abs(v))}`, label]
+              }}
+              labelFormatter={(label) => `Price Level: ${label}`}
+            />
+            <ReferenceLine
+              y={currentPriceLabel}
+              stroke="#4a9eff"
+              strokeWidth={2}
+              strokeDasharray="5 3"
+              label={{ value: `Current ${currentPriceLabel}`, fill: '#4a9eff', fontSize: 10, position: 'insideTopRight' }}
+            />
+
+            {/* Long liquidations — intensity-colored */}
+            <Bar dataKey="longLiq" name="longLiq" stackId="a" radius={[4, 0, 0, 4]}>
+              {chartData.map((entry, i) => (
+                <Cell key={i} fill={liqIntensityColor(entry.longVol, maxLong, 'long')} />
+              ))}
+            </Bar>
+
+            {/* Short liquidations — intensity-colored */}
+            <Bar dataKey="shortLiq" name="shortLiq" stackId="a" radius={[0, 4, 4, 0]}>
+              {chartData.map((entry, i) => (
+                <Cell key={i} fill={liqIntensityColor(entry.shortVol, maxShort, 'short')} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Legend */}
+      <div className="flex justify-center gap-6 mt-3">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-0.5">
+            {[0.3, 0.5, 0.7, 1.0].map((a, i) => (
+              <div key={i} className="w-3 h-3 rounded-sm" style={{ background: `rgba(255, 50, 80, ${a})` }} />
             ))}
-          </Bar>
-          <Bar dataKey="shortLiq" name="shortLiq" stackId="a" radius={[0, 4, 4, 0]}>
-            {chartData.map((entry, i) => (
-              <Cell key={i} fill="rgba(0,200,83,0.7)" />
+          </div>
+          <span className="text-[10px] text-text-muted">Long Liq (below price)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-0.5">
+            {[0.3, 0.5, 0.7, 1.0].map((a, i) => (
+              <div key={i} className="w-3 h-3 rounded-sm" style={{ background: `rgba(0, 220, 130, ${a})` }} />
             ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-      <div className="flex justify-center gap-4 mt-2 text-[10px] text-text-muted">
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-accent-red inline-block" /> Long Liquidations (below)
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-accent-green inline-block" /> Short Liquidations (above)
-        </span>
+          </div>
+          <span className="text-[10px] text-text-muted">Short Liq (above price)</span>
+        </div>
       </div>
     </div>
   )
 }
 
-function LeverageTable({ levels }) {
+// ── Leverage Table ──
+
+function LeverageTable({ levels, currentPrice }) {
   if (!levels?.levels?.length) return null
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">LEVERAGE LIQUIDATION LEVELS</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-3">LIQUIDATION BY LEVERAGE</h3>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="text-text-muted border-b border-white/5">
-              <th className="text-left py-2 font-medium">Leverage</th>
-              <th className="text-right py-2 font-medium">Long Liq</th>
-              <th className="text-right py-2 font-medium">Dist %</th>
-              <th className="text-right py-2 font-medium">Short Liq</th>
-              <th className="text-right py-2 font-medium">Dist %</th>
+              <th className="text-left py-2 font-medium">Lev</th>
+              <th className="text-right py-2 font-medium">Long Liq Price</th>
+              <th className="text-right py-2 font-medium">Distance</th>
+              <th className="text-right py-2 font-medium">Short Liq Price</th>
+              <th className="text-right py-2 font-medium">Distance</th>
             </tr>
           </thead>
           <tbody>
-            {levels.levels.map((l) => (
-              <tr key={l.leverage} className="border-b border-white/5">
-                <td className="py-2 font-bold text-text-primary">{l.leverage}</td>
-                <td className="py-2 text-right text-accent-red tabular-nums">
-                  {formatPrice(l.long_liq_price)}
-                </td>
-                <td className="py-2 text-right text-accent-red tabular-nums text-[10px]">
-                  -{l.long_distance_pct?.toFixed(2)}%
-                </td>
-                <td className="py-2 text-right text-accent-green tabular-nums">
-                  {formatPrice(l.short_liq_price)}
-                </td>
-                <td className="py-2 text-right text-accent-green tabular-nums text-[10px]">
-                  +{l.short_distance_pct?.toFixed(2)}%
-                </td>
-              </tr>
-            ))}
+            {levels.levels.map((l) => {
+              const longDanger = l.long_distance_pct < 5
+              const shortDanger = l.short_distance_pct < 5
+              return (
+                <tr key={l.leverage} className="border-b border-white/5 hover:bg-white/[0.02]">
+                  <td className="py-2.5 font-bold text-accent-blue">{l.leverage}</td>
+                  <td className="py-2.5 text-right text-accent-red tabular-nums font-medium">
+                    {formatPrice(l.long_liq_price)}
+                  </td>
+                  <td className={`py-2.5 text-right tabular-nums text-[10px] font-medium ${
+                    longDanger ? 'text-accent-red animate-pulse' : 'text-accent-red/60'
+                  }`}>
+                    -{l.long_distance_pct?.toFixed(2)}%
+                  </td>
+                  <td className="py-2.5 text-right text-accent-green tabular-nums font-medium">
+                    {formatPrice(l.short_liq_price)}
+                  </td>
+                  <td className={`py-2.5 text-right tabular-nums text-[10px] font-medium ${
+                    shortDanger ? 'text-accent-green animate-pulse' : 'text-accent-green/60'
+                  }`}>
+                    +{l.short_distance_pct?.toFixed(2)}%
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
     </div>
   )
 }
+
+// ── Key Levels ──
 
 function KeyLevels({ data }) {
   if (!data?.summary) return null
@@ -190,47 +317,51 @@ function KeyLevels({ data }) {
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">KEY LIQUIDATION LEVELS</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-3">NEAREST LIQUIDATION CLUSTERS</h3>
       <div className="space-y-2">
         {longCluster && (
-          <div className="flex items-center justify-between p-2 rounded-xl bg-accent-red/5 border border-accent-red/15">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-accent-red/5 border border-accent-red/15">
             <div>
-              <div className="text-[10px] text-text-muted">Largest Long Cluster</div>
-              <div className="text-sm font-bold text-accent-red tabular-nums">
+              <div className="text-[9px] text-text-muted font-medium">LONG CLUSTER</div>
+              <div className="text-base font-bold text-accent-red tabular-nums">
                 {formatPrice(longCluster.price)}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] text-text-muted">Distance</div>
-              <div className="text-sm font-bold text-accent-red tabular-nums">
+              <div className="text-[9px] text-text-muted font-medium">DISTANCE</div>
+              <div className={`text-base font-bold tabular-nums ${
+                longCluster.distance_pct < 5 ? 'text-accent-red animate-pulse' : 'text-accent-red'
+              }`}>
                 -{longCluster.distance_pct?.toFixed(2)}%
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] text-text-muted">Volume</div>
-              <div className="text-sm font-bold text-text-primary tabular-nums">
+              <div className="text-[9px] text-text-muted font-medium">VOLUME</div>
+              <div className="text-base font-bold text-text-primary tabular-nums">
                 ${formatNumber(longCluster.volume)}
               </div>
             </div>
           </div>
         )}
         {shortCluster && (
-          <div className="flex items-center justify-between p-2 rounded-xl bg-accent-green/5 border border-accent-green/15">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-accent-green/5 border border-accent-green/15">
             <div>
-              <div className="text-[10px] text-text-muted">Largest Short Cluster</div>
-              <div className="text-sm font-bold text-accent-green tabular-nums">
+              <div className="text-[9px] text-text-muted font-medium">SHORT CLUSTER</div>
+              <div className="text-base font-bold text-accent-green tabular-nums">
                 {formatPrice(shortCluster.price)}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] text-text-muted">Distance</div>
-              <div className="text-sm font-bold text-accent-green tabular-nums">
+              <div className="text-[9px] text-text-muted font-medium">DISTANCE</div>
+              <div className={`text-base font-bold tabular-nums ${
+                shortCluster.distance_pct < 5 ? 'text-accent-green animate-pulse' : 'text-accent-green'
+              }`}>
                 +{shortCluster.distance_pct?.toFixed(2)}%
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] text-text-muted">Volume</div>
-              <div className="text-sm font-bold text-text-primary tabular-nums">
+              <div className="text-[9px] text-text-muted font-medium">VOLUME</div>
+              <div className="text-base font-bold text-text-primary tabular-nums">
                 ${formatNumber(shortCluster.volume)}
               </div>
             </div>
@@ -241,6 +372,8 @@ function KeyLevels({ data }) {
   )
 }
 
+// ── Stats Grid ──
+
 function StatsGrid({ stats }) {
   if (!stats) return null
 
@@ -250,10 +383,12 @@ function StatsGrid({ stats }) {
     {
       label: 'L/S Ratio',
       value: stats.long_short_ratio?.long_short_ratio?.toFixed(2) ?? '--',
+      color: stats.long_short_ratio?.long_short_ratio > 1 ? 'text-accent-green' : 'text-accent-red',
     },
     {
-      label: 'Top Traders L/S',
+      label: 'Top Trader L/S',
       value: stats.top_trader_ratio?.long_short_ratio?.toFixed(2) ?? '--',
+      color: stats.top_trader_ratio?.long_short_ratio > 1 ? 'text-accent-green' : 'text-accent-red',
     },
     {
       label: 'Funding Rate',
@@ -279,6 +414,77 @@ function StatsGrid({ stats }) {
     </div>
   )
 }
+
+// ── Trading Insight ──
+
+function TradingInsight({ data, stats }) {
+  if (!data?.summary || !stats) return null
+
+  const { summary } = data
+  const fundingRate = stats.funding_rate
+  const lsRatio = stats.long_short_ratio?.long_short_ratio
+  const topRatio = stats.top_trader_ratio?.long_short_ratio
+
+  const insights = []
+
+  // Funding rate insight
+  if (fundingRate != null) {
+    if (Math.abs(fundingRate) > 0.001) {
+      insights.push({
+        icon: fundingRate > 0 ? '⚠️' : '✅',
+        text: fundingRate > 0
+          ? `High positive funding (${(fundingRate * 100).toFixed(4)}%) — longs are paying premium. Price may correct down.`
+          : `Negative funding (${(fundingRate * 100).toFixed(4)}%) — shorts are paying. Potential squeeze upward.`,
+      })
+    }
+  }
+
+  // L/S divergence from top traders
+  if (lsRatio && topRatio && Math.abs(lsRatio - topRatio) > 0.3) {
+    const retailBias = lsRatio > 1 ? 'long' : 'short'
+    const smartBias = topRatio > 1 ? 'long' : 'short'
+    if (retailBias !== smartBias) {
+      insights.push({
+        icon: '🧠',
+        text: `Smart money divergence: Retail is ${retailBias} (${lsRatio.toFixed(2)}) while top traders are ${smartBias} (${topRatio.toFixed(2)}). Follow the smart money.`,
+      })
+    }
+  }
+
+  // Liquidation cluster proximity
+  const longCluster = summary.nearest_long_cluster
+  const shortCluster = summary.nearest_short_cluster
+  if (longCluster && longCluster.distance_pct < 3) {
+    insights.push({
+      icon: '🔴',
+      text: `Long liquidation cluster just ${longCluster.distance_pct.toFixed(1)}% below price ($${formatNumber(longCluster.volume)}). A dip could cascade.`,
+    })
+  }
+  if (shortCluster && shortCluster.distance_pct < 3) {
+    insights.push({
+      icon: '🟢',
+      text: `Short squeeze zone just ${shortCluster.distance_pct.toFixed(1)}% above price ($${formatNumber(shortCluster.volume)}). A pump could cascade.`,
+    })
+  }
+
+  if (!insights.length) return null
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <h3 className="text-text-secondary text-xs font-semibold mb-3">TRADING INSIGHTS</h3>
+      <div className="space-y-2">
+        {insights.map((ins, i) => (
+          <div key={i} className="flex items-start gap-2 text-[11px]">
+            <span className="text-base shrink-0 mt-[-2px]">{ins.icon}</span>
+            <p className="text-text-secondary">{ins.text}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Main Page ──
 
 export default function Liquidations() {
   const [mapData, setMapData] = useState(null)
@@ -315,39 +521,48 @@ export default function Liquidations() {
         <h1 className="text-lg font-bold">Liquidation Map</h1>
         <div className="animate-pulse space-y-3">
           <div className="h-24 bg-bg-card rounded-2xl" />
-          <div className="h-[400px] bg-bg-card rounded-2xl" />
+          <div className="h-16 bg-bg-card rounded-2xl" />
+          <div className="h-[420px] bg-bg-card rounded-2xl" />
           <div className="h-48 bg-bg-card rounded-2xl" />
         </div>
       </div>
     )
   }
 
+  const longPct = mapData?.summary?.long_pct || 50
+  const shortPct = mapData?.summary?.short_pct || 50
+  const fundingRate = stats?.funding_rate
+
   return (
-    <div className="px-4 pt-4 space-y-3 pb-4">
+    <div className="px-4 pt-4 space-y-3 pb-20">
       <h1 className="text-lg font-bold">Liquidation Map</h1>
 
       <SummaryCard data={mapData} />
+      <RiskMeter longPct={longPct} shortPct={shortPct} fundingRate={fundingRate} />
       <LiquidationHeatmap data={mapData} />
-      <LeverageTable levels={levels} />
       <KeyLevels data={mapData} />
+      <TradingInsight data={mapData} stats={stats} />
+      <LeverageTable levels={levels} currentPrice={mapData?.current_price} />
       <StatsGrid stats={stats} />
 
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-2">HOW IT WORKS</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-2">HOW TO USE THIS</h3>
         <div className="text-text-muted text-[11px] space-y-2">
           <p>
-            This map estimates where leveraged BTC positions would get liquidated based on
-            current open interest, long/short ratios, and recent volume profile.
+            <span className="text-text-secondary font-semibold">Liquidation clusters act as price magnets.</span>{' '}
+            Market makers and whales deliberately push price toward large clusters to trigger
+            cascading liquidations, creating rapid moves.
           </p>
           <p>
-            <span className="text-text-secondary font-semibold">Red bars</span> show estimated
-            long liquidation clusters (below current price). <span className="text-text-secondary font-semibold">Green bars</span> show
-            short liquidation clusters (above current price). Large clusters act as price magnets.
+            <span className="text-accent-red font-semibold">Red bars</span> = long liquidations (below price).
+            If price drops to these levels, leveraged longs get force-closed, accelerating the dump.{' '}
+            <span className="text-accent-green font-semibold">Green bars</span> = short liquidations (above price).
+            A move up triggers short squeezes.
           </p>
           <p>
-            <span className="text-text-secondary font-semibold">Note:</span> These are estimates
-            based on public data and assumed leverage distribution. Actual liquidation levels
-            depend on individual trader entries, leverage, and margin.
+            <span className="text-text-secondary font-semibold">Pro tip:</span>{' '}
+            When funding rate and L/S ratio diverge from top trader positions, it often signals
+            an incoming liquidation event. Watch the Trading Insights section above.
           </p>
         </div>
       </div>
