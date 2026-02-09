@@ -37,13 +37,18 @@ def detect_chain(address: str) -> str | None:
 class CoinSearchService(BaseCollector):
     """Search coins by name/symbol or contract address, generate reports."""
 
+    CG_HEADERS = {
+        "User-Agent": "BTC-Oracle/1.0",
+        "Accept": "application/json",
+    }
+
     async def collect(self) -> dict:
         return {}
 
     async def search_by_name(self, query: str) -> list:
         """Search coins by name or symbol via CoinGecko."""
         url = f"{COINGECKO_BASE}/search"
-        data = await self.fetch_json(url, params={"query": query})
+        data = await self.fetch_json(url, params={"query": query}, headers=self.CG_HEADERS)
         if not data or "coins" not in data:
             return []
 
@@ -85,7 +90,7 @@ class CoinSearchService(BaseCollector):
     async def _fetch_contract(self, platform: str, address: str) -> dict | None:
         """Fetch token info by contract address from CoinGecko."""
         url = f"{COINGECKO_BASE}/coins/{platform}/contract/{address.lower()}"
-        data = await self.fetch_json(url)
+        data = await self.fetch_json(url, headers=self.CG_HEADERS)
         if not data or "error" in data:
             return None
 
@@ -114,7 +119,7 @@ class CoinSearchService(BaseCollector):
             "community_data": "false",
             "developer_data": "false",
         }
-        data = await self.fetch_json(url, params=params)
+        data = await self.fetch_json(url, params=params, headers=self.CG_HEADERS)
         if not data or "error" in data:
             return None
 
@@ -154,7 +159,7 @@ class CoinSearchService(BaseCollector):
         """Get price chart data for a coin."""
         url = f"{COINGECKO_BASE}/coins/{coin_id}/market_chart"
         params = {"vs_currency": "usd", "days": str(days)}
-        data = await self.fetch_json(url, params=params)
+        data = await self.fetch_json(url, params=params, headers=self.CG_HEADERS)
         if not data or "prices" not in data:
             return []
 

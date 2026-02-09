@@ -180,6 +180,7 @@ async def lifespan(app: FastAPI):
         await _safe_run(collect_price_data(), "collect_price_data")
         await _safe_run(collect_news_data(), "collect_news_data")
         await _safe_run(collect_macro_data(), "collect_macro_data")
+        await _safe_run(collect_onchain_data(), "collect_onchain_data")
         await _safe_run(collect_influencer_tweets(), "collect_influencer_tweets")
         await _safe_run(collect_funding_data(), "collect_funding_data")
         await _safe_run(collect_dominance_data(), "collect_dominance_data")

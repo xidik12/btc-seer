@@ -7,13 +7,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, Price, MacroData, OnChainData, FundingRate, BtcDominance, IndicatorSnapshot
 from app.collectors.market import MarketCollector
+from app.collectors.onchain import OnChainCollector
+from app.collectors.macro import MacroCollector
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/market", tags=["market"])
 
-# Shared collector for Binance API fallback
+# Shared collectors for live API fallback
 _market_collector = MarketCollector()
+_onchain_collector = OnChainCollector()
+_macro_collector = MacroCollector()
 
 # Minimum candles needed per timeframe to consider local data sufficient
 _MIN_CANDLES = {"1m": 2, "5m": 2, "15m": 2, "1h": 5, "4h": 5, "1d": 10, "1w": 20, "1mo": 20, "1y": 50, "all": 50}
@@ -391,10 +395,24 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
     macro = result.scalar_one_or_none()
 
     if not macro:
-        return {
-            "dxy": None, "gold": None, "sp500": None, "treasury_10y": None,
-            "fear_greed_index": None, "fear_greed_label": None, "timestamp": None,
-        }
+        # Live fallback: fetch directly from APIs when DB is empty
+        try:
+            live = await _macro_collector.collect()
+            return {
+                "dxy": live.get("dxy"),
+                "gold": live.get("gold"),
+                "sp500": live.get("sp500"),
+                "treasury_10y": live.get("treasury_10y"),
+                "fear_greed_index": None,
+                "fear_greed_label": None,
+                "timestamp": live.get("timestamp"),
+            }
+        except Exception as e:
+            logger.warning(f"Live macro fallback failed: {e}")
+            return {
+                "dxy": None, "gold": None, "sp500": None, "treasury_10y": None,
+                "fear_greed_index": None, "fear_greed_label": None, "timestamp": None,
+            }
 
     # Get macro data from ~1 hour ago for change calculation
     prev_result = await session.execute(
@@ -461,7 +479,24 @@ async def get_onchain_data(session: AsyncSession = Depends(get_session)):
     onchain = result.scalar_one_or_none()
 
     if not onchain:
-        return {"onchain": None, "message": "No on-chain data available"}
+        # Live fallback: fetch directly from blockchain APIs when DB is empty
+        try:
+            live = await _onchain_collector.collect()
+            return {
+                "hash_rate": live.get("hash_rate"),
+                "difficulty": live.get("difficulty"),
+                "mempool_size": live.get("mempool_size"),
+                "mempool_fees": live.get("mempool_fees"),
+                "tx_volume": live.get("tx_volume"),
+                "active_addresses": live.get("active_addresses"),
+                "exchange_reserve": live.get("exchange_reserve"),
+                "reserve_change_24h": None,
+                "large_tx_count": live.get("large_tx_count"),
+                "timestamp": live.get("timestamp"),
+            }
+        except Exception as e:
+            logger.warning(f"Live onchain fallback failed: {e}")
+            return {"onchain": None, "message": "No on-chain data available"}
 
     # Compute 24h reserve change
     reserve_change_24h = None
@@ -548,6 +583,24 @@ async def get_dominance_data(
     records = result.scalars().all()
 
     if not records:
+        # Live fallback: fetch directly from CoinGecko when DB is empty
+        try:
+            live = await _market_collector.get_btc_dominance()
+            if live:
+                return {
+                    "current": {
+                        "btc_dominance": live.get("btc_dominance"),
+                        "eth_dominance": live.get("eth_dominance"),
+                        "total_market_cap": live.get("total_market_cap"),
+                        "total_volume": live.get("total_volume"),
+                        "market_cap_change_24h": live.get("market_cap_change_24h"),
+                        "timestamp": datetime.utcnow().isoformat(),
+                    },
+                    "history": [],
+                    "count": 0,
+                }
+        except Exception as e:
+            logger.warning(f"Live dominance fallback failed: {e}")
         return {"dominance": None, "message": "No dominance data available"}
 
     latest = records[-1]
