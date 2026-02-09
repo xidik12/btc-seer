@@ -3,6 +3,7 @@ export default function About() {
     <div className="px-4 pt-4 space-y-3 pb-4">
       {/* Hero */}
       <div className="bg-bg-card rounded-2xl p-5 border border-white/5 text-center slide-up">
+        <img src="/btc-seer.jpeg" alt="BTC Seer" className="w-full rounded-xl mb-4" />
         <h1 className="text-xl font-bold mb-1">BTC Seer</h1>
         <p className="text-text-secondary text-sm">AI-Powered Bitcoin Intelligence</p>
         <p className="text-text-muted text-[11px] mt-2">

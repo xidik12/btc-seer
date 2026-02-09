@@ -23,7 +23,7 @@ def main_keyboard() -> InlineKeyboardMarkup:
     if settings.telegram_webapp_url:
         buttons.insert(0, [
             InlineKeyboardButton(
-                text="🔮 Open BTC Oracle",
+                text="🔮 Open BTC Seer",
                 web_app=WebAppInfo(url=settings.telegram_webapp_url),
             ),
         ])

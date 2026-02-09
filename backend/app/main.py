@@ -57,7 +57,7 @@ scheduler = AsyncIOScheduler()
 async def lifespan(app: FastAPI):
     """Application startup and shutdown."""
     # Startup
-    logger.info("🔮 BTC Oracle starting up...")
+    logger.info("🔮 BTC Seer starting up...")
 
     # Initialize database
     await init_db()
@@ -206,11 +206,11 @@ async def lifespan(app: FastAPI):
         await bot.session.close()
         logger.info("Telegram bot stopped")
 
-    logger.info("BTC Oracle shut down")
+    logger.info("BTC Seer shut down")
 
 
 app = FastAPI(
-    title="BTC Oracle",
+    title="BTC Seer",
     description="Bitcoin Price Prediction System with ML-powered signals",
     version="1.0.0",
     lifespan=lifespan,
@@ -264,7 +264,7 @@ async def serve_root():
     if WEBAPP_DIST.exists():
         return FileResponse(WEBAPP_DIST / "index.html")
     return {
-        "name": "BTC Oracle",
+        "name": "BTC Seer",
         "version": "1.0.0",
         "status": "running",
         "description": "Bitcoin Price Prediction System",

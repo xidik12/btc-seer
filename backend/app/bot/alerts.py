@@ -133,7 +133,7 @@ class AlertSender:
         """Format hourly prediction alert message."""
         direction_emoji = {"bullish": "🟢 ▲", "bearish": "🔴 ▼", "neutral": "🟡 ◄►"}
 
-        lines = ["🔮 <b>BTC Oracle — Hourly Update</b>\n"]
+        lines = ["🔮 <b>BTC Seer — Hourly Update</b>\n"]
 
         # Price — use fresh price passed in, fallback to prediction price
         price = current_price or (predictions[0].current_price if predictions else None)

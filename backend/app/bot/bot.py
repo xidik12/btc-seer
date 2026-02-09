@@ -59,7 +59,7 @@ async def cb_settings(callback: CallbackQuery):
 async def cb_back(callback: CallbackQuery):
     await callback.answer()
     await callback.message.edit_text(
-        "🔮 <b>BTC Oracle</b> — What would you like to see?",
+        "🔮 <b>BTC Seer</b> — What would you like to see?",
         parse_mode="HTML",
         reply_markup=main_keyboard(),
     )

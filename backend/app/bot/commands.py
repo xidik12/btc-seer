@@ -57,7 +57,7 @@ async def cmd_start(message: Message):
             status_line = f"\n\nStatus: <b>{status}</b>"
 
     await message.answer(
-        "🔮 <b>BTC Oracle</b> — Bitcoin Price Prediction System\n\n"
+        "🔮 <b>BTC Seer</b> — Bitcoin Price Prediction System\n\n"
         "I use ML models analyzing 60+ features from news, market data, "
         "on-chain metrics, and sentiment to predict Bitcoin's price direction.\n\n"
         "📊 Hourly predictions with confidence scores\n"

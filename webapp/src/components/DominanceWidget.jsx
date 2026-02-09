@@ -20,13 +20,6 @@ export default function DominanceWidget() {
     try {
       setError(null)
       const res = await api.getDominanceData(30)
-      // Check if response actually has dominance data
-      const hasCurrent = res?.current?.btc_dominance != null
-      const hasDominance = res?.dominance != null
-      if (!hasCurrent && !hasDominance && !res?.current) {
-        // API returned 200 but with no data — retry in 30s
-        setTimeout(fetchData, 30_000)
-      }
       setData(res)
     } catch (err) {
       setError(err.message)
@@ -40,6 +33,30 @@ export default function DominanceWidget() {
     const interval = setInterval(fetchData, 300_000)
     return () => clearInterval(interval)
   }, [fetchData])
+
+  // Extract dominance value safely
+  const current = typeof data?.current?.btc_dominance === 'number'
+    ? data.current.btc_dominance
+    : typeof data?.dominance === 'number'
+    ? data.dominance
+    : null
+
+  const change24h = typeof data?.current?.market_cap_change_24h === 'number'
+    ? data.current.market_cap_change_24h
+    : null
+
+  const rawHistory = Array.isArray(data?.history) ? data.history : []
+  const history = rawHistory
+    .map(h => ({
+      date: (typeof h?.timestamp === 'string' ? h.timestamp.slice(0, 10) : h?.date) || '',
+      dominance: typeof h?.btc_dominance === 'number' ? h.btc_dominance
+        : typeof h?.dominance === 'number' ? h.dominance
+        : null,
+    }))
+    .filter(h => h.dominance != null)
+
+  const isUp = change24h != null ? change24h >= 0 : true
+  const { data: visibleHistory, bindGestures, isZoomed, resetZoom } = useChartZoom(history)
 
   if (loading) {
     return (
@@ -64,15 +81,18 @@ export default function DominanceWidget() {
     )
   }
 
-  const current = data?.current?.btc_dominance ?? data?.dominance ?? data?.current
-  const change24h = data?.current?.market_cap_change_24h ?? data?.change_24h
-  const rawHistory = data?.history || []
-  const history = rawHistory.map(h => ({
-    date: h.timestamp?.slice(0, 10) || h.date,
-    dominance: h.btc_dominance ?? h.dominance,
-  })).filter(h => h.dominance != null)
-  const isUp = change24h >= 0
-  const { data: visibleHistory, bindGestures, isZoomed, resetZoom } = useChartZoom(history)
+  // No data yet — show waiting state (not an error)
+  if (current == null) {
+    return (
+      <div className="bg-bg-card rounded-2xl p-4 slide-up">
+        <h3 className="text-text-primary font-semibold text-sm mb-2">BTC Dominance</h3>
+        <div className="flex flex-col items-center py-6 gap-2">
+          <p className="text-text-muted text-sm">Collecting data...</p>
+          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">Refresh</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 slide-up">
@@ -90,7 +110,7 @@ export default function DominanceWidget() {
 
       <div className="flex items-end gap-3 mb-3">
         <span className="text-2xl font-bold text-text-primary tabular-nums">
-          {current != null ? `${current.toFixed(1)}%` : '--'}
+          {current.toFixed(1)}%
         </span>
         {change24h != null && (
           <span className={`text-sm font-medium ${isUp ? 'text-accent-green' : 'text-accent-red'}`}>
@@ -113,8 +133,8 @@ export default function DominanceWidget() {
               <YAxis domain={['dataMin - 0.5', 'dataMax + 0.5']} hide />
               <Tooltip
                 contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
-                formatter={(v) => [`${v.toFixed(2)}%`, 'Dominance']}
-                labelFormatter={(d) => d}
+                formatter={(v) => [typeof v === 'number' ? `${v.toFixed(2)}%` : '--', 'Dominance']}
+                labelFormatter={(d) => d || ''}
               />
               <Area
                 type="monotone"

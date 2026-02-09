@@ -160,7 +160,7 @@ export default function Dashboard() {
     <div className="px-4 pt-4 space-y-4">
       <header className="flex items-center justify-between mb-2">
         <h1 className="text-lg font-bold flex items-center gap-2">
-          <span className="text-xl">₿</span> BTC Oracle
+          <span className="text-xl">₿</span> BTC Seer
         </h1>
         <span className="text-text-muted text-xs pulse-glow">LIVE</span>
       </header>
