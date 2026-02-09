@@ -8,6 +8,7 @@ const MARKET_TABS = [
   { path: '/powerlaw', label: 'Power Law' },
   { path: '/elliott-wave', label: 'Elliott Wave' },
   { path: '/events', label: 'Events' },
+  { path: '/tools', label: 'Tools' },
 ]
 
 const TIMEFRAMES = ['1h', '4h', '24h', '7d']

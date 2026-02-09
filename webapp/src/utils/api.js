@@ -70,6 +70,9 @@ export const api = {
   openTrade: (tradeId) => fetchAPI(`/advisor/trades/${tradeId}/opened`, { method: 'POST' }),
   closeTrade: (tradeId) => fetchAPI(`/advisor/trades/${tradeId}/close`, { method: 'POST' }),
 
+  // Fear & Greed
+  getFearGreed: (days = 30) => fetchAPI(`/market/fear-greed?days=${days}`),
+
   // Indicator History
   getIndicatorHistory: () => fetchAPI('/market/indicator-history'),
 

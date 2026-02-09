@@ -9,6 +9,7 @@ const MARKET_TABS = [
   { path: '/powerlaw', label: 'Power Law' },
   { path: '/elliott-wave', label: 'Elliott Wave' },
   { path: '/events', label: 'Events' },
+  { path: '/tools', label: 'Tools' },
 ]
 
 import {

@@ -639,6 +639,48 @@ async def get_dominance_data(
     }
 
 
+@router.get("/fear-greed")
+async def get_fear_greed(
+    days: int = Query(30, ge=1, le=365),
+):
+    """Get Fear & Greed Index from alternative.me (free API)."""
+    import aiohttp
+
+    url = f"https://api.alternative.me/fng/?limit={days}&format=json"
+    try:
+        async with aiohttp.ClientSession() as sess:
+            async with sess.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                if resp.status != 200:
+                    return {"error": "Failed to fetch Fear & Greed data"}
+                raw = await resp.json(content_type=None)
+
+        data_list = raw.get("data", [])
+        if not data_list:
+            return {"current": None, "history": []}
+
+        current = data_list[0]
+        history = [
+            {
+                "value": int(d["value"]),
+                "label": d["value_classification"],
+                "timestamp": int(d["timestamp"]),
+            }
+            for d in data_list
+        ]
+
+        return {
+            "current": {
+                "value": int(current["value"]),
+                "label": current["value_classification"],
+                "timestamp": int(current["timestamp"]),
+            },
+            "history": history,
+        }
+    except Exception as e:
+        logger.warning(f"Fear & Greed fetch failed: {e}")
+        return {"current": None, "history": [], "error": str(e)}
+
+
 @router.get("/indicator-history")
 async def get_indicator_history(
     hours: int = Query(168, ge=1, le=720),
