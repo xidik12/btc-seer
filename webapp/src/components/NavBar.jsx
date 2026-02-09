@@ -6,6 +6,7 @@ const tabs = [
   { path: '/signals', label: 'Signals', icon: '📈' },
   { path: '/news', label: 'News', icon: '📰' },
   { path: '/history', label: 'History', icon: '🎯' },
+  { path: '/powerlaw', label: 'Power Law', icon: '📐' },
 ]
 
 export default function NavBar() {
@@ -20,7 +21,7 @@ export default function NavBar() {
           <button
             key={tab.path}
             onClick={() => navigate(tab.path)}
-            className={`flex flex-col items-center gap-0.5 px-4 py-2 transition-colors ${
+            className={`flex flex-col items-center gap-0.5 px-2 py-2 transition-colors ${
               active ? 'text-accent-blue' : 'text-text-muted'
             }`}
           >

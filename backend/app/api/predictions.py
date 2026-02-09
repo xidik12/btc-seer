@@ -15,7 +15,7 @@ async def get_current_predictions(session: AsyncSession = Depends(get_session)):
     result = await session.execute(
         select(Prediction)
         .order_by(desc(Prediction.timestamp))
-        .limit(3)
+        .limit(5)
     )
     predictions = result.scalars().all()
 
@@ -40,7 +40,7 @@ async def get_current_predictions(session: AsyncSession = Depends(get_session)):
 
 @router.get("/history")
 async def get_prediction_history(
-    timeframe: str = Query("1h", pattern="^(1h|4h|24h)$"),
+    timeframe: str = Query("1h", pattern="^(1h|4h|24h|1w|1mo)$"),
     days: int = Query(7, ge=1, le=90),
     session: AsyncSession = Depends(get_session),
 ):

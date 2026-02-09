@@ -71,10 +71,17 @@ class FeatureBuilder:
         "market_cap_change",   # 24h market cap change %
     ]
 
+    PHRASE_FEATURES = [
+        "top_bullish_phrase_score",   # Strongest bullish phrase correlation in recent headlines
+        "top_bearish_phrase_score",   # Strongest bearish phrase correlation in recent headlines
+        "phrase_sentiment_signal",     # Net phrase-based sentiment signal
+    ]
+
     ALL_FEATURES = (
         TECHNICAL_FEATURES + SENTIMENT_FEATURES + MACRO_FEATURES
         + ONCHAIN_FEATURES + EVENT_MEMORY_FEATURES
         + DERIVATIVES_FEATURES + DOMINANCE_FEATURES
+        + PHRASE_FEATURES
     )
 
     def __init__(self):
@@ -92,6 +99,7 @@ class FeatureBuilder:
         event_memory: dict = None,
         funding_data: dict = None,
         dominance_data: dict = None,
+        phrase_data: dict = None,
     ) -> dict:
         """Build complete feature vector from all data sources (including social media)."""
 
@@ -154,6 +162,12 @@ class FeatureBuilder:
             # Log-scale total market cap to keep it in a reasonable range
             features["total_market_cap"] = float(np.log10(total_mcap)) if total_mcap > 0 else 0.0
             features["market_cap_change"] = float(dominance_data.get("market_cap_change_24h", 0) or 0)
+
+        # Phrase correlation features
+        if phrase_data:
+            features["top_bullish_phrase_score"] = float(phrase_data.get("top_bullish_score", 0))
+            features["top_bearish_phrase_score"] = float(phrase_data.get("top_bearish_score", 0))
+            features["phrase_sentiment_signal"] = float(phrase_data.get("net_signal", 0))
 
         # Normalize features
         features = self._normalize(features)

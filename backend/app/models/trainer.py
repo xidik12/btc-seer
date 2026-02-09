@@ -31,7 +31,9 @@ class ModelTrainer:
 
     LOOKBACK = 168  # 7 days of hourly data
     MIN_SAMPLES = 168  # Minimum feature snapshots needed (1 week)
-    HORIZONS = {"1h": 1, "4h": 4, "24h": 24}
+    HORIZONS = {"1h": 1, "4h": 4, "24h": 24, "1w": 168, "1mo": 720}
+    TIMEFRAMES = ["1h", "4h", "24h", "1w", "1mo"]
+    NUM_HORIZONS = 5
 
     def __init__(self, model_dir: str = None):
         self.model_dir = Path(model_dir or settings.model_dir)
@@ -44,7 +46,7 @@ class ModelTrainer:
             dict with:
                 X_seq: (N, 168, num_features) sequences for LSTM/TFT
                 X_feat: (N, num_features) current features for XGBoost
-                y: (N, 6) targets — [dir_1h, mag_1h, dir_4h, mag_4h, dir_24h, mag_24h]
+                y: (N, 10) targets — [dir_1h, mag_1h, dir_4h, mag_4h, dir_24h, mag_24h, dir_1w, mag_1w, dir_1mo, mag_1mo]
                 feature_names: list of feature names
                 price_history: list of close prices for TimesFM
         """
@@ -241,7 +243,7 @@ class ModelTrainer:
 
                 outputs = model(X_batch)
                 loss = 0
-                for i, tf in enumerate(["1h", "4h", "24h"]):
+                for i, tf in enumerate(self.TIMEFRAMES):
                     out = outputs[tf]
                     dir_target = y_batch[:, i * 2]       # direction (0 or 1)
                     mag_target = y_batch[:, i * 2 + 1]   # magnitude %
@@ -260,7 +262,7 @@ class ModelTrainer:
                 X_v, y_v = X_val.to(device), y_val.to(device)
                 val_outputs = model(X_v)
                 val_loss = 0
-                for i, tf in enumerate(["1h", "4h", "24h"]):
+                for i, tf in enumerate(self.TIMEFRAMES):
                     out = val_outputs[tf]
                     val_loss += bce(out[:, 0], y_v[:, i * 2]).item()
                     val_loss += mse(out[:, 1], y_v[:, i * 2 + 1]).item() * 0.1
@@ -292,9 +294,9 @@ class ModelTrainer:
             X_t, y_t = X_test.to(device), y_test.to(device)
             test_outputs = model(X_t)
 
-            correct = {tf: 0 for tf in ["1h", "4h", "24h"]}
+            correct = {tf: 0 for tf in self.TIMEFRAMES}
             total = len(test_idx)
-            for i, tf in enumerate(["1h", "4h", "24h"]):
+            for i, tf in enumerate(self.TIMEFRAMES):
                 out = test_outputs[tf]
                 predicted_dir = (torch.sigmoid(out[:, 0]) > 0.5).float()
                 actual_dir = y_t[:, i * 2]
@@ -309,7 +311,7 @@ class ModelTrainer:
         )
 
         accuracies = {tf: c / total for tf, c in correct.items()}
-        avg_accuracy = sum(accuracies.values()) / 3
+        avg_accuracy = sum(accuracies.values()) / self.NUM_HORIZONS
 
         logger.info(f"LSTM training complete: accuracy={accuracies}, avg={avg_accuracy:.4f}")
 
@@ -377,10 +379,10 @@ class ModelTrainer:
                 X_batch, y_batch = X_batch.to(device), y_batch.to(device)
                 optimizer.zero_grad()
 
-                outputs = model(X_batch)  # (batch, 3, 2)
+                outputs = model(X_batch)  # (batch, 5, 2)
 
                 loss = 0
-                for i in range(3):  # 1h, 4h, 24h
+                for i in range(self.NUM_HORIZONS):
                     dir_target = y_batch[:, i * 2]
                     mag_target = y_batch[:, i * 2 + 1]
                     loss += bce(outputs[:, i, 0], dir_target)
@@ -397,7 +399,7 @@ class ModelTrainer:
                 X_v, y_v = X_val.to(device), y_val.to(device)
                 val_out = model(X_v)
                 val_loss = 0
-                for i in range(3):
+                for i in range(self.NUM_HORIZONS):
                     val_loss += bce(val_out[:, i, 0], y_v[:, i * 2]).item()
                     val_loss += mse(val_out[:, i, 1], y_v[:, i * 2 + 1]).item() * 0.1
 
@@ -427,9 +429,9 @@ class ModelTrainer:
             X_t, y_t = X_test.to(device), y_test.to(device)
             test_out = model(X_t)
 
-            correct = {"1h": 0, "4h": 0, "24h": 0}
+            correct = {tf: 0 for tf in self.TIMEFRAMES}
             total = len(test_idx)
-            for i, tf in enumerate(["1h", "4h", "24h"]):
+            for i, tf in enumerate(self.TIMEFRAMES):
                 predicted_dir = (torch.sigmoid(test_out[:, i, 0]) > 0.5).float()
                 actual_dir = y_t[:, i * 2]
                 correct[tf] = (predicted_dir == actual_dir).sum().item()
@@ -442,7 +444,7 @@ class ModelTrainer:
         )
 
         accuracies = {tf: c / total for tf, c in correct.items()}
-        avg_accuracy = sum(accuracies.values()) / 3
+        avg_accuracy = sum(accuracies.values()) / self.NUM_HORIZONS
 
         logger.info(f"TFT training complete: accuracy={accuracies}, avg={avg_accuracy:.4f}")
 
@@ -472,7 +474,7 @@ class ModelTrainer:
         results = {}
         models = {}
 
-        for i, tf in enumerate(["1h", "4h", "24h"]):
+        for i, tf in enumerate(self.TIMEFRAMES):
             dir_labels = y[:, i * 2]  # Binary direction labels
 
             X_train = X_feat[train_idx.start:train_idx.stop]
@@ -524,7 +526,7 @@ class ModelTrainer:
         for tf, m in models.items():
             m.save_model(str(self.model_dir / f"xgboost_{tf}.json"))
 
-        avg_accuracy = sum(results.values()) / 3
+        avg_accuracy = sum(results.values()) / len(results)
 
         logger.info(f"XGBoost training complete: accuracy={results}, avg={avg_accuracy:.4f}")
 

@@ -11,9 +11,12 @@ backend/venv/
 
 # Database
 *.db
+/data/
 
-# ML training data (too large for git)
+# ML model weights & training data
 backend/ml/data/
+backend/app/models/weights/
+/data/weights/
 
 # Node
 webapp/node_modules/

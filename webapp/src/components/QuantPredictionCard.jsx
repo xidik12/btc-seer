@@ -7,7 +7,7 @@ import {
 
 const POLL_INTERVAL = 30_000
 
-const TIMEFRAME_LABELS = { '1h': '1H', '4h': '4H', '24h': '24H' }
+const TIMEFRAME_LABELS = { '1h': '1H', '4h': '4H', '24h': '24H', '1w': '1W', '1mo': '1MO' }
 
 const ACTION_STYLES = {
   STRONG_BUY: { label: 'Strong Buy', color: 'text-accent-green', bg: 'bg-accent-green/15', border: 'border-accent-green/30' },
@@ -181,7 +181,7 @@ export default function QuantPredictionCard() {
 
       {/* Timeframe Predictions */}
       <div className="space-y-1.5">
-        {['1h', '4h', '24h'].map((tf) => {
+        {['1h', '4h', '24h', '1w', '1mo'].map((tf) => {
           const p = preds[tf]
           if (!p) return null
           const changePct = p.predicted_change_pct || 0

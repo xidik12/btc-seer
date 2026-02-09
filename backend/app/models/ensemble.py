@@ -169,7 +169,9 @@ class EnsemblePredictor:
         w = self.weights
         predictions = {}
 
-        for timeframe in ["1h", "4h", "24h"]:
+        tf_multiplier_map = {"1h": 1.0, "4h": 2.5, "24h": 5.0, "1w": 10.0, "1mo": 20.0}
+
+        for timeframe in ["1h", "4h", "24h", "1w", "1mo"]:
             # Collect per-model bullish probabilities
             tft_tf = tft_pred.get(timeframe, tft_pred.get("1h", {}))
             lstm_tf = lstm_pred.get(timeframe, lstm_pred.get("1h", {}))
@@ -194,7 +196,7 @@ class EnsemblePredictor:
             adjusted_prob = 0.5 + (base_prob - 0.5) * modifier
             adjusted_prob = max(0.05, min(0.95, adjusted_prob))
 
-            # Confidence scoring
+            # Confidence scoring — lower confidence for longer timeframes
             tft_conf = tft_tf.get("confidence", 0)
             lstm_conf = lstm_tf.get("confidence", 0)
             xgb_conf = xgb_pred.get("confidence", 0)
@@ -222,6 +224,9 @@ class EnsemblePredictor:
                     trained_agreement = 5
 
             confidence = base_confidence + agreement_bonus + trained_agreement
+            # Reduce confidence for longer timeframes (more uncertainty)
+            tf_conf_decay = {"1h": 1.0, "4h": 0.95, "24h": 0.9, "1w": 0.8, "1mo": 0.7}
+            confidence *= tf_conf_decay.get(timeframe, 1.0)
             any_trained = self.tft_trained or self.lstm_trained or self.xgboost_trained
             max_conf = 95 if any_trained else 85
             confidence = float(np.clip(confidence, 25, max_conf))
@@ -230,7 +235,7 @@ class EnsemblePredictor:
             direction = "bullish" if adjusted_prob >= 0.5 else "bearish"
 
             # Magnitude estimation
-            tf_multiplier = {"1h": 1.0, "4h": 2.5, "24h": 5.0}.get(timeframe, 1.0)
+            tf_multiplier = tf_multiplier_map.get(timeframe, 1.0)
             magnitude = (adjusted_prob - 0.5) * 2 * tf_multiplier
 
             # Prefer trained model magnitudes

@@ -29,7 +29,7 @@ export default function History() {
       <AccuracyTracker />
 
       <div className="flex gap-2 my-4">
-        {['1h', '4h', '24h'].map((tf) => (
+        {['1h', '4h', '24h', '1w', '1mo'].map((tf) => (
           <button
             key={tf}
             onClick={() => setTimeframe(tf)}

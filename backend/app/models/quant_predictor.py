@@ -708,9 +708,9 @@ class QuantPredictor:
         direction = "bullish" if composite_score > 0 else "bearish"
 
         # Predicted price (scaled by composite score)
-        # Score of ±100 → ±5% for 24h, ±2% for 4h, ±0.5% for 1h
+        # Score of ±100 → ±5% for 24h, ±2% for 4h, ±0.5% for 1h, ±15% for 1w, ±30% for 1mo
         predictions = {}
-        for tf, max_pct in [("1h", 0.8), ("4h", 2.5), ("24h", 5.0)]:
+        for tf, max_pct in [("1h", 0.8), ("4h", 2.5), ("24h", 5.0), ("1w", 15.0), ("1mo", 30.0)]:
             pct_change = (composite_score / 100) * max_pct
             pred_price = current_price * (1 + pct_change / 100)
             predictions[tf] = {

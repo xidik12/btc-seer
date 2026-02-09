@@ -55,6 +55,20 @@ if TORCH_AVAILABLE:
                 nn.Linear(64, 2),
             )
 
+            self.head_1w = nn.Sequential(
+                nn.Linear(hidden_size, 64),
+                nn.ReLU(),
+                nn.Dropout(dropout),
+                nn.Linear(64, 2),
+            )
+
+            self.head_1mo = nn.Sequential(
+                nn.Linear(hidden_size, 64),
+                nn.ReLU(),
+                nn.Dropout(dropout),
+                nn.Linear(64, 2),
+            )
+
         def forward(self, x):
             lstm_out, (h_n, c_n) = self.lstm(x)
             last_hidden = self.dropout(lstm_out[:, -1, :])
@@ -62,6 +76,8 @@ if TORCH_AVAILABLE:
                 "1h": self.head_1h(last_hidden),
                 "4h": self.head_4h(last_hidden),
                 "24h": self.head_24h(last_hidden),
+                "1w": self.head_1w(last_hidden),
+                "1mo": self.head_1mo(last_hidden),
             }
 
 
@@ -129,7 +145,7 @@ class LSTMPredictor:
         else:
             prob = 0.5
 
-        for tf, factor in [("1h", 1.0), ("4h", 0.9), ("24h", 0.8)]:
+        for tf, factor in [("1h", 1.0), ("4h", 0.9), ("24h", 0.8), ("1w", 0.7), ("1mo", 0.6)]:
             tf_prob = 0.5 + (prob - 0.5) * factor
             predictions[tf] = {
                 "bullish_prob": float(tf_prob),

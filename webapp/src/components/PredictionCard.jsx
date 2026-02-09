@@ -32,7 +32,7 @@ export default function PredictionCard() {
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5 animate-pulse">
         <div className="h-5 w-36 bg-bg-hover rounded mb-4" />
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-10 bg-bg-hover rounded-lg" />
           ))}
         </div>
@@ -49,8 +49,8 @@ export default function PredictionCard() {
     )
   }
 
-  const timeframes = ['1h', '4h', '24h']
-  const tfLabels = { '1h': '1H', '4h': '4H', '24h': '24H' }
+  const timeframes = ['1h', '4h', '24h', '1w', '1mo']
+  const tfLabels = { '1h': '1H', '4h': '4H', '24h': '24H', '1w': '1W', '1mo': '1MO' }
   const predMap = data?.predictions ?? data ?? {}
 
   const rows = timeframes.map((tf) => {

@@ -46,4 +46,11 @@ export const api = {
 
   // History
   getAccuracy: (days = 30) => fetchAPI(`/history/accuracy?days=${days}`),
+
+  // Power Law
+  getPowerLawCurrent: () => fetchAPI('/powerlaw/current'),
+  getPowerLawHistorical: (days = 365) => fetchAPI(`/powerlaw/historical?days=${days}`),
+
+  // Public API
+  getApiUsage: (apiKey) => fetchAPI('/v1/usage', { headers: { 'X-API-Key': apiKey } }),
 }

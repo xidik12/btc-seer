@@ -16,6 +16,7 @@ from app.config import settings
 from app.database import init_db
 from app.api import predictions, signals, news, market, history, influencers, events, quant
 from app.api import advisor as advisor_api
+from app.api import powerlaw, public_api
 from app.scheduler.jobs import (
     backfill_historical_prices,
     collect_price_data,
@@ -37,6 +38,9 @@ from app.scheduler.jobs import (
     run_advisor_check,
     run_trade_management,
 )
+from app.models.phrase_analyzer import analyze_news_phrases
+from app.models.continuous_learner import run_continuous_learning
+from app.models.ab_tester import evaluate_candidates
 
 logging.basicConfig(
     level=logging.INFO,
@@ -107,6 +111,15 @@ async def lifespan(app: FastAPI):
 
     # Auto-retrain: check every 6 hours if models need retraining (more frequent continuous learning)
     scheduler.add_job(auto_retrain_models, "interval", hours=6, id="auto_retrain")
+
+    # Phrase analyzer: hourly news phrase correlation analysis
+    scheduler.add_job(analyze_news_phrases, "interval", hours=1, id="analyze_phrases")
+
+    # Continuous learner: adaptive ensemble weights + selective retrain (every 6h)
+    scheduler.add_job(run_continuous_learning, "interval", hours=6, id="continuous_learning")
+
+    # A/B testing: evaluate candidate models (every 6h)
+    scheduler.add_job(evaluate_candidates, "interval", hours=6, id="ab_testing")
 
     # Advisor jobs
     scheduler.add_job(run_advisor_check, "interval", minutes=settings.prediction_interval_minutes, id="advisor_check")
@@ -201,6 +214,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# API Key authentication middleware (for /api/v1/ public endpoints)
+from app.middleware.auth import APIKeyMiddleware
+app.add_middleware(APIKeyMiddleware)
+
 # Include API routers
 app.include_router(predictions.router)
 app.include_router(signals.router)
@@ -211,6 +228,8 @@ app.include_router(influencers.router)
 app.include_router(events.router)
 app.include_router(quant.router)
 app.include_router(advisor_api.router)
+app.include_router(powerlaw.router)
+app.include_router(public_api.router)
 
 
 @app.get("/health")

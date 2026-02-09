@@ -69,7 +69,10 @@ class TFTPredictor:
                 output = self.model(x)
 
                 predictions = {}
-                for i, tf in enumerate(["1h", "4h", "24h"]):
+                timeframes = ["1h", "4h", "24h", "1w", "1mo"]
+                for i, tf in enumerate(timeframes):
+                    if i >= output.shape[1]:
+                        break
                     direction_logit = output[0, i, 0].item()
                     magnitude = output[0, i, 1].item()
                     prob = torch.sigmoid(torch.tensor(direction_logit)).item()
@@ -114,11 +117,11 @@ class TFTPredictor:
         else:
             base_prob = 0.5
 
-        for tf, decay in [("1h", 1.0), ("4h", 0.85), ("24h", 0.7)]:
+        for tf, decay in [("1h", 1.0), ("4h", 0.85), ("24h", 0.7), ("1w", 0.6), ("1mo", 0.5)]:
             prob = 0.5 + (base_prob - 0.5) * decay
             prob = float(np.clip(prob, 0.15, 0.85))
 
-            tf_multiplier = {"1h": 1.0, "4h": 2.5, "24h": 5.0}[tf]
+            tf_multiplier = {"1h": 1.0, "4h": 2.5, "24h": 5.0, "1w": 10.0, "1mo": 20.0}[tf]
             magnitude = (prob - 0.5) * 2 * tf_multiplier
 
             predictions[tf] = {
@@ -210,10 +213,12 @@ if TORCH_AVAILABLE:
             self.dropout = nn.Dropout(dropout)
             self.layer_norm = nn.LayerNorm(hidden_size)
 
-            # Multi-horizon output heads: 3 timeframes x 2 (direction + magnitude)
+            # Multi-horizon output heads: 5 timeframes x 2 (direction + magnitude)
             self.head_1h = nn.Linear(hidden_size, 2)
             self.head_4h = nn.Linear(hidden_size, 2)
             self.head_24h = nn.Linear(hidden_size, 2)
+            self.head_1w = nn.Linear(hidden_size, 2)
+            self.head_1mo = nn.Linear(hidden_size, 2)
 
         def forward(self, x):
             # x shape: (batch, seq_len, input_size)
@@ -247,5 +252,7 @@ if TORCH_AVAILABLE:
             out_1h = self.head_1h(last)
             out_4h = self.head_4h(last)
             out_24h = self.head_24h(last)
+            out_1w = self.head_1w(last)
+            out_1mo = self.head_1mo(last)
 
-            return torch.stack([out_1h, out_4h, out_24h], dim=1)  # (batch, 3, 2)
+            return torch.stack([out_1h, out_4h, out_24h, out_1w, out_1mo], dim=1)  # (batch, 5, 2)

@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     advisor_kelly_fraction: float = 0.25
     advisor_cooldown_hours: int = 4
 
+    # API Monetization (disabled by default — all free)
+    api_key_enabled: bool = False
+    api_free_rate_limit: int = 60       # requests/hr
+    api_basic_rate_limit: int = 300
+    api_pro_rate_limit: int = 1000
+    api_enterprise_rate_limit: int = 5000
+
     @property
     def model_path(self) -> Path:
         return Path(self.model_dir)

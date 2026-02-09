@@ -11,6 +11,7 @@ from app.database import (
     MacroData, OnChainData, InfluencerTweet, EventImpact, QuantPrediction,
     FundingRate, BtcDominance, IndicatorSnapshot, AlertLog, ModelVersion,
     PortfolioState, TradeAdvice, TradeResult, BotUser,
+    PredictionContext, ModelPerformanceLog,
 )
 from app.collectors import (
     MarketCollector, NewsCollector, FearGreedCollector,
@@ -617,8 +618,9 @@ async def generate_prediction():
         # Generate signals
         signals = signal_generator.generate(predictions, current_price, atr, volatility)
 
-        # Store predictions and signals
+        # Store predictions, signals, and context
         async with async_session() as session:
+            prediction_ids = {}
             for timeframe, pred in predictions.items():
                 # Ensemble now always produces a meaningful magnitude
                 magnitude = pred.get("magnitude_pct", 0) or 0
@@ -635,6 +637,8 @@ async def generate_prediction():
                     model_outputs=pred.get("model_outputs"),
                 )
                 session.add(prediction)
+                await session.flush()
+                prediction_ids[timeframe] = prediction.id
 
             for timeframe, sig in signals.items():
                 signal = Signal(
@@ -657,6 +661,22 @@ async def generate_prediction():
                 feature_data=features,
             )
             session.add(feature_record)
+
+            # Save full PredictionContext for training replay
+            try:
+                context = PredictionContext(
+                    timestamp=datetime.utcnow(),
+                    prediction_id=prediction_ids.get("1h"),
+                    current_price=current_price,
+                    features=features,
+                    news_headlines=[{"title": n.get("title", ""), "source": n.get("source", "")} for n in news_data[:20]] if news_data else None,
+                    macro_snapshot=None,
+                    event_memory=event_memory_data if event_memory_data else None,
+                    model_outputs={tf: p.get("model_outputs") for tf, p in predictions.items()},
+                )
+                session.add(context)
+            except Exception as e:
+                logger.debug(f"Context save error: {e}")
 
             await session.commit()
 
@@ -779,6 +799,10 @@ async def generate_quant_prediction():
                 pred_4h_change_pct=preds.get("4h", {}).get("predicted_change_pct"),
                 pred_24h_price=preds.get("24h", {}).get("predicted_price"),
                 pred_24h_change_pct=preds.get("24h", {}).get("predicted_change_pct"),
+                pred_1w_price=preds.get("1w", {}).get("predicted_price"),
+                pred_1w_change_pct=preds.get("1w", {}).get("predicted_change_pct"),
+                pred_1mo_price=preds.get("1mo", {}).get("predicted_price"),
+                pred_1mo_change_pct=preds.get("1mo", {}).get("predicted_change_pct"),
                 active_signals=result.get("active_signals", 0),
                 bullish_signals=result.get("bullish_signals", 0),
                 bearish_signals=result.get("bearish_signals", 0),
@@ -815,7 +839,7 @@ async def evaluate_predictions():
             evaluated_count = 0
             for pred in predictions:
                 # Determine evaluation time based on timeframe
-                hours = {"1h": 1, "4h": 4, "24h": 24}.get(pred.timeframe, 1)
+                hours = {"1h": 1, "4h": 4, "24h": 24, "1w": 168, "1mo": 720}.get(pred.timeframe, 1)
                 eval_time = pred.timestamp + timedelta(hours=hours)
 
                 if datetime.utcnow() < eval_time:
@@ -1232,12 +1256,14 @@ async def evaluate_quant_predictions():
     """Evaluate past quant predictions against actual prices (runs every hour)."""
     try:
         async with async_session() as session:
-            # Find unevaluated quant predictions (check both 1h and 24h)
+            # Find unevaluated quant predictions
             result = await session.execute(
                 select(QuantPrediction)
                 .where(
                     (QuantPrediction.was_correct_1h.is_(None)) |
-                    (QuantPrediction.was_correct_24h.is_(None))
+                    (QuantPrediction.was_correct_24h.is_(None)) |
+                    (QuantPrediction.was_correct_1w.is_(None)) |
+                    (QuantPrediction.was_correct_1mo.is_(None))
                 )
                 .where(QuantPrediction.timestamp < datetime.utcnow() - timedelta(hours=1))
             )
@@ -1245,30 +1271,26 @@ async def evaluate_quant_predictions():
 
             evaluated = 0
             for qp in predictions:
-                # Evaluate 1h prediction
-                if qp.was_correct_1h is None:
-                    eval_time = qp.timestamp + timedelta(hours=1)
+                # Evaluate each timeframe
+                eval_configs = [
+                    ("was_correct_1h", "actual_price_1h", timedelta(hours=1)),
+                    ("was_correct_24h", "actual_price_24h", timedelta(hours=24)),
+                    ("was_correct_1w", "actual_price_1w", timedelta(hours=168)),
+                    ("was_correct_1mo", "actual_price_1mo", timedelta(hours=720)),
+                ]
+                for correct_field, price_field, delta in eval_configs:
+                    if getattr(qp, correct_field) is not None:
+                        continue
+                    eval_time = qp.timestamp + delta
                     if datetime.utcnow() >= eval_time:
                         actual = await _get_price_at(session, eval_time)
                         if actual:
-                            qp.actual_price_1h = actual
+                            setattr(qp, price_field, actual)
                             actual_dir = "bullish" if actual > qp.current_price else "bearish"
-                            qp.was_correct_1h = (qp.direction == actual_dir) or (
+                            was_correct = (qp.direction == actual_dir) or (
                                 qp.direction == "neutral" and abs(actual - qp.current_price) / qp.current_price < 0.005
                             )
-                            evaluated += 1
-
-                # Evaluate 24h prediction
-                if qp.was_correct_24h is None:
-                    eval_time = qp.timestamp + timedelta(hours=24)
-                    if datetime.utcnow() >= eval_time:
-                        actual = await _get_price_at(session, eval_time)
-                        if actual:
-                            qp.actual_price_24h = actual
-                            actual_dir = "bullish" if actual > qp.current_price else "bearish"
-                            qp.was_correct_24h = (qp.direction == actual_dir) or (
-                                qp.direction == "neutral" and abs(actual - qp.current_price) / qp.current_price < 0.005
-                            )
+                            setattr(qp, correct_field, was_correct)
                             evaluated += 1
 
             await session.commit()
@@ -1286,6 +1308,9 @@ async def cleanup_old_data():
     Retention:
     - Predictions, Signals, QuantPredictions: NEVER deleted (core history)
     - EventImpacts: NEVER deleted (long-term memory)
+    - PredictionContext, NewsPriceCorrelation: NEVER deleted (training data)
+    - ModelPerformanceLog, FeatureImportanceLog: NEVER deleted (training data)
+    - ApiKey, ApiUsageLog: NEVER deleted (billing data)
     - Price, News, Features: 90 days
     - Funding rates, Dominance, Indicators: 180 days
     - MacroData, OnChainData: 180 days

@@ -199,11 +199,21 @@ class QuantPrediction(Base):
     # Full breakdown stored as JSON
     signal_breakdown: Mapped[dict] = mapped_column(JSON, nullable=True)
 
+    # 1-week and 1-month predictions
+    pred_1w_price: Mapped[float] = mapped_column(Float, nullable=True)
+    pred_1w_change_pct: Mapped[float] = mapped_column(Float, nullable=True)
+    pred_1mo_price: Mapped[float] = mapped_column(Float, nullable=True)
+    pred_1mo_change_pct: Mapped[float] = mapped_column(Float, nullable=True)
+
     # Evaluation (filled later)
     actual_price_1h: Mapped[float] = mapped_column(Float, nullable=True)
     actual_price_24h: Mapped[float] = mapped_column(Float, nullable=True)
+    actual_price_1w: Mapped[float] = mapped_column(Float, nullable=True)
+    actual_price_1mo: Mapped[float] = mapped_column(Float, nullable=True)
     was_correct_1h: Mapped[bool] = mapped_column(Boolean, nullable=True)
     was_correct_24h: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    was_correct_1w: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    was_correct_1mo: Mapped[bool] = mapped_column(Boolean, nullable=True)
 
 
 class FundingRate(Base):
@@ -280,6 +290,11 @@ class ModelVersion(Base):
     # Post-deployment accuracy (updated after running in prod)
     live_accuracy_1h: Mapped[float] = mapped_column(Float, nullable=True)
     live_accuracy_24h: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # A/B testing fields
+    is_candidate: Mapped[bool] = mapped_column(Boolean, default=False)
+    ab_test_accuracy: Mapped[float] = mapped_column(Float, nullable=True)
+    ensemble_weight: Mapped[float] = mapped_column(Float, nullable=True)
 
 
 class BotUser(Base):
@@ -404,6 +419,99 @@ class TradeResult(Base):
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=True)
     balance_before: Mapped[float] = mapped_column(Float, nullable=True)
     balance_after: Mapped[float] = mapped_column(Float, nullable=True)
+
+
+class PredictionContext(Base):
+    """Full snapshot of features, news, social, macro at each prediction for exact replay."""
+    __tablename__ = "prediction_contexts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    prediction_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    current_price: Mapped[float] = mapped_column(Float)
+    features: Mapped[dict] = mapped_column(JSON, nullable=True)
+    news_headlines: Mapped[dict] = mapped_column(JSON, nullable=True)
+    influencer_data: Mapped[dict] = mapped_column(JSON, nullable=True)
+    macro_snapshot: Mapped[dict] = mapped_column(JSON, nullable=True)
+    onchain_snapshot: Mapped[dict] = mapped_column(JSON, nullable=True)
+    funding_snapshot: Mapped[dict] = mapped_column(JSON, nullable=True)
+    dominance_snapshot: Mapped[dict] = mapped_column(JSON, nullable=True)
+    event_memory: Mapped[dict] = mapped_column(JSON, nullable=True)
+    model_outputs: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+
+class NewsPriceCorrelation(Base):
+    """Word/phrase-level tracking of headline correlations with price moves."""
+    __tablename__ = "news_price_correlations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    phrase: Mapped[str] = mapped_column(String(200), index=True)
+    phrase_type: Mapped[str] = mapped_column(String(20))  # word, bigram, trigram
+    occurrences: Mapped[int] = mapped_column(Integer, default=0)
+    avg_change_1h: Mapped[float] = mapped_column(Float, default=0.0)
+    avg_change_4h: Mapped[float] = mapped_column(Float, default=0.0)
+    avg_change_24h: Mapped[float] = mapped_column(Float, default=0.0)
+    bullish_ratio: Mapped[float] = mapped_column(Float, default=0.5)
+    last_seen: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    correlation_score: Mapped[float] = mapped_column(Float, default=0.0)
+
+
+class ModelPerformanceLog(Base):
+    """Per-model accuracy tracking per prediction."""
+    __tablename__ = "model_performance_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    prediction_id: Mapped[int] = mapped_column(Integer, index=True)
+    model_name: Mapped[str] = mapped_column(String(30), index=True)  # tft, lstm, xgboost, timesfm, ensemble
+    timeframe: Mapped[str] = mapped_column(String(10))
+    predicted_direction: Mapped[str] = mapped_column(String(20))
+    predicted_prob: Mapped[float] = mapped_column(Float, nullable=True)
+    actual_direction: Mapped[str] = mapped_column(String(20), nullable=True)
+    was_correct: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, nullable=True)
+
+
+class FeatureImportanceLog(Base):
+    """Which features matter most, tracked over time."""
+    __tablename__ = "feature_importance_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    model_type: Mapped[str] = mapped_column(String(30))
+    feature_importances: Mapped[dict] = mapped_column(JSON)
+    top_features: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+
+class ApiKey(Base):
+    """API keys for monetization."""
+    __tablename__ = "api_keys"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    key_prefix: Mapped[str] = mapped_column(String(8))  # First 8 chars for identification
+    owner: Mapped[str] = mapped_column(String(200))
+    telegram_id: Mapped[int] = mapped_column(Integer, nullable=True, index=True)
+    tier: Mapped[str] = mapped_column(String(20), default="free")  # free, basic, pro, enterprise
+    rate_limit: Mapped[int] = mapped_column(Integer, default=60)  # requests per hour
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+
+
+class ApiUsageLog(Base):
+    """Per-request API usage logging."""
+    __tablename__ = "api_usage_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    api_key_id: Mapped[int] = mapped_column(Integer, nullable=True, index=True)
+    endpoint: Mapped[str] = mapped_column(String(200))
+    method: Mapped[str] = mapped_column(String(10))
+    status_code: Mapped[int] = mapped_column(Integer)
+    response_time_ms: Mapped[float] = mapped_column(Float, nullable=True)
+    ip_address: Mapped[str] = mapped_column(String(45), nullable=True)
+    tier: Mapped[str] = mapped_column(String(20), nullable=True)
 
 
 async def init_db():

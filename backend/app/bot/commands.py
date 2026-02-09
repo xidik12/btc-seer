@@ -7,7 +7,7 @@ from sqlalchemy import select, desc
 
 from app.database import (
     async_session, BotUser, Prediction, Signal, News,
-    PortfolioState, TradeAdvice, TradeResult, Price,
+    PortfolioState, TradeAdvice, TradeResult, Price, ApiKey, ApiUsageLog,
 )
 from app.bot.keyboards import main_keyboard, settings_keyboard, back_keyboard, advisor_keyboard, trade_close_keyboard
 from app.signals.generator import DISCLAIMER
@@ -397,6 +397,172 @@ async def cmd_history(message: Message):
         )
 
     await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=advisor_keyboard())
+
+
+# ────────────────────────────────────────────────────────────────
+#  API KEY COMMANDS
+# ────────────────────────────────────────────────────────────────
+
+@router.message(Command("apikey"))
+async def cmd_apikey(message: Message):
+    """Generate a free-tier API key for the user."""
+    import secrets
+    from app.middleware.auth import hash_api_key
+    from sqlalchemy import func
+
+    telegram_id = message.from_user.id
+
+    async with async_session() as session:
+        # Check if user already has an active key
+        result = await session.execute(
+            select(ApiKey).where(
+                ApiKey.telegram_id == telegram_id,
+                ApiKey.is_active == True,
+            )
+        )
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            await message.answer(
+                f"<b>Your API Key</b>\n\n"
+                f"Prefix: <code>{existing.key_prefix}...</code>\n"
+                f"Tier: <b>{existing.tier}</b>\n"
+                f"Rate limit: {existing.rate_limit} req/hr\n\n"
+                "<i>You already have an active key. Use /revokekey to revoke and generate a new one.</i>",
+                parse_mode="HTML",
+            )
+            return
+
+        # Generate new key
+        raw_key = f"bto_{secrets.token_urlsafe(32)}"
+        key_hash = hash_api_key(raw_key)
+        key_prefix = raw_key[:12]
+
+        api_key = ApiKey(
+            key_hash=key_hash,
+            key_prefix=key_prefix,
+            owner=message.from_user.username or str(telegram_id),
+            telegram_id=telegram_id,
+            tier="free",
+            rate_limit=60,
+            is_active=True,
+        )
+        session.add(api_key)
+        await session.commit()
+
+    await message.answer(
+        f"<b>Your API Key (FREE tier)</b>\n\n"
+        f"<code>{raw_key}</code>\n\n"
+        f"Rate limit: 60 requests/hour\n"
+        f"Endpoints: Price, Power Law\n\n"
+        f"Use with:\n"
+        f"<code>curl -H 'X-API-Key: {raw_key}' https://your-domain/api/v1/price</code>\n\n"
+        f"<b>Save this key now!</b> It won't be shown again.",
+        parse_mode="HTML",
+    )
+
+
+@router.message(Command("revokekey"))
+async def cmd_revokekey(message: Message):
+    """Revoke the user's active API key."""
+    telegram_id = message.from_user.id
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(ApiKey).where(
+                ApiKey.telegram_id == telegram_id,
+                ApiKey.is_active == True,
+            )
+        )
+        key = result.scalar_one_or_none()
+
+        if not key:
+            await message.answer("You don't have an active API key. Use /apikey to generate one.")
+            return
+
+        key.is_active = False
+        await session.commit()
+
+    await message.answer(
+        "API key revoked. Use /apikey to generate a new one.",
+        parse_mode="HTML",
+    )
+
+
+@router.message(Command("upgrade"))
+async def cmd_upgrade(message: Message):
+    """Show API tier pricing."""
+    await message.answer(
+        "<b>API Subscription Tiers</b>\n\n"
+        "<b>Free</b> — $0/mo\n"
+        "  60 req/hr | Price + Power Law\n\n"
+        "<b>Basic</b> — $9.99/mo\n"
+        "  300 req/hr | + Predictions + Market data\n\n"
+        "<b>Pro</b> — $29.99/mo\n"
+        "  1,000 req/hr | All endpoints\n\n"
+        "<b>Enterprise</b> — $99.99/mo\n"
+        "  5,000 req/hr | All + priority support\n\n"
+        "<i>All tiers are currently FREE during beta!</i>\n"
+        "Contact @your_username to upgrade.",
+        parse_mode="HTML",
+    )
+
+
+@router.message(Command("usage"))
+async def cmd_usage(message: Message):
+    """Show API usage stats for the user's key."""
+    from sqlalchemy import func
+    from datetime import timedelta
+
+    telegram_id = message.from_user.id
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(ApiKey).where(
+                ApiKey.telegram_id == telegram_id,
+                ApiKey.is_active == True,
+            )
+        )
+        key = result.scalar_one_or_none()
+
+        if not key:
+            await message.answer("No active API key. Use /apikey to generate one.")
+            return
+
+        # Count usage
+        from datetime import datetime
+        hour_ago = datetime.utcnow() - timedelta(hours=1)
+        day_ago = datetime.utcnow() - timedelta(hours=24)
+
+        result_1h = await session.execute(
+            select(func.count(ApiUsageLog.id))
+            .where(ApiUsageLog.api_key_id == key.id)
+            .where(ApiUsageLog.timestamp >= hour_ago)
+        )
+        result_24h = await session.execute(
+            select(func.count(ApiUsageLog.id))
+            .where(ApiUsageLog.api_key_id == key.id)
+            .where(ApiUsageLog.timestamp >= day_ago)
+        )
+        result_total = await session.execute(
+            select(func.count(ApiUsageLog.id))
+            .where(ApiUsageLog.api_key_id == key.id)
+        )
+
+    requests_1h = result_1h.scalar() or 0
+    requests_24h = result_24h.scalar() or 0
+    requests_total = result_total.scalar() or 0
+
+    await message.answer(
+        f"<b>API Usage Stats</b>\n\n"
+        f"Tier: <b>{key.tier}</b>\n"
+        f"Rate limit: {key.rate_limit} req/hr\n\n"
+        f"Last hour: {requests_1h}/{key.rate_limit}\n"
+        f"Last 24h: {requests_24h}\n"
+        f"All time: {requests_total}\n\n"
+        f"Key prefix: <code>{key.key_prefix}...</code>",
+        parse_mode="HTML",
+    )
 
 
 @router.message(Command("close"))
