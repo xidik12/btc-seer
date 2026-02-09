@@ -41,15 +41,72 @@ class SafeWrap extends Component {
   }
 }
 
+const quickIcons = {
+  technical: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v18h18" />
+      <path d="M7 16l4-6 4 4 5-8" />
+    </svg>
+  ),
+  signals: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20v-6" />
+      <path d="M12 10V4" />
+      <circle cx="12" cy="12" r="2" />
+      <path d="M16.24 7.76a6 6 0 010 8.49" />
+      <path d="M7.76 16.24a6 6 0 010-8.49" />
+      <path d="M19.07 4.93a10 10 0 010 14.14" />
+      <path d="M4.93 19.07a10 10 0 010-14.14" />
+    </svg>
+  ),
+  liquidations: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" />
+      <path d="M12 18a4 4 0 01-4-4c0-2.5 2-4.5 4-7" />
+    </svg>
+  ),
+  powerlaw: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 20Q8 18 12 12t9-9" />
+      <path d="M3 20h18" />
+      <path d="M3 20V3" />
+    </svg>
+  ),
+  elliott: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 17 7 10 10 14 14 6 17 11 21 4" />
+      <path d="M21 4v4h-4" />
+    </svg>
+  ),
+  events: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  ),
+  coins: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5 1-2.5 2s1 2 2.5 2 2.5 1 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5" />
+      <path d="M12 6.5v1M12 16.5v1" />
+    </svg>
+  ),
+  advisor: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2a7 7 0 017 7c0 3-2 5.5-4 7.5L12 20l-3-3.5C7 14.5 5 12 5 9a7 7 0 017-7z" />
+      <circle cx="12" cy="9" r="2.5" />
+    </svg>
+  ),
+}
+
 const QUICK_LINKS = [
-  { path: '/technical', label: 'Technical', icon: '\u{1F4CA}' },
-  { path: '/signals', label: 'Signals', icon: '\u{1F4E1}' },
-  { path: '/liquidations', label: 'Liquidations', icon: '\u{1F525}' },
-  { path: '/powerlaw', label: 'Power Law', icon: '\u{1F4CF}' },
-  { path: '/elliott-wave', label: 'Elliott Wave', icon: '\u{1F30A}' },
-  { path: '/events', label: 'Events', icon: '\u{26A1}' },
-  { path: '/coins', label: 'Coins', icon: '\u{1FA99}' },
-  { path: '/advisor', label: 'Advisor', icon: '\u{1F9E0}' },
+  { path: '/technical', label: 'Technical', icon: 'technical' },
+  { path: '/signals', label: 'Signals', icon: 'signals' },
+  { path: '/liquidations', label: 'Liquidations', icon: 'liquidations' },
+  { path: '/powerlaw', label: 'Power Law', icon: 'powerlaw' },
+  { path: '/elliott-wave', label: 'Elliott Wave', icon: 'elliott' },
+  { path: '/events', label: 'Events', icon: 'events' },
+  { path: '/coins', label: 'Coins', icon: 'coins' },
+  { path: '/advisor', label: 'Advisor', icon: 'advisor' },
 ]
 
 function QuickAccessGrid() {
@@ -62,7 +119,7 @@ function QuickAccessGrid() {
           onClick={() => navigate(link.path)}
           className="bg-bg-card rounded-xl border border-white/5 p-3 flex flex-col items-center gap-1.5 hover:border-white/15 active:scale-95 transition-all"
         >
-          <span className="text-lg">{link.icon}</span>
+          <span className="w-5 h-5 text-text-secondary">{quickIcons[link.icon]}</span>
           <span className="text-[10px] text-text-secondary font-medium leading-tight text-center">{link.label}</span>
         </button>
       ))}
