@@ -177,16 +177,21 @@ function LiquidationHeatmap({ data }) {
   }))
 
   const currentPriceLabel = `$${(current_price / 1000).toFixed(1)}k`
+  const { data: visibleData, bindGestures, isZoomed, resetZoom } = useChartZoom(chartData)
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-text-secondary text-xs font-semibold">LIQUIDATION HEATMAP</h3>
-        <span className="text-text-muted text-[9px]">Drag bottom bar to zoom</span>
+        {isZoomed ? (
+          <button onClick={resetZoom} className="text-[10px] text-accent-blue">Reset zoom</button>
+        ) : (
+          <span className="text-text-muted text-[9px]">Pinch to zoom</span>
+        )}
       </div>
-      <div className="h-[420px]">
+      <div className="h-[420px]" {...bindGestures}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" barGap={0} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+          <BarChart data={visibleData} layout="vertical" barGap={0} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 6" stroke="#1a1a28" horizontal={false} />
             <XAxis
               type="number"
@@ -225,14 +230,14 @@ function LiquidationHeatmap({ data }) {
 
             {/* Long liquidations — intensity-colored */}
             <Bar dataKey="longLiq" name="longLiq" stackId="a" radius={[4, 0, 0, 4]}>
-              {chartData.map((entry, i) => (
+              {visibleData.map((entry, i) => (
                 <Cell key={i} fill={liqIntensityColor(entry.longVol, maxLong, 'long')} />
               ))}
             </Bar>
 
             {/* Short liquidations — intensity-colored */}
             <Bar dataKey="shortLiq" name="shortLiq" stackId="a" radius={[0, 4, 4, 0]}>
-              {chartData.map((entry, i) => (
+              {visibleData.map((entry, i) => (
                 <Cell key={i} fill={liqIntensityColor(entry.shortVol, maxShort, 'short')} />
               ))}
             </Bar>
@@ -561,7 +566,7 @@ function FundingOIChart({ fundingData }) {
               name="funding"
               radius={[2, 2, 0, 0]}
             >
-              {chartData.map((entry, i) => (
+              {visibleData.map((entry, i) => (
                 <Cell
                   key={i}
                   fill={entry.funding >= 0 ? 'rgba(0, 214, 143, 0.6)' : 'rgba(255, 77, 106, 0.6)'}
