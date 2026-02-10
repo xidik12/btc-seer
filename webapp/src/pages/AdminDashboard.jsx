@@ -60,15 +60,18 @@ function UsersTab({ initData }) {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const data = await api.getAdminUsers(initData, page, search)
       setUsers(data.users || [])
       setTotal(data.total || 0)
     } catch (err) {
       console.error('Admin users error:', err)
+      setError(err.message)
     } finally {
       setLoading(false)
     }
@@ -119,6 +122,13 @@ function UsersTab({ initData }) {
       />
 
       <div className="text-text-muted text-[9px]">{total} users total</div>
+
+      {error && (
+        <div className="bg-accent-red/10 border border-accent-red/30 rounded-xl px-3 py-2">
+          <p className="text-accent-red text-xs">{error}</p>
+          <button onClick={fetchUsers} className="text-accent-blue text-[10px] mt-1 hover:underline">Retry</button>
+        </div>
+      )}
 
       {loading ? (
         <div className="animate-pulse space-y-2">
