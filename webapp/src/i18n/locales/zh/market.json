@@ -350,7 +350,11 @@
     "theoryDescription": "艾略特波浪理论识别市场价格中重复的分形波浪模式。市场以5浪推动（顺趋势）和3浪调整（逆趋势）运行。",
     "threeRules": "三大不可违反规则：(1) 第2浪回撤永不超过第1浪的100%。(2) 第3浪永不是最短的推动浪。(3) 第4浪永不进入第1浪价格区域。",
     "fibRatios": "斐波那契比率指导波浪预测：第3浪通常延伸至第1浪的1.618倍，第4浪回撤至第3浪的0.382倍，第5浪长度通常与第1浪相等。",
-    "divergenceInfo": "摆动点的背离（价格 vs RSI/MACD）有助于确认波浪完成，尤其是第5浪结束。"
+    "divergenceInfo": "摆动点的背离（价格 vs RSI/MACD）有助于确认波浪完成，尤其是第5浪结束。",
+    "summaryImpulse": "BTC 处于{{direction}}推动浪的第 {{wave}} 浪。",
+    "summaryCorrective": "BTC 处于{{direction}}调整浪的第 {{wave}} 浪。",
+    "summaryUnclear": "艾略特波浪形态不明确，需要更多数据进行准确的波浪计数。",
+    "divergenceDetected": "在 {{indicator}} 上检测到{{type}}背离。"
   },
   "liquidations": {
     "title": "爆仓地图",

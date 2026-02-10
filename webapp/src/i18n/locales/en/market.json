@@ -350,7 +350,11 @@
     "theoryDescription": "Elliott Wave Theory identifies recurring fractal wave patterns in market prices. Markets move in 5-wave impulses (with the trend) and 3-wave corrections (against the trend).",
     "threeRules": "Three inviolable rules: (1) Wave 2 never retraces more than 100% of Wave 1. (2) Wave 3 is never the shortest impulse wave. (3) Wave 4 never enters Wave 1 price territory.",
     "fibRatios": "Fibonacci ratios guide wave projections: Wave 3 often extends to 1.618x of Wave 1, Wave 4 retraces to 0.382x of Wave 3, and Wave 5 often equals Wave 1 in length.",
-    "divergenceInfo": "Divergences (price vs RSI/MACD) at swing points help confirm wave completions, especially at Wave 5 endings."
+    "divergenceInfo": "Divergences (price vs RSI/MACD) at swing points help confirm wave completions, especially at Wave 5 endings.",
+    "summaryImpulse": "BTC is in Wave {{wave}} of a {{direction}} impulse pattern.",
+    "summaryCorrective": "BTC is in Wave {{wave}} of a {{direction}} corrective pattern.",
+    "summaryUnclear": "Elliott Wave pattern is unclear. More data needed for clear wave count.",
+    "divergenceDetected": "{{type}} divergence detected on {{indicator}}."
   },
   "liquidations": {
     "title": "Liquidation Map",

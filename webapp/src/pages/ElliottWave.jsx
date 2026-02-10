@@ -472,10 +472,29 @@ export default function ElliottWave() {
       <DivergenceAlerts divergences={current?.divergences} t={t} />
       <StatsGrid data={current} t={t} />
 
-      {current?.summary && (
+      {current?.wave_count && (
         <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-          <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('market:elliott.waveStatus').toUpperCase()}</h3>
-          <p className="text-text-muted text-[11px] leading-relaxed">{current.summary}</p>
+          <h3 className="text-text-secondary text-xs font-semibold mb-2">{String(t('market:elliott.waveStatus')).toUpperCase()}</h3>
+          <p className="text-text-muted text-[11px] leading-relaxed">
+            {(() => {
+              const wc = current.wave_count
+              const dir = wc.direction === 'bullish' ? t('market:elliott.directionBullish').toLowerCase() : wc.direction === 'bearish' ? t('market:elliott.directionBearish').toLowerCase() : t('market:elliott.directionNeutral').toLowerCase()
+              let summary
+              if (wc.pattern === 'impulse') {
+                summary = t('market:elliott.summaryImpulse', { wave: wc.current_wave, direction: dir })
+              } else if (wc.pattern === 'corrective') {
+                summary = t('market:elliott.summaryCorrective', { wave: wc.current_wave, direction: dir })
+              } else {
+                summary = t('market:elliott.summaryUnclear')
+              }
+              if (current.divergences?.length) {
+                const last = current.divergences[current.divergences.length - 1]
+                const divType = last.type === 'bullish' ? t('market:elliott.directionBullish') : t('market:elliott.directionBearish')
+                summary += ' ' + t('market:elliott.divergenceDetected', { type: divType, indicator: last.indicator })
+              }
+              return summary
+            })()}
+          </p>
         </div>
       )}
 
