@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTelegram } from '../hooks/useTelegram'
 import PriceWidget from '../components/PriceWidget'
 import PriceChart from '../components/PriceChart'
 import PredictionCard from '../components/PredictionCard'
@@ -159,14 +160,18 @@ const QUICK_LINKS = [
   { path: '/news', label: 'News', icon: 'news' },
   { path: '/settings', label: 'Settings', icon: 'settings' },
   { path: '/about', label: 'About', icon: 'about' },
-  { path: '/admin', label: 'Admin', icon: 'settings' },
 ]
+
+const ADMIN_TELEGRAM_ID = 598965469
 
 function QuickAccessGrid() {
   const navigate = useNavigate()
+  const { user } = useTelegram()
+  const isAdmin = user?.id === ADMIN_TELEGRAM_ID
+  const links = isAdmin ? [...QUICK_LINKS, { path: '/admin', label: 'Admin', icon: 'settings' }] : QUICK_LINKS
   return (
     <div className="grid grid-cols-4 gap-2">
-      {QUICK_LINKS.map((link) => (
+      {links.map((link) => (
         <button
           key={link.path}
           onClick={() => navigate(link.path)}

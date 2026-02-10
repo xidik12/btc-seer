@@ -289,8 +289,8 @@ function SystemTab({ system }) {
 }
 
 export default function AdminDashboard() {
-  const { user, webApp } = useTelegram()
-  const initData = webApp?.initData || ''
+  const { tg, user } = useTelegram()
+  const initData = tg?.initData || ''
 
   const [tab, setTab] = useState('overview')
   const [stats, setStats] = useState(null)
