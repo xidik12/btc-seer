@@ -29,9 +29,11 @@ import {
 const POLL_INTERVAL = 60_000
 
 const TIMEFRAMES = [
-  { key: '1h', label: '1H', days: 30 },
-  { key: '4h', label: '4H', days: 90 },
-  { key: '1d', label: '1D', days: 365 },
+  { key: '1h', label: '1H', days: 7 },
+  { key: '4h', label: '4H', days: 30 },
+  { key: '1d', label: '1D', days: 90 },
+  { key: '1w', label: '1W', days: 365 },
+  { key: '1mo', label: '1M', days: 730 },
 ]
 
 function TimeframeSelector({ selected, onChange }) {
@@ -130,7 +132,7 @@ function CandlestickShape(props) {
   )
 }
 
-function WaveChart({ historicalData }) {
+function WaveChart({ historicalData, timeframe }) {
   if (!historicalData?.points?.length) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5 h-64 flex items-center justify-center">
@@ -170,7 +172,12 @@ function WaveChart({ historicalData }) {
             <XAxis
               dataKey="date"
               tick={{ fontSize: 9, fill: '#888' }}
-              tickFormatter={(v) => v?.slice(5, 10)}
+              tickFormatter={(v) => {
+                if (!v) return ''
+                if (timeframe === '1mo') return v?.slice(0, 7)
+                if (timeframe === '1w') return v?.slice(2, 10)
+                return v?.slice(5, 10)
+              }}
               interval="preserveStartEnd"
             />
             <YAxis
@@ -446,7 +453,7 @@ export default function ElliottWave() {
       </div>
 
       <WaveStatusCard data={current} />
-      <WaveChart historicalData={historical} />
+      <WaveChart historicalData={historical} timeframe={timeframe} />
       <FibTargets targets={current?.fibonacci_targets} />
       <DivergenceAlerts divergences={current?.divergences} />
       <StatsGrid data={current} />

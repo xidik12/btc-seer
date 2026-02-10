@@ -515,12 +515,14 @@ TIMEFRAME_CONFIG = {
     "1h": {"resample": "1h", "days": 30, "lookback": 3},
     "4h": {"resample": "4h", "days": 120, "lookback": 5},
     "1d": {"resample": "1D", "days": 365, "lookback": 5},
+    "1w": {"resample": "W", "days": 730, "lookback": 8},
+    "1mo": {"resample": "ME", "days": 1095, "lookback": 10},
 }
 
 
 @router.get("/current")
 async def get_elliott_wave_current(
-    timeframe: str = Query("4h", regex="^(1h|4h|1d)$"),
+    timeframe: str = Query("4h", regex="^(1h|4h|1d|1w|1mo)$"),
     session: AsyncSession = Depends(get_session),
 ):
     """Current Elliott Wave analysis for BTC."""
@@ -569,8 +571,8 @@ async def get_elliott_wave_current(
 
 @router.get("/historical")
 async def get_elliott_wave_historical(
-    days: int = Query(90, ge=7, le=365),
-    timeframe: str = Query("4h", regex="^(1h|4h|1d)$"),
+    days: int = Query(90, ge=7, le=1095),
+    timeframe: str = Query("4h", regex="^(1h|4h|1d|1w|1mo)$"),
     session: AsyncSession = Depends(get_session),
 ):
     """Historical wave data for charting."""
