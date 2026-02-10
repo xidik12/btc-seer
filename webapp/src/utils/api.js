@@ -117,6 +117,15 @@ export const api = {
   getAdminSystem: (initData) => fetchAPI('/admin/system', { headers: { 'X-Telegram-Init-Data': initData } }),
   getAdminBotStatus: (initData) => fetchAPI('/admin/bot-status', { headers: { 'X-Telegram-Init-Data': initData } }),
 
+  // Auth
+  registerUser: (initData) => fetchAPI('/auth/register', {
+    method: 'POST',
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  getCurrentUser: (initData) => fetchAPI('/auth/me', {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+
   // Subscription
   createInvoice: (tier) => fetchAPI(`/subscription/create-invoice?tier=${tier}`),
 

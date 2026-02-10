@@ -1,6 +1,7 @@
-import { Component, lazy, Suspense } from 'react'
+import { Component, lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useTelegram } from './hooks/useTelegram'
+import { api } from './utils/api'
 import NavBar from './components/NavBar'
 
 // Lazy-load all pages for code splitting
@@ -76,8 +77,15 @@ function PageLoader() {
 }
 
 export default function App() {
-  useTelegram()
+  const { tg } = useTelegram()
   const location = useLocation()
+
+  // Auto-register user when Mini App opens
+  useEffect(() => {
+    if (tg?.initData) {
+      api.registerUser(tg.initData).catch(() => {})
+    }
+  }, [tg])
 
   return (
     <ErrorBoundary>
