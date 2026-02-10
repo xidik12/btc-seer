@@ -21,6 +21,15 @@ import {
 
 const POLL_INTERVAL = 60_000
 
+const MARKET_TABS = [
+  { path: '/liquidations', labelKey: 'common:link.liquidations' },
+  { path: '/powerlaw', labelKey: 'common:link.powerLaw' },
+  { path: '/elliott-wave', labelKey: 'common:link.elliottWave' },
+  { path: '/events', labelKey: 'common:link.events' },
+  { path: '/tools', labelKey: 'common:link.tools' },
+  { path: '/learn', labelKey: 'common:link.learn' },
+]
+
 // ── Color helpers ──
 
 function liqIntensityColor(volume, maxVolume, type) {
@@ -609,6 +618,8 @@ function FundingOIChart({ fundingData }) {
 // ── Main Page ──
 
 export default function Liquidations() {
+  const { t } = useTranslation(['market', 'common'])
+  const tabs = useMemo(() => MARKET_TABS.map(tab => ({ ...tab, label: t(tab.labelKey) })), [t])
   const [mapData, setMapData] = useState(null)
   const [levels, setLevels] = useState(null)
   const [stats, setStats] = useState(null)
@@ -643,7 +654,7 @@ export default function Liquidations() {
   if (loading) {
     return (
       <div className="px-4 pt-4 space-y-4">
-        <h1 className="text-lg font-bold">Liquidation Map</h1>
+        <h1 className="text-lg font-bold">{t('market:liquidations.title')}</h1>
         <div className="animate-pulse space-y-3">
           <div className="h-24 bg-bg-card rounded-2xl" />
           <div className="h-16 bg-bg-card rounded-2xl" />
@@ -660,12 +671,12 @@ export default function Liquidations() {
 
   return (
     <div className="px-4 pt-4 space-y-3 pb-20">
-      <SubTabBar tabs={MARKET_TABS} />
-      <h1 className="text-lg font-bold">Liquidation Map</h1>
+      <SubTabBar tabs={tabs} />
+      <h1 className="text-lg font-bold">{t('market:liquidations.title')}</h1>
 
-      <SummaryCard data={mapData} />
-      <RiskMeter longPct={longPct} shortPct={shortPct} fundingRate={fundingRate} />
-      <LiquidationHeatmap data={mapData} />
+      <SummaryCard data={mapData} t={t} />
+      <RiskMeter longPct={longPct} shortPct={shortPct} fundingRate={fundingRate} t={t} />
+      <LiquidationHeatmap data={mapData} t={t} />
       <KeyLevels data={mapData} />
       <FundingOIChart fundingData={fundingData} />
       <TradingInsight data={mapData} stats={stats} />
