@@ -14,7 +14,7 @@ export default {
           hover: '#2a2a38',
         },
         accent: {
-          blue: '#a08030',
+          blue: '#7a6535',
           green: '#00d68f',
           red: '#ff4d6a',
           yellow: '#ffb800',
