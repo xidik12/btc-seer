@@ -159,8 +159,16 @@
     },
     "indicatorHistory": {
       "title": "指标历史",
-      "explain": "关键指标随时间的变化。RSI 从 30 上升到 72 所包含的信息，是单看 72 这个数字无法提供的。"
-    }
+      "explain": "关键指标随时间的变化。RSI 从 30 上升到 72 所包含的信息，是单看 72 这个数字无法提供的。",
+      "resetZoom": "重置缩放"
+    },
+    "btcDominanceDescription": "BTC 市场占比显示比特币在整个加密市场中所占的百分比。占比上升，资金从山寨币流入比特币（人们更信任 BTC）。占比下降，资金流入山寨币（人们在承担更多风险）。高占比 = 更安全的市场。",
+    "stochRsiDescription": "这是 RSI 的增强版 — 对 RSI 再做 RSI 计算，使其更加敏感。它在 0 到 100 之间快速波动。20以下 = 极度超卖（买入机会）。80以上 = 极度超买（卖出信号）。%K 和 %D 线的交叉才是实际的交易信号。",
+    "williamsRDescription": "威廉 %R 告诉你收盘价相对于过去14个周期最高价的位置。范围从 -100（最低点）到 0（最高点）。低于 -80 = 超卖（价格接近近期低点，可能反弹）。高于 -20 = 超买（接近近期高点，可能回落）。",
+    "ichimokuDescription": "一种日本交易系统，同时显示支撑、阻力、动量和趋势方向。「云」是两条线之间的阴影区域。价格在云之上 = 看涨（强上升趋势）。之下 = 看跌。之内 = 趋势不明。转换线/基准线的交叉提供买卖信号。",
+    "candlestickDescription": "图表上的每根「蜡烛」显示一个时间段的开盘价、收盘价、最高价和最低价。特定形态有其名称并能预测后续走势。就像解读茶叶 — 但这些形态已被交易者使用了数百年。",
+    "advancedDescription": "这些是经验丰富的交易者用来发现重大市场转折点的专业工具。它们关注更长期的模式，可以判断比特币处于周期顶部（适合卖出）还是周期底部（适合买入）。",
+    "rateOfChangeDescription": "简单来说：不同时间段内价格变动了多少？正值 = 上涨，负值 = 下跌。数值越大 = 变动越快。这告诉你价格变化的速度。"
   },
   "powerLaw": {
     "title": "幂律模型",
@@ -175,7 +183,13 @@
     "support": "支撑",
     "resistance": "阻力",
     "explain": "幂律模型根据比特币的采用增长模式来描绘其价格轨迹。它提供一个公允价值通道 — 价格低于通道表明被低估，高于通道表明被高估。",
-    "disclaimer": "幂律模型是一种数学框架，不是价格预测。过去的模式可能不会持续。"
+    "disclaimer": "幂律模型是一种数学框架，不是价格预测。过去的模式可能不会持续。",
+    "daysGenesis": "创世天数",
+    "toSupport": "至支撑",
+    "toResistance": "至阻力",
+    "description": "比特币幂律模型使用幂律关系描述 BTC 的长期价格轨迹：价格 = 10^(-17.016 + 5.845 * log10(天数))",
+    "howItWorks": "工作原理：BTC 的价格在对数-对数图表上沿直线运行，整个历史中 R² > 0.95。该模型提供\u201c公允价值\u201d通道 \u2014 价格倾向于在公允价值线的支撑（0.42x）和阻力（1.5x）之间波动。",
+    "limitations": "局限性：过去的表现不保证未来结果。该模型假设采用持续增长，不考虑黑天鹅事件或监管变化。"
   },
   "elliott": {
     "title": "艾略特波浪分析",
@@ -193,7 +207,14 @@
       "1mo": "1月"
     },
     "explain": "艾略特波浪理论识别市场价格中的重复波浪模式。市场沿趋势方向运行5浪（推动浪），随后是3浪调整（调整浪）。",
-    "disclaimer": "波浪计数具有主观性，可能随新价格数据而改变。"
+    "disclaimer": "波浪计数具有主观性，可能随新价格数据而改变。",
+    "pattern": "形态",
+    "direction": "方向",
+    "waveCount": "波浪计数",
+    "theoryDescription": "艾略特波浪理论识别市场价格中重复的分形波浪模式。市场以5浪推动（顺趋势）和3浪调整（逆趋势）运行。",
+    "threeRules": "三大不可违反规则：(1) 第2浪回撤永不超过第1浪的100%。(2) 第3浪永不是最短的推动浪。(3) 第4浪永不进入第1浪价格区域。",
+    "fibRatios": "斐波那契比率指导波浪预测：第3浪通常延伸至第1浪的1.618倍，第4浪回撤至第3浪的0.382倍，第5浪长度通常与第1浪相等。",
+    "divergenceInfo": "摆动点的背离（价格 vs RSI/MACD）有助于确认波浪完成，尤其是第5浪结束。"
   },
   "liquidations": {
     "title": "爆仓地图",
@@ -206,7 +227,58 @@
     "shortLiquidations": "空头爆仓",
     "insights": "交易洞察",
     "explain": "爆仓数据显示杠杆仓位将在哪些价位被强制平仓。爆仓集中区域像磁铁一样吸引价格 — 价格经常向这些区域运动以触发连锁爆仓。",
-    "disclaimer": "爆仓数据为估算值，可能与交易所实际数据存在差异。"
+    "disclaimer": "爆仓数据为估算值，可能与交易所实际数据存在差异。",
+    "balanced": "平衡",
+    "longHeavy": "多头过重",
+    "shortHeavy": "空头过重",
+    "balancedDesc": "市场处于平衡状态。无明显爆仓倾向。",
+    "longHeavyDesc": "{{pct}}% 多头 — 下跌可能引发连锁多头爆仓。",
+    "shortHeavyDesc": "{{pct}}% 空头 — 上涨可能引发空头挤压。",
+    "shortHeavyLabel": "空头过重",
+    "balancedLabel": "平衡",
+    "longHeavyLabel": "多头过重",
+    "fundingConfirms": "资金费率确认：",
+    "longsPaying": "多头支付空头",
+    "shortsPaying": "空头支付多头",
+    "neutral": "中性",
+    "longLabel": "多头",
+    "shortLabel": "空头",
+    "priceLevelTooltip": "价格水平：",
+    "longLiqBelowPrice": "多头爆仓（价格下方）",
+    "shortLiqAbovePrice": "空头爆仓（价格上方）",
+    "liquidationByLeverage": "按杠杆爆仓",
+    "lev": "杠杆",
+    "longLiqPrice": "多头爆仓价",
+    "distance": "距离",
+    "shortLiqPrice": "空头爆仓价",
+    "nearestClusters": "最近爆仓集群",
+    "longCluster": "多头集群",
+    "shortCluster": "空头集群",
+    "volume": "成交量",
+    "oiBtc": "OI (BTC)",
+    "oiUsd": "OI (USD)",
+    "lsRatio": "多空比",
+    "topTraderRatio": "顶级交易者多空比",
+    "markPrice": "标记价格",
+    "tradingInsights": "交易洞察",
+    "fundingOiChart": "资金费率与未平仓合约",
+    "reset": "重置",
+    "extremeFundingDesc": "极高正费率 = 崩盘风险。负费率 = 挤压潜力。",
+    "fundingRateLabel": "资金费率",
+    "openInterestLabel": "未平仓合约",
+    "howToUseTitle": "使用指南",
+    "howToUse": {
+      "paragraph1": "爆仓集群像价格磁铁。做市商和巨鲸故意将价格推向大型集群以触发连锁爆仓,创造快速行情。",
+      "paragraph2": "红色柱 = 多头爆仓（价格下方）。如果价格跌至这些水平,杠杆多头将被强平,加速下跌。绿色柱 = 空头爆仓（价格上方）。上涨会触发空头挤压。",
+      "paragraph3": "专业提示：当资金费率和多空比与顶级交易者持仓背离时,通常预示即将发生爆仓事件。关注上方交易洞察部分。"
+    },
+    "insightFundingHigh": "高正费率（{{rate}}%）— 多头支付溢价。价格可能向下修正。",
+    "insightFundingNegative": "负费率（{{rate}}%）— 空头支付。潜在向上挤压。",
+    "insightSmartMoney": "聪明钱分歧：散户{{retailBias}}（{{lsRatio}}）而顶级交易者{{smartBias}}（{{topRatio}}）。跟随聪明钱。",
+    "insightLongCluster": "多头爆仓集群仅距价格{{pct}}%（${{volume}}）。下跌可能引发连锁。",
+    "insightShortCluster": "空头挤压区域仅距价格{{pct}}%（${{volume}}）。上涨可能引发连锁。",
+    "long": "做多",
+    "short": "做空"
   },
   "events": {
     "title": "事件记忆",
@@ -233,7 +305,11 @@
       "7d": "7天"
     },
     "noEvents": "暂无近期事件",
-    "explain": "历史事件追踪展示市场事件在不同时间周期内对比特币价格的影响。"
+    "explain": "历史事件追踪展示市场事件在不同时间周期内对比特币价格的影响。",
+    "category": "分类",
+    "count": "数量",
+    "systemDescription": "事件记忆系统追踪市场事件并测量其在多个时间周期内的实际价格影响。当类似事件再次发生时，您将了解历史模式。",
+    "noEventsYet": "尚未追踪事件。事件将在检测到时显示。"
   },
   "news": {
     "title": "加密新闻",
@@ -259,6 +335,13 @@
       "1h": "1小时",
       "4h": "4小时",
       "1d": "1天"
-    }
+    },
+    "streakLabel": "连续{{type}}{{count}}次",
+    "evaluatedLabel": "已评估 {{count}} 个",
+    "winsLabel": "{{count}}盈 ({{pct}}%)",
+    "lossesLabel": "{{count}}亏 ({{pct}}%)",
+    "bullishCalls": "看涨预测",
+    "bearishCalls": "看跌预测",
+    "correctLabel": "{{correct}}/{{total}} 正确"
   }
 }

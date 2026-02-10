@@ -76,7 +76,7 @@ function LiveSignalCard({ signal, t }) {
   )
 }
 
-function WinLossRecord({ signals }) {
+function WinLossRecord({ signals, t }) {
   const evaluated = signals.filter(s => s.was_correct != null)
   if (!evaluated.length) return null
 
@@ -86,15 +86,15 @@ function WinLossRecord({ signals }) {
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-2">SIGNAL PERFORMANCE</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('signals.performance').toUpperCase()}</h3>
       <div className="flex h-2.5 rounded-full overflow-hidden mb-2">
         <div className="bg-accent-green transition-all duration-500" style={{ width: `${winPct}%` }} />
         <div className="bg-accent-red transition-all duration-500" style={{ width: `${100 - winPct}%` }} />
       </div>
       <div className="flex justify-between text-[10px]">
-        <span className="text-accent-green font-bold">{wins}W ({winPct.toFixed(0)}%)</span>
-        <span className="text-text-muted">{evaluated.length} evaluated</span>
-        <span className="text-accent-red font-bold">{losses}L ({(100 - winPct).toFixed(0)}%)</span>
+        <span className="text-accent-green font-bold">{t('signals.winsLabel', { count: wins, pct: winPct.toFixed(0) })}</span>
+        <span className="text-text-muted">{evaluated.length} {t('signals.evaluated')}</span>
+        <span className="text-accent-red font-bold">{t('signals.lossesLabel', { count: losses, pct: (100 - winPct).toFixed(0) })}</span>
       </div>
     </div>
   )
@@ -250,13 +250,13 @@ export default function Signals() {
             </div>
           </div>
           <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-            <div className="text-text-muted text-[9px]">W / L</div>
+            <div className="text-text-muted text-[9px]">{t('signals.winLossLabel')}</div>
             <div className="text-text-primary text-sm font-bold">{stats.wins} / {stats.losses}</div>
           </div>
         </div>
       )}
 
-      <WinLossRecord signals={Object.values(allSignals).flat()} />
+      <WinLossRecord signals={Object.values(allSignals).flat()} t={t} />
 
       <div className="flex gap-1 bg-bg-secondary/50 rounded-lg p-0.5">
         {TIMEFRAMES.map(tf => (

@@ -60,9 +60,9 @@ export default function HalvingWidget() {
       {/* Progress bar */}
       <div className="mb-2">
         <div className="flex items-center justify-between text-[9px] text-text-muted mb-1">
-          <span>Apr 2024 ({t('halving.last', 'last')})</span>
+          <span>Apr 2024 ({t('halving.last')})</span>
           <span>{time.pct}% {t('halving.cycleProgress').toLowerCase()}</span>
-          <span>Apr 2028 ({t('halving.next', 'next')})</span>
+          <span>Apr 2028 ({t('halving.next')})</span>
         </div>
         <div className="h-2 bg-bg-hover rounded-full overflow-hidden">
           <div
@@ -73,7 +73,7 @@ export default function HalvingWidget() {
       </div>
 
       <p className="text-text-muted text-[10px]">
-        {t('halving.rewardDrop', { from: '3.125', to: '1.5625' })}. {t('halving.historicalNote', 'Historically, halvings precede significant bull runs within 12-18 months.')}
+        {t('halving.rewardDrop', { from: '3.125', to: '1.5625' })}. {t('halving.historicalNote')}
       </p>
     </div>
   )

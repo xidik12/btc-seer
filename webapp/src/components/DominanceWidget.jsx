@@ -90,7 +90,7 @@ export default function DominanceWidget() {
         <h3 className="text-text-primary font-semibold text-sm mb-2">{t('dominance.title')}</h3>
         <div className="flex flex-col items-center py-6 gap-2">
           <p className="text-text-muted text-sm">{t('common:app.loading')}</p>
-          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">{t('dominance.refresh', 'Refresh')}</button>
+          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">{t('dominance.refresh')}</button>
         </div>
       </div>
     )
@@ -156,10 +156,10 @@ export default function DominanceWidget() {
 
       <p className="text-text-muted text-[10px] mt-2">
         {current > 55
-          ? t('dominance.highDesc', 'High dominance signals capital flowing into BTC as a safe haven. Altcoins may underperform.')
+          ? t('dominance.highDesc')
           : current < 45
-          ? t('dominance.lowDesc', 'Low dominance signals alt season. Capital is flowing into riskier assets.')
-          : t('dominance.moderateDesc', 'Moderate dominance. Market is balanced between BTC and altcoins.')}
+          ? t('dominance.lowDesc')
+          : t('dominance.moderateDesc')}
       </p>
     </div>
   )

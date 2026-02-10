@@ -1,4 +1,9 @@
 {
+  "stepOf": "Step {{current}} of {{total}}",
+  "tip": "TIP",
+  "skipTutorial": "Skip Tutorial",
+  "finish": "Finish",
+  "next": "Next",
   "steps": {
     "welcome": {
       "title": "Welcome to Paper Trading",

@@ -74,11 +74,12 @@ function StreakBadge({ history }) {
 
   if (streak < 2) return null
   const isWin = first
+  const { t } = useTranslation(['market', 'common'])
   return (
     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
       isWin ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
     }`}>
-      {isWin ? 'W' : 'L'}{streak} Streak
+      {t('market:history.streakLabel', { type: isWin ? 'W' : 'L', count: streak })}
     </span>
   )
 }
@@ -263,9 +264,9 @@ function WinLossBar({ history }) {
         <div className="bg-accent-red transition-all duration-500" style={{ width: `${100 - winPct}%` }} />
       </div>
       <div className="flex justify-between mt-2 text-[10px]">
-        <span className="text-accent-green font-bold">{wins}W ({winPct.toFixed(0)}%)</span>
-        <span className="text-text-muted">{evaluated.length} evaluated</span>
-        <span className="text-accent-red font-bold">{losses}L ({(100 - winPct).toFixed(0)}%)</span>
+        <span className="text-accent-green font-bold">{t('market:history.winsLabel', { count: wins, pct: winPct.toFixed(0) })}</span>
+        <span className="text-text-muted">{t('market:history.evaluatedLabel', { count: evaluated.length })}</span>
+        <span className="text-accent-red font-bold">{t('market:history.lossesLabel', { count: losses, pct: (100 - winPct).toFixed(0) })}</span>
       </div>
     </div>
   )
@@ -290,14 +291,14 @@ function DirectionBreakdown({ history }) {
   return (
     <div className="grid grid-cols-2 gap-2">
       <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-        <div className="text-[9px] text-text-muted font-medium mb-1">{t('common:direction.bullish').toUpperCase()} CALLS</div>
+        <div className="text-[9px] text-text-muted font-medium mb-1">{t('market:history.bullishCalls').toUpperCase()}</div>
         <div className="text-accent-green text-lg font-bold tabular-nums">{bullAcc}%</div>
-        <div className="text-[9px] text-text-muted">{bullWins}/{bulls.length} correct</div>
+        <div className="text-[9px] text-text-muted">{t('market:history.correctLabel', { correct: bullWins, total: bulls.length })}</div>
       </div>
       <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-        <div className="text-[9px] text-text-muted font-medium mb-1">{t('common:direction.bearish').toUpperCase()} CALLS</div>
+        <div className="text-[9px] text-text-muted font-medium mb-1">{t('market:history.bearishCalls').toUpperCase()}</div>
         <div className="text-accent-red text-lg font-bold tabular-nums">{bearAcc}%</div>
-        <div className="text-[9px] text-text-muted">{bearWins}/{bears.length} correct</div>
+        <div className="text-[9px] text-text-muted">{t('market:history.correctLabel', { correct: bearWins, total: bears.length })}</div>
       </div>
     </div>
   )

@@ -107,7 +107,7 @@ function PortfolioSetupCard({ telegramId, onSetup, t }) {
   )
 }
 
-function AIAccuracyCard({ feedback }) {
+function AIAccuracyCard({ feedback, t }) {
   if (!feedback || feedback.total_trades === 0) return null
 
   const winRate = feedback.total_trades > 0
@@ -116,22 +116,22 @@ function AIAccuracyCard({ feedback }) {
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
-      <div className="text-text-muted text-[10px] font-medium mb-2">AI ACCURACY (Last {feedback.days}d)</div>
+      <div className="text-text-muted text-[10px] font-medium mb-2">{t('advisor.aiAccuracyLabel', { days: feedback.days })}</div>
       <div className="grid grid-cols-3 gap-2">
         <div className="text-center">
-          <div className="text-text-muted text-[9px]">Direction</div>
+          <div className="text-text-muted text-[9px]">{t('advisor.directionLabel')}</div>
           <div className={`text-sm font-bold ${feedback.direction_accuracy >= 55 ? 'text-accent-green' : 'text-accent-red'}`}>
             {feedback.direction_accuracy.toFixed(0)}%
           </div>
         </div>
         <div className="text-center">
-          <div className="text-text-muted text-[9px]">Win Rate</div>
+          <div className="text-text-muted text-[9px]">{t('advisor.winRateLabel')}</div>
           <div className={`text-sm font-bold ${Number(winRate) >= 50 ? 'text-accent-green' : 'text-accent-red'}`}>
             {winRate}%
           </div>
         </div>
         <div className="text-center">
-          <div className="text-text-muted text-[9px]">Avg R:R</div>
+          <div className="text-text-muted text-[9px]">{t('advisor.avgRRLabel')}</div>
           <div className={`text-sm font-bold ${feedback.avg_achieved_rr >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
             {feedback.avg_achieved_rr.toFixed(1)}
           </div>
@@ -139,7 +139,7 @@ function AIAccuracyCard({ feedback }) {
       </div>
       {feedback.confidence_calibration && Object.keys(feedback.confidence_calibration).length > 0 && (
         <div className="mt-3 pt-2 border-t border-white/5">
-          <div className="text-text-muted text-[9px] mb-1">{t('advisor.confidence')} Calibration</div>
+          <div className="text-text-muted text-[9px] mb-1">{t('advisor.confidenceCalibration')}</div>
           <div className="flex gap-1">
             {Object.entries(feedback.confidence_calibration).map(([bucket, data]) => (
               <div key={bucket} className="flex-1 text-center">
@@ -258,7 +258,7 @@ function TradeCard({ trade, onOpen, onClose, currentPrice, t }) {
               ? 'bg-accent-green/15 text-accent-green'
               : 'bg-accent-red/15 text-accent-red'
           }`}>
-            {isLong ? 'LONG' : 'SHORT'}
+            {isLong ? t('direction.long', { ns: 'common' }) : t('direction.short', { ns: 'common' })}
           </span>
           <span className="text-text-primary text-sm font-semibold">{t('trade.btcUsdt', { ns: 'common' })}</span>
           {trade.leverage && <span className="text-text-muted text-[9px]">{trade.leverage}x</span>}
@@ -349,7 +349,7 @@ function ClosedTradeRow({ trade }) {
             )}
           </span>
           <span className={`text-[10px] font-bold ${isLong ? 'text-accent-green' : 'text-accent-red'}`}>
-            {isLong ? 'LONG' : 'SHORT'}
+            {isLong ? t('direction.long', { ns: 'common' }) : t('direction.short', { ns: 'common' })}
           </span>
           {trade.leverage && <span className="text-text-muted text-[9px]">{trade.leverage}x</span>}
         </div>
@@ -516,7 +516,7 @@ export default function Advisor() {
         <PortfolioCard portfolio={portfolio} t={t} />
       )}
 
-      <AIAccuracyCard feedback={feedback} />
+      <AIAccuracyCard feedback={feedback} t={t} />
 
       <div className="flex gap-1 bg-bg-secondary/50 rounded-lg p-0.5">
         {['active', 'history'].map(tb => (

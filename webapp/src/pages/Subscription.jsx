@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { useTelegram } from '../hooks/useTelegram'
+import { useLanguageSwitch } from '../i18n/useLanguage'
 
 const TIER_COLORS = {
   premium: { bg: 'bg-accent-blue/15', border: 'border-accent-blue/40', text: 'text-accent-blue', labelKey: 'subscriptionPage.premium' },
@@ -16,15 +17,16 @@ const PROGRESS_COLORS = {
   free:    'bg-white/20',
 }
 
-function formatDate(iso) {
+function formatDate(iso, locale = 'en') {
   if (!iso) return '--'
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export default function Subscription() {
   const navigate = useNavigate()
   const { tg } = useTelegram()
-  const { t } = useTranslation('settings')
+  const { t, i18n } = useTranslation('settings')
+  const { currentLang } = useLanguageSwitch()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -83,8 +85,8 @@ export default function Subscription() {
         {data.tier !== 'free' && (
           <>
             <p className="text-text-muted text-xs mb-2">
-              {data.tier === 'premium' ? `Expires ${formatDate(data.subscription_end)}` : `Trial ends ${formatDate(data.trial_end)}`}
-              {' '}&middot; {data.days_remaining}{t('subscriptionPage.daysRemaining')}
+              {data.tier === 'premium' ? t('subscriptionPage.expires', { date: formatDate(data.subscription_end, i18n.language) }) : t('subscriptionPage.trialEnds', { date: formatDate(data.trial_end, i18n.language) })}
+              {' '}&middot; {data.days_remaining} {t('subscriptionPage.daysRemaining')}
             </p>
 
             {/* Progress bar */}
@@ -126,8 +128,8 @@ export default function Subscription() {
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-text-primary text-xs font-medium capitalize">{p.tier} &middot; {p.days}d</p>
-                  <p className="text-text-muted text-[10px]">{formatDate(p.created_at)}</p>
+                  <p className="text-text-primary text-xs font-medium capitalize">{p.tier} &middot; {p.days}{t('subscriptionPage.daysShort')}</p>
+                  <p className="text-text-muted text-[10px]">{formatDate(p.created_at, i18n.language)}</p>
                 </div>
                 <span className="text-text-primary text-xs font-semibold shrink-0">{p.stars_amount} {t('subscription.stars')}</span>
               </div>
@@ -147,7 +149,7 @@ export default function Subscription() {
           </div>
           <div>
             <p className="text-text-muted text-[10px]">{t('subscriptionPage.memberSince')}</p>
-            <p className="text-text-primary text-xs font-medium">{formatDate(data.joined_at)}</p>
+            <p className="text-text-primary text-xs font-medium">{formatDate(data.joined_at, i18n.language)}</p>
           </div>
         </div>
       )}

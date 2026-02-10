@@ -10,7 +10,13 @@
     "noSignals": "No signal data available",
     "timeframe": "Timeframe",
     "predicted": "Predicted",
-    "change": "Change"
+    "change": "Change",
+    "aiModel": "AI MODEL",
+    "modelDescription": "LSTM + XGBoost + Sentiment",
+    "hideBreakdown": "Hide signal breakdown",
+    "showBreakdown": "Show signal breakdown",
+    "bullishShort": "B",
+    "bearishShort": "S"
   },
   "priceWidget": {
     "title": "BTC / USD",
@@ -36,7 +42,12 @@
     "greed": "Greed",
     "extremeGreed": "Extreme Greed",
     "last7Days": "Last 7 Days",
-    "marketSentiment": "Market Sentiment"
+    "marketSentiment": "Market Sentiment",
+    "tipExtremeFear": "Extreme fear can signal buying opportunities.",
+    "tipFear": "Fear in the market. Potential accumulation zone.",
+    "tipNeutral": "Market is balanced between fear and greed.",
+    "tipGreed": "Greed rising. Be cautious with new entries.",
+    "tipExtremeGreed": "Extreme greed often precedes corrections."
   },
   "signalPanel": {
     "title": "Trading Signal",
@@ -46,13 +57,17 @@
     "stopLoss": "Stop Loss",
     "confidence": "Confidence",
     "riskLevel": "Risk Level",
-    "disclaimer": "AI-generated signal. Not financial advice. Always do your own research before trading."
+    "disclaimer": "AI-generated signal. Not financial advice. Always do your own research before trading.",
+    "low": "Low",
+    "high": "High"
   },
   "news": {
     "title": "Latest News",
     "sources": "sources",
     "new": "NEW",
-    "noNews": "No news available"
+    "noNews": "No news available",
+    "articles": "articles",
+    "willAppear": "News will appear here once collected"
   },
   "influencer": {
     "title": "Social Signals",
@@ -69,7 +84,9 @@
     "inflows": "Inflows",
     "outflows": "Outflows",
     "24hUnique": "24h unique senders",
-    "networkSecurity": "Network security"
+    "networkSecurity": "Network security",
+    "largeTxDesc": "Txns > $100K (24h)",
+    "whaleWatching": "Whale watching"
   },
   "supply": {
     "title": "Bitcoin Supply",
@@ -80,14 +97,21 @@
     "blockReward": "Block Reward",
     "nextHalving": "Next Halving",
     "milestones": "Supply Milestones",
-    "percentMined": "{{pct}}% Mined"
+    "percentMined": "{{pct}}% Mined",
+    "cap21M": "21M cap",
+    "perBlock": "per block",
+    "block": "block"
   },
   "dominance": {
     "title": "BTC Dominance",
     "change24h": "24h Change",
     "interpretation": "Interpretation",
     "riskOff": "Risk-Off: Money flowing into BTC",
-    "riskOn": "Risk-On: Money flowing into alts"
+    "riskOn": "Risk-On: Money flowing into alts",
+    "refresh": "Refresh",
+    "highDesc": "High dominance signals capital flowing into BTC as a safe haven. Altcoins may underperform.",
+    "lowDesc": "Low dominance signals alt season. Capital is flowing into riskier assets.",
+    "moderateDesc": "Moderate dominance. Market is balanced between BTC and altcoins."
   },
   "macro": {
     "title": "Macro Dashboard",
@@ -97,7 +121,8 @@
     "treasury10y": "10Y Treasury",
     "nasdaq": "Nasdaq",
     "vix": "VIX",
-    "eurusd": "EUR/USD"
+    "eurusd": "EUR/USD",
+    "updatesEvery5m": "Updates every 5m"
   },
   "halving": {
     "title": "Bitcoin Halving Countdown",
@@ -108,7 +133,10 @@
     "minutes": "minutes",
     "seconds": "seconds",
     "cycleProgress": "Cycle Progress",
-    "rewardDrop": "Reward drops from {{from}} to {{to}} BTC"
+    "rewardDrop": "Reward drops from {{from}} to {{to}} BTC",
+    "last": "last",
+    "next": "next",
+    "historicalNote": "Historically, halvings precede significant bull runs within 12-18 months."
   },
   "accuracy": {
     "title": "Prediction Accuracy",

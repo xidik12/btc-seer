@@ -12,8 +12,8 @@ const TIERS = [
     nameKey: 'subscription.monthly',
     durationKey: 'subscription.days30',
     stars: 500,
-    usd: '$9.99',
-    perMonth: '$9.99',
+    usdKey: 'subscription.pricing.monthly',
+    perMonthKey: 'subscription.pricing.monthlyPerMonth',
     savingsKey: null,
     popular: false,
   },
@@ -22,8 +22,8 @@ const TIERS = [
     nameKey: 'subscription.quarterly',
     durationKey: 'subscription.days90',
     stars: 1250,
-    usd: '$24.99',
-    perMonth: '$8.33',
+    usdKey: 'subscription.pricing.quarterly',
+    perMonthKey: 'subscription.pricing.quarterlyPerMonth',
     savingsKey: 'subscription.save17',
     popular: true,
   },
@@ -32,8 +32,8 @@ const TIERS = [
     nameKey: 'subscription.yearly',
     durationKey: 'subscription.days365',
     stars: 4500,
-    usd: '$89.99',
-    perMonth: '$7.50',
+    usdKey: 'subscription.pricing.yearly',
+    perMonthKey: 'subscription.pricing.yearlyPerMonth',
     savingsKey: 'subscription.save25',
     popular: false,
   },
@@ -81,8 +81,8 @@ function ConfirmModal({ tier, onConfirm, onCancel, loading, t }) {
             </div>
           </div>
           <div className="flex items-center justify-between mt-1">
-            <span className="text-text-muted text-[10px]">{tier.perMonth}{t('subscription.perMonth')}</span>
-            <span className="text-text-muted text-[10px]">~{tier.usd}</span>
+            <span className="text-text-muted text-[10px]">{t(tier.perMonthKey)}{t('subscription.perMonth')}</span>
+            <span className="text-text-muted text-[10px]">~{t(tier.usdKey)}</span>
           </div>
         </div>
 
@@ -92,7 +92,7 @@ function ConfirmModal({ tier, onConfirm, onCancel, loading, t }) {
             disabled={loading}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-text-muted bg-bg-secondary active:scale-95 transition-all"
           >
-            {t('alerts.save') === 'Save' ? 'Cancel' : t('alerts.save')}
+            {t('subscription.cancel')}
           </button>
           <button
             onClick={onConfirm}
@@ -277,9 +277,9 @@ export default function Settings() {
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-text-primary text-lg font-bold">{tier.stars} {t('subscription.stars')}</span>
-                <span className="text-text-muted text-xs">~{tier.usd}</span>
+                <span className="text-text-muted text-xs">~{t(tier.usdKey)}</span>
               </div>
-              <div className="text-text-muted text-[10px] mt-0.5">{t(tier.durationKey)} &middot; {tier.perMonth}{t('subscription.perMonth')}</div>
+              <div className="text-text-muted text-[10px] mt-0.5">{t(tier.durationKey)} &middot; {t(tier.perMonthKey)}{t('subscription.perMonth')}</div>
             </button>
           ))}
         </div>

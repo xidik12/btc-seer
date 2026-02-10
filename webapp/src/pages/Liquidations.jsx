@@ -54,17 +54,17 @@ function RiskMeter({ longPct, shortPct, fundingRate, t }) {
 
   let riskLabel, riskColor, riskDesc
   if (imbalance < 3) {
-    riskLabel = 'BALANCED'
+    riskLabel = t('market:liquidations.balanced')
     riskColor = 'text-accent-yellow'
-    riskDesc = 'Market is balanced. No strong liquidation bias.'
+    riskDesc = t('market:liquidations.balancedDesc')
   } else if (isLongHeavy) {
-    riskLabel = 'LONG HEAVY'
+    riskLabel = t('market:liquidations.longHeavy')
     riskColor = 'text-accent-red'
-    riskDesc = `${longPct.toFixed(1)}% longs — a dip could trigger cascading long liquidations.`
+    riskDesc = t('market:liquidations.longHeavyDesc', { pct: longPct.toFixed(1) })
   } else {
-    riskLabel = 'SHORT HEAVY'
+    riskLabel = t('market:liquidations.shortHeavy')
     riskColor = 'text-accent-green'
-    riskDesc = `${shortPct.toFixed(1)}% shorts — a pump could trigger a short squeeze.`
+    riskDesc = t('market:liquidations.shortHeavyDesc', { pct: shortPct.toFixed(1) })
   }
 
   const needlePos = longPct // 0-100, 50 = balanced
@@ -89,16 +89,16 @@ function RiskMeter({ longPct, shortPct, fundingRate, t }) {
         />
       </div>
       <div className="flex justify-between text-[9px] text-text-muted mb-2">
-        <span>Short Heavy</span>
-        <span>Balanced</span>
-        <span>Long Heavy</span>
+        <span>{t('market:liquidations.shortHeavyLabel')}</span>
+        <span>{t('market:liquidations.balancedLabel')}</span>
+        <span>{t('market:liquidations.longHeavyLabel')}</span>
       </div>
       <p className="text-text-muted text-[10px]">{riskDesc}</p>
       {fundingRate != null && (
         <div className="flex items-center gap-2 mt-2 text-[10px]">
-          <span className="text-text-muted">Funding confirms:</span>
+          <span className="text-text-muted">{t('market:liquidations.fundingConfirms')}</span>
           <span className={fundingRate >= 0 ? 'text-accent-green font-medium' : 'text-accent-red font-medium'}>
-            {fundingBias === 'long' ? 'Longs paying shorts' : fundingBias === 'short' ? 'Shorts paying longs' : 'Neutral'}
+            {fundingBias === 'long' ? t('market:liquidations.longsPaying') : fundingBias === 'short' ? t('market:liquidations.shortsPaying') : t('market:liquidations.neutral')}
             {' '}({(fundingRate * 100).toFixed(4)}%)
           </span>
         </div>
@@ -144,10 +144,10 @@ function SummaryCard({ data, t }) {
         </div>
         <div className="flex justify-between mt-1 text-[9px]">
           <span className="text-accent-green font-medium">
-            Long {summary.long_pct?.toFixed(1)}% (${formatNumber(summary.long_oi_usd)})
+            {t('market:liquidations.longLabel')} {summary.long_pct?.toFixed(1)}% (${formatNumber(summary.long_oi_usd)})
           </span>
           <span className="text-accent-red font-medium">
-            Short {summary.short_pct?.toFixed(1)}% (${formatNumber(summary.short_oi_usd)})
+            {t('market:liquidations.shortLabel')} {summary.short_pct?.toFixed(1)}% (${formatNumber(summary.short_oi_usd)})
           </span>
         </div>
       </div>
@@ -222,7 +222,7 @@ function LiquidationHeatmap({ data, t }) {
                 const label = name === 'longLiq' ? t('market:liquidations.longLiquidations') : t('market:liquidations.shortLiquidations')
                 return [`$${formatNumber(Math.abs(v))}`, label]
               }}
-              labelFormatter={(label) => `Price Level: ${label}`}
+              labelFormatter={(label) => `${t('market:liquidations.priceLevelTooltip')} ${label}`}
             />
             <ReferenceLine
               y={currentPriceLabel}
@@ -257,7 +257,7 @@ function LiquidationHeatmap({ data, t }) {
               <div key={i} className="w-3 h-3 rounded-sm" style={{ background: `rgba(255, 50, 80, ${a})` }} />
             ))}
           </div>
-          <span className="text-[10px] text-text-muted">Long Liq (below price)</span>
+          <span className="text-[10px] text-text-muted">{t('market:liquidations.longLiqBelowPrice')}</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex gap-0.5">
@@ -265,10 +265,10 @@ function LiquidationHeatmap({ data, t }) {
               <div key={i} className="w-3 h-3 rounded-sm" style={{ background: `rgba(0, 220, 130, ${a})` }} />
             ))}
           </div>
-          <span className="text-[10px] text-text-muted">Short Liq (above price)</span>
+          <span className="text-[10px] text-text-muted">{t('market:liquidations.shortLiqAbovePrice')}</span>
         </div>
       </div>
-      <p className="text-text-muted text-[9px] text-center mt-2">Pinch to zoom &middot; Drag to pan</p>
+      <p className="text-text-muted text-[9px] text-center mt-2">{t('common:chart.pinchZoom')}</p>
     </div>
   )
 }

@@ -74,7 +74,12 @@
     "executeTrade": "Execute Trade",
     "conservative": "Conservative",
     "moderate": "Moderate",
-    "aggressive": "Aggressive"
+    "aggressive": "Aggressive",
+    "aiAccuracyLabel": "AI ACCURACY (Last {{days}}d)",
+    "directionLabel": "Direction",
+    "winRateLabel": "Win Rate",
+    "avgRRLabel": "Avg R:R",
+    "confidenceCalibration": "Confidence Calibration"
   },
   "signals": {
     "title": "Trading Signals",
@@ -95,8 +100,14 @@
     "result": "Result",
     "win": "Win",
     "loss": "Loss",
-    "pending": "Pending"
+    "pending": "Pending",
+    "performance": "Signal Performance",
+    "evaluated": "evaluated",
+    "winsLabel": "{{count}}W ({{pct}}%)",
+    "lossesLabel": "{{count}}L ({{pct}}%)",
+    "winLossLabel": "W / L"
   },
   "loginRequired": "Login via Telegram to save paper trades",
-  "createFailed": "Failed to create trade: {{error}}"
+  "createFailed": "Failed to create trade: {{error}}",
+  "unknownError": "Unknown error"
 }

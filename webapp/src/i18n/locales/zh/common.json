@@ -103,7 +103,77 @@
     "failedToLoad": "{{name}} 加载失败"
   },
   "chart": {
-    "pinchToZoom": "双指缩放 · 拖动平移"
+    "pinchToZoom": "双指缩放 · 拖动平移",
+    "pinchZoom": "双指缩放 · 拖动平移",
+    "reset": "重置缩放",
+    "loading": "加载中...",
+    "noData": "暂无图表数据",
+    "loadingChart": "加载图表中...",
+    "btcChart": "BTC 图表",
+    "failedToLoad": "图表加载失败",
+    "timeframe": {
+      "24h": "24小时",
+      "1w": "1周",
+      "1m": "1月",
+      "1y": "1年",
+      "all": "全部"
+    },
+    "overlay": {
+      "ema": "EMA",
+      "bb": "BB",
+      "vol": "成交量",
+      "rsi": "RSI"
+    },
+    "legend": {
+      "ema9": "EMA9",
+      "ema21": "EMA21",
+      "ema50": "EMA50"
+    }
+  },
+  "sentiment": {
+    "title": "恐慌与贪婪指数",
+    "extremeFear": "极度恐慌",
+    "fear": "恐慌",
+    "neutral": "中性",
+    "greed": "贪婪",
+    "extremeGreed": "极度贪婪",
+    "failedToLoad": "情绪数据加载失败",
+    "updated": "更新于"
+  },
+  "news": {
+    "title": "新闻",
+    "new": "最新",
+    "articles": "条新闻",
+    "sources": "个来源",
+    "noNews": "暂无新闻",
+    "willAppear": "收集到新闻后将显示在此处",
+    "positive": "正面",
+    "negative": "负面"
+  },
+  "influencer": {
+    "title": "影响力人物动态",
+    "noData": "暂无影响力人物数据",
+    "monitoring": "监控 {{count}} 位加密货币影响力人物",
+    "category": {
+      "ceo": "CEO",
+      "investor": "投资者",
+      "gov": "政府",
+      "regulator": "监管者",
+      "analyst": "分析师",
+      "dev": "开发者",
+      "economist": "经济学家",
+      "billionaire": "亿万富翁",
+      "exchangeCeo": "交易所CEO",
+      "founder": "创始人",
+      "politician": "政客",
+      "vc": "风投",
+      "media": "媒体",
+      "unknown": "未知"
+    },
+    "stats": {
+      "bullishCount": "{{count}}涨",
+      "bearishCount": "{{count}}跌"
+    }
   },
   "confidence": "置信度",
   "risk": "风险",

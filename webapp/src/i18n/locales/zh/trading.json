@@ -74,7 +74,12 @@
     "executeTrade": "执行交易",
     "conservative": "保守型",
     "moderate": "稳健型",
-    "aggressive": "激进型"
+    "aggressive": "激进型",
+    "aiAccuracyLabel": "AI准确率（近{{days}}天）",
+    "directionLabel": "方向",
+    "winRateLabel": "胜率",
+    "avgRRLabel": "平均风险回报比",
+    "confidenceCalibration": "置信度校准"
   },
   "signals": {
     "title": "交易信号",
@@ -95,8 +100,14 @@
     "result": "结果",
     "win": "盈利",
     "loss": "亏损",
-    "pending": "待定"
+    "pending": "待定",
+    "performance": "信号表现",
+    "evaluated": "已评估",
+    "winsLabel": "{{count}}盈 ({{pct}}%)",
+    "lossesLabel": "{{count}}亏 ({{pct}}%)",
+    "winLossLabel": "盈 / 亏"
   },
   "loginRequired": "请通过 Telegram 登录以保存模拟交易",
-  "createFailed": "创建交易失败：{{error}}"
+  "createFailed": "创建交易失败：{{error}}",
+  "unknownError": "未知错误"
 }

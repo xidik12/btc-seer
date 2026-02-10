@@ -152,11 +152,11 @@ export default function FearGreedWidget() {
       </div>
 
       <p className="text-text-muted text-[10px] mt-2 text-center">
-        {value <= 25 ? t('fearGreed.tipExtremeFear', 'Extreme fear can signal buying opportunities.')
-          : value <= 45 ? t('fearGreed.tipFear', 'Fear in the market. Potential accumulation zone.')
-          : value <= 55 ? t('fearGreed.tipNeutral', 'Market is balanced between fear and greed.')
-          : value <= 75 ? t('fearGreed.tipGreed', 'Greed rising. Be cautious with new entries.')
-          : t('fearGreed.tipExtremeGreed', 'Extreme greed often precedes corrections.')}
+        {value <= 25 ? t('fearGreed.tipExtremeFear')
+          : value <= 45 ? t('fearGreed.tipFear')
+          : value <= 55 ? t('fearGreed.tipNeutral')
+          : value <= 75 ? t('fearGreed.tipGreed')
+          : t('fearGreed.tipExtremeGreed')}
       </p>
 
       {history.length > 1 && (

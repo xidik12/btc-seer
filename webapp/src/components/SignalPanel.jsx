@@ -52,7 +52,7 @@ function getActionDisplay(action, t) {
     sell: { label: t('common:signal.sell') },
     strong_sell: { label: t('common:signal.strongSell') },
   }
-  return ACTION_DISPLAY[action] ?? { label: action ?? 'Unknown' }
+  return ACTION_DISPLAY[action] ?? { label: action ?? t('common:signal.hold') }
 }
 
 export default function SignalPanel() {
@@ -182,8 +182,8 @@ export default function SignalPanel() {
           />
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-text-muted text-[10px]">{t('signalPanel.low', 'Low')}</span>
-          <span className="text-text-muted text-[10px]">{t('signalPanel.high', 'High')}</span>
+          <span className="text-text-muted text-[10px]">{t('signalPanel.low')}</span>
+          <span className="text-text-muted text-[10px]">{t('signalPanel.high')}</span>
         </div>
       </div>
 

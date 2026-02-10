@@ -35,6 +35,7 @@
     "paymentVia": "Payment via Telegram Stars. Secure & instant.",
     "whatYouGet": "What you get",
     "bestValue": "Best Value",
+    "cancel": "Cancel",
     "monthly": "Monthly",
     "quarterly": "3 Months",
     "yearly": "Yearly",
@@ -45,6 +46,14 @@
     "perMonth": "/mo",
     "save17": "Save 17%",
     "save25": "Save 25%",
+    "pricing": {
+      "monthly": "$9.99",
+      "monthlyPerMonth": "$9.99",
+      "quarterly": "$24.99",
+      "quarterlyPerMonth": "$8.33",
+      "yearly": "$89.99",
+      "yearlyPerMonth": "$7.50"
+    },
     "features": {
       "predictions": "AI-powered price predictions (1h, 4h, 24h)",
       "signals": "Full trading signals with entry/target/SL",
@@ -60,7 +69,8 @@
     "title": "Subscription",
     "tier": "Tier",
     "status": "Status",
-    "daysRemaining": "Days Remaining",
+    "daysRemaining": "days remaining",
+    "daysShort": "d",
     "memberSince": "Member Since",
     "paymentHistory": "Payment History",
     "free": "Free",
@@ -68,6 +78,8 @@
     "premium": "Premium",
     "active": "Active",
     "expired": "Expired",
+    "expires": "Expires {{date}}",
+    "trialEnds": "Trial ends {{date}}",
     "noPayments": "No payment history"
   }
 }

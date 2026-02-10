@@ -159,8 +159,16 @@
     },
     "indicatorHistory": {
       "title": "Indicator History",
-      "explain": "How key indicators have changed over time. RSI trending from 30 to 72 tells a story that a single snapshot at 72 misses."
-    }
+      "explain": "How key indicators have changed over time. RSI trending from 30 to 72 tells a story that a single snapshot at 72 misses.",
+      "resetZoom": "Reset zoom"
+    },
+    "btcDominanceDescription": "BTC Dominance shows what percentage of the TOTAL crypto market belongs to Bitcoin. When dominance rises, money flows FROM altcoins TO Bitcoin (people trust BTC more). When it falls, money flows TO altcoins (people are taking more risk). High dominance = safer market.",
+    "stochRsiDescription": "This is like RSI on steroids — it measures the RSI of the RSI, making it more sensitive. It swings between 0 and 100 very quickly. Below 20 = extremely oversold (buy opportunity). Above 80 = extremely overbought (sell signal). The %K and %D lines crossing is the actual trade signal.",
+    "williamsRDescription": "Williams %R tells you where the closing price is relative to the highest high over the last 14 periods. It ranges from -100 (lowest point) to 0 (highest point). Below -80 = oversold (price is near its recent low — might bounce). Above -20 = overbought (near its recent high — might drop).",
+    "ichimokuDescription": "A Japanese trading system that shows support, resistance, momentum, and trend direction all at once. The 'cloud' is a shaded zone between two lines. Price ABOVE the cloud = bullish (strong uptrend). BELOW = bearish. INSIDE = no clear trend. The Tenkan/Kijun cross gives buy/sell signals.",
+    "candlestickDescription": "Each 'candle' on a chart shows the opening price, closing price, highest price, and lowest price for a time period. Certain shapes have names and predict what comes next. Like reading tea leaves — but these patterns have been used by traders for centuries.",
+    "advancedDescription": "These are specialized tools used by experienced traders to spot major market turning points. They look at longer-term patterns that can signal whether Bitcoin is at a cycle top (time to sell) or cycle bottom (time to buy).",
+    "rateOfChangeDescription": "Simply: how much did the price change over different time periods? Positive = price went up. Negative = price went down. Bigger numbers = faster movement. This tells you the SPEED of the price change."
   },
   "powerLaw": {
     "title": "Power Law Model",
@@ -175,7 +183,13 @@
     "support": "Support",
     "resistance": "Resistance",
     "explain": "The Power Law model maps Bitcoin's price trajectory based on adoption growth patterns. It provides a fair value corridor — prices below the band suggest undervaluation, above suggest overvaluation.",
-    "disclaimer": "The Power Law model is a mathematical framework, not a price prediction. Past patterns may not continue."
+    "disclaimer": "The Power Law model is a mathematical framework, not a price prediction. Past patterns may not continue.",
+    "daysGenesis": "Days Since Genesis",
+    "toSupport": "To Support",
+    "toResistance": "To Resistance",
+    "description": "The Bitcoin Power Law model describes BTC's long-term price trajectory using a power law relationship: Price = 10^(-17.016 + 5.845 * log10(days))",
+    "howItWorks": "How it works: BTC's price follows a straight line on a log-log chart, with R² > 0.95 over its entire history. The model provides a \"fair value\" corridor — price tends to oscillate between support (0.42x) and resistance (1.5x) of the fair value line.",
+    "limitations": "Limitations: Past performance doesn't guarantee future results. The model assumes continued adoption growth and doesn't account for black swan events or regulatory changes."
   },
   "elliott": {
     "title": "Elliott Wave Analysis",
@@ -193,7 +207,14 @@
       "1mo": "1M"
     },
     "explain": "Elliott Wave Theory identifies repetitive wave patterns in market prices. Markets move in 5 waves in the direction of the trend (impulse), followed by 3 corrective waves.",
-    "disclaimer": "Wave counts are subjective and may change as new price data arrives."
+    "disclaimer": "Wave counts are subjective and may change as new price data arrives.",
+    "pattern": "Pattern",
+    "direction": "Direction",
+    "waveCount": "Wave Count",
+    "theoryDescription": "Elliott Wave Theory identifies recurring fractal wave patterns in market prices. Markets move in 5-wave impulses (with the trend) and 3-wave corrections (against the trend).",
+    "threeRules": "Three inviolable rules: (1) Wave 2 never retraces more than 100% of Wave 1. (2) Wave 3 is never the shortest impulse wave. (3) Wave 4 never enters Wave 1 price territory.",
+    "fibRatios": "Fibonacci ratios guide wave projections: Wave 3 often extends to 1.618x of Wave 1, Wave 4 retraces to 0.382x of Wave 3, and Wave 5 often equals Wave 1 in length.",
+    "divergenceInfo": "Divergences (price vs RSI/MACD) at swing points help confirm wave completions, especially at Wave 5 endings."
   },
   "liquidations": {
     "title": "Liquidation Map",
@@ -206,7 +227,58 @@
     "shortLiquidations": "Short Liquidations",
     "insights": "Trading Insights",
     "explain": "Liquidation data shows where leveraged positions will be force-closed. Clusters of liquidations act as price magnets — price often moves toward them to trigger cascading liquidations.",
-    "disclaimer": "Liquidation data is estimated and may not reflect exact exchange figures."
+    "disclaimer": "Liquidation data is estimated and may not reflect exact exchange figures.",
+    "balanced": "BALANCED",
+    "longHeavy": "LONG HEAVY",
+    "shortHeavy": "SHORT HEAVY",
+    "balancedDesc": "Market is balanced. No strong liquidation bias.",
+    "longHeavyDesc": "{{pct}}% longs — a dip could trigger cascading long liquidations.",
+    "shortHeavyDesc": "{{pct}}% shorts — a pump could trigger a short squeeze.",
+    "shortHeavyLabel": "Short Heavy",
+    "balancedLabel": "Balanced",
+    "longHeavyLabel": "Long Heavy",
+    "fundingConfirms": "Funding confirms:",
+    "longsPaying": "Longs paying shorts",
+    "shortsPaying": "Shorts paying longs",
+    "neutral": "Neutral",
+    "longLabel": "Long",
+    "shortLabel": "Short",
+    "priceLevelTooltip": "Price Level:",
+    "longLiqBelowPrice": "Long Liq (below price)",
+    "shortLiqAbovePrice": "Short Liq (above price)",
+    "liquidationByLeverage": "LIQUIDATION BY LEVERAGE",
+    "lev": "Lev",
+    "longLiqPrice": "Long Liq Price",
+    "distance": "Distance",
+    "shortLiqPrice": "Short Liq Price",
+    "nearestClusters": "NEAREST LIQUIDATION CLUSTERS",
+    "longCluster": "LONG CLUSTER",
+    "shortCluster": "SHORT CLUSTER",
+    "volume": "VOLUME",
+    "oiBtc": "OI (BTC)",
+    "oiUsd": "OI (USD)",
+    "lsRatio": "L/S Ratio",
+    "topTraderRatio": "Top Trader L/S",
+    "markPrice": "Mark Price",
+    "tradingInsights": "TRADING INSIGHTS",
+    "fundingOiChart": "FUNDING RATE & OPEN INTEREST",
+    "reset": "Reset",
+    "extremeFundingDesc": "Extreme positive funding = crash risk. Negative = squeeze potential.",
+    "fundingRateLabel": "Funding Rate",
+    "openInterestLabel": "Open Interest",
+    "howToUseTitle": "HOW TO USE THIS",
+    "howToUse": {
+      "paragraph1": "Liquidation clusters act as price magnets. Market makers and whales deliberately push price toward large clusters to trigger cascading liquidations, creating rapid moves.",
+      "paragraph2": "Red bars = long liquidations (below price). If price drops to these levels, leveraged longs get force-closed, accelerating the dump. Green bars = short liquidations (above price). A move up triggers short squeezes.",
+      "paragraph3": "Pro tip: When funding rate and L/S ratio diverge from top trader positions, it often signals an incoming liquidation event. Watch the Trading Insights section above."
+    },
+    "insightFundingHigh": "High positive funding ({{rate}}%) — longs are paying premium. Price may correct down.",
+    "insightFundingNegative": "Negative funding ({{rate}}%) — shorts are paying. Potential squeeze upward.",
+    "insightSmartMoney": "Smart money divergence: Retail is {{retailBias}} ({{lsRatio}}) while top traders are {{smartBias}} ({{topRatio}}). Follow the smart money.",
+    "insightLongCluster": "Long liquidation cluster just {{pct}}% below price (${{volume}}). A dip could cascade.",
+    "insightShortCluster": "Short squeeze zone just {{pct}}% above price (${{volume}}). A pump could cascade.",
+    "long": "long",
+    "short": "short"
   },
   "events": {
     "title": "Event Memory",
@@ -233,7 +305,11 @@
       "7d": "7d"
     },
     "noEvents": "No recent events",
-    "explain": "Historical event tracking shows how market events affected Bitcoin price across different timeframes."
+    "explain": "Historical event tracking shows how market events affected Bitcoin price across different timeframes.",
+    "category": "Category",
+    "count": "Count",
+    "systemDescription": "The Event Memory system tracks market events and measures their actual price impact across multiple timeframes. When similar events happen again, you'll know the historical pattern.",
+    "noEventsYet": "No events tracked yet. Events will appear as they are detected."
   },
   "news": {
     "title": "Crypto News",
@@ -259,6 +335,13 @@
       "1h": "1h",
       "4h": "4h",
       "1d": "1d"
-    }
+    },
+    "streakLabel": "{{type}}{{count}} Streak",
+    "evaluatedLabel": "{{count}} evaluated",
+    "winsLabel": "{{count}}W ({{pct}}%)",
+    "lossesLabel": "{{count}}L ({{pct}}%)",
+    "bullishCalls": "Bullish Calls",
+    "bearishCalls": "Bearish Calls",
+    "correctLabel": "{{correct}}/{{total}} correct"
   }
 }

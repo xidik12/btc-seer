@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { useTelegram } from '../hooks/useTelegram'
@@ -58,8 +58,8 @@ function TPProgress({ currentPrice, entry, targets, stopLoss }) {
   )
 }
 
-// ─── Order Form ────────────────────────────────────────────
-function OrderForm({ currentPrice, onSubmit, submitting, t }) {
+// ─── Order Form (memoized to prevent scroll jitter from price ticks) ──
+const OrderForm = memo(function OrderForm({ priceRef, onSubmit, submitting, t }) {
   const [direction, setDirection] = useState('LONG')
   const [orderType, setOrderType] = useState('market')
   const [positionMode, setPositionMode] = useState('one-way')
@@ -74,30 +74,37 @@ function OrderForm({ currentPrice, onSubmit, submitting, t }) {
 
   const initialFillDone = useRef(false)
 
-  // Auto-fill entry price and defaults — only on first load, not on every price tick
+  // Auto-fill entry price and defaults — poll ref until price arrives, then fill once
   useEffect(() => {
-    if (currentPrice && !initialFillDone.current) {
+    if (initialFillDone.current) return
+    const fill = () => {
+      const price = priceRef.current
+      if (!price || initialFillDone.current) return false
       initialFillDone.current = true
-      setEntry(currentPrice.toFixed(0))
+      setEntry(price.toFixed(0))
       const slPct = direction === 'LONG' ? 0.98 : 1.02
-      setSl((currentPrice * slPct).toFixed(0))
+      setSl((price * slPct).toFixed(0))
       const mult = direction === 'LONG' ? [1.02, 1.04, 1.06] : [0.98, 0.96, 0.94]
-      setTp1((currentPrice * mult[0]).toFixed(0))
-      setTp2((currentPrice * mult[1]).toFixed(0))
-      setTp3((currentPrice * mult[2]).toFixed(0))
+      setTp1((price * mult[0]).toFixed(0))
+      setTp2((price * mult[1]).toFixed(0))
+      setTp3((price * mult[2]).toFixed(0))
+      return true
     }
-  }, [currentPrice])
+    if (fill()) return
+    const id = setInterval(() => { if (fill()) clearInterval(id) }, 200)
+    return () => clearInterval(id)
+  }, [priceRef])
 
   // Update entry when switching to market order type
   useEffect(() => {
-    if (orderType === 'market' && currentPrice) {
-      setEntry(currentPrice.toFixed(0))
+    if (orderType === 'market' && priceRef.current) {
+      setEntry(priceRef.current.toFixed(0))
     }
-  }, [orderType])
+  }, [orderType, priceRef])
 
   const updateDirection = (dir) => {
     setDirection(dir)
-    const price = parseFloat(entry) || currentPrice || 0
+    const price = parseFloat(entry) || priceRef.current || 0
     if (price) {
       const slPct = dir === 'LONG' ? 0.98 : 1.02
       const mult = dir === 'LONG' ? [1.02, 1.04, 1.06] : [0.98, 0.96, 0.94]
@@ -191,7 +198,7 @@ function OrderForm({ currentPrice, onSubmit, submitting, t }) {
               type="button"
               onClick={() => {
                 setOrderType(ot)
-                if (ot === 'market' && currentPrice) setEntry(currentPrice.toFixed(0))
+                if (ot === 'market' && priceRef.current) setEntry(priceRef.current.toFixed(0))
               }}
               className={`flex-1 py-1.5 text-[10px] font-semibold rounded-md transition-all ${
                 orderType === ot ? 'bg-accent-blue text-white' : 'text-text-muted'
@@ -212,7 +219,7 @@ function OrderForm({ currentPrice, onSubmit, submitting, t }) {
             direction === 'LONG' ? 'bg-accent-green text-white shadow-lg shadow-accent-green/20' : 'bg-bg-hover text-text-muted hover:text-accent-green'
           }`}
         >
-          LONG
+          {t('direction.long', { ns: 'common' })}
         </button>
         <button
           type="button"
@@ -221,7 +228,7 @@ function OrderForm({ currentPrice, onSubmit, submitting, t }) {
             direction === 'SHORT' ? 'bg-accent-red text-white shadow-lg shadow-accent-red/20' : 'bg-bg-hover text-text-muted hover:text-accent-red'
           }`}
         >
-          SHORT
+          {t('direction.short', { ns: 'common' })}
         </button>
       </div>
 
@@ -416,7 +423,7 @@ function OrderForm({ currentPrice, onSubmit, submitting, t }) {
       </button>
     </form>
   )
-}
+})
 
 // ─── Active Position Card ──────────────────────────────────
 function PositionCard({ trade, currentPrice, onClose, t }) {
@@ -622,6 +629,7 @@ export default function MockTrading() {
   const [history, setHistory] = useState([])
   const [currentPrice, setCurrentPrice] = useState(0)
   const [priceChange, setPriceChange] = useState(0)
+  const priceRef = useRef(0)
   const [tab, setTab] = useState('trade')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -640,7 +648,9 @@ export default function MockTrading() {
       ])
       setTrades(mockTrades?.trades || [])
       setHistory(mockHist?.results || [])
-      setCurrentPrice(mockTrades?.current_price || priceData?.price || priceData?.close || 0)
+      const p = mockTrades?.current_price || priceData?.price || priceData?.close || 0
+      priceRef.current = p
+      setCurrentPrice(p)
       setPriceChange(priceData?.change_24h || priceData?.change_pct || 0)
     } catch (err) {
       console.error('Mock trading data error:', err)
@@ -651,12 +661,14 @@ export default function MockTrading() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // Auto-refresh price every 15s
+  // Auto-refresh price every 15s — update ref silently, state only for display components
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
         const priceData = await api.getCurrentPrice()
-        setCurrentPrice(priceData?.price || priceData?.close || 0)
+        const p = priceData?.price || priceData?.close || 0
+        priceRef.current = p
+        setCurrentPrice(p)
         setPriceChange(priceData?.change_24h || priceData?.change_pct || 0)
       } catch {}
     }, 15000)
@@ -675,7 +687,7 @@ export default function MockTrading() {
       setTab('active')
     } catch (err) {
       console.error('Create mock trade error:', err)
-      alert(t('createFailed', { error: err.message || 'Unknown error' }))
+      alert(t('createFailed', { error: err.message || t('unknownError') }))
     } finally {
       setSubmitting(false)
     }
@@ -759,7 +771,7 @@ export default function MockTrading() {
 
       {/* ─── New Trade Tab ─── */}
       {tab === 'trade' && (
-        <OrderForm currentPrice={currentPrice} onSubmit={handleSubmit} submitting={submitting} t={t} />
+        <OrderForm priceRef={priceRef} onSubmit={handleSubmit} submitting={submitting} t={t} />
       )}
 
       {/* ─── Active Positions Tab ─── */}

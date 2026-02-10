@@ -250,7 +250,7 @@ export default function CoinReport() {
       </button>
 
       <p className="text-text-muted text-[10px] text-center">
-        {t('report.reportGenerated', { time: report.generated_at ? new Date(report.generated_at).toLocaleString() : 'just now' })}
+        {t('report.reportGenerated', { time: report.generated_at ? new Date(report.generated_at).toLocaleString() : t('time.justNow', { ns: 'common' }) })}
       </p>
     </div>
   )

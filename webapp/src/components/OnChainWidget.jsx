@@ -60,12 +60,12 @@ export default function OnChainWidget() {
       label: t('onChain.exchangeReserves'),
       value: data?.exchange_reserve != null ? `${formatNumber(data.exchange_reserve)} BTC` : '--',
       change: data?.reserve_change_24h,
-      desc: data?.reserve_change_24h < 0 ? t('onChain.outflows') + ' (' + t('common:direction.bullish').toLowerCase() + ')' : t('onChain.inflows') + ' (' + t('common:direction.bearish').toLowerCase() + ')',
+      desc: data?.reserve_change_24h < 0 ? `${t('onChain.outflows')} (${t('common:direction.bullish').toLowerCase()})` : `${t('onChain.inflows')} (${t('common:direction.bearish').toLowerCase()})`,
     },
     {
       label: t('onChain.largeTransactions'),
       value: data?.large_tx_count != null ? formatNumber(data.large_tx_count) : '--',
-      desc: t('onChain.largeTxDesc', 'Txns > $100K (24h)'),
+      desc: t('onChain.largeTxDesc'),
     },
     {
       label: t('onChain.activeAddresses'),
@@ -83,7 +83,7 @@ export default function OnChainWidget() {
     <div className="bg-bg-card rounded-2xl p-4 slide-up">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-text-primary font-semibold text-sm">{t('onChain.title')}</h3>
-        <span className="text-text-muted text-[10px]">{t('onChain.whaleWatching', 'Whale watching')}</span>
+        <span className="text-text-muted text-[10px]">{t('onChain.whaleWatching')}</span>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {metrics.map((m) => (

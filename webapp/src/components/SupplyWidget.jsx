@@ -108,7 +108,7 @@ export default function SupplyWidget() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-text-primary font-semibold text-sm">{t('supply.title')}</h3>
-        <span className="text-text-muted text-[10px]">21M cap</span>
+        <span className="text-text-muted text-[10px]">{t('supply.cap21M')}</span>
       </div>
 
       {/* Donut + Stats */}
@@ -125,7 +125,7 @@ export default function SupplyWidget() {
           </div>
           <div>
             <div className="text-[9px] text-text-muted uppercase tracking-wider">{t('supply.dailyMining')}</div>
-            <div className="text-text-secondary text-xs">~{btcPerDay} BTC/day ({blockReward} {t('supply.perBlock', 'per block')})</div>
+            <div className="text-text-secondary text-xs">~{btcPerDay} BTC/day ({blockReward} {t('supply.perBlock')})</div>
           </div>
         </div>
       </div>
@@ -170,7 +170,7 @@ export default function SupplyWidget() {
             {schedule.map((s) => (
               <div key={s.year} className="flex items-center justify-between text-[10px]">
                 <span className="text-text-secondary">{s.year}</span>
-                <span className="text-text-muted">{s.reward} BTC/{t('supply.block', 'block')}</span>
+                <span className="text-text-muted">{s.reward} BTC/{t('supply.block')}</span>
                 <span className="text-text-primary font-medium">{formatBtc(s.total_mined_approx)}</span>
               </div>
             ))}
@@ -179,7 +179,7 @@ export default function SupplyWidget() {
       )}
 
       <p className="text-text-muted text-[10px]">
-        {t('halving.rewardDrop', { from: String(blockReward), to: String(blockReward / 2) })}. {t('halving.historicalNote', 'Halvings historically precede bull runs within 12-18 months.')}
+        {t('halving.rewardDrop', { from: String(blockReward), to: String(blockReward / 2) })}. {t('halving.historicalNote')}
       </p>
     </div>
   )

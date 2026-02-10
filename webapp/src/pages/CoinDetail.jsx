@@ -85,7 +85,7 @@ export default function CoinDetail() {
         </div>
         {md.market_cap_rank && (
           <span className="ml-auto text-[10px] text-text-muted bg-white/5 px-2 py-1 rounded-full">
-            Rank #{md.market_cap_rank}
+            {t('detail.rankNumber', { rank: md.market_cap_rank })}
           </span>
         )}
       </div>
@@ -94,7 +94,7 @@ export default function CoinDetail() {
       <div>
         <p className="text-2xl font-bold">{formatCoinPrice(price)}</p>
         <p className={`text-sm font-medium ${changeColor}`}>
-          {formatPercent(change)} (24h)
+          {formatPercent(change)} {t('detail.change24hLabel')}
         </p>
       </div>
 
@@ -110,14 +110,14 @@ export default function CoinDetail() {
         <StatCard label={t('detail.totalSupply')} value={formatSupply(md.total_supply, detail.symbol)} />
         <StatCard label={t('detail.allTimeHigh')} value={formatCoinPrice(md.ath)} sub={md.ath_date ? formatDate(md.ath_date) : null} />
         <StatCard label={t('detail.allTimeLow')} value={formatCoinPrice(md.atl)} sub={md.atl_date ? formatDate(md.atl_date) : null} />
-        <StatCard label="7d" value={formatPercent(md.change_7d)} color={md.change_7d >= 0 ? 'text-accent-green' : 'text-accent-red'} />
-        <StatCard label="30d" value={formatPercent(md.change_30d)} color={md.change_30d >= 0 ? 'text-accent-green' : 'text-accent-red'} />
+        <StatCard label={t('detail.change7d')} value={formatPercent(md.change_7d)} color={md.change_7d >= 0 ? 'text-accent-green' : 'text-accent-red'} />
+        <StatCard label={t('detail.change30d')} value={formatPercent(md.change_30d)} color={md.change_30d >= 0 ? 'text-accent-green' : 'text-accent-red'} />
       </div>
 
       {/* FDV */}
       {md.fully_diluted_valuation && (
         <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-          <p className="text-[10px] text-text-muted mb-1">FDV</p>
+          <p className="text-[10px] text-text-muted mb-1">{t('detail.fdv')}</p>
           <p className="text-sm font-bold">{formatMarketCap(md.fully_diluted_valuation)}</p>
         </div>
       )}

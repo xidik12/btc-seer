@@ -5,24 +5,28 @@ import { formatTimeAgo } from '../utils/format.js'
 
 const CATEGORY_STYLES = {
   // Backend categories
-  ceo: { label: 'CEO', bg: 'bg-amber-500/10', text: 'text-amber-400' },
-  investor: { label: 'Investor', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
-  government: { label: 'Gov', bg: 'bg-red-500/10', text: 'text-red-400' },
-  regulator: { label: 'Regulator', bg: 'bg-orange-500/10', text: 'text-orange-400' },
-  analyst: { label: 'Analyst', bg: 'bg-cyan-500/10', text: 'text-cyan-400' },
-  developer: { label: 'Dev', bg: 'bg-green-500/10', text: 'text-green-400' },
-  economist: { label: 'Economist', bg: 'bg-purple-500/10', text: 'text-purple-400' },
+  ceo: { labelKey: 'common:influencer.category.ceo', bg: 'bg-amber-500/10', text: 'text-amber-400' },
+  investor: { labelKey: 'common:influencer.category.investor', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
+  government: { labelKey: 'common:influencer.category.gov', bg: 'bg-red-500/10', text: 'text-red-400' },
+  regulator: { labelKey: 'common:influencer.category.regulator', bg: 'bg-orange-500/10', text: 'text-orange-400' },
+  analyst: { labelKey: 'common:influencer.category.analyst', bg: 'bg-cyan-500/10', text: 'text-cyan-400' },
+  developer: { labelKey: 'common:influencer.category.dev', bg: 'bg-green-500/10', text: 'text-green-400' },
+  economist: { labelKey: 'common:influencer.category.economist', bg: 'bg-purple-500/10', text: 'text-purple-400' },
   // Legacy/alternate categories
-  billionaire: { label: 'Billionaire', bg: 'bg-amber-500/10', text: 'text-amber-400' },
-  exchange_ceo: { label: 'Exchange CEO', bg: 'bg-blue-500/10', text: 'text-blue-400' },
-  founder: { label: 'Founder', bg: 'bg-purple-500/10', text: 'text-purple-400' },
-  politician: { label: 'Politician', bg: 'bg-red-500/10', text: 'text-red-400' },
-  vc: { label: 'VC', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
-  media: { label: 'Media', bg: 'bg-pink-500/10', text: 'text-pink-400' },
+  billionaire: { labelKey: 'common:influencer.category.billionaire', bg: 'bg-amber-500/10', text: 'text-amber-400' },
+  exchange_ceo: { labelKey: 'common:influencer.category.exchangeCeo', bg: 'bg-blue-500/10', text: 'text-blue-400' },
+  founder: { labelKey: 'common:influencer.category.founder', bg: 'bg-purple-500/10', text: 'text-purple-400' },
+  politician: { labelKey: 'common:influencer.category.politician', bg: 'bg-red-500/10', text: 'text-red-400' },
+  vc: { labelKey: 'common:influencer.category.vc', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
+  media: { labelKey: 'common:influencer.category.media', bg: 'bg-pink-500/10', text: 'text-pink-400' },
 }
 
-function getCategoryStyle(cat) {
-  return CATEGORY_STYLES[cat] || { label: cat || 'Unknown', bg: 'bg-gray-500/10', text: 'text-gray-400' }
+function getCategoryStyle(cat, t) {
+  const style = CATEGORY_STYLES[cat]
+  if (style) {
+    return { ...style, label: t(style.labelKey) }
+  }
+  return { label: cat || t('common:influencer.category.unknown'), bg: 'bg-gray-500/10', text: 'text-gray-400' }
 }
 
 function getSentimentColor(score) {
@@ -57,8 +61,8 @@ function WeightDots({ weight }) {
   )
 }
 
-function TweetItem({ tweet, isLast }) {
-  const catStyle = getCategoryStyle(tweet.category)
+function TweetItem({ tweet, isLast, t }) {
+  const catStyle = getCategoryStyle(tweet.category, t)
   const sentColor = getSentimentColor(tweet.sentiment_score)
   const sentBg = getSentimentBg(tweet.sentiment_score)
 
@@ -154,7 +158,7 @@ export default function InfluencerFeed() {
       <div className="px-4 pt-3 pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-text-primary font-semibold text-sm">{t('influencer.title')}</h3>
+            <h3 className="text-text-primary font-semibold text-sm">{t('common:influencer.title')}</h3>
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-400" />
@@ -166,7 +170,7 @@ export default function InfluencerFeed() {
                 {sentimentLabel}
               </span>
               <span className="text-text-muted text-[10px]">
-                {sentiment.bullish_count}B / {sentiment.bearish_count}R
+                {sentiment.bullish_count}{t('prediction.bullishShort')} / {sentiment.bearish_count}{t('prediction.bearishShort')}
               </span>
             </div>
           )}
@@ -189,13 +193,13 @@ export default function InfluencerFeed() {
         </div>
       ) : error ? (
         <div className="px-4 pb-4 flex flex-col items-center justify-center py-6 gap-2">
-          <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('influencer.title') })}</p>
+          <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('common:influencer.title') })}</p>
           <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">{t('common:app.retry')}</button>
         </div>
       ) : tweets.length === 0 ? (
         <div className="px-4 pb-4 py-6 text-center">
-          <p className="text-text-secondary text-sm">{t('influencer.noData')}</p>
-          <p className="text-text-muted text-xs mt-1">{t('influencer.monitoring', { count: '25+' })}</p>
+          <p className="text-text-secondary text-sm">{t('common:influencer.noData')}</p>
+          <p className="text-text-muted text-xs mt-1">{t('common:influencer.monitoring', { count: '25+' })}</p>
         </div>
       ) : (
         <div className="max-h-[350px] overflow-y-auto scrollbar-thin">
@@ -204,6 +208,7 @@ export default function InfluencerFeed() {
               key={tweet.id || index}
               tweet={tweet}
               isLast={index === tweets.length - 1}
+              t={t}
             />
           ))}
         </div>

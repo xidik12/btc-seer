@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ComposedChart,
   Area,
@@ -23,11 +24,11 @@ import {
 import { useChartZoom } from '../hooks/useChartZoom'
 
 const TIMEFRAMES = [
-  { label: '24H', value: '1d' },
-  { label: '1W', value: '1w' },
-  { label: '1M', value: '1mo' },
-  { label: '1Y', value: '1y' },
-  { label: 'ALL', value: 'all' },
+  { labelKey: 'common:chart.timeframe.24h', value: '1d' },
+  { labelKey: 'common:chart.timeframe.1w', value: '1w' },
+  { labelKey: 'common:chart.timeframe.1m', value: '1mo' },
+  { labelKey: 'common:chart.timeframe.1y', value: '1y' },
+  { labelKey: 'common:chart.timeframe.all', value: 'all' },
 ]
 
 // ── Frontend indicator calculations from candle data ──
@@ -140,13 +141,14 @@ function RsiTooltip({ active, payload }) {
 // ── Indicator toggles ──
 
 const OVERLAYS = [
-  { key: 'ema', label: 'EMA', default: true },
-  { key: 'bb', label: 'BB', default: false },
-  { key: 'vol', label: 'Vol', default: true },
-  { key: 'rsi', label: 'RSI', default: false },
+  { key: 'ema', labelKey: 'common:chart.overlay.ema', default: true },
+  { key: 'bb', labelKey: 'common:chart.overlay.bb', default: false },
+  { key: 'vol', labelKey: 'common:chart.overlay.vol', default: true },
+  { key: 'rsi', labelKey: 'common:chart.overlay.rsi', default: false },
 ]
 
 export default function PriceChart() {
+  const { t } = useTranslation()
   const [tfIndex, setTfIndex] = useState(0)
   const [candles, setCandles] = useState([])
   const [stats, setStats] = useState(null)
@@ -271,7 +273,7 @@ export default function PriceChart() {
       <div className="px-4 pt-3 pb-2">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <h3 className="text-text-primary font-semibold text-sm">BTC Chart</h3>
+            <h3 className="text-text-primary font-semibold text-sm">{t('common:chart.btcChart')}</h3>
             {stats && (
               <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${isPositive ? 'bg-accent-green/10 text-accent-green' : 'bg-accent-red/10 text-accent-red'}`}>
                 {isPositive ? '+' : ''}{Number(stats.changePct || 0).toFixed(2)}%
@@ -290,7 +292,7 @@ export default function PriceChart() {
         <div className="flex gap-1 bg-bg-secondary/50 rounded-lg p-0.5 mb-2">
           {TIMEFRAMES.map((tf, i) => (
             <button
-              key={tf.label}
+              key={tf.value}
               onClick={() => setTfIndex(i)}
               className={`flex-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-all duration-200 ${
                 tfIndex === i
@@ -298,7 +300,7 @@ export default function PriceChart() {
                   : 'text-text-muted hover:text-text-secondary'
               }`}
             >
-              {tf.label}
+              {t(tf.labelKey)}
             </button>
           ))}
         </div>
@@ -315,7 +317,7 @@ export default function PriceChart() {
                   : 'bg-transparent text-text-muted border-white/10'
               }`}
             >
-              {o.label}
+              {t(o.labelKey)}
             </button>
           ))}
           {isZoomed && (
@@ -323,7 +325,7 @@ export default function PriceChart() {
               onClick={resetZoom}
               className="ml-auto px-2 py-0.5 rounded text-[10px] font-semibold text-accent-blue border border-accent-blue/30"
             >
-              Reset
+              {t('common:chart.reset')}
             </button>
           )}
         </div>
@@ -333,32 +335,32 @@ export default function PriceChart() {
         <div className="h-[240px] flex items-center justify-center">
           <div className="flex flex-col items-center gap-2">
             <div className="w-5 h-5 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
-            <span className="text-text-muted text-xs">Loading chart...</span>
+            <span className="text-text-muted text-xs">{t('common:chart.loadingChart')}</span>
           </div>
         </div>
       ) : error ? (
         <div className="h-[240px] flex flex-col items-center justify-center gap-2">
-          <p className="text-accent-red text-sm">Failed to load chart</p>
-          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">Retry</button>
+          <p className="text-accent-red text-sm">{t('common:chart.failedToLoad')}</p>
+          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">{t('common:app.retry')}</button>
         </div>
       ) : chartData.length === 0 ? (
         <div className="h-[240px] flex items-center justify-center">
-          <p className="text-text-secondary text-sm">No data available</p>
+          <p className="text-text-secondary text-sm">{t('common:chart.noData')}</p>
         </div>
       ) : (
         <>
           {/* Main price chart with overlays */}
           <div className="h-[250px] px-1 relative" {...bindGestures}>
             <div className="absolute top-2 left-14 z-10 text-[10px] text-[#3a3a55] font-semibold tracking-wider">
-              BTC/USDT {timeframe.label}
+              {t('common:trade.btcUsdt')} {t(timeframe.labelKey)}
             </div>
 
             {/* MA Legend */}
             {overlays.ema && (
               <div className="absolute top-2 right-14 z-10 flex gap-2 text-[8px] font-semibold">
-                <span style={{ color: '#ffbb33' }}>EMA9</span>
-                <span style={{ color: '#33bbff' }}>EMA21</span>
-                <span style={{ color: '#ff66aa' }}>EMA50</span>
+                <span style={{ color: '#ffbb33' }}>{t('common:chart.legend.ema9')}</span>
+                <span style={{ color: '#33bbff' }}>{t('common:chart.legend.ema21')}</span>
+                <span style={{ color: '#ff66aa' }}>{t('common:chart.legend.ema50')}</span>
               </div>
             )}
 
@@ -562,7 +564,7 @@ export default function PriceChart() {
               </div>
             </div>
           )}
-          <p className="text-text-muted text-[9px] text-center py-1.5">Pinch to zoom &middot; Drag to pan</p>
+          <p className="text-text-muted text-[9px] text-center py-1.5">{t('common:chart.pinchToZoom')}</p>
         </>
       )}
     </div>

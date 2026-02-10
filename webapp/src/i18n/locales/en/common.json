@@ -108,7 +108,72 @@
     "reset": "Reset zoom",
     "loading": "Loading...",
     "noData": "No chart data available",
-    "loadingChart": "Loading chart..."
+    "loadingChart": "Loading chart...",
+    "btcChart": "BTC Chart",
+    "failedToLoad": "Failed to load chart",
+    "timeframe": {
+      "24h": "24H",
+      "1w": "1W",
+      "1m": "1M",
+      "1y": "1Y",
+      "all": "ALL"
+    },
+    "overlay": {
+      "ema": "EMA",
+      "bb": "BB",
+      "vol": "Vol",
+      "rsi": "RSI"
+    },
+    "legend": {
+      "ema9": "EMA9",
+      "ema21": "EMA21",
+      "ema50": "EMA50"
+    }
+  },
+  "sentiment": {
+    "title": "Fear & Greed Index",
+    "extremeFear": "Extreme Fear",
+    "fear": "Fear",
+    "neutral": "Neutral",
+    "greed": "Greed",
+    "extremeGreed": "Extreme Greed",
+    "failedToLoad": "Failed to load sentiment data",
+    "updated": "Updated"
+  },
+  "news": {
+    "title": "News",
+    "new": "NEW",
+    "articles": "articles",
+    "sources": "sources",
+    "noNews": "No news available",
+    "willAppear": "News will appear here once collected",
+    "positive": "Positive",
+    "negative": "Negative"
+  },
+  "influencer": {
+    "title": "Influencer Feed",
+    "noData": "No influencer data available",
+    "monitoring": "Monitoring {{count}} crypto influencers",
+    "category": {
+      "ceo": "CEO",
+      "investor": "Investor",
+      "gov": "Gov",
+      "regulator": "Regulator",
+      "analyst": "Analyst",
+      "dev": "Dev",
+      "economist": "Economist",
+      "billionaire": "Billionaire",
+      "exchangeCeo": "Exchange CEO",
+      "founder": "Founder",
+      "politician": "Politician",
+      "vc": "VC",
+      "media": "Media",
+      "unknown": "Unknown"
+    },
+    "stats": {
+      "bullishCount": "{{count}}B",
+      "bearishCount": "{{count}}R"
+    }
   },
   "failedToLoad": "Failed to load data",
   "confidence": "Confidence",

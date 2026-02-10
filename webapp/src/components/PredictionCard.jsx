@@ -68,8 +68,8 @@ export default function PredictionCard() {
     <div className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-accent-blue">AI MODEL</span>
-          <span className="text-text-muted text-[8px]">LSTM + XGBoost + Sentiment</span>
+          <span className="text-[10px] font-bold text-accent-blue">{t('prediction.aiModel')}</span>
+          <span className="text-text-muted text-[8px]">{t('prediction.modelDescription')}</span>
         </div>
         {timestamp && (
           <span className="text-text-muted text-[10px]">{formatTimeAgo(timestamp)}</span>

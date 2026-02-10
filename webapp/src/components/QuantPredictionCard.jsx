@@ -58,7 +58,7 @@ function SignalBreakdown({ breakdown, expanded, t }) {
   return (
     <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
       <p className="text-text-muted text-[10px] font-semibold tracking-wider mb-2">
-        {t('prediction.signalBreakdown').toUpperCase()} ({signals.length} {t('prediction.activeSignals')})
+        {t('dashboard:prediction.signalBreakdown').toUpperCase()} ({signals.length} {t('dashboard:prediction.activeSignals')})
       </p>
       {signals.map(([name, sig]) => {
         const dir = sig.direction || 0
@@ -176,7 +176,7 @@ export default function QuantPredictionCard() {
         <ScoreBar score={score} />
         <div className="flex items-center justify-between mt-1.5">
           <span className="text-text-muted text-[10px]">
-            {data.bullish_signals || 0}B / {data.bearish_signals || 0}S
+            {data.bullish_signals || 0}{t('prediction.bullishShort')} / {data.bearish_signals || 0}{t('prediction.bearishShort')}
             {data.agreement_ratio ? ` (${(data.agreement_ratio * 100).toFixed(0)}% ${t('prediction.agreement')})` : ''}
           </span>
           <span className="text-text-muted text-[10px] tabular-nums">
@@ -242,7 +242,7 @@ export default function QuantPredictionCard() {
         onClick={() => setExpanded(!expanded)}
         className="w-full mt-2 text-center text-accent-blue text-[11px] hover:underline"
       >
-        {expanded ? t('prediction.hideBreakdown', 'Hide signal breakdown') : t('prediction.showBreakdown', 'Show signal breakdown')}
+        {expanded ? t('prediction.hideBreakdown') : t('prediction.showBreakdown')}
       </button>
 
       <SignalBreakdown breakdown={data.signal_breakdown} expanded={expanded} t={t} />

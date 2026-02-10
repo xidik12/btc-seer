@@ -74,7 +74,12 @@
     "executeTrade": "Исполнить сделку",
     "conservative": "Консервативный",
     "moderate": "Умеренный",
-    "aggressive": "Агрессивный"
+    "aggressive": "Агрессивный",
+    "aiAccuracyLabel": "ТОЧНОСТЬ ИИ (За {{days}}д)",
+    "directionLabel": "Направление",
+    "winRateLabel": "Процент побед",
+    "avgRRLabel": "Средн. Р/У",
+    "confidenceCalibration": "Калибровка уверенности"
   },
   "signals": {
     "title": "Торговые сигналы",
@@ -95,8 +100,14 @@
     "result": "Результат",
     "win": "Прибыль",
     "loss": "Убыток",
-    "pending": "Ожидание"
+    "pending": "Ожидание",
+    "performance": "Эффективность сигналов",
+    "evaluated": "оценено",
+    "winsLabel": "{{count}}П ({{pct}}%)",
+    "lossesLabel": "{{count}}У ({{pct}}%)",
+    "winLossLabel": "П / У"
   },
   "loginRequired": "Войдите через Telegram, чтобы сохранить бумажные сделки",
-  "createFailed": "Не удалось создать сделку: {{error}}"
+  "createFailed": "Не удалось создать сделку: {{error}}",
+  "unknownError": "Неизвестная ошибка"
 }

@@ -10,7 +10,13 @@
     "noSignals": "暂无信号数据",
     "timeframe": "时间周期",
     "predicted": "预测值",
-    "change": "变化"
+    "change": "变化",
+    "aiModel": "AI 模型",
+    "modelDescription": "LSTM + XGBoost + 情绪分析",
+    "hideBreakdown": "隐藏信号分解",
+    "showBreakdown": "显示信号分解",
+    "bullishShort": "多",
+    "bearishShort": "空"
   },
   "priceWidget": {
     "title": "BTC / USD",
@@ -36,7 +42,12 @@
     "greed": "贪婪",
     "extremeGreed": "极度贪婪",
     "last7Days": "近7天",
-    "marketSentiment": "市场情绪"
+    "marketSentiment": "市场情绪",
+    "tipExtremeFear": "极度恐惧可能预示着买入机会。",
+    "tipFear": "市场恐惧。可能的积累区间。",
+    "tipNeutral": "市场在恐惧与贪婪之间保持平衡。",
+    "tipGreed": "贪婪上升。新入场需谨慎。",
+    "tipExtremeGreed": "极度贪婪往往预示着回调。"
   },
   "signalPanel": {
     "title": "交易信号",
@@ -46,7 +57,9 @@
     "stopLoss": "止损",
     "confidence": "置信度",
     "riskLevel": "风险等级",
-    "disclaimer": "AI 生成的信号，不构成投资建议。交易前请务必自行研究。"
+    "disclaimer": "AI 生成的信号，不构成投资建议。交易前请务必自行研究。",
+    "low": "低",
+    "high": "高"
   },
   "news": {
     "title": "最新资讯",
@@ -69,7 +82,9 @@
     "inflows": "流入",
     "outflows": "流出",
     "24hUnique": "24小时独立发送者",
-    "networkSecurity": "网络安全性"
+    "networkSecurity": "网络安全性",
+    "largeTxDesc": "单笔交易 > $10万（24小时）",
+    "whaleWatching": "巨鲸监控"
   },
   "supply": {
     "title": "比特币供应",
@@ -80,14 +95,21 @@
     "blockReward": "区块奖励",
     "nextHalving": "下次减半",
     "milestones": "供应里程碑",
-    "percentMined": "已挖出 {{pct}}%"
+    "percentMined": "已挖出 {{pct}}%",
+    "cap21M": "2100万上限",
+    "perBlock": "每区块",
+    "block": "区块"
   },
   "dominance": {
     "title": "BTC 市场占比",
     "change24h": "24小时变化",
     "interpretation": "解读",
     "riskOff": "避险：资金流入 BTC",
-    "riskOn": "冒险：资金流入山寨币"
+    "riskOn": "冒险：资金流入山寨币",
+    "refresh": "刷新",
+    "highDesc": "高市场占比表明资金流入 BTC 作为避险资产。山寨币可能表现不佳。",
+    "lowDesc": "低市场占比预示着山寨币季节。资金正在流入更高风险的资产。",
+    "moderateDesc": "适中的市场占比。市场在 BTC 和山寨币之间保持平衡。"
   },
   "macro": {
     "title": "宏观看板",
@@ -97,7 +119,8 @@
     "treasury10y": "10年期美债",
     "nasdaq": "纳斯达克",
     "vix": "VIX 恐慌指数",
-    "eurusd": "EUR/USD"
+    "eurusd": "EUR/USD",
+    "updatesEvery5m": "每5分钟更新"
   },
   "halving": {
     "title": "比特币减半倒计时",
@@ -108,7 +131,10 @@
     "minutes": "分钟",
     "seconds": "秒",
     "cycleProgress": "周期进度",
-    "rewardDrop": "区块奖励从 {{from}} 降至 {{to}} BTC"
+    "rewardDrop": "区块奖励从 {{from}} 降至 {{to}} BTC",
+    "last": "上次",
+    "next": "下次",
+    "historicalNote": "历史上，减半事件通常在12-18个月内引发显著的牛市行情。"
   },
   "accuracy": {
     "title": "预测准确率",

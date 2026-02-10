@@ -9,6 +9,9 @@
   "detail": {
     "price": "Price",
     "change24h": "24h Change",
+    "change24hLabel": "(24h)",
+    "change7d": "7d",
+    "change30d": "30d",
     "marketCap": "Market Cap",
     "volume24h": "24h Volume",
     "circulatingSupply": "Circulating Supply",
@@ -16,6 +19,8 @@
     "allTimeHigh": "All-Time High",
     "allTimeLow": "All-Time Low",
     "contracts": "Contract Addresses",
+    "rankNumber": "Rank #{{rank}}",
+    "fdv": "FDV",
     "timeframes": {
       "1d": "1D",
       "7d": "7D",

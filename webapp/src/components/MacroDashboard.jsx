@@ -126,7 +126,7 @@ export default function MacroDashboard() {
         </h3>
         {!loading && !error && (
           <span className="text-text-muted text-[10px]">
-            {t('macro.updatesEvery5m', 'Updates every 5m')}
+            {t('macro.updatesEvery5m')}
           </span>
         )}
       </div>

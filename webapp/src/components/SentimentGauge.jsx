@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import {
   formatPrice,
@@ -13,12 +14,12 @@ import {
 
 const POLL_INTERVAL = 300_000
 
-function getSentimentLabel(value) {
-  if (value <= 20) return 'Extreme Fear'
-  if (value <= 40) return 'Fear'
-  if (value <= 60) return 'Neutral'
-  if (value <= 80) return 'Greed'
-  return 'Extreme Greed'
+function getSentimentLabel(value, t) {
+  if (value <= 20) return t('common:sentiment.extremeFear')
+  if (value <= 40) return t('common:sentiment.fear')
+  if (value <= 60) return t('common:sentiment.neutral')
+  if (value <= 80) return t('common:sentiment.greed')
+  return t('common:sentiment.extremeGreed')
 }
 
 function getSentimentColor(value) {
@@ -162,6 +163,7 @@ function GaugeArc({ value, size = 180 }) {
 }
 
 export default function SentimentGauge() {
+  const { t } = useTranslation()
   const [macro, setMacro] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -197,12 +199,12 @@ export default function SentimentGauge() {
   if (error) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/20">
-        <p className="text-accent-red text-sm">Failed to load sentiment data</p>
+        <p className="text-accent-red text-sm">{t('common:sentiment.failedToLoad')}</p>
         <button
           onClick={fetchData}
           className="text-accent-blue text-xs mt-1 underline"
         >
-          Retry
+          {t('common:app.retry')}
         </button>
       </div>
     )
@@ -214,13 +216,13 @@ export default function SentimentGauge() {
     macro?.fgi ??
     50
   const value = Math.max(0, Math.min(100, Math.round(fgi)))
-  const label = getSentimentLabel(value)
+  const label = getSentimentLabel(value, t)
   const textClass = getSentimentTextClass(value)
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
       <h3 className="text-text-primary text-sm font-semibold mb-2">
-        Fear &amp; Greed Index
+        {t('common:sentiment.title')}
       </h3>
 
       <GaugeArc value={value} />
@@ -236,7 +238,7 @@ export default function SentimentGauge() {
 
       {macro?.updated_at && (
         <p className="text-text-muted text-[10px] mt-3 text-right">
-          Updated {formatTimeAgo(macro.updated_at)}
+          {t('common:sentiment.updated')} {formatTimeAgo(macro.updated_at)}
         </p>
       )}
     </div>

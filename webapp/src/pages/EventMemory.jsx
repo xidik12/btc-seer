@@ -41,11 +41,11 @@ function CategoryHeatmap({ stats, t }) {
         <table className="w-full text-[10px]">
           <thead>
             <tr className="text-text-muted border-b border-white/5">
-              <th className="text-left py-2 font-medium pr-2">Category</th>
+              <th className="text-left py-2 font-medium pr-2">{t('market:events.category')}</th>
               {TIMEFRAMES.map(tf => (
                 <th key={tf} className="text-center py-2 font-medium px-1">{tf}</th>
               ))}
-              <th className="text-center py-2 font-medium px-1">Count</th>
+              <th className="text-center py-2 font-medium px-1">{t('market:events.count')}</th>
             </tr>
           </thead>
           <tbody>
@@ -212,8 +212,7 @@ export default function EventMemory() {
 
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
         <p className="text-text-muted text-[11px] leading-relaxed">
-          The Event Memory system tracks market events and measures their actual price impact across
-          multiple timeframes. When similar events happen again, you'll know the historical pattern.
+          {t('market:events.systemDescription')}
         </p>
       </div>
 
@@ -232,7 +231,7 @@ export default function EventMemory() {
           </div>
         ) : (
           <div className="text-center text-text-muted py-10 text-sm">
-            No events tracked yet. Events will appear as they are detected.
+            {t('market:events.noEventsYet')}
           </div>
         )}
       </div>
