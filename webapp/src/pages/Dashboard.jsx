@@ -180,7 +180,7 @@ const CATEGORIES = [
       { path: '/learn', label: 'Learn', icon: 'learn' },
       { path: '/resources', label: 'Resources', icon: 'resources' },
       { path: '/tools', label: 'Tools', icon: 'tools' },
-      { path: '/subscription', label: 'Premium', icon: 'premium' },
+      { path: '/subscription', label: 'Premium', icon: 'premium', highlight: true },
       { path: '/settings', label: 'Settings', icon: 'settings' },
       { path: '/about', label: 'About', icon: 'about' },
     ],
@@ -208,10 +208,12 @@ function QuickAccessGrid() {
                 <button
                   key={link.path}
                   onClick={() => navigate(link.path)}
-                  className="bg-bg-card rounded-xl border border-white/5 p-3 flex flex-col items-center gap-1.5 hover:border-white/15 active:scale-95 transition-all"
+                  className={`bg-bg-card rounded-xl border p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-all ${
+                    link.highlight ? 'border-accent-yellow/25 hover:border-accent-yellow/40' : 'border-white/5 hover:border-white/15'
+                  }`}
                 >
-                  <span className="w-5 h-5 text-text-secondary">{quickIcons[link.icon]}</span>
-                  <span className="text-[10px] text-text-secondary font-medium leading-tight text-center">{link.label}</span>
+                  <span className={`w-5 h-5 ${link.highlight ? 'text-accent-yellow' : 'text-text-secondary'}`}>{quickIcons[link.icon]}</span>
+                  <span className={`text-[10px] font-medium leading-tight text-center ${link.highlight ? 'text-accent-yellow' : 'text-text-secondary'}`}>{link.label}</span>
                 </button>
               ))}
             </div>
