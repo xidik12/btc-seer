@@ -43,6 +43,9 @@ export default function About() {
     desc: t(`about:howAiWorks.step${n}_desc`),
   }))
 
+  const pipelineRaw = t('about:dataPipeline.items', { returnObjects: true })
+  const pipelineItems = Array.isArray(pipelineRaw) ? pipelineRaw : []
+
   const whatsInsideKeys = [
     'dashboard', 'signals', 'advisor', 'technical', 'powerLaw', 'elliottWave',
     'liquidations', 'coins', 'news', 'events', 'history', 'paperTrading',
@@ -107,7 +110,7 @@ export default function About() {
 
       {/* AI Ensemble Architecture */}
       <div className="bg-bg-card rounded-2xl p-4 gradient-border">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:architecture.title').toUpperCase()}</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{String(t('about:architecture.title')).toUpperCase()}</h3>
         <div className="space-y-2">
           {models.map((model) => (
             <div key={model.nameKey} className="p-2.5 rounded-xl bg-white/[0.02]">
@@ -141,7 +144,7 @@ export default function About() {
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
         <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:dataPipeline.title')}</h3>
         <div className="space-y-1.5">
-          {(t('about:dataPipeline.items', { returnObjects: true }) || []).map((item, idx) => (
+          {pipelineItems.map((item, idx) => (
             <div key={idx} className="flex gap-2 py-1 border-b border-white/[0.03] last:border-0">
               <span className="text-accent-green text-[10px] font-bold w-20 flex-shrink-0">{item.freq}</span>
               <span className="text-text-muted text-[10px]">{item.desc}</span>
@@ -207,7 +210,7 @@ export default function About() {
 
       {/* Features Grid */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:features.title').toUpperCase()}</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{String(t('about:features.title')).toUpperCase()}</h3>
         <div className="grid grid-cols-2 gap-2">
           {[
             { icon: I(<><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2a7 7 0 00-4 12.9V17h8v-2.1A7 7 0 0012 2z" /></>, true), labelKey: 'about:features.predictions' },
@@ -237,7 +240,7 @@ export default function About() {
 
       {/* Creator / Community */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('about:credits.title').toUpperCase()}</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-2">{String(t('about:credits.title')).toUpperCase()}</h3>
         <div className="text-text-muted text-[11px] space-y-2">
           <p dangerouslySetInnerHTML={{ __html: t('about:credits.createdBy') }} />
           <p>
@@ -256,7 +259,7 @@ export default function About() {
 
       {/* Disclaimer */}
       <div className="bg-bg-card rounded-2xl p-4 border border-accent-yellow/15">
-        <h3 className="text-accent-yellow text-xs font-semibold mb-2">{t('about:disclaimer.title').toUpperCase()}</h3>
+        <h3 className="text-accent-yellow text-xs font-semibold mb-2">{String(t('about:disclaimer.title')).toUpperCase()}</h3>
         <p className="text-text-muted text-[10px]">
           {t('about:disclaimer.text')}
         </p>

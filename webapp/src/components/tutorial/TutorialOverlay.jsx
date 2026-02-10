@@ -40,17 +40,7 @@ export default function TutorialOverlay({ tutorial }) {
     const el = document.querySelector(stepData.target)
     if (el) {
       applyHighlight(el)
-      const rect = el.getBoundingClientRect()
-      setTargetRect(rect)
-      // Scroll element into view if needed
-      const vh = window.innerHeight
-      if (rect.top < 60 || rect.bottom > vh - 60) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        // Re-measure after scroll
-        setTimeout(() => {
-          setTargetRect(el.getBoundingClientRect())
-        }, 350)
-      }
+      setTargetRect(el.getBoundingClientRect())
     } else {
       setTargetRect(null)
       clearHighlight()
@@ -58,6 +48,7 @@ export default function TutorialOverlay({ tutorial }) {
   }, [stepData?.target, applyHighlight, clearHighlight])
 
   useEffect(() => {
+    if (!active) return
     updatePosition()
     window.addEventListener('resize', updatePosition)
     window.addEventListener('scroll', updatePosition, true)
@@ -68,7 +59,24 @@ export default function TutorialOverlay({ tutorial }) {
       window.removeEventListener('scroll', updatePosition, true)
       observer.disconnect()
     }
-  }, [updatePosition])
+  }, [updatePosition, active])
+
+  // Scroll target into view only on step changes (not on every scroll event)
+  useEffect(() => {
+    if (!active || !stepData?.target) return
+    const el = document.querySelector(stepData.target)
+    if (el) {
+      const rect = el.getBoundingClientRect()
+      const vh = window.innerHeight
+      if (rect.top < 60 || rect.bottom > vh - 60) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        // Re-measure after scroll
+        setTimeout(() => {
+          setTargetRect(el.getBoundingClientRect())
+        }, 350)
+      }
+    }
+  }, [step, active, stepData?.target])
 
   // Clean up highlight class when tutorial ends or component unmounts
   useEffect(() => {
