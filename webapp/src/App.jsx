@@ -20,6 +20,7 @@ const MockTrading = lazy(() => import('./pages/MockTrading'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const More = lazy(() => import('./pages/More'))
 const Settings = lazy(() => import('./pages/Settings'))
+const Subscription = lazy(() => import('./pages/Subscription'))
 const Coins = lazy(() => import('./pages/Coins'))
 const CoinDetail = lazy(() => import('./pages/CoinDetail'))
 const CoinSearch = lazy(() => import('./pages/CoinSearch'))
@@ -118,6 +119,7 @@ export default function App() {
           <Route path="/advisor" element={<Advisor />} />
           <Route path="/mock-trading" element={<MockTrading />} />
           <Route path="/about" element={<About />} />
+          <Route path="/subscription" element={<Subscription />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin" element={<AdminDashboard />} />
         </Routes>

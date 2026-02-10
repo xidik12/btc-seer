@@ -25,6 +25,11 @@ pytorch-lightning>=2.0.0
 
 # Technical Analysis
 ta==0.11.0
+pandas_ta>=0.3.14b1
+
+# Advanced quantitative analysis
+arch>=7.0        # GARCH volatility models
+PyWavelets>=1.6  # Wavelet decomposition
 
 # NLP / Sentiment
 vaderSentiment==3.3.2

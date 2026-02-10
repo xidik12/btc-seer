@@ -339,6 +339,19 @@ class BotUser(Base):
     ban_reason: Mapped[str] = mapped_column(String(500), nullable=True)
 
 
+class PaymentHistory(Base):
+    """Logs every Telegram Stars payment for subscription tracking."""
+    __tablename__ = "payment_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(Integer, index=True)
+    tier: Mapped[str] = mapped_column(String(20))  # monthly, quarterly, yearly
+    days: Mapped[int] = mapped_column(Integer)
+    stars_amount: Mapped[int] = mapped_column(Integer)
+    payment_id: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
 class PortfolioState(Base):
     """Tracks user portfolio balance, risk settings, and trading stats."""
     __tablename__ = "portfolio_states"

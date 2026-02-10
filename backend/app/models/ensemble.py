@@ -13,6 +13,7 @@ from pathlib import Path
 
 import numpy as np
 
+from app.features.builder import FeatureBuilder
 from app.models.lstm import LSTMPredictor
 from app.models.xgboost_model import XGBoostPredictor
 from app.models.tft_model import TFTPredictor
@@ -53,9 +54,11 @@ class EnsemblePredictor:
     def __init__(
         self,
         model_dir: str = "app/models/weights",
-        num_features: int = 66,
+        num_features: int = None,
         use_finbert: bool = False,
     ):
+        if num_features is None:
+            num_features = len(FeatureBuilder.ALL_FEATURES)
         model_dir = Path(model_dir)
 
         # Load all models

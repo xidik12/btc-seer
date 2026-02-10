@@ -3,7 +3,12 @@ from pathlib import Path
 
 import numpy as np
 
+from app.features.builder import FeatureBuilder
+
 logger = logging.getLogger(__name__)
+
+# Build feature-name → index mapping for named lookups
+_FEATURE_INDEX = {name: i for i, name in enumerate(FeatureBuilder.ALL_FEATURES)}
 
 
 class XGBoostPredictor:
@@ -51,35 +56,27 @@ class XGBoostPredictor:
             return self._heuristic_predict(features)
 
     def _heuristic_predict(self, features: np.ndarray) -> dict:
-        """Smart heuristic fallback using all available technical + sentiment features.
+        """Smart heuristic fallback using named feature lookups.
 
-        Feature indices match FeatureBuilder.ALL_FEATURES order:
-          0-4: ema_9, ema_21, ema_50, ema_200, sma_20
-          5: rsi, 6: macd, 7: macd_signal, 8: macd_hist
-          9: bb_upper, 10: bb_lower, 11: bb_width, 12: bb_position
-          13: atr, 14: obv, 15: vwap
-          16-19: roc_1, roc_6, roc_12, roc_24
-          20-21: momentum_10, momentum_20
-          22: volume_ratio, 23: volatility_24h
-          24-26: price_vs_ema9, price_vs_ema21, price_vs_ema50
-          27-29: body_size, upper_shadow, lower_shadow
-          30-32: news_sentiment_1h, 4h, 24h
-          33-35: news_volume_1h, news_bullish_pct, news_bearish_pct
-          36: reddit_sentiment, 37: reddit_volume
-          38: fear_greed_value
-          39-46: macro features (dxy, gold, sp500, treasury)
-          47-51: onchain features (hash_rate, mempool, tx_volume, addresses)
-          52-58: event memory features
-          59-61: derivatives (funding_rate, open_interest, mark_index_spread)
-          62-65: dominance (btc_dom, eth_dom, total_mcap, mcap_change)
+        Uses _FEATURE_INDEX for robust index resolution — immune to
+        feature list reordering or expansion.
         """
         n = len(features)
+
+        def _get(name: str) -> float | None:
+            """Safely retrieve a feature value by name."""
+            idx = _FEATURE_INDEX.get(name)
+            if idx is None or idx >= n:
+                return None
+            v = features[idx]
+            return float(v) if v != 0 else None
+
         # Weighted signals: (probability, weight)
         signals = []
 
         # ── RSI (weight 3) — strongest mean-reversion signal ──
-        if n > 5 and features[5] != 0:
-            rsi = features[5]
+        rsi = _get("rsi")
+        if rsi is not None:
             if rsi < 20:
                 signals.append((0.85, 3.0))
             elif rsi < 30:
@@ -96,15 +93,14 @@ class XGBoostPredictor:
                 signals.append((0.50, 1.0))
 
         # ── MACD histogram (weight 2.5) — trend momentum ──
-        if n > 8 and features[8] != 0:
-            macd_h = features[8]
-            # Normalize MACD by price scale (feature may be raw or normalized)
-            sig = np.clip(macd_h * 50, -1, 1)  # Scale to -1..+1
+        macd_h = _get("macd_hist")
+        if macd_h is not None:
+            sig = np.clip(macd_h * 50, -1, 1)
             signals.append((0.5 + sig * 0.3, 2.5))
 
         # ── Bollinger position (weight 2) — mean reversion ──
-        if n > 12 and features[12] != 0:
-            bb_pos = features[12]  # 0 = lower band, 1 = upper band
+        bb_pos = _get("bb_position")
+        if bb_pos is not None:
             if bb_pos < 0.1:
                 signals.append((0.80, 2.0))
             elif bb_pos < 0.25:
@@ -116,20 +112,19 @@ class XGBoostPredictor:
             else:
                 signals.append((0.50, 0.5))
 
-        # ── Rate of Change — momentum across timeframes (weight 2) ──
-        roc_weights = {16: 1.5, 17: 2.0, 18: 2.0, 19: 2.5}  # roc_1, roc_6, roc_12, roc_24
-        for idx, w in roc_weights.items():
-            if n > idx and features[idx] != 0:
-                roc = features[idx]
+        # ── Rate of Change — momentum across timeframes ──
+        for roc_name, w in [("roc_1", 1.5), ("roc_6", 2.0), ("roc_12", 2.0), ("roc_24", 2.5)]:
+            roc = _get(roc_name)
+            if roc is not None:
                 sig = np.clip(roc * 10, -1, 1)
                 signals.append((0.5 + sig * 0.25, w))
 
         # ── Price vs EMAs (weight 2) — trend alignment ──
         ema_bullish = 0
         ema_count = 0
-        for idx in [24, 25, 26]:  # price_vs_ema9, ema21, ema50
-            if n > idx:
-                val = features[idx]
+        for name in ["price_vs_ema9", "price_vs_ema21", "price_vs_ema50"]:
+            val = _get(name)
+            if val is not None:
                 if val > 0:
                     ema_bullish += 1
                 ema_count += 1
@@ -138,49 +133,47 @@ class XGBoostPredictor:
             signals.append((0.35 + ema_ratio * 0.30, 2.0))
 
         # ── Momentum (weight 1.5) ──
-        for idx in [20, 21]:  # momentum_10, momentum_20
-            if n > idx and features[idx] != 0:
-                sig = np.clip(features[idx] * 5, -1, 1)
+        for name in ["momentum_10", "momentum_20"]:
+            mom = _get(name)
+            if mom is not None:
+                sig = np.clip(mom * 5, -1, 1)
                 signals.append((0.5 + sig * 0.2, 1.5))
 
         # ── Volume ratio (weight 1) — confirms moves ──
-        if n > 22 and features[22] != 0:
-            vol_ratio = features[22]
+        vol_ratio = _get("volume_ratio")
+        if vol_ratio is not None:
             if vol_ratio > 1.5:
-                signals.append((0.55, 1.0))  # High volume slightly bullish (buying pressure)
+                signals.append((0.55, 1.0))
             elif vol_ratio < 0.5:
                 signals.append((0.45, 0.5))
 
         # ── News sentiment (weight 2.5) — very impactful ──
-        if n > 30 and features[30] != 0:
-            sent = features[30]  # news_sentiment_1h
+        sent = _get("news_sentiment_1h")
+        if sent is not None:
             sig = np.clip(sent * 2, -1, 1)
             signals.append((0.5 + sig * 0.3, 2.5))
 
         # ── Fear & Greed (weight 1.5) — contrarian signal ──
-        if n > 38 and features[38] != 0:
-            fg = features[38]
+        fg = _get("fear_greed_value")
+        if fg is not None:
             if fg < 20:
-                signals.append((0.70, 1.5))  # Extreme fear → contrarian bullish
+                signals.append((0.70, 1.5))
             elif fg < 35:
                 signals.append((0.60, 1.0))
             elif fg > 80:
-                signals.append((0.30, 1.5))  # Extreme greed → contrarian bearish
+                signals.append((0.30, 1.5))
             elif fg > 65:
                 signals.append((0.40, 1.0))
 
         # ── Event memory expected impact (weight 2) ──
-        if n > 52 and features[52] != 0:
-            expected_1h = features[52]
-            sig = np.clip(expected_1h, -1, 1)
+        ev_impact = _get("event_expected_impact_1h")
+        if ev_impact is not None:
+            sig = np.clip(ev_impact, -1, 1)
             signals.append((0.5 + sig * 0.25, 2.0))
 
         # ── Funding rate (weight 2) — derivatives signal ──
-        # Index 59 = funding_rate
-        if n > 59 and features[59] != 0:
-            fr = features[59]
-            # Extreme positive funding = overleveraged longs → bearish
-            # Extreme negative funding = overleveraged shorts → bullish
+        fr = _get("funding_rate")
+        if fr is not None:
             if fr > 0.001:
                 signals.append((0.35, 2.0))
             elif fr > 0.0005:
@@ -191,18 +184,259 @@ class XGBoostPredictor:
                 signals.append((0.58, 1.5))
 
         # ── Mark-index spread (weight 1.5) — premium/discount ──
-        # Index 61 = mark_index_spread
-        if n > 61 and features[61] != 0:
-            spread = features[61]
+        spread = _get("mark_index_spread")
+        if spread is not None:
             sig = np.clip(spread * 0.1, -1, 1)
             signals.append((0.5 + sig * 0.15, 1.5))
 
         # ── BTC dominance change (weight 1) ──
-        # Index 65 = market_cap_change (24h)
-        if n > 65 and features[65] != 0:
-            mcap_chg = features[65]
+        mcap_chg = _get("market_cap_change")
+        if mcap_chg is not None:
             sig = np.clip(mcap_chg * 2, -1, 1)
             signals.append((0.5 + sig * 0.15, 1.0))
+
+        # ── NEW: ADX (weight 2) — trend strength ──
+        adx_val = _get("adx")
+        if adx_val is not None:
+            # Strong trend (ADX > 25) amplifies momentum direction
+            if adx_val > 40:
+                # Very strong trend — trust momentum signals more
+                mom_10 = _get("momentum_10")
+                if mom_10 is not None:
+                    signals.append((0.70 if mom_10 > 0 else 0.30, 2.0))
+            elif adx_val > 25:
+                mom_10 = _get("momentum_10")
+                if mom_10 is not None:
+                    signals.append((0.60 if mom_10 > 0 else 0.40, 1.5))
+
+        # ── NEW: MFI (weight 2) — money flow index (volume-weighted RSI) ──
+        mfi_val = _get("mfi")
+        if mfi_val is not None:
+            if mfi_val < 20:
+                signals.append((0.75, 2.0))  # Oversold
+            elif mfi_val > 80:
+                signals.append((0.25, 2.0))  # Overbought
+
+        # ── NEW: CMF (weight 1.5) — Chaikin Money Flow ──
+        cmf_val = _get("cmf")
+        if cmf_val is not None:
+            sig = np.clip(cmf_val * 5, -1, 1)
+            signals.append((0.5 + sig * 0.2, 1.5))
+
+        # ── NEW: Supertrend direction (weight 2) ──
+        st_dir = _get("supertrend_dir")
+        if st_dir is not None:
+            # -1 = uptrend (bullish), 1 = downtrend (bearish)
+            if st_dir < 0:
+                signals.append((0.65, 2.0))
+            elif st_dir > 0:
+                signals.append((0.35, 2.0))
+
+        # ── NEW: CCI (weight 1.5) — Commodity Channel Index ──
+        cci_val = _get("cci_20")
+        if cci_val is not None:
+            if cci_val < -200:
+                signals.append((0.80, 1.5))  # Extremely oversold
+            elif cci_val < -100:
+                signals.append((0.65, 1.5))
+            elif cci_val > 200:
+                signals.append((0.20, 1.5))  # Extremely overbought
+            elif cci_val > 100:
+                signals.append((0.35, 1.5))
+
+        # ── NEW: Fisher Transform (weight 1.5) ──
+        fisher = _get("fisher_9")
+        if fisher is not None:
+            sig = np.clip(fisher, -3, 3) / 3  # Normalize to -1..+1
+            signals.append((0.5 + sig * 0.2, 1.5))
+
+        # ── NEW: Long/Short Ratio (weight 2) — crowd positioning ──
+        ls_ratio = _get("long_short_ratio")
+        if ls_ratio is not None:
+            # Contrarian: extreme longs = bearish, extreme shorts = bullish
+            if ls_ratio > 3.0:
+                signals.append((0.30, 2.0))  # Too many longs
+            elif ls_ratio > 2.0:
+                signals.append((0.40, 1.5))
+            elif ls_ratio < 0.5:
+                signals.append((0.70, 2.0))  # Too many shorts
+            elif ls_ratio < 0.8:
+                signals.append((0.60, 1.5))
+
+        # ── NEW: Taker Buy/Sell Ratio (weight 2) — aggression ──
+        taker = _get("taker_buy_sell_ratio")
+        if taker is not None:
+            if taker > 1.1:
+                signals.append((0.65, 2.0))  # Aggressive buying
+            elif taker > 1.02:
+                signals.append((0.57, 1.5))
+            elif taker < 0.9:
+                signals.append((0.35, 2.0))  # Aggressive selling
+            elif taker < 0.98:
+                signals.append((0.43, 1.5))
+
+        # ── NEW: DVOL — BTC implied volatility (weight 1.5) ──
+        dvol = _get("dvol")
+        if dvol is not None:
+            # High DVOL = uncertainty, low DVOL = complacency
+            if dvol > 80:
+                signals.append((0.45, 1.5))  # Fear/uncertainty
+            elif dvol < 40:
+                signals.append((0.55, 1.0))  # Calm — slight bullish
+
+        # ── NEW: Liquidation imbalance (weight 2) ──
+        long_liq = _get("long_liquidation_24h")
+        short_liq = _get("short_liquidation_24h")
+        if long_liq is not None and short_liq is not None:
+            total_liq = long_liq + short_liq
+            if total_liq > 0:
+                # If mostly longs liquidated → contrarian bullish (cascade exhausted)
+                long_pct = long_liq / total_liq
+                if long_pct > 0.7:
+                    signals.append((0.60, 2.0))  # Long squeeze exhaustion
+                elif long_pct < 0.3:
+                    signals.append((0.40, 2.0))  # Short squeeze exhaustion
+
+        # ── NEW: ETF Net Flow (weight 2.5) — institutional demand ──
+        etf_flow = _get("etf_net_flow_usd")
+        if etf_flow is not None:
+            if etf_flow > 500e6:
+                signals.append((0.75, 2.5))  # Massive inflow
+            elif etf_flow > 100e6:
+                signals.append((0.63, 2.0))
+            elif etf_flow < -500e6:
+                signals.append((0.25, 2.5))  # Massive outflow
+            elif etf_flow < -100e6:
+                signals.append((0.37, 2.0))
+
+        # ── NEW: Exchange Netflow (weight 2) — coins entering/leaving exchanges ──
+        exch_net = _get("exchange_netflow_btc")
+        if exch_net is not None:
+            # Positive netflow = coins to exchanges = sell pressure
+            if exch_net > 5000:
+                signals.append((0.30, 2.0))  # Heavy inflows — bearish
+            elif exch_net > 1000:
+                signals.append((0.40, 1.5))
+            elif exch_net < -5000:
+                signals.append((0.70, 2.0))  # Heavy outflows — bullish
+            elif exch_net < -1000:
+                signals.append((0.60, 1.5))
+
+        # ── NEW: NVT Signal (weight 1.5) — on-chain valuation ──
+        nvt = _get("nvt_signal")
+        if nvt is not None:
+            if nvt > 150:
+                signals.append((0.30, 1.5))  # Overvalued by transaction volume
+            elif nvt < 30:
+                signals.append((0.65, 1.5))  # Undervalued
+
+        # ── NEW: MVRV Z-Score (weight 2) — market vs realized value ──
+        mvrv = _get("mvrv_zscore")
+        if mvrv is not None:
+            if mvrv > 7:
+                signals.append((0.15, 2.0))  # Extreme overvaluation
+            elif mvrv > 3:
+                signals.append((0.35, 1.5))
+            elif mvrv < 0:
+                signals.append((0.75, 2.0))  # Below realized value — strong buy
+            elif mvrv < 1:
+                signals.append((0.60, 1.5))
+
+        # ── NEW: SOPR (weight 1.5) — Spent Output Profit Ratio ──
+        sopr = _get("sopr")
+        if sopr is not None:
+            if sopr < 0.95:
+                signals.append((0.70, 1.5))  # Sellers at a loss — capitulation
+            elif sopr > 1.05:
+                signals.append((0.40, 1.0))  # Profit taking
+
+        # ── NEW: Puell Multiple (weight 1.5) — miner revenue vs avg ──
+        puell = _get("puell_multiple")
+        if puell is not None:
+            if puell > 4:
+                signals.append((0.25, 1.5))  # Miners over-earning — top signal
+            elif puell < 0.5:
+                signals.append((0.70, 1.5))  # Miners under-earning — bottom signal
+
+        # ── NEW: Hurst Exponent (weight 2) — regime detection ──
+        hurst = _get("hurst_exponent")
+        if hurst is not None:
+            # H > 0.5 = trending, H < 0.5 = mean-reverting, H ≈ 0.5 = random
+            mom_10 = _get("momentum_10")
+            if hurst > 0.65 and mom_10 is not None:
+                # Strong trend — follow momentum direction
+                signals.append((0.70 if mom_10 > 0 else 0.30, 2.0))
+            elif hurst < 0.35 and rsi is not None:
+                # Mean-reverting — contrarian play
+                if rsi < 35:
+                    signals.append((0.70, 2.0))
+                elif rsi > 65:
+                    signals.append((0.30, 2.0))
+
+        # ── NEW: GARCH Volatility Forecast (weight 1) ──
+        garch_vol = _get("garch_vol_forecast")
+        if garch_vol is not None:
+            # High predicted volatility = uncertainty
+            if garch_vol > 0.05:
+                signals.append((0.45, 1.0))  # Slight bearish bias in high vol
+            elif garch_vol < 0.01:
+                signals.append((0.55, 0.5))  # Low vol — calm markets
+
+        # ── NEW: Parabolic SAR Direction (weight 2) — trend ──
+        psar_d = _get("psar_dir")
+        if psar_d is not None:
+            if psar_d > 0:
+                signals.append((0.62, 2.0))  # SAR below price — bullish
+            elif psar_d < 0:
+                signals.append((0.38, 2.0))  # SAR above price — bearish
+
+        # ── NEW: Return Skew (weight 1) — asymmetry of returns ──
+        skew = _get("return_skew_24")
+        if skew is not None:
+            # Positive skew = more right tail = bullish potential
+            sig = np.clip(skew, -2, 2) / 2
+            signals.append((0.5 + sig * 0.15, 1.0))
+
+        # ── NEW: Aroon Oscillator (weight 1.5) — trend direction ──
+        aroon = _get("aroon_osc")
+        if aroon is not None:
+            sig = np.clip(aroon / 100, -1, 1)
+            signals.append((0.5 + sig * 0.2, 1.5))
+
+        # ── NEW: TSI (weight 1.5) — True Strength Index ──
+        tsi_val = _get("tsi")
+        if tsi_val is not None:
+            sig = np.clip(tsi_val / 30, -1, 1)
+            signals.append((0.5 + sig * 0.2, 1.5))
+
+        # ── NEW: Stablecoin Supply Change 7d (weight 1.5) — liquidity ──
+        stable_chg = _get("stablecoin_supply_change_7d")
+        if stable_chg is not None:
+            # Growing stablecoin supply = more dry powder = bullish
+            if stable_chg > 2:
+                signals.append((0.65, 1.5))
+            elif stable_chg > 0.5:
+                signals.append((0.57, 1.0))
+            elif stable_chg < -2:
+                signals.append((0.35, 1.5))
+            elif stable_chg < -0.5:
+                signals.append((0.43, 1.0))
+
+        # ── NEW: Hash Ribbon (weight 1.5) — miner capitulation ──
+        hash_rib = _get("hash_ribbon")
+        if hash_rib is not None:
+            if hash_rib < 0:
+                signals.append((0.65, 1.5))  # Miner capitulation — buy signal
+            elif hash_rib > 0:
+                signals.append((0.50, 0.5))  # Recovery/expansion
+
+        # ── NEW: Estimated Leverage Ratio (weight 1.5) ──
+        leverage = _get("estimated_leverage_ratio")
+        if leverage is not None:
+            if leverage > 0.3:
+                signals.append((0.40, 1.5))  # High leverage — risk of cascade
+            elif leverage < 0.1:
+                signals.append((0.55, 1.0))  # Low leverage — healthy
 
         # ── Compute weighted average ──
         if not signals:

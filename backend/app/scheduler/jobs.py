@@ -17,6 +17,8 @@ from app.collectors import (
     MarketCollector, NewsCollector, FearGreedCollector,
     MacroCollector, OnChainCollector, RedditCollector,
     BinanceNewsCollector, InfluencerCollector,
+    ETFCollector, ExchangeFlowCollector,
+    DerivativesExtendedCollector, StablecoinCollector,
 )
 from app.features.builder import FeatureBuilder
 from app.features.sentiment import SentimentAnalyzer
@@ -36,6 +38,10 @@ onchain_collector = OnChainCollector()
 reddit_collector = RedditCollector()
 binance_news_collector = BinanceNewsCollector()
 influencer_collector = InfluencerCollector()
+etf_collector = ETFCollector()
+exchange_flow_collector = ExchangeFlowCollector()
+derivatives_extended_collector = DerivativesExtendedCollector()
+stablecoin_collector = StablecoinCollector()
 feature_builder = FeatureBuilder()
 signal_generator = SignalGenerator()
 event_classifier = EventClassifier()
@@ -555,6 +561,8 @@ async def generate_prediction():
                         "mempool_fees": oc.mempool_fees,
                         "tx_volume": oc.tx_volume,
                         "active_addresses": oc.active_addresses,
+                        "difficulty": oc.difficulty,
+                        "large_tx_count": oc.large_tx_count,
                     }
         except Exception as e:
             logger.debug(f"OnChain data query error: {e}")
@@ -604,6 +612,31 @@ async def generate_prediction():
         except Exception as e:
             logger.debug(f"Influencer data query error: {e}")
 
+        # ── Collect new data sources ──
+        derivatives_ext_data = None
+        try:
+            derivatives_ext_data = await derivatives_extended_collector.collect()
+        except Exception as e:
+            logger.debug(f"Derivatives extended collection error: {e}")
+
+        etf_data = None
+        try:
+            etf_data = await etf_collector.collect()
+        except Exception as e:
+            logger.debug(f"ETF data collection error: {e}")
+
+        exchange_flow_data = None
+        try:
+            exchange_flow_data = await exchange_flow_collector.collect()
+        except Exception as e:
+            logger.debug(f"Exchange flow collection error: {e}")
+
+        stablecoin_data_raw = None
+        try:
+            stablecoin_data_raw = await stablecoin_collector.collect()
+        except Exception as e:
+            logger.debug(f"Stablecoin data collection error: {e}")
+
         # Build features (including social media, event memory, funding, dominance)
         news_data = [{"title": n.title, "source": n.source} for n in news]
         features = feature_builder.build_features(
@@ -615,6 +648,10 @@ async def generate_prediction():
             dominance_data=dominance_data,
             onchain_data=onchain_raw,
             supply_data=supply_data,
+            derivatives_extended=derivatives_ext_data,
+            etf_data=etf_data,
+            exchange_flow_data=exchange_flow_data,
+            stablecoin_data=stablecoin_data_raw,
         )
 
         # Build REAL feature sequence from Feature table history

@@ -6,6 +6,12 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 try:
+    from app.features.builder import FeatureBuilder
+    _NUM_FEATURES = len(FeatureBuilder.ALL_FEATURES)
+except Exception:
+    _NUM_FEATURES = 222
+
+try:
     import torch
     import torch.nn as nn
     TORCH_AVAILABLE = True
@@ -18,7 +24,7 @@ if TORCH_AVAILABLE:
     class LSTMModel(nn.Module):
         """LSTM model for time-series BTC price prediction."""
 
-        def __init__(self, input_size: int = 74, hidden_size: int = 128, num_layers: int = 2, dropout: float = 0.2):
+        def __init__(self, input_size: int = _NUM_FEATURES, hidden_size: int = 128, num_layers: int = 2, dropout: float = 0.2):
             super().__init__()
 
             self.hidden_size = hidden_size
@@ -84,7 +90,7 @@ if TORCH_AVAILABLE:
 class LSTMPredictor:
     """Wrapper for LSTM model inference. Falls back to heuristics if torch is unavailable."""
 
-    def __init__(self, input_size: int = 74, model_path: str = None):
+    def __init__(self, input_size: int = _NUM_FEATURES, model_path: str = None):
         self._torch_model = None
 
         self.is_trained = False
@@ -94,9 +100,14 @@ class LSTMPredictor:
             self._torch_model = LSTMModel(input_size=input_size).to(self.device)
 
             if model_path and Path(model_path).exists():
-                self.load(model_path)
-                self.is_trained = True
-                logger.info(f"LSTM model loaded from {model_path}")
+                try:
+                    self.load(model_path)
+                    self.is_trained = True
+                    logger.info(f"LSTM model loaded from {model_path}")
+                except Exception as e:
+                    logger.warning(f"LSTM weight loading failed (shape mismatch after feature expansion?): {e}")
+                    logger.warning("LSTM will use heuristic fallback until next retrain")
+                    self._torch_model = LSTMModel(input_size=input_size).to(self.device)
             else:
                 logger.warning("LSTM model weights not found, using random weights")
 

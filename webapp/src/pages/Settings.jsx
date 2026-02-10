@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 import { useTelegram } from '../hooks/useTelegram'
 import AlertSettings from '../components/AlertSettings'
@@ -119,6 +120,7 @@ function SuccessMessage() {
 }
 
 export default function Settings() {
+  const navigate = useNavigate()
   const { tg } = useTelegram()
   const [selectedTier, setSelectedTier] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -185,6 +187,26 @@ export default function Settings() {
       {/* Subscription Section */}
       <div className="space-y-3">
         <h2 className="text-sm font-semibold text-text-primary">Premium Plans</h2>
+
+        {/* Manage Subscription link */}
+        <button
+          onClick={() => navigate('/subscription')}
+          className="w-full flex items-center gap-3 bg-bg-card rounded-xl border border-white/5 p-3 hover:bg-bg-hover transition-colors text-left"
+        >
+          <div className="w-8 h-8 rounded-lg bg-accent-blue/10 flex items-center justify-center shrink-0">
+            <svg className="w-4 h-4 text-accent-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-text-primary text-xs font-medium">Manage Subscription</p>
+            <p className="text-text-muted text-[10px]">View status, expiry & payment history</p>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-text-muted shrink-0">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+
         <p className="text-text-muted text-xs">
           Tap a plan to subscribe instantly via Telegram Stars.
         </p>

@@ -131,6 +131,9 @@ export const api = {
 
   // Subscription
   createInvoice: (tier) => fetchAPI(`/subscription/create-invoice?tier=${tier}`),
+  getSubscriptionStatus: (initData) => fetchAPI('/subscription/status', {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
 
   // Fear & Greed
   getFearGreed: (days = 30) => fetchAPI(`/market/fear-greed?days=${days}`),

@@ -5,7 +5,7 @@ from aiogram.types import CallbackQuery, Message, PreCheckoutQuery, LabeledPrice
 from sqlalchemy import select
 
 from app.config import settings
-from app.database import async_session, BotUser, TradeAdvice, Price
+from app.database import async_session, BotUser, TradeAdvice, Price, PaymentHistory
 from app.bot.commands import router as commands_router
 from app.bot.keyboards import main_keyboard, settings_keyboard, advisor_keyboard, trade_close_keyboard
 from app.bot.subscription import require_premium, activate_premium, get_status_text
@@ -329,6 +329,18 @@ async def on_payment_success(message: Message):
             await session.flush()
 
         await activate_premium(user, payment.telegram_payment_charge_id, session, days=days)
+
+        # Record payment history
+        tier_map = {30: "monthly", 90: "quarterly", 365: "yearly"}
+        session.add(PaymentHistory(
+            telegram_id=telegram_id,
+            tier=tier_map.get(days, "monthly"),
+            days=days,
+            stars_amount=payment.total_amount,
+            payment_id=payment.telegram_payment_charge_id,
+        ))
+        await session.commit()
+
         status = get_status_text(user)
 
     await message.answer(

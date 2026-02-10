@@ -14,8 +14,12 @@ logger = logging.getLogger(__name__)
 class FeatureBuilder:
     """Combines all features into a unified feature vector for ML models."""
 
-    # Features expected by the ML models
+    # ═══════════════════════════════════════════════════════════
+    #  FEATURE LISTS
+    # ═══════════════════════════════════════════════════════════
+
     TECHNICAL_FEATURES = [
+        # ── Original 30 (indices 0-29) ──
         "ema_9", "ema_21", "ema_50", "ema_200", "sma_20",
         "rsi", "macd", "macd_signal", "macd_hist",
         "bb_upper", "bb_lower", "bb_width", "bb_position",
@@ -25,13 +29,61 @@ class FeatureBuilder:
         "volume_ratio", "volatility_24h",
         "price_vs_ema9", "price_vs_ema21", "price_vs_ema50",
         "body_size", "upper_shadow", "lower_shadow",
+        # ── Promoted already-computed indicators (29) ──
+        "sma_111", "sma_200", "sma_350",
+        "rsi_7", "rsi_30",
+        "adx", "momentum_30", "mayer_multiple", "pi_cycle_ratio",
+        "ema_cross", "zscore_20",
+        "stoch_rsi_k", "stoch_rsi_d", "williams_r",
+        "ichimoku_tenkan", "ichimoku_kijun",
+        "ichimoku_senkou_a", "ichimoku_senkou_b", "ichimoku_chikou",
+        "candle_doji", "candle_hammer", "candle_inverted_hammer",
+        "candle_bullish_engulfing", "candle_bearish_engulfing",
+        "candle_morning_star", "candle_evening_star",
+        "trend_short", "trend_medium", "trend_long",
+        # ── pandas-ta indicators (45) ──
+        "ao", "cci_20", "cmo_14", "fisher_9", "fisher_signal",
+        "kst", "kst_signal", "ppo", "ppo_signal", "ppo_hist",
+        "stoch_k", "stoch_d", "tsi", "uo",
+        "aroon_osc", "chop_14", "dpo_20", "supertrend_dir",
+        "vortex_diff", "mass_index", "plus_di", "minus_di",
+        "donchian_upper", "donchian_lower", "donchian_mid", "donchian_width",
+        "kc_upper", "kc_lower", "kc_position", "natr", "ui",
+        "ad", "cmf", "efi_13", "mfi", "nvi", "pvi",
+        "entropy_10", "kurtosis_20", "skew_20", "variance_20",
+        "zscore_14", "stdev_20", "linreg_slope", "linreg_r2",
+        # ── Advanced quantitative indicators (37) ──
+        # Adaptive MAs (3)
+        "kama_10", "t3_10", "dema_21",
+        # Additional momentum (4)
+        "trix_14", "bop", "psar", "psar_dir",
+        # Additional candlestick patterns (7)
+        "candle_three_white", "candle_three_black", "candle_dark_cloud",
+        "candle_piercing", "candle_harami", "candle_kicking", "candle_three_line_strike",
+        # Price transforms (3)
+        "typical_price", "weighted_close", "median_price",
+        # Return-based statistics (6)
+        "return_1h", "return_skew_24", "return_kurtosis_24",
+        "return_autocorr_1", "return_autocorr_6", "return_autocorr_24",
+        # Hurst exponent (1)
+        "hurst_exponent",
+        # GARCH volatility (2)
+        "garch_vol_forecast", "vol_risk_premium",
+        # Wavelet features (3)
+        "wavelet_trend", "wavelet_detail_1", "wavelet_detail_2",
+        # Calendar features (4)
+        "hour_sin", "hour_cos", "day_of_week_sin", "day_of_week_cos",
+        # Hash Ribbon (1)
+        "hash_ribbon",
+        # Cross-feature interactions (3)
+        "rsi_macd_divergence", "volume_price_trend", "atr_ratio_50_14",
     ]
 
     SENTIMENT_FEATURES = [
         "news_sentiment_1h", "news_sentiment_4h", "news_sentiment_24h",
         "news_volume_1h", "news_bullish_pct", "news_bearish_pct",
         "reddit_sentiment", "reddit_volume",
-        "social_sentiment_1h", "social_volume_1h",  # Influencer social media
+        "social_sentiment_1h", "social_volume_1h",
         "social_bullish_pct", "social_bearish_pct",
         "fear_greed_value",
     ]
@@ -46,42 +98,90 @@ class FeatureBuilder:
     ONCHAIN_FEATURES = [
         "hash_rate", "mempool_size", "mempool_fees",
         "tx_volume", "active_addresses",
+        # Promoted from already-collected data
+        "difficulty", "large_tx_count",
     ]
 
     EVENT_MEMORY_FEATURES = [
-        "event_expected_impact_1h",  # Expected % change from similar past events
+        "event_expected_impact_1h",
         "event_expected_impact_4h",
         "event_expected_impact_24h",
-        "event_memory_confidence",   # How confident the memory match is (0-1)
-        "event_severity",            # Current event severity (0-10)
-        "event_sentiment_predictive", # How often sentiment predicted direction correctly
-        "active_event_count",        # Number of significant events in last hour
+        "event_memory_confidence",
+        "event_severity",
+        "event_sentiment_predictive",
+        "active_event_count",
     ]
 
     DERIVATIVES_FEATURES = [
-        "funding_rate",        # Binance perpetual funding rate
-        "open_interest",       # Open interest in BTC
-        "mark_index_spread",   # mark_price - index_price (premium)
+        "funding_rate",
+        "open_interest",
+        "mark_index_spread",
     ]
 
     DOMINANCE_FEATURES = [
-        "btc_dominance",       # BTC market cap %
-        "eth_dominance",       # ETH market cap %
-        "total_market_cap",    # Total crypto market cap USD (log-scaled)
-        "market_cap_change",   # 24h market cap change %
+        "btc_dominance",
+        "eth_dominance",
+        "total_market_cap",
+        "market_cap_change",
     ]
 
     PHRASE_FEATURES = [
-        "top_bullish_phrase_score",   # Strongest bullish phrase correlation in recent headlines
-        "top_bearish_phrase_score",   # Strongest bearish phrase correlation in recent headlines
-        "phrase_sentiment_signal",     # Net phrase-based sentiment signal
+        "top_bullish_phrase_score",
+        "top_bearish_phrase_score",
+        "phrase_sentiment_signal",
     ]
 
     SUPPLY_FEATURES = [
-        "btc_mined_pct",         # % of 21M mined (94.3 → 0.943)
-        "daily_issuance_rate",   # daily new BTC / circulating supply
-        "blocks_until_halving",  # normalized: blocks_left / 210_000
-        "halving_cycle_pct",     # % through current halving cycle (0-1)
+        "btc_mined_pct",
+        "daily_issuance_rate",
+        "blocks_until_halving",
+        "halving_cycle_pct",
+    ]
+
+    # ── NEW FEATURE CATEGORIES ──
+
+    DERIVATIVES_EXTENDED_FEATURES = [
+        "long_short_ratio",        # Global long/short account ratio
+        "long_account_pct",        # % of accounts that are long
+        "short_account_pct",       # % of accounts that are short
+        "top_trader_long_short",   # Top trader position ratio
+        "top_long_pct",
+        "top_short_pct",
+        "taker_buy_sell_ratio",    # Taker buy vs sell volume
+        "dvol",                    # Deribit BTC implied volatility index
+        "liquidation_24h_usd",     # Total liquidations in 24h
+        "long_liquidation_24h",    # Long liquidations
+        "short_liquidation_24h",   # Short liquidations
+        "estimated_leverage_ratio", # OI / exchange reserve
+    ]
+
+    ETF_FEATURES = [
+        "etf_net_flow_usd",       # Daily ETF net inflow/outflow
+        "etf_total_holdings_btc", # Total BTC in all ETFs
+        "etf_ibit_flow",          # BlackRock IBIT flow
+        "etf_fbtc_flow",          # Fidelity FBTC flow
+        "etf_gbtc_flow",          # Grayscale GBTC flow
+        "etf_volume_usd",         # Daily ETF trading volume
+    ]
+
+    EXCHANGE_FLOW_FEATURES = [
+        "exchange_reserve_btc",    # Total BTC on exchanges
+        "exchange_netflow_btc",    # Net in - out (positive = selling pressure)
+        "nvt_signal",              # NVT Signal (smoothed)
+        "mvrv_zscore",             # MVRV Z-Score
+        "sopr",                    # Spent Output Profit Ratio
+        "puell_multiple",          # Miner revenue / 365d avg
+        "supply_in_profit_pct",    # % of supply in profit
+        "long_term_holder_supply", # BTC held by LTH (>155 days)
+        "coin_days_destroyed",     # CDD (dormancy weighted)
+    ]
+
+    STABLECOIN_FEATURES = [
+        "usdt_market_cap",              # USDT circulating supply
+        "usdc_market_cap",              # USDC circulating supply
+        "total_stablecoin_supply",      # Total stablecoin market cap
+        "stablecoin_supply_change_7d",  # 7-day change %
+        "defi_tvl_usd",                # Total DeFi TVL
     ]
 
     ALL_FEATURES = (
@@ -89,6 +189,8 @@ class FeatureBuilder:
         + ONCHAIN_FEATURES + EVENT_MEMORY_FEATURES
         + DERIVATIVES_FEATURES + DOMINANCE_FEATURES
         + PHRASE_FEATURES + SUPPLY_FEATURES
+        + DERIVATIVES_EXTENDED_FEATURES + ETF_FEATURES
+        + EXCHANGE_FLOW_FEATURES + STABLECOIN_FEATURES
     )
 
     def __init__(self):
@@ -99,7 +201,7 @@ class FeatureBuilder:
         price_df: pd.DataFrame,
         news_data: list[dict] = None,
         reddit_data: list[dict] = None,
-        influencer_data: list[dict] = None,  # Social media from influencers
+        influencer_data: list[dict] = None,
         macro_data: dict = None,
         onchain_data: dict = None,
         fear_greed: dict = None,
@@ -108,8 +210,13 @@ class FeatureBuilder:
         dominance_data: dict = None,
         phrase_data: dict = None,
         supply_data: dict = None,
+        # New data sources
+        derivatives_extended: dict = None,
+        etf_data: dict = None,
+        exchange_flow_data: dict = None,
+        stablecoin_data: dict = None,
     ) -> dict:
-        """Build complete feature vector from all data sources (including social media)."""
+        """Build complete feature vector from all data sources."""
 
         features = {}
 
@@ -134,7 +241,7 @@ class FeatureBuilder:
             for feat in self.MACRO_FEATURES:
                 features[feat] = macro_feats.get(feat, 0.0) or 0.0
 
-        # On-chain features
+        # On-chain features (now includes difficulty + large_tx_count)
         if onchain_data:
             for feat in self.ONCHAIN_FEATURES:
                 val = onchain_data.get(feat)
@@ -167,7 +274,6 @@ class FeatureBuilder:
             features["btc_dominance"] = float(dominance_data.get("btc_dominance", 0) or 0)
             features["eth_dominance"] = float(dominance_data.get("eth_dominance", 0) or 0)
             total_mcap = float(dominance_data.get("total_market_cap", 0) or 0)
-            # Log-scale total market cap to keep it in a reasonable range
             features["total_market_cap"] = float(np.log10(total_mcap)) if total_mcap > 0 else 0.0
             features["market_cap_change"] = float(dominance_data.get("market_cap_change_24h", 0) or 0)
 
@@ -184,6 +290,38 @@ class FeatureBuilder:
             blocks_left = supply_data.get("blocks_until_halving", 169_000)
             features["blocks_until_halving"] = blocks_left / 210_000
             features["halving_cycle_pct"] = 1.0 - (blocks_left / 210_000)
+
+        # ── NEW: Extended derivatives (long/short, DVOL, liquidations) ──
+        if derivatives_extended:
+            for feat in self.DERIVATIVES_EXTENDED_FEATURES:
+                val = derivatives_extended.get(feat)
+                features[feat] = float(val) if val is not None else 0.0
+
+        # ── NEW: ETF flow data ──
+        if etf_data:
+            features["etf_net_flow_usd"] = float(etf_data.get("net_flow_usd", 0) or 0)
+            features["etf_total_holdings_btc"] = float(etf_data.get("total_holdings_btc", 0) or 0)
+            features["etf_ibit_flow"] = float(etf_data.get("ibit_flow", 0) or 0)
+            features["etf_fbtc_flow"] = float(etf_data.get("fbtc_flow", 0) or 0)
+            features["etf_gbtc_flow"] = float(etf_data.get("gbtc_flow", 0) or 0)
+            features["etf_volume_usd"] = float(etf_data.get("etf_volume_usd", 0) or 0)
+
+        # ── NEW: Exchange flow and on-chain valuation ──
+        if exchange_flow_data:
+            for feat in self.EXCHANGE_FLOW_FEATURES:
+                val = exchange_flow_data.get(feat)
+                features[feat] = float(val) if val is not None else 0.0
+
+        # ── NEW: Stablecoin supply ──
+        if stablecoin_data:
+            for feat in self.STABLECOIN_FEATURES:
+                val = stablecoin_data.get(feat)
+                if feat in ("usdt_market_cap", "usdc_market_cap", "total_stablecoin_supply", "defi_tvl_usd"):
+                    # Log-scale large dollar values
+                    fval = float(val) if val else 0.0
+                    features[feat] = float(np.log10(fval)) if fval > 0 else 0.0
+                else:
+                    features[feat] = float(val) if val is not None else 0.0
 
         # Normalize features
         features = self._normalize(features)
@@ -205,8 +343,8 @@ class FeatureBuilder:
             if titles:
                 agg = self.sentiment_analyzer.get_aggregate_sentiment(titles)
                 result["news_sentiment_1h"] = agg["mean_score"]
-                result["news_sentiment_4h"] = agg["mean_score"]  # Needs historical for real 4h
-                result["news_sentiment_24h"] = agg["mean_score"]  # Needs historical for real 24h
+                result["news_sentiment_4h"] = agg["mean_score"]
+                result["news_sentiment_24h"] = agg["mean_score"]
                 result["news_volume_1h"] = float(agg["volume"])
                 result["news_bullish_pct"] = agg["bullish_pct"]
                 result["news_bearish_pct"] = agg["bearish_pct"]
@@ -220,7 +358,6 @@ class FeatureBuilder:
                 result["reddit_sentiment"] = agg["mean_score"]
                 result["reddit_volume"] = float(agg["volume"])
 
-        # Influencer social media (tweets/posts from key crypto figures)
         if influencer_data:
             texts = [t.get("text", "") for t in influencer_data if t.get("text")]
 
@@ -248,24 +385,14 @@ class FeatureBuilder:
         return np.array([features.get(f, 0.0) for f in self.ALL_FEATURES], dtype=np.float32)
 
     def build_sequence(self, feature_history: list[dict], lookback: int = 168) -> np.ndarray:
-        """Build a sequence of feature vectors for LSTM input.
-
-        Args:
-            feature_history: List of feature dicts (oldest first)
-            lookback: Number of time steps
-
-        Returns:
-            numpy array of shape (lookback, num_features)
-        """
+        """Build a sequence of feature vectors for LSTM input."""
         if len(feature_history) < lookback:
-            # Pad with zeros if not enough history
             padding = [
                 {f: 0.0 for f in self.ALL_FEATURES}
                 for _ in range(lookback - len(feature_history))
             ]
             feature_history = padding + feature_history
 
-        # Take last `lookback` entries
         recent = feature_history[-lookback:]
         matrix = np.array(
             [[entry.get(f, 0.0) for f in self.ALL_FEATURES] for entry in recent],

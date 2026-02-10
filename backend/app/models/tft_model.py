@@ -1,7 +1,7 @@
 """Temporal Fusion Transformer for multi-horizon BTC prediction.
 
 Uses pytorch-forecasting's TFT implementation which handles:
-- Variable selection: learns which of our 74 features matter most
+- Variable selection: learns which features matter most
 - Multi-horizon: predicts 1h, 4h, 24h simultaneously
 - Interpretability: shows feature importance per prediction
 - Mixed inputs: observed (price/volume), known (time features), static (regime)
@@ -12,6 +12,12 @@ from pathlib import Path
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+try:
+    from app.features.builder import FeatureBuilder
+    _NUM_FEATURES = len(FeatureBuilder.ALL_FEATURES)
+except Exception:
+    _NUM_FEATURES = 222
 
 try:
     import torch
@@ -34,7 +40,7 @@ except ImportError:
 class TFTPredictor:
     """Temporal Fusion Transformer for multi-horizon BTC prediction."""
 
-    def __init__(self, model_path: str = None, num_features: int = 66):
+    def __init__(self, model_path: str = None, num_features: int = _NUM_FEATURES):
         self.model = None
         self.is_trained = False
         self.num_features = num_features
@@ -153,6 +159,12 @@ class TFTPredictor:
             self.model.eval()
             self.is_trained = True
             logger.info(f"TFT model loaded from {path}")
+        except RuntimeError as e:
+            # Shape mismatch after feature expansion — fall back to heuristics
+            logger.warning(f"TFT weight loading failed (shape mismatch after feature expansion?): {e}")
+            logger.warning("TFT will use fallback predictions until next retrain")
+            self.model = None
+            self.is_trained = False
         except Exception as e:
             logger.error(f"Error loading TFT model: {e}")
             self.model = None
@@ -168,7 +180,7 @@ if TORCH_AVAILABLE:
         dataset format.
         """
 
-        def __init__(self, input_size: int = 74, hidden_size: int = 128,
+        def __init__(self, input_size: int = _NUM_FEATURES, hidden_size: int = 128,
                      num_heads: int = 4, num_layers: int = 2, dropout: float = 0.1):
             super().__init__()
 
