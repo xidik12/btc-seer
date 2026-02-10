@@ -297,7 +297,10 @@ WEBAPP_DIST = _local_dist if _local_dist.exists() else _docker_dist
 async def serve_root():
     """Serve the React SPA root or API info."""
     if WEBAPP_DIST.exists():
-        return FileResponse(WEBAPP_DIST / "index.html")
+        return FileResponse(
+            WEBAPP_DIST / "index.html",
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+        )
     return {
         "name": "BTC Seer",
         "version": "1.0.0",
@@ -323,6 +326,9 @@ if WEBAPP_DIST.exists():
                 and str(static_file).startswith(str(WEBAPP_DIST.resolve()))
             ):
                 return FileResponse(static_file)
-            return FileResponse(WEBAPP_DIST / "index.html")
+            return FileResponse(
+                WEBAPP_DIST / "index.html",
+                headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+            )
         # Re-raise the exception for API routes
         raise exc
