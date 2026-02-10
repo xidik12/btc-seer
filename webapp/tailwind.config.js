@@ -23,8 +23,8 @@ export default {
         },
         text: {
           primary: '#ffffff',
-          secondary: '#8b8b9e',
-          muted: '#5a5a70',
+          secondary: '#c0c0d0',
+          muted: '#9090a8',
         },
       },
     },
