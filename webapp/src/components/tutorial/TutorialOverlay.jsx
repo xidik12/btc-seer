@@ -1,23 +1,45 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import TutorialTooltip from './TutorialTooltip'
 import getTutorialSteps from './tutorialSteps'
+
+const HIGHLIGHT_CLASS = 'tutorial-highlight'
 
 export default function TutorialOverlay({ tutorial }) {
   const { t } = useTranslation()
   const { step, totalSteps, next, prev, skip, active } = tutorial
   const [targetRect, setTargetRect] = useState(null)
+  const prevTargetRef = useRef(null)
 
   const tutorialSteps = getTutorialSteps(t)
   const stepData = tutorialSteps[step] || tutorialSteps[0]
 
+  // Remove highlight class from previously highlighted element
+  const clearHighlight = useCallback(() => {
+    if (prevTargetRef.current) {
+      prevTargetRef.current.classList.remove(HIGHLIGHT_CLASS)
+      prevTargetRef.current = null
+    }
+  }, [])
+
+  // Apply highlight class to the current target element
+  const applyHighlight = useCallback((el) => {
+    clearHighlight()
+    if (el) {
+      el.classList.add(HIGHLIGHT_CLASS)
+      prevTargetRef.current = el
+    }
+  }, [clearHighlight])
+
   const updatePosition = useCallback(() => {
     if (!stepData?.target) {
       setTargetRect(null)
+      clearHighlight()
       return
     }
     const el = document.querySelector(stepData.target)
     if (el) {
+      applyHighlight(el)
       const rect = el.getBoundingClientRect()
       setTargetRect(rect)
       // Scroll element into view if needed
@@ -31,8 +53,9 @@ export default function TutorialOverlay({ tutorial }) {
       }
     } else {
       setTargetRect(null)
+      clearHighlight()
     }
-  }, [stepData?.target])
+  }, [stepData?.target, applyHighlight, clearHighlight])
 
   useEffect(() => {
     updatePosition()
@@ -46,6 +69,14 @@ export default function TutorialOverlay({ tutorial }) {
       observer.disconnect()
     }
   }, [updatePosition])
+
+  // Clean up highlight class when tutorial ends or component unmounts
+  useEffect(() => {
+    if (!active) {
+      clearHighlight()
+    }
+    return () => clearHighlight()
+  }, [active, clearHighlight])
 
   // Keyboard navigation
   useEffect(() => {
@@ -113,7 +144,7 @@ export default function TutorialOverlay({ tutorial }) {
         targetRect={targetRect}
       />
 
-      {/* Pulse animation */}
+      {/* Pulse animation + highlight styles */}
       <style>{`
         @keyframes tutorialPulse {
           0%, 100% { box-shadow: 0 0 0 2px #00d68f, 0 0 12px rgba(0, 214, 143, 0.3); }
@@ -125,6 +156,13 @@ export default function TutorialOverlay({ tutorial }) {
         }
         .animate-fade-in {
           animation: fade-in 0.25s ease-out;
+        }
+        .tutorial-highlight {
+          position: relative !important;
+          z-index: 10000 !important;
+          box-shadow: 0 0 20px rgba(0, 214, 143, 0.4), 0 0 40px rgba(0, 214, 143, 0.15) !important;
+          border-radius: 12px !important;
+          transition: box-shadow 0.3s ease !important;
         }
       `}</style>
     </>

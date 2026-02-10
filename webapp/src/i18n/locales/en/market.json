@@ -36,7 +36,13 @@
       "fast": "RSI (7) — fast",
       "standard": "RSI (14) — standard",
       "standardDesc": "The most commonly used RSI. This is what most traders look at.",
-      "slow": "RSI (30) — slow"
+      "slow": "RSI (30) — slow",
+      "fastDescOverbought": "Looks at the last 7 hours only. Quick reactions — showing overbought, short-term drop likely.",
+      "fastDescOversold": "Looks at the last 7 hours only. Quick reactions — showing oversold, short-term bounce likely.",
+      "fastDescNeutral": "Looks at the last 7 hours only. Quick reactions — nothing extreme right now.",
+      "slowDescOverbought": "Looks at the last 30 hours. Slower to react but more reliable — even the slow RSI says overbought, strong sell signal.",
+      "slowDescOversold": "Looks at the last 30 hours. Slower to react but more reliable — even the slow RSI says oversold, strong buy signal.",
+      "slowDescNeutral": "Looks at the last 30 hours. Slower to react but more reliable — no extreme reading."
     },
     "macd": {
       "title": "MACD (Moving Average Convergence Divergence)",
@@ -44,13 +50,23 @@
       "line": "MACD Line",
       "signal": "Signal Line",
       "signalDesc": "A smoothed version of MACD. When MACD crosses above this line = buy. Below = sell.",
-      "histogram": "Histogram"
+      "histogram": "Histogram",
+      "lineDescPositive": "Positive — the fast average is above the slow average, meaning recent price action is stronger than the longer trend. Bullish.",
+      "lineDescNegative": "Negative — the fast average is below the slow average, meaning recent price action is weaker than the longer trend. Bearish."
     },
     "movingAverages": {
       "title": "Moving Averages",
       "explain": "A moving average smooths out the price over time. If today's price is ABOVE the average, it means BTC is doing better than its recent history (bullish). If BELOW, it's doing worse (bearish). Shorter averages react faster, longer ones show the big picture.",
       "aboveBy": "Price is ${{amount}} ABOVE this average — bullish.",
-      "belowBy": "Price is ${{amount}} BELOW this average — bearish."
+      "belowBy": "Price is ${{amount}} BELOW this average — bearish.",
+      "ema9Desc": "Average price over last 9 hours. Very fast — shows what happened today.",
+      "ema21Desc": "Average price over last 21 hours (~1 day). Good for short-term trends.",
+      "sma20Desc": "Simple average of last 20 hours. A common benchmark traders watch closely.",
+      "ema50Desc": "Average price over last 50 hours (~2 days). Medium-term trend direction.",
+      "sma111Desc": "Average price over ~5 days. Used in the Pi Cycle indicator to spot major tops.",
+      "ema200Desc": "Average over ~8 days. THE most important line in trading — price above = bull market, below = bear market.",
+      "sma200Desc": "The \"golden line\". If BTC is above this, the long-term trend is healthy.",
+      "sma350Desc": "Average over ~15 days. Part of the Pi Cycle Top indicator for spotting market tops."
     },
     "bollinger": {
       "title": "Bollinger Bands",
@@ -62,21 +78,40 @@
       "position": "Where is price in the bands?",
       "nearFloor": "Near floor (cheap)",
       "middleFair": "Middle (fair)",
-      "nearCeiling": "Near ceiling (expensive)"
+      "nearCeiling": "Near ceiling (expensive)",
+      "upperDesc": "The upper limit of normal price range. If price touches this, it may be overextended.",
+      "middleDesc": "The 20-period average price. Think of this as the 'fair value' center.",
+      "lowerDesc": "The lower limit of normal price range. If price touches this, it may be a bargain.",
+      "widthWide": "Bands are WIDE — high volatility. Price is making big moves. Expect continued swings.",
+      "widthNarrow": "Bands are NARROW (squeeze) — low volatility. A big price explosion is likely coming soon, but direction is unknown.",
+      "widthNormal": "Bands are normal width. Moderate volatility — nothing extreme."
     },
     "volume": {
       "title": "Volume Analysis",
       "explain": "Volume = how much Bitcoin is being traded. High volume means many people are buying/selling (strong conviction). Low volume means few people are trading (weak moves that can reverse easily). Volume confirms trends — a price move WITH high volume is trustworthy.",
       "ratio": "Volume Ratio",
       "vwap": "VWAP",
-      "obv": "OBV (On Balance Volume)"
+      "obv": "OBV (On Balance Volume)",
+      "vwapAbove": "Price is ABOVE VWAP — means the average buyer today is in profit. Bullish. Traders see this as a sign of strength.",
+      "vwapBelow": "Price is BELOW VWAP — means the average buyer today is at a loss. Bearish. Traders see this as weakness.",
+      "vwapDefault": "The average price weighted by volume — shows where the \"true\" average trading price is.",
+      "obvDesc": "Running total of volume: adds volume on up days, subtracts on down days. If OBV is rising, smart money is accumulating (buying). If falling, they're distributing (selling)."
     },
     "supportResistance": {
       "title": "Support & Resistance",
       "explain": "Support = a price level where Bitcoin stops falling (like a floor — buyers step in). Resistance = a price level where it stops rising (like a ceiling — sellers step in). These levels help predict where price will bounce or get rejected.",
       "resistance": "Resistance (ceiling)",
       "pivot": "Pivot Point (center)",
-      "support": "Support (floor)"
+      "support": "Support (floor)",
+      "resistanceDesc": "Bitcoin may struggle to go above {{price}}. If it breaks through, that's very bullish — the next move up could be strong. Price is {{distanceText}}.",
+      "resistanceDescDefault": "The estimated price ceiling based on recent highs and lows.",
+      "resistanceAbove": "already above this level — bullish breakout",
+      "resistanceBelow": "${{amount}} away from this ceiling",
+      "pivotDesc": "The balance point calculated from yesterday's high, low, and close. Above pivot = bullish day, below = bearish day. Traders use this to judge the overall mood.",
+      "supportDesc": "Bitcoin should find buyers around {{price}}. If it breaks below, that's bearish — more selling could follow. Price is {{distanceText}}.",
+      "supportDescDefault": "The estimated price floor based on recent highs and lows.",
+      "supportAbove": "${{amount}} above this floor",
+      "supportBelow": "dangerously close to or below this support"
     },
     "trendStrength": {
       "title": "Trend Strength",
@@ -105,7 +140,10 @@
       "dSlow": "%D (slow line)",
       "buyZone": "Buy zone",
       "neutral": "Neutral",
-      "sellZone": "Sell zone"
+      "sellZone": "Sell zone",
+      "kFastDesc": "The fast-reacting line. When it enters extreme zones (above 80 or below 20), pay attention.",
+      "dSlowDescAbove": "The fast line (%K) is ABOVE the slow line (%D) — this is a buy signal. Momentum is shifting upward.",
+      "dSlowDescBelow": "The fast line (%K) is BELOW the slow line (%D) — this is a sell signal. Momentum is shifting downward."
     },
     "williamsR": {
       "title": "Williams %R",
@@ -123,7 +161,15 @@
       "cloudBottom": "Cloud Bottom (Senkou B)",
       "aboveCloud": "Price is ABOVE the cloud — Strong Bullish. The cloud below acts as a safety net (support). This is the best position to be in as a buyer.",
       "belowCloud": "Price is BELOW the cloud — Strong Bearish. The cloud above acts as a ceiling (resistance). Sellers are in control and it's hard for price to recover.",
-      "insideCloud": "Price is INSIDE the cloud — Uncertain. The market is in transition between bullish and bearish. Wait for a clear breakout above or below the cloud."
+      "insideCloud": "Price is INSIDE the cloud — Uncertain. The market is in transition between bullish and bearish. Wait for a clear breakout above or below the cloud.",
+      "tenkanAbove": "Price is above the conversion line — short-term momentum is up. Like having the wind at your back.",
+      "tenkanBelow": "Price is below the conversion line — short-term momentum is down. Buyers are struggling.",
+      "tenkanDefault": "The short-term trend line (average of 9-period high and low).",
+      "kijunAbove": "Price is above the base line — medium-term trend is bullish. This is the more important of the two lines.",
+      "kijunBelow": "Price is below the base line — medium-term trend is bearish. This is a stronger bearish signal than being below Tenkan.",
+      "kijunDefault": "The medium-term trend line (average of 26-period high and low).",
+      "cloudTopDesc": "The top edge of the cloud. Acts as support when price is above the cloud, or resistance when below.",
+      "cloudBottomDesc": "The bottom edge of the cloud. This is the stronger support/resistance level."
     },
     "candlestick": {
       "title": "Candlestick Patterns",
@@ -139,7 +185,21 @@
       "bullishEngulfing": "Bullish Engulfing",
       "bearishEngulfing": "Bearish Engulfing",
       "morningStar": "Morning Star",
-      "eveningStar": "Evening Star"
+      "eveningStar": "Evening Star",
+      "dojiDesc": "The candle opened and closed at almost the same price. This means INDECISION — buyers and sellers are equally matched. Often appears right before a reversal.",
+      "hammerDesc": "Price dropped significantly but buyers pushed it back up. Shaped like a hammer. This is a BULLISH reversal signal — sellers tried to push price down but failed.",
+      "invertedHammerDesc": "Price rose significantly but sellers pushed it back down, then buyers recovered some. Can signal a BOTTOM is forming — next candle confirms.",
+      "bullishEngulfingDesc": "Today's green candle completely \"swallowed\" yesterday's red candle. This is a STRONG BUY signal — buyers have completely overwhelmed sellers.",
+      "bearishEngulfingDesc": "Today's red candle completely \"swallowed\" yesterday's green candle. This is a STRONG SELL signal — sellers have completely overwhelmed buyers.",
+      "morningStarDesc": "A 3-candle pattern: big red candle, tiny candle (indecision), then big green candle. Like dawn after a dark night — signals the downtrend is ENDING and price will rise.",
+      "eveningStarDesc": "A 3-candle pattern: big green candle, tiny candle, then big red candle. Like sunset — signals the uptrend is ENDING and price will fall.",
+      "bodySizeLarge": "Large body — strong conviction in the direction. Buyers or sellers clearly won this candle.",
+      "bodySizeMedium": "Medium body — moderate move. Neither side dominated strongly.",
+      "bodySizeSmall": "Tiny body — almost no difference between open and close. The market is undecided.",
+      "upperShadowLong": "Long upper shadow — sellers pushed the price down from the high. There's selling pressure above current price.",
+      "upperShadowShort": "Short upper shadow — not much selling pressure above. Buyers stayed in control.",
+      "lowerShadowLong": "Long lower shadow — buyers pushed the price up from the low. There are buyers waiting below, providing support.",
+      "lowerShadowShort": "Short lower shadow — price didn't dip much. No significant buying interest at lower prices."
     },
     "advanced": {
       "title": "Advanced Metrics",
@@ -278,7 +338,8 @@
     "insightLongCluster": "Long liquidation cluster just {{pct}}% below price (${{volume}}). A dip could cascade.",
     "insightShortCluster": "Short squeeze zone just {{pct}}% above price (${{volume}}). A pump could cascade.",
     "long": "long",
-    "short": "short"
+    "short": "short",
+    "currentLabel": "Current"
   },
   "events": {
     "title": "Event Memory",
@@ -342,6 +403,12 @@
     "lossesLabel": "{{count}}L ({{pct}}%)",
     "bullishCalls": "Bullish Calls",
     "bearishCalls": "Bearish Calls",
-    "correctLabel": "{{correct}}/{{total}} correct"
+    "correctLabel": "{{correct}}/{{total}} correct",
+    "pending": "Pending...",
+    "timeframe": "Timeframe",
+    "predicted": "Predicted",
+    "actualMove": "Actual Move",
+    "conf": "conf",
+    "calibrationDesc": "Higher confidence should = higher accuracy. Dots sized by sample count."
   }
 }

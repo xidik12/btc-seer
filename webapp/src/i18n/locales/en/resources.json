@@ -1,6 +1,6 @@
 {
-  "title": "Resources",
-  "subtitle": "Expert-curated tools and platforms",
+  "title": "Resources & Tools",
+  "subtitle": "Expert-curated platforms and tools used by professional traders. Based on community recommendations, expert reviews, and real-world performance.",
   "categories": {
     "exchanges": "Exchanges",
     "analysis": "Analysis Tools",
@@ -12,18 +12,89 @@
   },
   "tierGuide": "Tier Guide",
   "tiers": {
-    "essential": "Essential",
-    "pro": "Pro",
-    "beginner": "Beginner",
-    "free": "Free"
+    "essential": { "name": "Essential", "desc": "Must-have tools every trader needs" },
+    "beginner": { "name": "Beginner", "desc": "Easy to use, great starting point" },
+    "pro": { "name": "Pro", "desc": "Advanced features for experienced traders" },
+    "free": { "name": "Free", "desc": "No cost, no account required" }
   },
   "gettingStarted": {
     "title": "Getting Started",
-    "step1": "Start with a reputable exchange",
-    "step2": "Learn the basics on educational platforms",
-    "step3": "Practice with paper trading before using real money",
-    "step4": "Use analysis tools to inform your decisions",
-    "step5": "Never invest more than you can afford to lose"
+    "beginner_label": "Beginner:",
+    "beginner_desc": " Start with Coinbase (exchange) + TradingView (charts) + CoinMarketCap (research). Learn the basics.",
+    "intermediate_label": "Intermediate:",
+    "intermediate_desc": " Add CoinGlass (liquidations/funding) + Glassnode free tier (on-chain) + a portfolio tracker. Start using indicators.",
+    "advanced_label": "Advanced:",
+    "advanced_desc": " Layer in Nansen (smart money) + Dune (custom analytics) + trading bots. Build systematic strategies."
+  },
+  "keyMetrics": {
+    "title": "KEY METRICS EVERY TRADER SHOULD TRACK",
+    "fearGreed": { "name": "Fear & Greed Index", "source": "CoinMarketCap / Alternative.me", "why": "Market sentiment at a glance. Extreme fear = potential buy, extreme greed = potential sell." },
+    "mvrv": { "name": "MVRV Z-Score", "source": "Glassnode / Bitcoin Magazine Pro", "why": "Identifies market tops (>7) and bottoms (<0.1) based on on-chain valuation." },
+    "fundingRates": { "name": "Funding Rates", "source": "CoinGlass / Coinalyze", "why": "Shows derivatives market positioning. Extreme funding = potential reversal signal." },
+    "exchangeNetflows": { "name": "Exchange Netflows", "source": "CryptoQuant / Glassnode", "why": "BTC flowing into exchanges = potential selling. Flowing out = accumulation." },
+    "openInterest": { "name": "Open Interest", "source": "CoinGlass / Coinalyze", "why": "Rising OI + rising price = strong trend. Rising OI + falling price = bearish pressure." },
+    "rsiMacd": { "name": "RSI + MACD Combo", "source": "TradingView / BTC Seer", "why": "Most reliable indicator combination. RSI for overbought/oversold, MACD for trend confirmation." },
+    "btcDominance": { "name": "BTC Dominance", "source": "CoinMarketCap / BTC Seer", "why": "Rising dominance = money flowing to BTC safety. Falling = alt season potential." },
+    "dxy": { "name": "DXY (Dollar Index)", "source": "TradingView / BTC Seer", "why": "BTC often inversely correlates with dollar strength. Weak dollar = bullish BTC." }
+  },
+  "exchanges": {
+    "title": "EXCHANGES & TRADING PLATFORMS",
+    "description": "Where to trade. Ranked by experts for reliability, fees, and features.",
+    "binance": { "desc": "#1 by volume worldwide. Full trading suite with leverage, automation, and 600+ pairs. Best for active traders.", "tags": ["Low fees", "Deep liquidity", "Futures"] },
+    "coinbase": { "desc": "Best for beginners. US-regulated, insured, simple buy/sell. Coinbase Advanced for experienced traders.", "tags": ["Regulated", "Easy UI", "Staking"] },
+    "kraken": { "desc": "Rock-solid reliability since 2011. Kraken Pro offers institutional-grade features. Great for day traders.", "tags": ["Reliable", "Low fees", "Futures"] },
+    "bybit": { "desc": "Top derivatives exchange. Copy trading, advanced order types, and deep liquidity for non-US users.", "tags": ["Derivatives", "Copy trading", "High leverage"] },
+    "okx": { "desc": "CEX + DEX hybrid. Built-in Web3 wallet, DEX aggregator, and NFT marketplace. Full ecosystem.", "tags": ["DeFi", "Web3 wallet", "DEX aggregator"] },
+    "bydfi": { "desc": "Most feature-rich for 2026. CEX+DEX, copy trading, grid bots, broad asset support. Active trader favorite.", "tags": ["CEX+DEX", "Copy trading", "Grid bots"] }
+  },
+  "analysis": {
+    "title": "CHARTING & ANALYSIS TOOLS",
+    "description": "Technical analysis, charting, and market research platforms.",
+    "tradingview": { "desc": "The #1 charting platform. 100+ indicators, community-shared strategies, real-time data. Used by 90% of traders.", "tags": ["Charts", "100+ indicators", "Community"] },
+    "coinglass": { "desc": "Best for derivatives data. Liquidation heatmaps, open interest, funding rates, order flow, and whale tracking.", "tags": ["Liquidations", "OI", "Funding rates"] },
+    "coinmarketcap": { "desc": "Go-to for market overview. Price tracking, market cap rankings, Fear & Greed index, crypto calendar.", "tags": ["Prices", "Rankings", "Fear & Greed"] },
+    "trendspider": { "desc": "AI-powered technical analysis. Automated trendline detection, multi-timeframe analysis, strategy backtesting.", "tags": ["Auto trendlines", "Backtesting", "Alerts"] },
+    "coinalyze": { "desc": "Aggregated futures data across all major exchanges. Open interest, funding, volume, and basis analytics.", "tags": ["Futures data", "OI", "Aggregated"] },
+    "bitcoinmagazinepro": { "desc": "BTC-specific charts: MVRV Z-Score, Pi Cycle, Puell Multiple, Stock-to-Flow. Best Bitcoin cycle tools.", "tags": ["BTC charts", "Cycle analysis", "MVRV"] }
+  },
+  "onchain": {
+    "title": "ON-CHAIN ANALYTICS",
+    "description": "Blockchain data, whale tracking, and smart money analysis.",
+    "glassnode": { "desc": "Industry standard for on-chain. MVRV Z-Score, SOPR, NVT, holder behavior, exchange flows. Free tier available.", "tags": ["MVRV", "SOPR", "Supply metrics"] },
+    "cryptoquant": { "desc": "Best for exchange flow analysis. Tracks whale deposits/withdrawals, miner behavior, and market stress signals.", "tags": ["Exchange flows", "Miner data", "Alerts"] },
+    "nansen": { "desc": "Wallet intelligence platform. Track smart money, fund movements, whale wallets. Labels 250M+ wallets.", "tags": ["Smart money", "Wallet labels", "DeFi"] },
+    "santiment": { "desc": "Combines on-chain + social sentiment. Developer activity tracking, social volume, holder distribution.", "tags": ["Social data", "Dev activity", "On-chain"] },
+    "defillama": { "desc": "Best free DeFi analytics. TVL across all protocols, yield tracking, fee revenue. 100% free, no account needed.", "tags": ["TVL", "DeFi", "Yields"] },
+    "whalealert": { "desc": "Real-time large transaction tracker. Monitors BTC, ETH, and major blockchains for whale movements.", "tags": ["Large txs", "Real-time", "Multi-chain"] },
+    "dune": { "desc": "Build custom on-chain dashboards with SQL. Community-shared dashboards for every protocol. Free tier available.", "tags": ["Custom queries", "Dashboards", "SQL"] }
+  },
+  "portfolio": {
+    "title": "PORTFOLIO & TAX TOOLS",
+    "description": "Track your holdings, calculate taxes, and manage your portfolio.",
+    "cointracker": { "desc": "Leading integrated portfolio + tax solution. 300+ exchange integrations, auto DeFi tracking, TurboTax compatible.", "tags": ["Tax", "Portfolio", "DeFi"] },
+    "koinly": { "desc": "Best for international users. Supports 100+ countries, DeFi, NFT, and margin trades. Simple tax reporting.", "tags": ["Tax", "100+ countries", "DeFi/NFT"] },
+    "cointracking": { "desc": "Power user favorite. Deep historical data imports, comprehensive analytics, and detailed tax reports.", "tags": ["Tax", "Analytics", "300+ exchanges"] },
+    "coinledger": { "desc": "Best for US-based users. Direct TurboTax and TaxAct integration. Simple, straightforward tax reporting.", "tags": ["Tax", "US-focused", "TurboTax"] },
+    "debank": { "desc": "Best free DeFi portfolio tracker. Tracks all wallet positions across all chains. No signup required.", "tags": ["DeFi portfolio", "Multi-chain", "Free"] },
+    "zenledger": { "desc": "Best for heavy DeFi users. Excels at staking rewards, liquidity pool tracking, and complex DeFi tax scenarios.", "tags": ["DeFi tax", "Staking", "LP"] }
+  },
+  "bots": {
+    "title": "TRADING BOTS & AUTOMATION",
+    "description": "Automated trading, grid bots, copy trading, and algorithmic strategies.",
+    "cryptohopper": { "desc": "Most versatile bot platform. Cloud-based, works with Binance/Coinbase/Kraken. Strategy marketplace for beginners.", "tags": ["Cloud-based", "Strategy marketplace", "DCA bots"] },
+    "threecommas": { "desc": "Popular for smart trade terminals. Grid bots, DCA bots, and portfolio rebalancing across major exchanges.", "tags": ["Smart trades", "Grid bots", "DCA"] },
+    "pionex": { "desc": "Exchange with free built-in bots. 16+ bot types including grid, DCA, and rebalancing. No extra fees.", "tags": ["Free bots", "Grid trading", "Built-in"] },
+    "haasonline": { "desc": "For advanced algorithmic traders. Custom scripting language, extensive backtesting, and strategy optimization.", "tags": ["Custom scripts", "Backtesting", "Advanced"] }
+  },
+  "learn": {
+    "title": "LEARNING RESOURCES",
+    "description": "Education, courses, communities, and research for all levels.",
+    "investopedia": { "desc": "Best free crypto education. Comprehensive guides on trading, technical analysis, and investing fundamentals.", "tags": ["Education", "Guides", "Free"] },
+    "binanceacademy": { "desc": "Free structured crypto education. Beginner to advanced courses on blockchain, trading, DeFi, and security.", "tags": ["Free courses", "Videos", "Quizzes"] },
+    "coinbureau": { "desc": "Trusted crypto research and reviews. In-depth analysis, project reviews, and educational YouTube content.", "tags": ["Reviews", "Research", "YouTube"] },
+    "messari": { "desc": "Institutional-grade crypto research. Sector reports, token profiles, governance data, and fundraising intel.", "tags": ["Research", "Data", "Reports"] },
+    "theblock": { "desc": "Premium crypto news and data dashboards. Industry-leading reporting on institutional adoption and market structure.", "tags": ["News", "Data", "Research"] },
+    "reddit": { "desc": "Largest crypto communities on Reddit. Real-time discussion, sentiment gauge, and community-vetted information.", "tags": ["Community", "Discussion", "News"] }
   },
   "visitSite": "Visit Site"
 }

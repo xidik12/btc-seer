@@ -229,7 +229,7 @@ function LiquidationHeatmap({ data, t }) {
               stroke="#4a9eff"
               strokeWidth={2}
               strokeDasharray="5 3"
-              label={{ value: `Current ${currentPriceLabel}`, fill: '#4a9eff', fontSize: 10, position: 'insideTopRight' }}
+              label={{ value: `${t('market:liquidations.currentLabel')} ${currentPriceLabel}`, fill: '#4a9eff', fontSize: 10, position: 'insideTopRight' }}
             />
 
             {/* Long liquidations — intensity-colored */}
@@ -275,21 +275,21 @@ function LiquidationHeatmap({ data, t }) {
 
 // ── Leverage Table ──
 
-function LeverageTable({ levels, currentPrice }) {
+function LeverageTable({ levels, currentPrice, t }) {
   if (!levels?.levels?.length) return null
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">LIQUIDATION BY LEVERAGE</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('market:liquidations.liquidationByLeverage')}</h3>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="text-text-muted border-b border-white/5">
-              <th className="text-left py-2 font-medium">Lev</th>
-              <th className="text-right py-2 font-medium">Long Liq Price</th>
-              <th className="text-right py-2 font-medium">Distance</th>
-              <th className="text-right py-2 font-medium">Short Liq Price</th>
-              <th className="text-right py-2 font-medium">Distance</th>
+              <th className="text-left py-2 font-medium">{t('market:liquidations.lev')}</th>
+              <th className="text-right py-2 font-medium">{t('market:liquidations.longLiqPrice')}</th>
+              <th className="text-right py-2 font-medium">{t('market:liquidations.distance')}</th>
+              <th className="text-right py-2 font-medium">{t('market:liquidations.shortLiqPrice')}</th>
+              <th className="text-right py-2 font-medium">{t('market:liquidations.distance')}</th>
             </tr>
           </thead>
           <tbody>
@@ -327,7 +327,7 @@ function LeverageTable({ levels, currentPrice }) {
 
 // ── Key Levels ──
 
-function KeyLevels({ data }) {
+function KeyLevels({ data, t }) {
   if (!data?.summary) return null
   const { summary, current_price } = data
   const longCluster = summary.nearest_long_cluster
@@ -337,18 +337,18 @@ function KeyLevels({ data }) {
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">NEAREST LIQUIDATION CLUSTERS</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('market:liquidations.nearestClusters')}</h3>
       <div className="space-y-2">
         {longCluster && (
           <div className="flex items-center justify-between p-3 rounded-xl bg-accent-red/5 border border-accent-red/15">
             <div>
-              <div className="text-[9px] text-text-muted font-medium">LONG CLUSTER</div>
+              <div className="text-[9px] text-text-muted font-medium">{t('market:liquidations.longCluster')}</div>
               <div className="text-base font-bold text-accent-red tabular-nums">
                 {formatPrice(longCluster.price)}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[9px] text-text-muted font-medium">DISTANCE</div>
+              <div className="text-[9px] text-text-muted font-medium">{t('market:liquidations.distance').toUpperCase()}</div>
               <div className={`text-base font-bold tabular-nums ${
                 longCluster.distance_pct < 5 ? 'text-accent-red animate-pulse' : 'text-accent-red'
               }`}>
@@ -356,7 +356,7 @@ function KeyLevels({ data }) {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[9px] text-text-muted font-medium">VOLUME</div>
+              <div className="text-[9px] text-text-muted font-medium">{t('market:liquidations.volume')}</div>
               <div className="text-base font-bold text-text-primary tabular-nums">
                 ${formatNumber(longCluster.volume)}
               </div>
@@ -366,13 +366,13 @@ function KeyLevels({ data }) {
         {shortCluster && (
           <div className="flex items-center justify-between p-3 rounded-xl bg-accent-green/5 border border-accent-green/15">
             <div>
-              <div className="text-[9px] text-text-muted font-medium">SHORT CLUSTER</div>
+              <div className="text-[9px] text-text-muted font-medium">{t('market:liquidations.shortCluster')}</div>
               <div className="text-base font-bold text-accent-green tabular-nums">
                 {formatPrice(shortCluster.price)}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[9px] text-text-muted font-medium">DISTANCE</div>
+              <div className="text-[9px] text-text-muted font-medium">{t('market:liquidations.distance').toUpperCase()}</div>
               <div className={`text-base font-bold tabular-nums ${
                 shortCluster.distance_pct < 5 ? 'text-accent-green animate-pulse' : 'text-accent-green'
               }`}>
@@ -380,7 +380,7 @@ function KeyLevels({ data }) {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[9px] text-text-muted font-medium">VOLUME</div>
+              <div className="text-[9px] text-text-muted font-medium">{t('market:liquidations.volume')}</div>
               <div className="text-base font-bold text-text-primary tabular-nums">
                 ${formatNumber(shortCluster.volume)}
               </div>
@@ -394,29 +394,29 @@ function KeyLevels({ data }) {
 
 // ── Stats Grid ──
 
-function StatsGrid({ stats }) {
+function StatsGrid({ stats, t }) {
   if (!stats) return null
 
   const items = [
-    { label: 'OI (BTC)', value: stats.open_interest_btc ? formatNumber(stats.open_interest_btc) : '--' },
-    { label: 'OI (USD)', value: stats.open_interest_usd ? `$${formatNumber(stats.open_interest_usd)}` : '--' },
+    { label: t('market:liquidations.oiBtc'), value: stats.open_interest_btc ? formatNumber(stats.open_interest_btc) : '--' },
+    { label: t('market:liquidations.oiUsd'), value: stats.open_interest_usd ? `$${formatNumber(stats.open_interest_usd)}` : '--' },
     {
-      label: 'L/S Ratio',
+      label: t('market:liquidations.lsRatio'),
       value: stats.long_short_ratio?.long_short_ratio?.toFixed(2) ?? '--',
       color: stats.long_short_ratio?.long_short_ratio > 1 ? 'text-accent-green' : 'text-accent-red',
     },
     {
-      label: 'Top Trader L/S',
+      label: t('market:liquidations.topTraderRatio'),
       value: stats.top_trader_ratio?.long_short_ratio?.toFixed(2) ?? '--',
       color: stats.top_trader_ratio?.long_short_ratio > 1 ? 'text-accent-green' : 'text-accent-red',
     },
     {
-      label: 'Funding Rate',
+      label: t('market:liquidations.fundingRateLabel'),
       value: stats.funding_rate != null ? `${(stats.funding_rate * 100).toFixed(4)}%` : '--',
       color: stats.funding_rate >= 0 ? 'text-accent-green' : 'text-accent-red',
     },
     {
-      label: 'Mark Price',
+      label: t('market:liquidations.markPrice'),
       value: stats.mark_price ? formatPrice(stats.mark_price) : '--',
     },
   ]
@@ -437,7 +437,7 @@ function StatsGrid({ stats }) {
 
 // ── Trading Insight ──
 
-function TradingInsight({ data, stats }) {
+function TradingInsight({ data, stats, t }) {
   if (!data?.summary || !stats) return null
 
   const { summary } = data
@@ -461,24 +461,24 @@ function TradingInsight({ data, stats }) {
           </svg>
         ),
         text: fundingRate > 0
-          ? `High positive funding (${(fundingRate * 100).toFixed(4)}%) — longs are paying premium. Price may correct down.`
-          : `Negative funding (${(fundingRate * 100).toFixed(4)}%) — shorts are paying. Potential squeeze upward.`,
+          ? t('market:liquidations.insightFundingHigh', { rate: (fundingRate * 100).toFixed(4) })
+          : t('market:liquidations.insightFundingNegative', { rate: (fundingRate * 100).toFixed(4) }),
       })
     }
   }
 
   // L/S divergence from top traders
   if (lsRatio && topRatio && Math.abs(lsRatio - topRatio) > 0.3) {
-    const retailBias = lsRatio > 1 ? 'long' : 'short'
-    const smartBias = topRatio > 1 ? 'long' : 'short'
-    if (retailBias !== smartBias) {
+    const retailBias = lsRatio > 1 ? t('market:liquidations.long') : t('market:liquidations.short')
+    const smartBias = topRatio > 1 ? t('market:liquidations.long') : t('market:liquidations.short')
+    if ((lsRatio > 1) !== (topRatio > 1)) {
       insights.push({
         icon: (
           <svg className="w-4 h-4 text-accent-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 18h6M10 22h4" /><path d="M12 2a7 7 0 00-4 12.9V17h8v-2.1A7 7 0 0012 2z" />
           </svg>
         ),
-        text: `Smart money divergence: Retail is ${retailBias} (${lsRatio.toFixed(2)}) while top traders are ${smartBias} (${topRatio.toFixed(2)}). Follow the smart money.`,
+        text: t('market:liquidations.insightSmartMoney', { retailBias, lsRatio: lsRatio.toFixed(2), smartBias, topRatio: topRatio.toFixed(2) }),
       })
     }
   }
@@ -493,7 +493,7 @@ function TradingInsight({ data, stats }) {
           <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
         </svg>
       ),
-      text: `Long liquidation cluster just ${longCluster.distance_pct.toFixed(1)}% below price ($${formatNumber(longCluster.volume)}). A dip could cascade.`,
+      text: t('market:liquidations.insightLongCluster', { pct: longCluster.distance_pct.toFixed(1), volume: formatNumber(longCluster.volume) }),
     })
   }
   if (shortCluster && shortCluster.distance_pct < 3) {
@@ -503,7 +503,7 @@ function TradingInsight({ data, stats }) {
           <circle cx="12" cy="12" r="10" /><polyline points="16 10 11 15 8 12" />
         </svg>
       ),
-      text: `Short squeeze zone just ${shortCluster.distance_pct.toFixed(1)}% above price ($${formatNumber(shortCluster.volume)}). A pump could cascade.`,
+      text: t('market:liquidations.insightShortCluster', { pct: shortCluster.distance_pct.toFixed(1), volume: formatNumber(shortCluster.volume) }),
     })
   }
 
@@ -511,7 +511,7 @@ function TradingInsight({ data, stats }) {
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">TRADING INSIGHTS</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('market:liquidations.tradingInsights')}</h3>
       <div className="space-y-2">
         {insights.map((ins, i) => (
           <div key={i} className="flex items-start gap-2 text-[11px]">
@@ -526,7 +526,7 @@ function TradingInsight({ data, stats }) {
 
 // ── Funding Rate + OI History ──
 
-function FundingOIChart({ fundingData }) {
+function FundingOIChart({ fundingData, t }) {
   if (!fundingData?.history?.length) return null
 
   const chartData = fundingData.history.map((d) => ({
@@ -540,13 +540,13 @@ function FundingOIChart({ fundingData }) {
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <div className="flex items-center justify-between mb-1">
-        <h3 className="text-text-secondary text-xs font-semibold">FUNDING RATE & OPEN INTEREST</h3>
+        <h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.fundingOiChart')}</h3>
         {isZoomed && (
-          <button onClick={resetZoom} className="text-[10px] text-accent-blue">Reset</button>
+          <button onClick={resetZoom} className="text-[10px] text-accent-blue">{t('market:liquidations.reset')}</button>
         )}
       </div>
       <p className="text-text-muted text-[9px] mb-3">
-        Extreme positive funding = crash risk. Negative = squeeze potential.
+        {t('market:liquidations.extremeFundingDesc')}
       </p>
       <div className="h-[220px]" {...bindGestures}>
         <ResponsiveContainer width="100%" height="100%">
@@ -578,8 +578,8 @@ function FundingOIChart({ fundingData }) {
             <Tooltip
               contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
               formatter={(v, name) => {
-                if (name === 'funding') return [`${v.toFixed(4)}%`, 'Funding Rate']
-                if (name === 'oi') return [`$${formatNumber(v)}`, 'Open Interest']
+                if (name === 'funding') return [`${v.toFixed(4)}%`, t('market:liquidations.fundingRateLabel')]
+                if (name === 'oi') return [`$${formatNumber(v)}`, t('market:liquidations.openInterestLabel')]
                 return [v, name]
               }}
               labelFormatter={(v) => v}
@@ -610,7 +610,7 @@ function FundingOIChart({ fundingData }) {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-text-muted text-[9px] text-center mt-2">Pinch to zoom &middot; Drag to pan</p>
+      <p className="text-text-muted text-[9px] text-center mt-2">{t('common:chart.pinchZoom')}</p>
     </div>
   )
 }
@@ -677,31 +677,18 @@ export default function Liquidations() {
       <SummaryCard data={mapData} t={t} />
       <RiskMeter longPct={longPct} shortPct={shortPct} fundingRate={fundingRate} t={t} />
       <LiquidationHeatmap data={mapData} t={t} />
-      <KeyLevels data={mapData} />
-      <FundingOIChart fundingData={fundingData} />
-      <TradingInsight data={mapData} stats={stats} />
-      <LeverageTable levels={levels} currentPrice={mapData?.current_price} />
-      <StatsGrid stats={stats} />
+      <KeyLevels data={mapData} t={t} />
+      <FundingOIChart fundingData={fundingData} t={t} />
+      <TradingInsight data={mapData} stats={stats} t={t} />
+      <LeverageTable levels={levels} currentPrice={mapData?.current_price} t={t} />
+      <StatsGrid stats={stats} t={t} />
 
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-2">HOW TO USE THIS</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('market:liquidations.howToUseTitle')}</h3>
         <div className="text-text-muted text-[11px] space-y-2">
-          <p>
-            <span className="text-text-secondary font-semibold">Liquidation clusters act as price magnets.</span>{' '}
-            Market makers and whales deliberately push price toward large clusters to trigger
-            cascading liquidations, creating rapid moves.
-          </p>
-          <p>
-            <span className="text-accent-red font-semibold">Red bars</span> = long liquidations (below price).
-            If price drops to these levels, leveraged longs get force-closed, accelerating the dump.{' '}
-            <span className="text-accent-green font-semibold">Green bars</span> = short liquidations (above price).
-            A move up triggers short squeezes.
-          </p>
-          <p>
-            <span className="text-text-secondary font-semibold">Pro tip:</span>{' '}
-            When funding rate and L/S ratio diverge from top trader positions, it often signals
-            an incoming liquidation event. Watch the Trading Insights section above.
-          </p>
+          <p>{t('market:liquidations.howToUse.paragraph1')}</p>
+          <p>{t('market:liquidations.howToUse.paragraph2')}</p>
+          <p>{t('market:liquidations.howToUse.paragraph3')}</p>
         </div>
       </div>
     </div>

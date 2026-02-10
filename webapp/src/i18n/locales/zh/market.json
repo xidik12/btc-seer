@@ -278,7 +278,8 @@
     "insightLongCluster": "多头爆仓集群仅距价格{{pct}}%（${{volume}}）。下跌可能引发连锁。",
     "insightShortCluster": "空头挤压区域仅距价格{{pct}}%（${{volume}}）。上涨可能引发连锁。",
     "long": "做多",
-    "short": "做空"
+    "short": "做空",
+    "currentLabel": "当前"
   },
   "events": {
     "title": "事件记忆",
@@ -342,6 +343,12 @@
     "lossesLabel": "{{count}}亏 ({{pct}}%)",
     "bullishCalls": "看涨预测",
     "bearishCalls": "看跌预测",
-    "correctLabel": "{{correct}}/{{total}} 正确"
+    "correctLabel": "{{correct}}/{{total}} 正确",
+    "pending": "等待中...",
+    "timeframe": "时间周期",
+    "predicted": "预测价",
+    "actualMove": "实际变动",
+    "conf": "置信",
+    "calibrationDesc": "更高的置信度应对应更高的准确率。点的大小反映样本量。"
   }
 }

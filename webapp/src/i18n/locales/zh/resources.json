@@ -1,6 +1,6 @@
 {
-  "title": "资源",
-  "subtitle": "专家精选的工具和平台",
+  "title": "资源与工具",
+  "subtitle": "专家精选的专业交易者使用的平台和工具。基于社区推荐、专家评测和实际表现。",
   "categories": {
     "exchanges": "交易所",
     "analysis": "分析工具",
@@ -12,18 +12,54 @@
   },
   "tierGuide": "等级指南",
   "tiers": {
-    "essential": "必备",
-    "pro": "专业",
-    "beginner": "入门",
-    "free": "免费"
+    "essential": { "name": "必备", "desc": "每个交易者必备的工具" },
+    "beginner": { "name": "入门", "desc": "易于使用，适合入门" },
+    "pro": { "name": "专业", "desc": "为经验丰富的交易者提供高级功能" },
+    "free": { "name": "免费", "desc": "免费，无需注册" }
   },
   "gettingStarted": {
     "title": "入门指南",
-    "step1": "从知名交易所开始",
-    "step2": "在教育平台上学习基础知识",
-    "step3": "在使用真实资金前先用模拟交易练习",
-    "step4": "使用分析工具辅助你的决策",
-    "step5": "投资金额不要超过你能承受的损失"
+    "beginner_label": "初学者：",
+    "beginner_desc": "从Coinbase（交易所）+ TradingView（图表）+ CoinMarketCap（研究）开始。学习基础知识。",
+    "intermediate_label": "中级：",
+    "intermediate_desc": "添加CoinGlass（清算/资金费率）+ Glassnode免费版（链上）+ 投资组合追踪器。开始使用指标。",
+    "advanced_label": "高级：",
+    "advanced_desc": "加入Nansen（聪明钱）+ Dune（自定义分析）+ 交易机器人。构建系统化策略。"
+  },
+  "keyMetrics": {
+    "title": "每个交易者都应追踪的关键指标",
+    "fearGreed": { "name": "恐惧与贪婪指数", "source": "CoinMarketCap / Alternative.me", "why": "一目了然的市场情绪。极度恐惧 = 潜在买入，极度贪婪 = 潜在卖出。" },
+    "mvrv": { "name": "MVRV Z-Score", "source": "Glassnode / Bitcoin Magazine Pro", "why": "基于链上估值识别市场顶部（>7）和底部（<0.1）。" },
+    "fundingRates": { "name": "资金费率", "source": "CoinGlass / Coinalyze", "why": "显示衍生品市场定位。极端资金费率 = 潜在反转信号。" },
+    "exchangeNetflows": { "name": "交易所净流量", "source": "CryptoQuant / Glassnode", "why": "BTC流入交易所 = 潜在抛售。流出 = 积累。" },
+    "openInterest": { "name": "未平仓合约", "source": "CoinGlass / Coinalyze", "why": "OI上升 + 价格上涨 = 强势趋势。OI上升 + 价格下跌 = 空头压力。" },
+    "rsiMacd": { "name": "RSI + MACD 组合", "source": "TradingView / BTC Seer", "why": "最可靠的指标组合。RSI用于超买/超卖，MACD用于趋势确认。" },
+    "btcDominance": { "name": "BTC主导地位", "source": "CoinMarketCap / BTC Seer", "why": "主导地位上升 = 资金流向BTC避险。下降 = 山寨币季节潜力。" },
+    "dxy": { "name": "DXY（美元指数）", "source": "TradingView / BTC Seer", "why": "BTC通常与美元强度负相关。美元走弱 = BTC看涨。" }
+  },
+  "exchanges": {
+    "title": "交易所和交易平台",
+    "description": "在哪里交易。由专家按可靠性、费用和功能排名。"
+  },
+  "analysis": {
+    "title": "图表与分析工具",
+    "description": "技术分析、图表和市场研究平台。"
+  },
+  "onchain": {
+    "title": "链上分析",
+    "description": "区块链数据、鲸鱼追踪和聪明钱分析。"
+  },
+  "portfolio": {
+    "title": "投资组合与税务工具",
+    "description": "追踪您的持仓、计算税款和管理投资组合。"
+  },
+  "bots": {
+    "title": "交易机器人与自动化",
+    "description": "自动交易、网格机器人、跟单交易和算法策略。"
+  },
+  "learn": {
+    "title": "学习资源",
+    "description": "适合所有级别的教育、课程、社区和研究。"
   },
   "visitSite": "访问网站"
 }

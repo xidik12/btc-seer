@@ -326,6 +326,7 @@ function TradeCard({ trade, onOpen, onClose, currentPrice, t }) {
 }
 
 function ClosedTradeRow({ trade }) {
+  const { t } = useTranslation('trading')
   const isLong = trade.direction === 'LONG' || trade.direction === 'long' || trade.action?.includes('buy')
   const pnl = trade.pnl_usdt || trade.pnl || trade.realized_pnl || 0
   const won = trade.was_winner || pnl > 0

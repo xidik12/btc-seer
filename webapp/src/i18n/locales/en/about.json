@@ -2,8 +2,38 @@
   "title": "About BTC Seer",
   "version": "Version",
   "description": "AI-powered Bitcoin analysis and trading platform",
+  "heroSubtitle": "Real-time predictions, trading signals, and deep market analysis — powered by a 4-model AI ensemble analyzing 192 features across 13 data categories.",
+  "whatIs": {
+    "title": "WHAT IS BTC SEER?",
+    "p1": "BTC Seer is a production-grade Bitcoin prediction platform that analyzes <b>192 engineered features</b> across 13 categories — technical indicators, news sentiment, on-chain metrics, derivatives data, macro markets, ETF flows, exchange flows, stablecoin supply, social signals, and more.",
+    "p2": "It generates predictions across <b>5 timeframes</b> (1H, 4H, 24H, 1W, 1MO) using a <b>4-model ensemble</b>: Temporal Fusion Transformer (40%), XGBoost (25%), LSTM (20%), and Google TimesFM (15%) — with adaptive weighting that shifts based on model performance.",
+    "p3": "The system runs <b>24 background jobs</b> continuously — collecting data every minute, generating predictions, evaluating accuracy, retraining models, and learning from market events."
+  },
+  "byTheNumbers": {
+    "title": "BY THE NUMBERS",
+    "features": "Features",
+    "aiModels": "AI Models",
+    "dataSources": "Data Sources",
+    "timeframes": "Timeframes",
+    "backgroundJobs": "Background Jobs",
+    "retrainCycle": "Retrain Cycle"
+  },
+  "howToUse": {
+    "title": "HOW TO USE BTC SEER",
+    "subtitle": "New here? Follow these 5 steps to get started:",
+    "step1_label": "Start on Dashboard",
+    "step1_desc": " — check the live BTC price, dual prediction cards (AI + Quant), trading signals, and market overview at a glance.",
+    "step2_label": "Read Signals",
+    "step2_desc": " — view AI-generated entry, target, and stop-loss levels with confidence scores and risk ratings.",
+    "step3_label": "Check Sentiment",
+    "step3_desc": " — browse news sentiment, Fear & Greed index, influencer mood, and social volume to gauge market emotion.",
+    "step4_label": "Dive Deeper",
+    "step4_desc": " — explore technical analysis (45+ indicators), Power Law, Elliott Wave, liquidation maps, on-chain metrics, and ETF flows.",
+    "step5_label": "Practice First",
+    "step5_desc": " — use Paper Trading to test strategies with virtual money before risking real capital."
+  },
   "architecture": {
-    "title": "Architecture",
+    "title": "AI Ensemble Architecture",
     "aiEnsemble": "AI Ensemble",
     "models": {
       "tft": "Temporal Fusion Transformer",
@@ -11,8 +41,88 @@
       "lstm": "Long Short-Term Memory",
       "timesfm": "TimesFM Foundation Model"
     },
+    "tftDesc": "Multi-horizon attention model — captures long-range dependencies and variable-importance weighting",
+    "xgboostDesc": "Gradient-boosted trees — excels at feature-based classification with 192 engineered inputs",
+    "lstmDesc": "Recurrent neural network — detects sequential patterns in 168-hour (1 week) lookback windows",
+    "timesfmDesc": "Zero-shot foundation model — provides a baseline from pre-trained time-series knowledge",
+    "adaptiveNote": "Weights are adaptive — the system shifts allocation based on each model's recent accuracy. A sentiment modifier (up to ±50%) amplifies or dampens the ensemble signal based on real-time market mood.",
     "features": "{{count}} features across {{categories}} data categories",
     "dataCategories": "Data Categories"
+  },
+  "featuresCategories": {
+    "title": "192 FEATURES ACROSS 13 CATEGORIES",
+    "technical": { "name": "Technical (111)", "desc": "EMAs, RSI, MACD, Bollinger, Ichimoku, Donchian, Keltner, GARCH volatility, Hurst exponent, wavelets, candlestick patterns, and 45 Pandas-TA indicators" },
+    "sentiment": { "name": "Sentiment (13)", "desc": "News sentiment 1h/4h/24h, Reddit & social sentiment, bullish/bearish %, Fear & Greed index" },
+    "derivativesExt": { "name": "Derivatives Extended (12)", "desc": "Long/short ratio, taker buy/sell, liquidations, DVOL, leverage ratio, top trader positions" },
+    "exchangeFlows": { "name": "Exchange Flows (9)", "desc": "Exchange reserves, NVT signal, MVRV Z-score, SOPR, Puell multiple, coin days destroyed" },
+    "macro": { "name": "Macro (8)", "desc": "DXY, gold, S&P 500, NASDAQ, VIX, EUR/USD, 10Y Treasury" },
+    "onChain": { "name": "On-Chain (7)", "desc": "Hash rate, mempool size/fees, tx volume, active addresses, difficulty, large tx count" },
+    "eventMemory": { "name": "Event Memory (7)", "desc": "Expected impact 1h/4h/24h, confidence, severity, sentiment predictiveness, active event count" },
+    "etfFlows": { "name": "ETF Flows (6)", "desc": "Net flow, total holdings, IBIT (BlackRock), FBTC (Fidelity), GBTC (Grayscale), ETF volume" },
+    "stablecoin": { "name": "Stablecoin (5)", "desc": "USDT/USDC market caps, total stablecoin supply, 7d supply change, DeFi TVL" },
+    "dominance": { "name": "Dominance (4)", "desc": "BTC dominance, ETH dominance, total market cap, market cap change" },
+    "supplyMining": { "name": "Supply/Mining (4)", "desc": "% mined, daily issuance, blocks until halving, halving cycle position" },
+    "derivatives": { "name": "Derivatives (3)", "desc": "Funding rate, open interest, mark/index spread" },
+    "phraseAnalysis": { "name": "Phrase Analysis (3)", "desc": "Top bullish/bearish phrase scores, net sentiment signal from news language patterns" }
+  },
+  "dataPipeline": {
+    "title": "REAL-TIME DATA PIPELINE",
+    "items": [
+      { "freq": "Every 1 min", "desc": "BTC price from Binance (OHLCV candles)" },
+      { "freq": "Every 2 min", "desc": "News from 25+ RSS feeds, CryptoPanic, Reddit, Binance announcements" },
+      { "freq": "Every 2 min", "desc": "Alt-coin prices (ETH, SOL, XRP and more)" },
+      { "freq": "Every 5 min", "desc": "Event classification — news categorized into regulatory, technical, market, macro, supply, exchange events" },
+      { "freq": "Every 10 min", "desc": "Influencer tweets — weighted by market impact (Elon, Saylor, CZ, Cathie Wood, etc.)" },
+      { "freq": "Every 30 min", "desc": "Funding rates, open interest, and derivatives data from Binance perpetuals" },
+      { "freq": "Every 1 hr", "desc": "Macro indicators (DXY, gold, S&P 500, VIX, treasuries), on-chain metrics, BTC dominance, technical snapshot, phrase analysis" },
+      { "freq": "Configurable", "desc": "AI predictions (ensemble + quant theory), prediction evaluation, Telegram alerts" },
+      { "freq": "Every 6 hrs", "desc": "Auto-retraining, continuous learning, A/B testing of candidate models" },
+      { "freq": "Every 24 hrs", "desc": "Data cleanup (90d price/news, 180d macro/on-chain), subscription checks" }
+    ]
+  },
+  "howAiWorks": {
+    "title": "HOW THE AI WORKS",
+    "step1_label": "Ensemble Voting:",
+    "step1_desc": " 4 models independently analyze 192 features and vote on each prediction. TFT leads at 40%, but weights adapt based on recent performance — reducing individual model bias.",
+    "step2_label": "Continuous Learning:",
+    "step2_desc": " Models auto-retrain every 6 hours using the latest market data. If accuracy drops below 55% or 50+ new predictions are evaluated, retraining triggers immediately.",
+    "step3_label": "Event Memory:",
+    "step3_desc": " The system stores up to 500 historical events, tracking their actual impact at 1h, 4h, 24h, and 7d. When similar events occur, it pattern-matches to predict expected impact.",
+    "step4_label": "Phrase Analyzer:",
+    "step4_desc": " Learns which specific news words and phrases historically move the market. Over time, this builds a language-to-price correlation map that improves sentiment accuracy.",
+    "step5_label": "A/B Testing:",
+    "step5_desc": " New model candidates compete against production models before promotion. Only models that outperform the current ensemble get deployed — ensuring quality never regresses.",
+    "step6_label": "Hot Swapping:",
+    "step6_desc": " When retraining produces better weights, the ensemble hot-swaps them without stopping the prediction pipeline. Zero downtime, continuous improvement.",
+    "step7_label": "Accuracy Tracking:",
+    "step7_desc": " Every prediction is evaluated against actual price movements and scored. Full transparency — you can see exactly how well the models perform over time."
+  },
+  "howItHelps": {
+    "title": "HOW IT HELPS YOU",
+    "coinsMarket": "Coins & Market Data",
+    "coinsMarketDesc": "Track BTC, ETH, SOL, XRP, and more — search any coin, generate AI analysis reports",
+    "accuracyTransparency": "Accuracy & Transparency",
+    "accuracyTransparencyDesc": "Every prediction scored against actual results — see model performance, hit rates, and confidence calibration"
+  },
+  "whatsInside": {
+    "title": "WHAT'S INSIDE",
+    "dashboard": { "name": "Dashboard", "desc": "Live BTC price, dual prediction cards, trading signals, Fear & Greed, news, on-chain, dominance, supply, and macro overview" },
+    "signals": { "name": "Signals", "desc": "Actionable entry/target/stop-loss levels with confidence, risk rating, and signal strength" },
+    "advisor": { "name": "Advisor", "desc": "AI-powered trade plans with position sizing, risk management, and reversal detection" },
+    "technical": { "name": "Technical", "desc": "Charts with 45+ indicators — RSI, MACD, Bollinger, Ichimoku, GARCH, wavelets, and more" },
+    "powerLaw": { "name": "Power Law", "desc": "Long-term fair value model based on BTC logarithmic adoption growth" },
+    "elliottWave": { "name": "Elliott Wave", "desc": "Wave-based analysis of market structure, trend phases, and reversal points" },
+    "liquidations": { "name": "Liquidations", "desc": "Leveraged position clusters and liquidation cascade risk zones" },
+    "coins": { "name": "Coins", "desc": "Track BTC, ETH, SOL, XRP — search any coin, generate AI analysis reports" },
+    "news": { "name": "News", "desc": "Real-time news from 25+ sources with AI sentiment scoring and phrase analysis" },
+    "events": { "name": "Events", "desc": "Market-moving events with AI impact predictions based on historical pattern matching" },
+    "history": { "name": "History", "desc": "Past predictions and their outcomes — full accuracy audit trail" },
+    "paperTrading": { "name": "Paper Trading", "desc": "Practice with virtual money — track P&L without risk" },
+    "learn": { "name": "Learn", "desc": "Trading education — basics, strategies, technical analysis, psychology, and patterns" },
+    "tools": { "name": "Tools", "desc": "Calculators and utilities for position sizing, risk management, and trade planning" },
+    "resources": { "name": "Resources", "desc": "Curated links, guides, and reference material for Bitcoin traders" },
+    "settings": { "name": "Settings", "desc": "Customize alerts, notifications, and display preferences" },
+    "premium": { "name": "Premium", "desc": "Unlock advanced features, faster updates, and priority access" }
   },
   "features": {
     "title": "Features",
@@ -35,15 +145,23 @@
     "powerLaw": "Power Law",
     "powerLawDesc": "Bitcoin fair value model based on adoption growth",
     "liquidations": "Liquidation Map",
-    "liquidationsDesc": "Derivatives market risk visualization"
+    "liquidationsDesc": "Derivatives market risk visualization",
+    "quantTheory": "Quant Theory",
+    "accuracyTracking": "Accuracy Tracking",
+    "coinsTokens": "Coins & Tokens",
+    "etfFlows": "ETF Flows",
+    "learnEducate": "Learn & Educate",
+    "eventMemory": "Event Memory"
+  },
+  "credits": {
+    "title": "Credits",
+    "createdBy": "Created by <b>Salakhitdinov Khidayotullo</b> — full-stack developer, AI researcher, and crypto enthusiast.",
+    "builtWith": "Built with React, Python, and love for Bitcoin",
+    "poweredBy": "Powered by multiple AI models and real-time market data",
+    "joinTelegram": "Join on Telegram"
   },
   "disclaimer": {
     "title": "Disclaimer",
     "text": "BTC Seer is an educational tool. Nothing in this app constitutes financial advice. AI predictions may be inaccurate. Always do your own research (DYOR) before making any investment decisions. Past performance does not guarantee future results."
-  },
-  "credits": {
-    "title": "Credits",
-    "builtWith": "Built with React, Python, and love for Bitcoin",
-    "poweredBy": "Powered by multiple AI models and real-time market data"
   }
 }

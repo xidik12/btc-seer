@@ -2,8 +2,38 @@
   "title": "关于 BTC Seer",
   "version": "版本",
   "description": "AI 驱动的比特币分析与交易平台",
+  "heroSubtitle": "实时预测、交易信号和深度市场分析 — 由4模型 AI 集成系统驱动，分析覆盖13个数据类别的192个特征。",
+  "whatIs": {
+    "title": "什么是 BTC SEER？",
+    "p1": "BTC Seer 是一个生产级比特币预测平台，分析覆盖13个类别的 <b>192个工程特征</b> — 技术指标、新闻情绪、链上指标、衍生品数据、宏观市场、ETF 资金流、交易所资金流、稳定币供应、社交信号等。",
+    "p2": "它使用 <b>4模型集成</b> 在 <b>5个时间周期</b>（1小时、4小时、24小时、1周、1月）生成预测：时序融合变换器 (40%)、XGBoost (25%)、LSTM (20%) 和 Google TimesFM (15%) — 权重根据模型表现自适应调整。",
+    "p3": "系统持续运行 <b>24个后台任务</b> — 每分钟采集数据、生成预测、评估准确率、重新训练模型，并从市场事件中学习。"
+  },
+  "byTheNumbers": {
+    "title": "数据一览",
+    "features": "特征",
+    "aiModels": "AI 模型",
+    "dataSources": "数据源",
+    "timeframes": "时间周期",
+    "backgroundJobs": "后台任务",
+    "retrainCycle": "重训周期"
+  },
+  "howToUse": {
+    "title": "如何使用 BTC SEER",
+    "subtitle": "新用户？按以下5个步骤开始：",
+    "step1_label": "从仪表盘开始",
+    "step1_desc": " — 查看实时 BTC 价格、双预测卡片（AI + 量化）、交易信号和市场概览。",
+    "step2_label": "阅读信号",
+    "step2_desc": " — 查看 AI 生成的入场价、目标价和止损位，附带置信度评分和风险评级。",
+    "step3_label": "查看情绪",
+    "step3_desc": " — 浏览新闻情绪、恐惧与贪婪指数、KOL 情绪和社交量，判断市场情绪。",
+    "step4_label": "深入研究",
+    "step4_desc": " — 探索技术分析（45+ 指标）、幂律模型、艾略特波浪、爆仓地图、链上指标和 ETF 资金流。",
+    "step5_label": "先模拟练习",
+    "step5_desc": " — 使用模拟交易用虚拟资金测试策略，不冒真实资金风险。"
+  },
   "architecture": {
-    "title": "架构",
+    "title": "AI 集成架构",
     "aiEnsemble": "AI 集成模型",
     "models": {
       "tft": "时序融合变换器",
@@ -11,8 +41,88 @@
       "lstm": "长短期记忆网络",
       "timesfm": "TimesFM 基础模型"
     },
+    "tftDesc": "多视野注意力模型 — 捕捉长程依赖关系和变量重要性权重",
+    "xgboostDesc": "梯度提升树 — 擅长基于192个工程特征进行分类",
+    "lstmDesc": "循环神经网络 — 检测168小时（1周）回溯窗口中的序列模式",
+    "timesfmDesc": "零样本基础模型 — 基于预训练的时间序列知识提供基线",
+    "adaptiveNote": "权重自适应调整 — 系统根据每个模型的近期准确率重新分配权重。情绪修正因子（最高 ±50%）根据实时市场情绪放大或抑制集成信号。",
     "features": "{{count}} 个特征，涵盖 {{categories}} 个数据类别",
     "dataCategories": "数据类别"
+  },
+  "featuresCategories": {
+    "title": "192个特征，涵盖13个类别",
+    "technical": { "name": "技术指标 (111)", "desc": "EMA、RSI、MACD、布林带、一目均衡、唐奇安、肯特纳、GARCH 波动率、Hurst 指数、小波分析、K线形态和45个 Pandas-TA 指标" },
+    "sentiment": { "name": "情绪 (13)", "desc": "新闻情绪 1小时/4小时/24小时、Reddit 和社交情绪、看涨/看跌百分比、恐惧与贪婪指数" },
+    "derivativesExt": { "name": "扩展衍生品 (12)", "desc": "多空比、主动买卖量、爆仓、DVOL、杠杆率、顶级交易者持仓" },
+    "exchangeFlows": { "name": "交易所资金流 (9)", "desc": "交易所储备、NVT 信号、MVRV Z 值、SOPR、Puell 倍数、币天销毁" },
+    "macro": { "name": "宏观 (8)", "desc": "美元指数、黄金、标普500、纳斯达克、VIX、欧元/美元、10年期国债" },
+    "onChain": { "name": "链上 (7)", "desc": "算力、内存池大小/手续费、交易量、活跃地址、难度、大额交易数" },
+    "eventMemory": { "name": "事件记忆 (7)", "desc": "预期影响 1小时/4小时/24小时、置信度、严重程度、情绪预测性、活跃事件数" },
+    "etfFlows": { "name": "ETF 资金流 (6)", "desc": "净流入、总持仓、IBIT (贝莱德)、FBTC (富达)、GBTC (灰度)、ETF 交易量" },
+    "stablecoin": { "name": "稳定币 (5)", "desc": "USDT/USDC 市值、稳定币总供应、7天供应变化、DeFi TVL" },
+    "dominance": { "name": "市占率 (4)", "desc": "BTC 市占率、ETH 市占率、总市值、市值变化" },
+    "supplyMining": { "name": "供应/挖矿 (4)", "desc": "已开采百分比、每日发行量、距减半区块数、减半周期位置" },
+    "derivatives": { "name": "衍生品 (3)", "desc": "资金费率、未平仓合约、标记/指数价差" },
+    "phraseAnalysis": { "name": "短语分析 (3)", "desc": "热门看涨/看跌短语评分、基于新闻语言模式的净情绪信号" }
+  },
+  "dataPipeline": {
+    "title": "实时数据管道",
+    "items": [
+      { "freq": "每1分钟", "desc": "来自 Binance 的 BTC 价格（OHLCV K线）" },
+      { "freq": "每2分钟", "desc": "来自25+ RSS 源、CryptoPanic、Reddit、Binance 公告的新闻" },
+      { "freq": "每2分钟", "desc": "山寨币价格（ETH、SOL、XRP 等）" },
+      { "freq": "每5分钟", "desc": "事件分类 — 新闻分为监管、技术、市场、宏观、供应、交易所事件" },
+      { "freq": "每10分钟", "desc": "KOL 推文 — 按市场影响力加权（Elon、Saylor、CZ、Cathie Wood 等）" },
+      { "freq": "每30分钟", "desc": "来自 Binance 永续合约的资金费率、未平仓合约和衍生品数据" },
+      { "freq": "每1小时", "desc": "宏观指标（美元指数、黄金、标普500、VIX、国债）、链上指标、BTC 市占率、技术快照、短语分析" },
+      { "freq": "可配置", "desc": "AI 预测（集成 + 量化理论）、预测评估、Telegram 提醒" },
+      { "freq": "每6小时", "desc": "自动重训、持续学习、候选模型 A/B 测试" },
+      { "freq": "每24小时", "desc": "数据清理（90天价格/新闻，180天宏观/链上），订阅检查" }
+    ]
+  },
+  "howAiWorks": {
+    "title": "AI 如何运作",
+    "step1_label": "集成投票：",
+    "step1_desc": " 4个模型独立分析192个特征，对每个预测进行投票。TFT 以40%领先，但权重根据近期表现自适应调整 — 降低单一模型偏差。",
+    "step2_label": "持续学习：",
+    "step2_desc": " 模型每6小时使用最新市场数据自动重训。如果准确率低于55%或评估了50+新预测，将立即触发重训。",
+    "step3_label": "事件记忆：",
+    "step3_desc": " 系统存储多达500个历史事件，追踪其在1小时、4小时、24小时和7天的实际影响。当类似事件发生时，系统进行模式匹配以预测预期影响。",
+    "step4_label": "短语分析器：",
+    "step4_desc": " 学习哪些特定新闻词汇和短语历史上推动了市场。随着时间推移，构建语言-价格关联图谱，提高情绪预测准确性。",
+    "step5_label": "A/B 测试：",
+    "step5_desc": " 新候选模型在上线前与生产模型竞争。只有优于当前集成的模型才会部署 — 确保质量永不下降。",
+    "step6_label": "热替换：",
+    "step6_desc": " 当重训产生更好的权重时，集成系统在不停止预测管道的情况下热替换。零停机，持续改进。",
+    "step7_label": "准确率追踪：",
+    "step7_desc": " 每个预测都对照实际价格走势进行评估和评分。完全透明 — 您可以清楚看到模型随时间的表现。"
+  },
+  "howItHelps": {
+    "title": "如何帮助您",
+    "coinsMarket": "币种与市场数据",
+    "coinsMarketDesc": "追踪 BTC、ETH、SOL、XRP 等 — 搜索任意币种，生成 AI 分析报告",
+    "accuracyTransparency": "准确率与透明度",
+    "accuracyTransparencyDesc": "每个预测对照实际结果评分 — 查看模型表现、命中率和置信度校准"
+  },
+  "whatsInside": {
+    "title": "功能一览",
+    "dashboard": { "name": "仪表盘", "desc": "实时 BTC 价格、双预测卡片、交易信号、恐惧与贪婪、新闻、链上、市占率、供应和宏观概览" },
+    "signals": { "name": "信号", "desc": "可操作的入场/目标/止损位，附带置信度、风险评级和信号强度" },
+    "advisor": { "name": "顾问", "desc": "AI 驱动的交易计划，含仓位大小、风险管理和反转检测" },
+    "technical": { "name": "技术", "desc": "图表含45+指标 — RSI、MACD、布林带、一目均衡、GARCH、小波分析等" },
+    "powerLaw": { "name": "幂律模型", "desc": "基于 BTC 对数采用增长的长期公允价值模型" },
+    "elliottWave": { "name": "艾略特波浪", "desc": "基于波浪的市场结构分析、趋势阶段和反转点" },
+    "liquidations": { "name": "爆仓", "desc": "杠杆持仓集群和爆仓级联风险区域" },
+    "coins": { "name": "币种", "desc": "追踪 BTC、ETH、SOL、XRP — 搜索任意币种，生成 AI 分析报告" },
+    "news": { "name": "新闻", "desc": "来自25+来源的实时新闻，附 AI 情绪评分和短语分析" },
+    "events": { "name": "事件", "desc": "市场事件与基于历史模式匹配的 AI 影响预测" },
+    "history": { "name": "历史", "desc": "过往预测及结果 — 完整准确率审计追踪" },
+    "paperTrading": { "name": "模拟交易", "desc": "使用虚拟资金练习 — 无风险追踪盈亏" },
+    "learn": { "name": "学习", "desc": "交易教育 — 基础知识、策略、技术分析、心理学和形态" },
+    "tools": { "name": "工具", "desc": "仓位大小、风险管理和交易计划的计算器和实用工具" },
+    "resources": { "name": "资源", "desc": "为比特币交易者精选的链接、指南和参考资料" },
+    "settings": { "name": "设置", "desc": "自定义提醒、通知和显示偏好" },
+    "premium": { "name": "高级版", "desc": "解锁高级功能、更快更新和优先访问" }
   },
   "features": {
     "title": "功能",
@@ -35,15 +145,23 @@
     "powerLaw": "幂律模型",
     "powerLawDesc": "基于采用增长的比特币公允价值模型",
     "liquidations": "爆仓地图",
-    "liquidationsDesc": "衍生品市场风险可视化"
+    "liquidationsDesc": "衍生品市场风险可视化",
+    "quantTheory": "量化理论",
+    "accuracyTracking": "准确率追踪",
+    "coinsTokens": "币种与代币",
+    "etfFlows": "ETF 资金流",
+    "learnEducate": "学习与教育",
+    "eventMemory": "事件记忆"
+  },
+  "credits": {
+    "title": "致谢",
+    "createdBy": "由 <b>Salakhitdinov Khidayotullo</b> 创建 — 全栈开发者、AI 研究员和加密货币爱好者。",
+    "builtWith": "使用 React、Python 和对比特币的热爱构建",
+    "poweredBy": "由多个 AI 模型和实时市场数据驱动",
+    "joinTelegram": "加入 Telegram"
   },
   "disclaimer": {
     "title": "免责声明",
     "text": "BTC Seer 是一款教育工具。本应用中的任何内容均不构成投资建议。AI 预测可能不准确。在做出任何投资决策前，请务必自行研究（DYOR）。过往表现不代表未来收益。"
-  },
-  "credits": {
-    "title": "致谢",
-    "builtWith": "使用 React、Python 和对比特币的热爱构建",
-    "poweredBy": "由多个 AI 模型和实时市场数据驱动"
   }
 }

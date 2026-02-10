@@ -278,7 +278,8 @@
     "insightLongCluster": "Кластер ликвидации лонгов всего {{pct}}% ниже цены (${{volume}}). Падение может вызвать каскад.",
     "insightShortCluster": "Зона сжатия шортов всего {{pct}}% выше цены (${{volume}}). Рост может вызвать каскад.",
     "long": "в лонге",
-    "short": "в шорте"
+    "short": "в шорте",
+    "currentLabel": "Текущая"
   },
   "events": {
     "title": "Память событий",
@@ -342,6 +343,12 @@
     "lossesLabel": "{{count}}У ({{pct}}%)",
     "bullishCalls": "Бычьи прогнозы",
     "bearishCalls": "Медвежьи прогнозы",
-    "correctLabel": "{{correct}}/{{total}} верно"
+    "correctLabel": "{{correct}}/{{total}} верно",
+    "pending": "Ожидание...",
+    "timeframe": "Таймфрейм",
+    "predicted": "Прогноз",
+    "actualMove": "Факт. движение",
+    "conf": "увер.",
+    "calibrationDesc": "Более высокая уверенность должна = более высокая точность. Размер точек зависит от числа наблюдений."
   }
 }

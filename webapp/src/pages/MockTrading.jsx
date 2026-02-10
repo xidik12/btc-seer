@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, memo, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { useTelegram } from '../hooks/useTelegram'
@@ -16,6 +16,43 @@ const ADVISOR_TABS = [
 const LEVERAGE_PRESETS = [1, 2, 5, 10, 20, 50, 75, 125]
 const BALANCE = 10000 // Virtual starting balance
 
+// ═══════════════════════════════════════════════════════════
+// PRICE STORE — singleton external store so price updates
+// NEVER cause parent MockTrading to re-render. Only components
+// that subscribe via usePriceStore() re-render on price ticks.
+// ═══════════════════════════════════════════════════════════
+function createPriceStore() {
+  let price = 0
+  let change = 0
+  const listeners = new Set()
+  return {
+    getSnapshot: () => ({ price, change }),
+    subscribe: (cb) => { listeners.add(cb); return () => listeners.delete(cb) },
+    setPrice: (p, c) => {
+      if (p === price && c === change) return
+      price = p
+      change = c
+      listeners.forEach(cb => cb())
+    },
+    getPrice: () => price,
+  }
+}
+const priceStore = createPriceStore()
+
+// Stable reference for getSnapshot — avoid creating new object each call
+let _snapshotCache = { price: 0, change: 0 }
+function getSnapshot() {
+  const s = priceStore.getSnapshot()
+  if (s.price !== _snapshotCache.price || s.change !== _snapshotCache.change) {
+    _snapshotCache = s
+  }
+  return _snapshotCache
+}
+
+function usePriceStore() {
+  return useSyncExternalStore(priceStore.subscribe, getSnapshot, getSnapshot)
+}
+
 // ─── Liquidation price calculator ──────────────────────────
 function calcLiquidation(entry, leverage, direction, fee = 0.0006) {
   if (!entry || !leverage || leverage <= 0) return 0
@@ -26,7 +63,7 @@ function calcLiquidation(entry, leverage, direction, fee = 0.0006) {
 }
 
 // ─── TP Progress bar (reused from Advisor) ─────────────────
-function TPProgress({ currentPrice, entry, targets, stopLoss }) {
+const TPProgress = memo(function TPProgress({ currentPrice, entry, targets, stopLoss }) {
   if (!entry || !targets?.length) return null
   const isLong = targets[0] > entry
   const range = isLong
@@ -56,7 +93,7 @@ function TPProgress({ currentPrice, entry, targets, stopLoss }) {
       </div>
     </div>
   )
-}
+})
 
 // ─── Order Form (memoized to prevent scroll jitter from price ticks) ──
 const OrderForm = memo(function OrderForm({ priceRef, onSubmit, submitting, t }) {
@@ -425,10 +462,37 @@ const OrderForm = memo(function OrderForm({ priceRef, onSubmit, submitting, t })
   )
 })
 
-// ─── Active Position Card ──────────────────────────────────
-function PositionCard({ trade, currentPrice, onClose, t }) {
+// ─── Price Banner (self-contained — subscribes to price store directly) ──
+const PriceBanner = memo(function PriceBanner({ t }) {
+  const { price, change } = usePriceStore()
+  if (price <= 0) return null
+
+  return (
+    <div className="bg-bg-card rounded-xl border border-white/5 p-3 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <span className="text-text-muted text-xs">{t('trade.btcUsdt', { ns: 'common' })}</span>
+        {change !== 0 && (
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+            change >= 0 ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
+          }`}>
+            {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+          </span>
+        )}
+      </div>
+      <span className={`text-xl font-bold tabular-nums ${
+        change >= 0 ? 'text-accent-green' : 'text-accent-red'
+      }`}>
+        {formatPrice(price)}
+      </span>
+    </div>
+  )
+})
+
+// ─── Active Position Card (subscribes to price store internally) ──────
+const PositionCard = memo(function PositionCard({ trade, onClose, t }) {
+  const { price: storePrice } = usePriceStore()
   const isLong = trade.direction === 'LONG'
-  const price = trade.current_price || currentPrice || 0
+  const price = trade.current_price || storePrice || 0
   const pnlPct = trade.unrealized_pnl_pct || (trade.entry_price ? ((price - trade.entry_price) / trade.entry_price * 100 * (isLong ? 1 : -1) * (trade.leverage || 1)) : 0)
   const pnlUsdt = (trade.position_size_usdt || 0) * (pnlPct / 100)
   const liqPrice = calcLiquidation(trade.entry_price, trade.leverage, trade.direction)
@@ -503,10 +567,10 @@ function PositionCard({ trade, currentPrice, onClose, t }) {
       </div>
     </div>
   )
-}
+})
 
-// ─── History Row ───────────────────────────────────────────
-function HistoryRow({ trade, t }) {
+// ─── History Row (memoized — no price dependency) ─────────────────
+const HistoryRow = memo(function HistoryRow({ trade, t }) {
   const won = trade.was_winner
   const isLong = trade.direction === 'LONG'
 
@@ -554,10 +618,10 @@ function HistoryRow({ trade, t }) {
       </div>
     </div>
   )
-}
+})
 
-// ─── Portfolio Summary ─────────────────────────────────────
-function PortfolioSummary({ trades, history, t }) {
+// ─── Portfolio Summary (memoized) ─────────────────────────────────
+const PortfolioSummary = memo(function PortfolioSummary({ trades, history, t }) {
   const totalPnl = useMemo(() => {
     return (history || []).reduce((sum, tr) => sum + (tr.pnl_usdt || 0), 0)
   }, [history])
@@ -599,7 +663,7 @@ function PortfolioSummary({ trades, history, t }) {
           <div className="text-text-primary text-sm font-bold">{(trades || []).length}</div>
         </div>
       </div>
-      {/* Progress bar: $10 → $10,000 journey */}
+      {/* Progress bar: $10 -> $10,000 journey */}
       <div>
         <div className="flex justify-between text-[9px] text-text-muted mb-1">
           <span>{t('portfolio.start')}</span>
@@ -614,7 +678,49 @@ function PortfolioSummary({ trades, history, t }) {
       </div>
     </div>
   )
-}
+})
+
+// ─── Memoized inner tab content sections ──────────────────────────
+// These are wrapped in memo so that the parent MockTrading re-rendering
+// (e.g. on tab change) doesn't force deep re-renders of inactive content.
+
+const ActivePositionsTab = memo(function ActivePositionsTab({ trades, loading, onClose, t }) {
+  return (
+    <div data-tutorial="positions" style={{ overflowAnchor: 'auto' }}>
+      {loading ? (
+        <div className="animate-pulse space-y-3">
+          <div className="h-24 bg-bg-card rounded-2xl" />
+        </div>
+      ) : trades.length > 0 ? (
+        <div className="space-y-2">
+          {trades.map((tr, i) => (
+            <PositionCard key={tr.id || i} trade={tr} onClose={onClose} t={t} />
+          ))}
+        </div>
+      ) : (
+        <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
+          <p className="text-text-muted text-sm">{t('position.noActive')}</p>
+          <p className="text-text-muted text-xs mt-1">{t('position.startPractice')}</p>
+        </div>
+      )}
+    </div>
+  )
+})
+
+const HistoryTab = memo(function HistoryTab({ history, t }) {
+  return history.length > 0 ? (
+    <div className="space-y-2" style={{ overflowAnchor: 'auto' }}>
+      {history.map((tr, i) => (
+        <HistoryRow key={tr.id || i} trade={tr} t={t} />
+      ))}
+    </div>
+  ) : (
+    <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
+      <p className="text-text-muted text-sm">{t('position.noHistory')}</p>
+      <p className="text-text-muted text-xs mt-1">{t('position.historyHint')}</p>
+    </div>
+  )
+})
 
 // ═══════════════════════════════════════════════════════════
 // MAIN PAGE
@@ -627,8 +733,6 @@ export default function MockTrading() {
 
   const [trades, setTrades] = useState([])
   const [history, setHistory] = useState([])
-  const [currentPrice, setCurrentPrice] = useState(0)
-  const [priceChange, setPriceChange] = useState(0)
   const priceRef = useRef(0)
   const [tab, setTab] = useState('trade')
   const [loading, setLoading] = useState(true)
@@ -650,8 +754,8 @@ export default function MockTrading() {
       setHistory(mockHist?.results || [])
       const p = mockTrades?.current_price || priceData?.price || priceData?.close || 0
       priceRef.current = p
-      setCurrentPrice(p)
-      setPriceChange(priceData?.change_24h || priceData?.change_pct || 0)
+      // Update the external price store — only PriceBanner & PositionCard re-render
+      priceStore.setPrice(p, priceData?.change_24h || priceData?.change_pct || 0)
     } catch (err) {
       console.error('Mock trading data error:', err)
     } finally {
@@ -661,21 +765,25 @@ export default function MockTrading() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // Auto-refresh price every 15s — update ref silently, state only for display components
+  // Auto-refresh price every 15s — updates external store only (NO setState in parent)
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
         const priceData = await api.getCurrentPrice()
         const p = priceData?.price || priceData?.close || 0
         priceRef.current = p
-        setCurrentPrice(p)
-        setPriceChange(priceData?.change_24h || priceData?.change_pct || 0)
+        // Only update the external store — parent does NOT re-render
+        priceStore.setPrice(p, priceData?.change_24h || priceData?.change_pct || 0)
       } catch {}
     }, 15000)
     return () => clearInterval(interval)
   }, [])
 
-  const handleSubmit = async (tradeData) => {
+  // Stable callback refs so memoized children don't re-render on parent re-render
+  const handleSubmitRef = useRef()
+  const handleCloseRef = useRef()
+
+  handleSubmitRef.current = async (tradeData) => {
     if (!telegramId) {
       alert(t('loginRequired'))
       return
@@ -693,7 +801,7 @@ export default function MockTrading() {
     }
   }
 
-  const handleClose = async (tradeId, price) => {
+  handleCloseRef.current = async (tradeId, price) => {
     if (!window.confirm(t('position.closeConfirm', { price: formatPrice(price) }))) return
     try {
       await api.closeTrade(tradeId, price, 'manual_close')
@@ -703,8 +811,12 @@ export default function MockTrading() {
     }
   }
 
+  // Stable callbacks that never change identity
+  const handleSubmit = useCallback((...args) => handleSubmitRef.current(...args), [])
+  const handleClose = useCallback((...args) => handleCloseRef.current(...args), [])
+
   return (
-    <div className="px-4 pt-4 space-y-3 pb-20">
+    <div className="px-4 pt-4 space-y-3 pb-20" style={{ overflowAnchor: 'auto' }}>
       {/* Tutorial Overlay */}
       <TutorialOverlay tutorial={tutorial} />
 
@@ -728,26 +840,8 @@ export default function MockTrading() {
 
       <SubTabBar tabs={advisorTabs} />
 
-      {/* Price Banner */}
-      {currentPrice > 0 && (
-        <div className="bg-bg-card rounded-xl border border-white/5 p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-text-muted text-xs">{t('trade.btcUsdt', { ns: 'common' })}</span>
-            {priceChange !== 0 && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                priceChange >= 0 ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
-              }`}>
-                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
-              </span>
-            )}
-          </div>
-          <span className={`text-xl font-bold tabular-nums ${
-            priceChange >= 0 ? 'text-accent-green' : 'text-accent-red'
-          }`}>
-            {formatPrice(currentPrice)}
-          </span>
-        </div>
-      )}
+      {/* Price Banner — self-contained, subscribes to price store */}
+      <PriceBanner t={t} />
 
       {/* Inner Tabs */}
       <div className="flex gap-1 bg-bg-secondary/50 rounded-lg p-0.5">
@@ -769,47 +863,17 @@ export default function MockTrading() {
         ))}
       </div>
 
-      {/* ─── New Trade Tab ─── */}
+      {/* Tab Content */}
       {tab === 'trade' && (
         <OrderForm priceRef={priceRef} onSubmit={handleSubmit} submitting={submitting} t={t} />
       )}
 
-      {/* ─── Active Positions Tab ─── */}
       {tab === 'active' && (
-        <div data-tutorial="positions">
-          {loading ? (
-            <div className="animate-pulse space-y-3">
-              <div className="h-24 bg-bg-card rounded-2xl" />
-            </div>
-          ) : trades.length > 0 ? (
-            <div className="space-y-2">
-              {trades.map((tr, i) => (
-                <PositionCard key={tr.id || i} trade={tr} currentPrice={currentPrice} onClose={handleClose} t={t} />
-              ))}
-            </div>
-          ) : (
-            <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
-              <p className="text-text-muted text-sm">{t('position.noActive')}</p>
-              <p className="text-text-muted text-xs mt-1">{t('position.startPractice')}</p>
-            </div>
-          )}
-        </div>
+        <ActivePositionsTab trades={trades} loading={loading} onClose={handleClose} t={t} />
       )}
 
-      {/* ─── History Tab ─── */}
       {tab === 'history' && (
-        history.length > 0 ? (
-          <div className="space-y-2">
-            {history.map((tr, i) => (
-              <HistoryRow key={tr.id || i} trade={tr} t={t} />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
-            <p className="text-text-muted text-sm">{t('position.noHistory')}</p>
-            <p className="text-text-muted text-xs mt-1">{t('position.historyHint')}</p>
-          </div>
-        )
+        <HistoryTab history={history} t={t} />
       )}
 
       {/* Portfolio Summary */}

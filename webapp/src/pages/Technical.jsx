@@ -24,7 +24,7 @@ const POLL_INTERVAL = 60_000
 
 // ── Reusable components ──
 
-function IndicatorRow({ label, value, unit, signal, description }) {
+function IndicatorRow({ label, value, unit, signal, description, t }) {
   if (value == null) return null
   const signalColor =
     signal === 'bullish' ? 'text-accent-green' :
@@ -40,13 +40,13 @@ function IndicatorRow({ label, value, unit, signal, description }) {
             {typeof value === 'number' ? value.toFixed(2) : value}
           </span>
           {unit && <span className="text-text-muted text-[9px]">{unit}</span>}
-          {signal && (
+          {signal && t && (
             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
               signal === 'bullish' ? 'bg-accent-green/15 text-accent-green' :
               signal === 'bearish' ? 'bg-accent-red/15 text-accent-red' :
               'bg-accent-yellow/15 text-accent-yellow'
             }`}>
-              {signal === 'bullish' ? 'BUY' : signal === 'bearish' ? 'SELL' : 'HOLD'}
+              {signal === 'bullish' ? t('common:signal.buy') : signal === 'bearish' ? t('common:signal.sell') : t('common:signal.hold')}
             </span>
           )}
         </div>
@@ -163,6 +163,7 @@ function bbExplain(pos, width) {
 // ── Indicator History Chart ──
 
 function IndicatorHistory() {
+  const { t } = useTranslation(['market', 'common'])
   const [histData, setHistData] = useState(null)
   const [histLoading, setHistLoading] = useState(true)
 
@@ -195,12 +196,12 @@ function IndicatorHistory() {
 
   return (
     <Section
-      title="Indicator History"
+      title={t('market:technical.indicatorHistory.title')}
       color="text-accent-blue"
-      explain="How key indicators have changed over time. RSI trending from 30 to 72 tells a story that a single snapshot at 72 misses."
+      explain={t('market:technical.indicatorHistory.explain')}
     >
       {isZoomed && (
-        <button onClick={resetZoom} className="text-[10px] text-accent-blue mb-2">Reset zoom</button>
+        <button onClick={resetZoom} className="text-[10px] text-accent-blue mb-2">{t('market:technical.indicatorHistory.resetZoom')}</button>
       )}
       <div className="h-[200px]" {...bindGestures}>
         <ResponsiveContainer width="100%" height="100%">
@@ -257,7 +258,7 @@ function IndicatorHistory() {
           <span className="w-3 h-0.5 bg-accent-purple inline-block rounded" /> MACD
         </span>
       </div>
-      <p className="text-text-muted text-[9px] text-center mt-1">Pinch to zoom &middot; Drag to pan</p>
+      <p className="text-text-muted text-[9px] text-center mt-1">{t('common:chart.pinchZoom')}</p>
     </Section>
   )
 }
@@ -357,10 +358,10 @@ export default function Technical() {
   const overallBg = overall === 'bullish' ? 'bg-accent-green/15 border-accent-green/30' : overall === 'bearish' ? 'bg-accent-red/15 border-accent-red/30' : 'bg-accent-yellow/15 border-accent-yellow/30'
 
   const overallExplain = overall === 'bullish'
-    ? `${bullCount} out of ${signals.length} indicators suggest the price will go UP. More tools are pointing to buying than selling — this is a positive sign, but nothing is guaranteed.`
+    ? t('technical.overallBullish', { count: bullCount, total: signals.length })
     : overall === 'bearish'
-    ? `${bearCount} out of ${signals.length} indicators suggest the price will go DOWN. More tools are pointing to selling than buying — be cautious.`
-    : `Indicators are split — ${bullCount} say buy, ${bearCount} say sell, ${neutralCount} are undecided. The market is uncertain. Best to wait for a clearer signal.`
+    ? t('technical.overallBearish', { count: bearCount, total: signals.length })
+    : t('technical.overallNeutral', { bull: bullCount, bear: bearCount, neutral: neutralCount })
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
@@ -402,18 +403,18 @@ export default function Technical() {
         explain={t('technical.trend.explain')}
       >
         {[
-          { label: 'Short-term (20 hours)', val: trend.short_term, what: 'What happened in the last ~1 day' },
-          { label: 'Medium-term (50 hours)', val: trend.medium_term, what: 'What happened in the last ~2 days' },
-          { label: 'Long-term (100 hours)', val: trend.long_term, what: 'What happened in the last ~4 days' },
+          { label: t('technical.trend.shortTerm'), val: trend.short_term, what: t('technical.trend.whatShort') },
+          { label: t('technical.trend.mediumTerm'), val: trend.medium_term, what: t('technical.trend.whatMedium') },
+          { label: t('technical.trend.longTerm'), val: trend.long_term, what: t('technical.trend.whatLong') },
         ].map(({ label, val, what }) => {
-          const trendLabel = val === 1 ? 'Ascending' : val === -1 ? 'Descending' : 'Sideways'
+          const trendLabel = val === 1 ? t('technical.trend.ascending') : val === -1 ? t('technical.trend.descending') : t('technical.trend.sideways')
           const sig = val === 1 ? 'bullish' : val === -1 ? 'bearish' : 'neutral'
           const desc = val === 1
-            ? `${what}. Price is climbing — each high is higher than the last. Good for buyers.`
+            ? t('technical.trend.ascendingDesc', { what })
             : val === -1
-            ? `${what}. Price is falling — each low is lower than the last. Sellers are in control.`
-            : `${what}. Price is flat — no clear direction. The market is waiting for something to happen.`
-          return <IndicatorRow key={label} label={label} value={trendLabel} signal={sig} description={desc} />
+            ? t('technical.trend.descendingDesc', { what })
+            : t('technical.trend.sidewaysDesc', { what })
+          return <IndicatorRow key={label} label={label} value={trendLabel} signal={sig} description={desc} t={t} />
         })}
       </Section>
 
@@ -427,7 +428,7 @@ export default function Technical() {
           value={mom.rsi}
           min={0}
           max={100}
-          label="RSI (14)"
+          label={t('technical.rsi.standard')}
           zones={[
             { color: 'bg-accent-green/40', width: '30%' },
             { color: 'bg-accent-yellow/30', width: '40%' },
@@ -440,13 +441,13 @@ export default function Technical() {
           <span>{t('technical.rsi.neutral')}</span>
           <span>{t('technical.rsi.overbought')}</span>
         </div>
-        <IndicatorRow label="RSI (7) — fast" value={mom.rsi_7} signal={getRsiSignal(mom.rsi_7)}
+        <IndicatorRow label={t('technical.rsi.fast')} value={mom.rsi_7} signal={getRsiSignal(mom.rsi_7)} t={t}
           description={mom.rsi_7 != null ? `Looks at the last 7 hours only. Quick reactions — ${mom.rsi_7 > 70 ? 'showing overbought, short-term drop likely' : mom.rsi_7 < 30 ? 'showing oversold, short-term bounce likely' : 'nothing extreme right now'}.` : null}
         />
-        <IndicatorRow label="RSI (14) — standard" value={mom.rsi} signal={getRsiSignal(mom.rsi)}
-          description="The most commonly used RSI. This is what most traders look at."
+        <IndicatorRow label={t('technical.rsi.standard')} value={mom.rsi} signal={getRsiSignal(mom.rsi)} t={t}
+          description={t('technical.rsi.standardDesc')}
         />
-        <IndicatorRow label="RSI (30) — slow" value={mom.rsi_30} signal={getRsiSignal(mom.rsi_30)}
+        <IndicatorRow label={t('technical.rsi.slow')} value={mom.rsi_30} signal={getRsiSignal(mom.rsi_30)} t={t}
           description={mom.rsi_30 != null ? `Looks at the last 30 hours. Slower to react but more reliable — ${mom.rsi_30 > 70 ? 'even the slow RSI says overbought, strong sell signal' : mom.rsi_30 < 30 ? 'even the slow RSI says oversold, strong buy signal' : 'no extreme reading'}.` : null}
         />
       </Section>
@@ -457,13 +458,13 @@ export default function Technical() {
         color="text-accent-purple"
         explain={t('technical.macd.explain')}
       >
-        <IndicatorRow label="MACD Line" value={mom.macd} signal={getMacdSignal(mom.macd)}
+        <IndicatorRow label={t('technical.macd.line')} value={mom.macd} signal={getMacdSignal(mom.macd)} t={t}
           description={mom.macd != null ? (mom.macd > 0 ? 'Positive — the fast average is above the slow average, meaning recent price action is stronger than the longer trend. Bullish.' : 'Negative — the fast average is below the slow average, meaning recent price action is weaker than the longer trend. Bearish.') : null}
         />
-        <IndicatorRow label="Signal Line" value={mom.macd_signal}
-          description="A smoothed version of MACD. When MACD crosses above this line = buy. Below = sell."
+        <IndicatorRow label={t('technical.macd.signal')} value={mom.macd_signal} t={t}
+          description={t('technical.macd.signalDesc')}
         />
-        <IndicatorRow label="Histogram" value={mom.macd_histogram} signal={getMacdSignal(mom.macd_histogram)}
+        <IndicatorRow label={t('technical.macd.histogram')} value={mom.macd_histogram} signal={getMacdSignal(mom.macd_histogram)} t={t}
           description={macdExplain(mom.macd_histogram)}
         />
       </Section>
@@ -506,23 +507,23 @@ export default function Technical() {
         color="text-accent-yellow"
         explain={t('technical.bollinger.explain')}
       >
-        <IndicatorRow label="Upper Band (ceiling)" value={vol.bb_upper ? formatPricePrecise(vol.bb_upper) : null}
+        <IndicatorRow label={t('technical.bollinger.upper')} value={vol.bb_upper ? formatPricePrecise(vol.bb_upper) : null} t={t}
           description="The upper limit of normal price range. If price touches this, it may be overextended."
         />
-        <IndicatorRow label="Middle Band (average)" value={vol.bb_middle ? formatPricePrecise(vol.bb_middle) : null}
+        <IndicatorRow label={t('technical.bollinger.middle')} value={vol.bb_middle ? formatPricePrecise(vol.bb_middle) : null} t={t}
           description="The 20-period average price. Think of this as the 'fair value' center."
         />
-        <IndicatorRow label="Lower Band (floor)" value={vol.bb_lower ? formatPricePrecise(vol.bb_lower) : null}
+        <IndicatorRow label={t('technical.bollinger.lower')} value={vol.bb_lower ? formatPricePrecise(vol.bb_lower) : null} t={t}
           description="The lower limit of normal price range. If price touches this, it may be a bargain."
         />
-        <IndicatorRow label="Band Width" value={vol.bb_width}
+        <IndicatorRow label={t('technical.bollinger.width')} value={vol.bb_width} t={t}
           description={vol.bb_width > 0.06 ? 'Bands are WIDE — high volatility. Price is making big moves. Expect continued swings.' : vol.bb_width < 0.03 ? 'Bands are NARROW (squeeze) — low volatility. A big price explosion is likely coming soon, but direction is unknown.' : 'Bands are normal width. Moderate volatility — nothing extreme.'}
         />
         <GaugeBar
           value={(vol.bb_position || 0) * 100}
           min={0}
           max={100}
-          label="Where is price in the bands?"
+          label={t('technical.bollinger.position')}
           zones={[
             { color: 'bg-accent-green/40', width: '20%' },
             { color: 'bg-accent-yellow/30', width: '60%' },
@@ -543,7 +544,7 @@ export default function Technical() {
         color="text-accent-green"
         explain={t('technical.volume.explain')}
       >
-        <IndicatorRow label="Volume Ratio" value={volume.volume_ratio} signal={getVolSignal(volume.volume_ratio)}
+        <IndicatorRow label={t('technical.volume.ratio')} value={volume.volume_ratio} signal={getVolSignal(volume.volume_ratio)} t={t}
           description={
             volume.volume_ratio > 2 ? `Trading volume is ${volume.volume_ratio.toFixed(1)}x the average — VERY high activity. Whatever direction the price is moving, lots of people agree. This move has strong conviction.`
             : volume.volume_ratio > 1.5 ? `Trading volume is ${volume.volume_ratio.toFixed(1)}x the average — above normal. More people are trading than usual, which gives the current price move more credibility.`
@@ -552,13 +553,13 @@ export default function Technical() {
             : `Trading volume is very low at ${volume.volume_ratio?.toFixed(1)}x average. Almost nobody is trading. Any price move right now is unreliable and can easily reverse.`
           }
         />
-        <IndicatorRow label="VWAP" value={volume.vwap ? formatPricePrecise(volume.vwap) : null}
+        <IndicatorRow label={t('technical.volume.vwap')} value={volume.vwap ? formatPricePrecise(volume.vwap) : null} t={t}
           signal={price && volume.vwap ? (price > volume.vwap ? 'bullish' : 'bearish') : null}
           description={price && volume.vwap ? (price > volume.vwap
             ? 'Price is ABOVE VWAP — means the average buyer today is in profit. Bullish. Traders see this as a sign of strength.'
             : 'Price is BELOW VWAP — means the average buyer today is at a loss. Bearish. Traders see this as weakness.') : 'The average price weighted by volume — shows where the "true" average trading price is.'}
         />
-        <IndicatorRow label="OBV (On Balance Volume)" value={volume.obv ? (volume.obv / 1e6).toFixed(1) : null} unit="M"
+        <IndicatorRow label={t('technical.volume.obv')} value={volume.obv ? (volume.obv / 1e6).toFixed(1) : null} unit="M" t={t}
           description="Running total of volume: adds volume on up days, subtracts on down days. If OBV is rising, smart money is accumulating (buying). If falling, they're distributing (selling)."
         />
       </Section>
@@ -569,13 +570,13 @@ export default function Technical() {
         color="text-accent-red"
         explain={t('technical.supportResistance.explain')}
       >
-        <IndicatorRow label="Resistance (ceiling)" value={levels.resistance_1 ? formatPricePrecise(levels.resistance_1) : null}
+        <IndicatorRow label={t('technical.supportResistance.resistance')} value={levels.resistance_1 ? formatPricePrecise(levels.resistance_1) : null} t={t}
           description={levels.resistance_1 && price ? `Bitcoin may struggle to go above ${formatPrice(levels.resistance_1)}. If it breaks through, that's very bullish — the next move up could be strong. Price is ${price < levels.resistance_1 ? `$${(levels.resistance_1 - price).toFixed(0)} away from this ceiling` : 'already above this level — bullish breakout'}.` : 'The estimated price ceiling based on recent highs and lows.'}
         />
-        <IndicatorRow label="Pivot Point (center)" value={levels.pivot ? formatPricePrecise(levels.pivot) : null}
+        <IndicatorRow label={t('technical.supportResistance.pivot')} value={levels.pivot ? formatPricePrecise(levels.pivot) : null} t={t}
           description="The balance point calculated from yesterday's high, low, and close. Above pivot = bullish day, below = bearish day. Traders use this to judge the overall mood."
         />
-        <IndicatorRow label="Support (floor)" value={levels.support_1 ? formatPricePrecise(levels.support_1) : null}
+        <IndicatorRow label={t('technical.supportResistance.support')} value={levels.support_1 ? formatPricePrecise(levels.support_1) : null} t={t}
           description={levels.support_1 && price ? `Bitcoin should find buyers around ${formatPrice(levels.support_1)}. If it breaks below, that's bearish — more selling could follow. Price is ${price > levels.support_1 ? `$${(price - levels.support_1).toFixed(0)} above this floor` : 'dangerously close to or below this support'}.` : 'The estimated price floor based on recent highs and lows.'}
         />
       </Section>
@@ -590,7 +591,7 @@ export default function Technical() {
           value={mom.adx || 0}
           min={0}
           max={75}
-          label="ADX (Trend Strength)"
+          label={t('technical.trendStrength.adx')}
           zones={[
             { color: 'bg-text-muted/30', width: '27%' },
             { color: 'bg-accent-yellow/40', width: '33%' },
@@ -608,10 +609,10 @@ export default function Technical() {
           <span>{t('technical.trendStrength.moderateTrend')}</span>
           <span>{t('technical.trendStrength.strongTrend')}</span>
         </div>
-        <IndicatorRow label="ATR (Average True Range)" value={vol.atr}
+        <IndicatorRow label={t('technical.trendStrength.atr')} value={vol.atr} t={t}
           description={vol.atr ? `Bitcoin's average price swing is $${vol.atr.toFixed(0)} per hour. This tells you how much the price typically moves — useful for setting stop-losses. Bigger = more volatile.` : null}
         />
-        <IndicatorRow label="24h Volatility" value={vol.volatility_24h} unit="%"
+        <IndicatorRow label={t('technical.trendStrength.volatility24h')} value={vol.volatility_24h} unit="%" t={t}
           description={vol.volatility_24h > 3 ? 'HIGH volatility — price is swinging wildly. Bigger potential profits but also bigger risks. Be extra careful with positions.' : vol.volatility_24h > 1.5 ? 'MODERATE volatility — normal market conditions. Reasonable price swings.' : 'LOW volatility — very calm market. Small price movements. A breakout might be approaching.'}
         />
       </Section>
@@ -619,15 +620,15 @@ export default function Technical() {
       {/* ── BTC Dominance ── */}
       {btcDom.btc_dominance != null && (
         <Section
-          title="BTC Dominance"
+          title={t('technical.btcDominance.title')}
           color="text-accent-yellow"
-          explain="BTC Dominance shows what percentage of the TOTAL crypto market belongs to Bitcoin. When dominance rises, money flows FROM altcoins TO Bitcoin (people trust BTC more). When it falls, money flows TO altcoins (people are taking more risk). High dominance = safer market."
+          explain={t('technical.btcDominance.explain')}
         >
           <GaugeBar
             value={btcDom.btc_dominance || 0}
             min={30}
             max={70}
-            label="Bitcoin Market Share"
+            label={t('technical.btcDominance.marketShare')}
             zones={[
               { color: 'bg-accent-red/40', width: '30%' },
               { color: 'bg-accent-yellow/30', width: '40%' },
@@ -640,17 +641,17 @@ export default function Technical() {
             }
           />
           <div className="flex justify-between text-[9px] text-text-muted -mt-1 mb-2">
-            <span>Altcoin season</span>
-            <span>Normal</span>
-            <span>BTC season</span>
+            <span>{t('technical.btcDominance.altcoinSeason')}</span>
+            <span>{t('technical.btcDominance.normal')}</span>
+            <span>{t('technical.btcDominance.btcSeason')}</span>
           </div>
           {btcDom.eth_dominance != null && (
-            <IndicatorRow label="ETH Dominance" value={btcDom.eth_dominance} unit="%"
+            <IndicatorRow label={t('technical.btcDominance.ethDominance')} value={btcDom.eth_dominance} unit="%" t={t}
               description="Ethereum's share of the crypto market. When ETH dominance rises, it often signals growing interest in DeFi and altcoins."
             />
           )}
           {btcDom.market_cap_change_24h != null && (
-            <IndicatorRow label="Total Market 24h Change" value={btcDom.market_cap_change_24h} unit="%"
+            <IndicatorRow label={t('technical.btcDominance.totalMarket24h')} value={btcDom.market_cap_change_24h} unit="%" t={t}
               signal={btcDom.market_cap_change_24h > 0 ? 'bullish' : 'bearish'}
               description={btcDom.market_cap_change_24h > 0 ? 'The entire crypto market grew in the last 24 hours — money is coming into crypto overall.' : 'The entire crypto market shrank — money is leaving crypto. Even strong coins can fall in this environment.'}
             />
@@ -660,15 +661,15 @@ export default function Technical() {
 
       {/* ── Stochastic RSI ── */}
       <Section
-        title="Stochastic RSI"
+        title={t('technical.stochRsi.title')}
         color="text-accent-purple"
-        explain="This is like RSI on steroids — it measures the RSI of the RSI, making it more sensitive. It swings between 0 and 100 very quickly. Below 20 = extremely oversold (buy opportunity). Above 80 = extremely overbought (sell signal). The %K and %D lines crossing is the actual trade signal."
+        explain={t('technical.stochRsi.explain')}
       >
         <GaugeBar
           value={stochRsi.k || 0}
           min={0}
           max={100}
-          label="Stoch RSI %K"
+          label={t('technical.stochRsi.kFast')}
           zones={[
             { color: 'bg-accent-green/40', width: '20%' },
             { color: 'bg-accent-yellow/30', width: '60%' },
@@ -681,15 +682,15 @@ export default function Technical() {
           }
         />
         <div className="flex justify-between text-[9px] text-text-muted -mt-1 mb-2">
-          <span>Buy zone</span>
-          <span>Neutral</span>
-          <span>Sell zone</span>
+          <span>{t('technical.stochRsi.buyZone')}</span>
+          <span>{t('technical.stochRsi.neutral')}</span>
+          <span>{t('technical.stochRsi.sellZone')}</span>
         </div>
-        <IndicatorRow label="%K (fast line)" value={stochRsi.k}
+        <IndicatorRow label={t('technical.stochRsi.kFast')} value={stochRsi.k} t={t}
           signal={stochRsi.k > 80 ? 'bearish' : stochRsi.k < 20 ? 'bullish' : 'neutral'}
           description="The fast-reacting line. When it enters extreme zones (above 80 or below 20), pay attention."
         />
-        <IndicatorRow label="%D (slow line)" value={stochRsi.d}
+        <IndicatorRow label={t('technical.stochRsi.dSlow')} value={stochRsi.d} t={t}
           signal={stochRsi.k > stochRsi.d ? 'bullish' : 'bearish'}
           description={stochRsi.k > stochRsi.d ? 'The fast line (%K) is ABOVE the slow line (%D) — this is a buy signal. Momentum is shifting upward.' : 'The fast line (%K) is BELOW the slow line (%D) — this is a sell signal. Momentum is shifting downward.'}
         />
@@ -697,9 +698,9 @@ export default function Technical() {
 
       {/* ── Williams %R ── */}
       <Section
-        title="Williams %R"
+        title={t('technical.williamsR.title')}
         color="text-accent-red"
-        explain="Williams %R tells you where the closing price is relative to the highest high over the last 14 periods. It ranges from -100 (lowest point) to 0 (highest point). Below -80 = oversold (price is near its recent low — might bounce). Above -20 = overbought (near its recent high — might drop)."
+        explain={t('technical.williamsR.explain')}
       >
         <GaugeBar
           value={williamsR != null ? williamsR + 100 : 50}
@@ -718,34 +719,34 @@ export default function Technical() {
           }
         />
         <div className="flex justify-between text-[9px] text-text-muted -mt-1">
-          <span>Near lows (buy zone)</span>
-          <span>Mid-range</span>
-          <span>Near highs (sell zone)</span>
+          <span>{t('technical.williamsR.nearLows')}</span>
+          <span>{t('technical.williamsR.midRange')}</span>
+          <span>{t('technical.williamsR.nearHighs')}</span>
         </div>
       </Section>
 
       {/* ── Ichimoku Cloud ── */}
       <Section
-        title="Ichimoku Cloud"
+        title={t('technical.ichimoku.title')}
         color="text-accent-green"
-        explain="A Japanese trading system that shows support, resistance, momentum, and trend direction all at once. The 'cloud' is a shaded zone between two lines. Price ABOVE the cloud = bullish (strong uptrend). BELOW = bearish. INSIDE = no clear trend. The Tenkan/Kijun cross gives buy/sell signals."
+        explain={t('technical.ichimoku.explain')}
       >
-        <IndicatorRow label="Tenkan-sen (conversion)" value={ichimoku.tenkan ? formatPricePrecise(ichimoku.tenkan) : null}
+        <IndicatorRow label={t('technical.ichimoku.tenkan')} value={ichimoku.tenkan ? formatPricePrecise(ichimoku.tenkan) : null} t={t}
           signal={price && ichimoku.tenkan ? (price > ichimoku.tenkan ? 'bullish' : 'bearish') : null}
           description={price && ichimoku.tenkan ? (price > ichimoku.tenkan
             ? 'Price is above the conversion line — short-term momentum is up. Like having the wind at your back.'
             : 'Price is below the conversion line — short-term momentum is down. Buyers are struggling.') : 'The short-term trend line (average of 9-period high and low).'}
         />
-        <IndicatorRow label="Kijun-sen (base)" value={ichimoku.kijun ? formatPricePrecise(ichimoku.kijun) : null}
+        <IndicatorRow label={t('technical.ichimoku.kijun')} value={ichimoku.kijun ? formatPricePrecise(ichimoku.kijun) : null} t={t}
           signal={price && ichimoku.kijun ? (price > ichimoku.kijun ? 'bullish' : 'bearish') : null}
           description={price && ichimoku.kijun ? (price > ichimoku.kijun
             ? 'Price is above the base line — medium-term trend is bullish. This is the more important of the two lines.'
             : 'Price is below the base line — medium-term trend is bearish. This is a stronger bearish signal than being below Tenkan.') : 'The medium-term trend line (average of 26-period high and low).'}
         />
-        <IndicatorRow label="Cloud Top (Senkou A)" value={ichimoku.senkou_a ? formatPricePrecise(ichimoku.senkou_a) : null}
+        <IndicatorRow label={t('technical.ichimoku.cloudTop')} value={ichimoku.senkou_a ? formatPricePrecise(ichimoku.senkou_a) : null} t={t}
           description="The top edge of the cloud. Acts as support when price is above the cloud, or resistance when below."
         />
-        <IndicatorRow label="Cloud Bottom (Senkou B)" value={ichimoku.senkou_b ? formatPricePrecise(ichimoku.senkou_b) : null}
+        <IndicatorRow label={t('technical.ichimoku.cloudBottom')} value={ichimoku.senkou_b ? formatPricePrecise(ichimoku.senkou_b) : null} t={t}
           description="The bottom edge of the cloud. This is the stronger support/resistance level."
         />
         {ichimoku.senkou_a != null && ichimoku.senkou_b != null && (
@@ -757,19 +758,19 @@ export default function Technical() {
               : 'bg-accent-yellow/10 border-accent-yellow/20 text-accent-yellow'
           }`}>
             {price > Math.max(ichimoku.senkou_a, ichimoku.senkou_b)
-              ? 'Price is ABOVE the cloud — Strong Bullish. The cloud below acts as a safety net (support). This is the best position to be in as a buyer.'
+              ? t('technical.ichimoku.aboveCloud')
               : price < Math.min(ichimoku.senkou_a, ichimoku.senkou_b)
-              ? 'Price is BELOW the cloud — Strong Bearish. The cloud above acts as a ceiling (resistance). Sellers are in control and it\'s hard for price to recover.'
-              : 'Price is INSIDE the cloud — Uncertain. The market is in transition between bullish and bearish. Wait for a clear breakout above or below the cloud.'}
+              ? t('technical.ichimoku.belowCloud')
+              : t('technical.ichimoku.insideCloud')}
           </div>
         )}
       </Section>
 
       {/* ── Candlestick Patterns ── */}
       <Section
-        title="Candlestick Patterns"
+        title={t('technical.candlestick.title')}
         color="text-accent-yellow"
-        explain="Each 'candle' on a chart shows the opening price, closing price, highest price, and lowest price for a time period. Certain shapes have names and predict what comes next. Like reading tea leaves — but these patterns have been used by traders for centuries."
+        explain={t('technical.candlestick.explain')}
       >
         {(() => {
           const active = []
@@ -782,20 +783,20 @@ export default function Technical() {
           if (patterns.evening_star) active.push({ name: 'Evening Star', signal: 'bearish', desc: 'A 3-candle pattern: big green candle, tiny candle, then big red candle. Like sunset — signals the uptrend is ENDING and price will fall.' })
 
           if (active.length === 0) {
-            return <p className="text-text-muted text-xs">No special patterns detected on the latest candle. The price action is unremarkable right now — no strong reversal signals.</p>
+            return <p className="text-text-muted text-xs">{t('technical.candlestick.noPatterns')}</p>
           }
           return active.map((p) => (
-            <IndicatorRow key={p.name} label={p.name} value="Detected" signal={p.signal} description={p.desc} />
+            <IndicatorRow key={p.name} label={p.name} value={t('technical.candlestick.detected')} signal={p.signal} description={p.desc} t={t} />
           ))
         })()}
         <div className="mt-2 pt-2 border-t border-white/5">
-          <IndicatorRow label="Body Size" value={candle.body_size} unit="%"
+          <IndicatorRow label={t('technical.candlestick.bodySize')} value={candle.body_size} unit="%" t={t}
             description={candle.body_size > 1 ? 'Large body — strong conviction in the direction. Buyers or sellers clearly won this candle.' : candle.body_size > 0.3 ? 'Medium body — moderate move. Neither side dominated strongly.' : 'Tiny body — almost no difference between open and close. The market is undecided.'}
           />
-          <IndicatorRow label="Upper Shadow" value={candle.upper_shadow} unit="%"
+          <IndicatorRow label={t('technical.candlestick.upperShadow')} value={candle.upper_shadow} unit="%" t={t}
             description={candle.upper_shadow > 0.5 ? 'Long upper shadow — sellers pushed the price down from the high. There\'s selling pressure above current price.' : 'Short upper shadow — not much selling pressure above. Buyers stayed in control.'}
           />
-          <IndicatorRow label="Lower Shadow" value={candle.lower_shadow} unit="%"
+          <IndicatorRow label={t('technical.candlestick.lowerShadow')} value={candle.lower_shadow} unit="%" t={t}
             description={candle.lower_shadow > 0.5 ? 'Long lower shadow — buyers pushed the price up from the low. There are buyers waiting below, providing support.' : 'Short lower shadow — price didn\'t dip much. No significant buying interest at lower prices.'}
           />
         </div>
@@ -803,11 +804,11 @@ export default function Technical() {
 
       {/* ── Advanced Metrics ── */}
       <Section
-        title="Advanced Metrics"
+        title={t('technical.advanced.title')}
         color="text-accent-blue"
-        explain="These are specialized tools used by experienced traders to spot major market turning points. They look at longer-term patterns that can signal whether Bitcoin is at a cycle top (time to sell) or cycle bottom (time to buy)."
+        explain={t('technical.advanced.explain')}
       >
-        <IndicatorRow label="Mayer Multiple" value={adv.mayer_multiple}
+        <IndicatorRow label={t('technical.advanced.mayer')} value={adv.mayer_multiple} t={t}
           signal={adv.mayer_multiple > 2.4 ? 'bearish' : adv.mayer_multiple < 0.8 ? 'bullish' : 'neutral'}
           description={
             adv.mayer_multiple > 2.4 ? `At ${adv.mayer_multiple?.toFixed(2)}, Bitcoin is MORE THAN 2.4x its 200-period average. Historically, this means it's dangerously overheated — major corrections have followed. Extreme caution.`
@@ -817,7 +818,7 @@ export default function Technical() {
             : `At ${adv.mayer_multiple?.toFixed(2)}, Bitcoin is significantly below its long-term average. Historically, buying at this level has been very profitable long-term.`
           }
         />
-        <IndicatorRow label="Pi Cycle Ratio" value={adv.pi_cycle_ratio}
+        <IndicatorRow label={t('technical.advanced.piCycle')} value={adv.pi_cycle_ratio} t={t}
           signal={adv.pi_cycle_ratio > 0.95 ? 'bearish' : 'neutral'}
           description={
             adv.pi_cycle_ratio > 0.95 ? `At ${adv.pi_cycle_ratio?.toFixed(3)}, this is approaching 1.0 — DANGER ZONE. The Pi Cycle indicator has historically predicted every major Bitcoin top within 3 days when this hits 1.0.`
@@ -825,14 +826,14 @@ export default function Technical() {
             : `At ${adv.pi_cycle_ratio?.toFixed(3)}, well below the danger zone. Bitcoin still has significant room before hitting a Pi Cycle top signal. The cycle has more room to run.`
           }
         />
-        <IndicatorRow label="Golden/Death Cross" value={adv.ema_cross}
+        <IndicatorRow label={t('technical.advanced.goldenDeath')} value={adv.ema_cross} t={t}
           signal={adv.ema_cross > 1 ? 'bullish' : 'bearish'}
           description={adv.ema_cross > 1
             ? `The 50-period average is ABOVE the 200-period average (${adv.ema_cross?.toFixed(3)}). This is called a "Golden Cross" — one of the most famous bullish signals in all of trading. It means the short-term trend is outperforming the long-term trend. Historically, big rallies follow.`
             : `The 50-period average is BELOW the 200-period average (${adv.ema_cross?.toFixed(3)}). This is called a "Death Cross" — one of the most famous bearish signals. The short-term trend is underperforming. Historically, this precedes further declines.`
           }
         />
-        <IndicatorRow label="Mean Reversion Z-Score" value={adv.zscore_20}
+        <IndicatorRow label={t('technical.advanced.zScore')} value={adv.zscore_20} t={t}
           signal={adv.zscore_20 > 2 ? 'bearish' : adv.zscore_20 < -2 ? 'bullish' : 'neutral'}
           description={
             adv.zscore_20 > 2 ? `At ${adv.zscore_20?.toFixed(2)} standard deviations above average — price has stretched TOO FAR above normal. Like a rubber band, it tends to snap back. Expect a pullback toward the average.`
@@ -844,17 +845,17 @@ export default function Technical() {
 
       {/* ── Rate of Change ── */}
       <Section
-        title="Rate of Change"
+        title={t('technical.rateOfChange.title')}
         color="text-text-secondary"
-        explain="Simply: how much did the price change over different time periods? Positive = price went up. Negative = price went down. Bigger numbers = faster movement. This tells you the SPEED of the price change."
+        explain={t('technical.rateOfChange.explain')}
       >
         {[
-          { label: 'Last 1 Hour', val: mom.roc_1, period: 'the past hour' },
-          { label: 'Last 6 Hours', val: mom.roc_6, period: 'the past 6 hours' },
-          { label: 'Last 12 Hours', val: mom.roc_12, period: 'the past 12 hours' },
-          { label: 'Last 24 Hours', val: mom.roc_24, period: 'the past 24 hours' },
+          { label: t('technical.rateOfChange.last1h'), val: mom.roc_1, period: 'the past hour' },
+          { label: t('technical.rateOfChange.last6h'), val: mom.roc_6, period: 'the past 6 hours' },
+          { label: t('technical.rateOfChange.last12h'), val: mom.roc_12, period: 'the past 12 hours' },
+          { label: t('technical.rateOfChange.last24h'), val: mom.roc_24, period: 'the past 24 hours' },
         ].map(({ label, val, period }) => (
-          <IndicatorRow key={label} label={label} value={val} unit="%"
+          <IndicatorRow key={label} label={label} value={val} unit="%" t={t}
             signal={val > 0 ? 'bullish' : val < 0 ? 'bearish' : 'neutral'}
             description={val != null ? (val > 0
               ? `Bitcoin went UP ${val.toFixed(2)}% over ${period}. ${val > 3 ? 'That\'s a significant move — strong buying pressure.' : val > 1 ? 'A moderate gain.' : 'A small gain.'}`
@@ -868,8 +869,7 @@ export default function Technical() {
       <IndicatorHistory />
 
       <p className="text-text-muted text-[10px] text-center pb-4 leading-relaxed">
-        Technical indicators update every minute. These are mathematical tools, not crystal balls.
-        They work best when multiple indicators agree. Always combine with your own research.
+        {t('technical.updatesEveryMinute')}
       </p>
     </div>
   )

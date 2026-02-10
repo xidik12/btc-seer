@@ -32,7 +32,7 @@ function PositionSizeCalc() {
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('tools:positionSize.title').toUpperCase()}</h3>
       <p className="text-text-muted text-[10px] mb-3">
-        Calculate your ideal position size based on account risk. Pros risk 1-2% per trade.
+        {t('tools:positionSize.description')}
       </p>
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
@@ -59,9 +59,9 @@ function PositionSizeCalc() {
       {capitalNum > 0 && entryNum > 0 && slNum > 0 && (
         <div className="grid grid-cols-2 gap-2">
           <ResultBox label={t('tools:positionSize.riskAmount')} value={`$${riskAmount.toFixed(2)}`} />
-          <ResultBox label="Stop Distance" value={`$${stopDist.toFixed(2)}`} />
+          <ResultBox label={t('tools:positionSize.stopDistance')} value={`$${stopDist.toFixed(2)}`} />
           <ResultBox label={t('tools:positionSize.result')} value={`${positionSize.toFixed(6)} BTC`} highlight />
-          <ResultBox label="Position Value" value={`$${positionValue.toFixed(2)}`} highlight />
+          <ResultBox label={t('tools:positionSize.positionValue')} value={`$${positionValue.toFixed(2)}`} highlight />
         </div>
       )}
     </div>
@@ -139,7 +139,7 @@ function PnLCalc() {
           {leverageNum > 1 && (
             <ResultBox label={t('common:trade.liqPrice')} value={`$${liqPrice.toFixed(2)}`} color="text-accent-red" />
           )}
-          <ResultBox label="Break-Even" value={`$${entryNum.toFixed(2)}`} />
+          <ResultBox label={t('tools:pnl.breakEven')} value={`$${entryNum.toFixed(2)}`} />
         </div>
       )}
     </div>
@@ -165,7 +165,7 @@ function RiskRewardCalc() {
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('tools:riskReward.title').toUpperCase()}</h3>
       <p className="text-text-muted text-[10px] mb-3">
-        Pros aim for at least 1:2 R:R. Higher ratios mean you can be wrong more often and still profit.
+        {t('tools:riskReward.description')}
       </p>
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div>
@@ -203,9 +203,9 @@ function RiskRewardCalc() {
               value={`1:${rrRatio.toFixed(2)}`}
               color={rrRatio >= 2 ? 'text-accent-green' : rrRatio >= 1 ? 'text-accent-yellow' : 'text-accent-red'}
               highlight />
-            <ResultBox label="Win Rate Needed" value={`${winRateNeeded.toFixed(1)}%`} />
-            <ResultBox label="Quality"
-              value={rrRatio >= 3 ? 'Excellent' : rrRatio >= 2 ? 'Good' : rrRatio >= 1 ? 'Fair' : 'Poor'}
+            <ResultBox label={t('tools:riskReward.winRateNeeded')} value={`${winRateNeeded.toFixed(1)}%`} />
+            <ResultBox label={t('tools:riskReward.quality')}
+              value={rrRatio >= 3 ? t('tools:riskReward.qualityExcellent') : rrRatio >= 2 ? t('tools:riskReward.qualityGood') : rrRatio >= 1 ? t('tools:riskReward.qualityFair') : t('tools:riskReward.qualityPoor')}
               color={rrRatio >= 2 ? 'text-accent-green' : rrRatio >= 1 ? 'text-accent-yellow' : 'text-accent-red'} />
           </div>
         </div>
@@ -233,17 +233,17 @@ function DCACalc() {
 
   // Simulate scenarios
   const scenarios = [
-    { label: 'Bear (-30%)', pct: -30, color: 'text-accent-red' },
-    { label: 'Flat (0%)', pct: 0, color: 'text-text-muted' },
-    { label: 'Bull (+50%)', pct: 50, color: 'text-accent-green' },
-    { label: 'Moon (+100%)', pct: 100, color: 'text-accent-green' },
+    { label: t('tools:dca.scenarioBear'), pct: -30, color: 'text-accent-red' },
+    { label: t('tools:dca.scenarioFlat'), pct: 0, color: 'text-text-muted' },
+    { label: t('tools:dca.scenarioBull'), pct: 50, color: 'text-accent-green' },
+    { label: t('tools:dca.scenarioMoon'), pct: 100, color: 'text-accent-green' },
   ]
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('tools:dca.title').toUpperCase()}</h3>
       <p className="text-text-muted text-[10px] mb-3">
-        Dollar Cost Averaging reduces timing risk. Consistent buying regardless of price.
+        {t('tools:dca.description')}
       </p>
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
@@ -255,7 +255,7 @@ function DCACalc() {
           <label className="text-text-muted text-[10px]">{t('tools:dca.frequency')}</label>
           <select value={frequency} onChange={e => setFrequency(e.target.value)}
             className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5">
-            <option value="daily">Daily</option>
+            <option value="daily">{t('tools:dca.daily')}</option>
             <option value="weekly">{t('tools:dca.weekly')}</option>
             <option value="biweekly">{t('tools:dca.biweekly')}</option>
             <option value="monthly">{t('tools:dca.monthly')}</option>
@@ -276,10 +276,10 @@ function DCACalc() {
         <>
           <div className="grid grid-cols-3 gap-2 mb-3">
             <ResultBox label={t('tools:dca.totalInvested')} value={`$${totalInvested.toLocaleString()}`} />
-            <ResultBox label="Total Buys" value={totalBuys.toString()} />
+            <ResultBox label={t('tools:dca.totalBuys')} value={totalBuys.toString()} />
             <ResultBox label={t('tools:dca.totalBtc')} value={`${btcAccumulated.toFixed(6)}`} highlight />
           </div>
-          <div className="text-text-muted text-[9px] font-semibold mb-1.5">PRICE SCENARIOS</div>
+          <div className="text-text-muted text-[9px] font-semibold mb-1.5">{t('tools:dca.priceScenarios')}</div>
           <div className="grid grid-cols-2 gap-2">
             {scenarios.map(s => {
               const futurePrice = priceNum * (1 + s.pct / 100)

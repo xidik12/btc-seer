@@ -9,6 +9,46 @@ const I = (children, sm) => (
 export default function About() {
   const { t } = useTranslation(['about', 'common'])
 
+  const stats = [
+    { value: '192', labelKey: 'about:byTheNumbers.features' },
+    { value: '4', labelKey: 'about:byTheNumbers.aiModels' },
+    { value: '13', labelKey: 'about:byTheNumbers.dataSources' },
+    { value: '5', labelKey: 'about:byTheNumbers.timeframes' },
+    { value: '24', labelKey: 'about:byTheNumbers.backgroundJobs' },
+    { value: '6h', labelKey: 'about:byTheNumbers.retrainCycle' },
+  ]
+
+  const steps = [1, 2, 3, 4, 5].map((n) => ({
+    num: n,
+    label: t(`about:howToUse.step${n}_label`),
+    desc: t(`about:howToUse.step${n}_desc`),
+  }))
+
+  const models = [
+    { nameKey: 'about:architecture.models.tft', weight: '40%', descKey: 'about:architecture.tftDesc', color: 'text-accent-green' },
+    { nameKey: 'about:architecture.models.xgboost', weight: '25%', descKey: 'about:architecture.xgboostDesc', color: 'text-accent-blue' },
+    { nameKey: 'about:architecture.models.lstm', weight: '20%', descKey: 'about:architecture.lstmDesc', color: 'text-accent-purple' },
+    { nameKey: 'about:architecture.models.timesfm', weight: '15%', descKey: 'about:architecture.timesfmDesc', color: 'text-accent-yellow' },
+  ]
+
+  const featureCategoryKeys = [
+    'technical', 'sentiment', 'derivativesExt', 'exchangeFlows', 'macro',
+    'onChain', 'eventMemory', 'etfFlows', 'stablecoin', 'dominance',
+    'supplyMining', 'derivatives', 'phraseAnalysis',
+  ]
+
+  const aiSteps = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
+    num: n,
+    label: t(`about:howAiWorks.step${n}_label`),
+    desc: t(`about:howAiWorks.step${n}_desc`),
+  }))
+
+  const whatsInsideKeys = [
+    'dashboard', 'signals', 'advisor', 'technical', 'powerLaw', 'elliottWave',
+    'liquidations', 'coins', 'news', 'events', 'history', 'paperTrading',
+    'learn', 'tools', 'resources', 'settings', 'premium',
+  ]
+
   return (
     <div className="px-4 pt-4 space-y-3 pb-4">
       {/* Hero */}
@@ -24,73 +64,44 @@ export default function About() {
           </span>
         </div>
         <p className="text-text-muted text-[11px] mt-2">
-          Real-time predictions, trading signals, and deep market analysis — powered by a 4-model AI ensemble analyzing 192 features across 13 data categories.
+          {t('about:heroSubtitle')}
         </p>
       </div>
 
       {/* What is BTC Seer */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-2">WHAT IS BTC SEER?</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('about:whatIs.title')}</h3>
         <div className="text-text-muted text-[11px] space-y-2">
-          <p>
-            BTC Seer is a production-grade Bitcoin prediction platform that analyzes <span className="text-text-secondary font-semibold">192 engineered features</span> across
-            13 categories — technical indicators, news sentiment, on-chain metrics, derivatives data, macro markets, ETF flows, exchange flows, stablecoin supply, social signals, and more.
-          </p>
-          <p>
-            It generates predictions across <span className="text-text-secondary font-semibold">5 timeframes</span> (1H, 4H, 24H, 1W, 1MO) using a
-            <span className="text-text-secondary font-semibold"> 4-model ensemble</span>: Temporal Fusion Transformer (40%), XGBoost (25%), LSTM (20%), and Google TimesFM (15%) — with adaptive weighting that shifts based on model performance.
-          </p>
-          <p>
-            The system runs <span className="text-text-secondary font-semibold">24 background jobs</span> continuously — collecting data every minute, generating predictions, evaluating accuracy, retraining models, and learning from market events.
-          </p>
+          <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p1') }} />
+          <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p2') }} />
+          <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p3') }} />
         </div>
       </div>
 
       {/* By the Numbers */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">BY THE NUMBERS</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:byTheNumbers.title')}</h3>
         <div className="grid grid-cols-3 gap-2">
-          {[
-            { value: '192', label: 'Features' },
-            { value: '4', label: 'AI Models' },
-            { value: '13', label: 'Data Sources' },
-            { value: '5', label: 'Timeframes' },
-            { value: '24', label: 'Background Jobs' },
-            { value: '6h', label: 'Retrain Cycle' },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center p-2 rounded-xl bg-white/[0.02]">
+          {stats.map((stat) => (
+            <div key={stat.labelKey} className="text-center p-2 rounded-xl bg-white/[0.02]">
               <div className="text-accent-blue text-lg font-bold">{stat.value}</div>
-              <div className="text-text-muted text-[9px] uppercase tracking-wider">{stat.label}</div>
+              <div className="text-text-muted text-[9px] uppercase tracking-wider">{t(stat.labelKey)}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* How to Use BTC Seer — Quick Start */}
+      {/* How to Use BTC Seer -- Quick Start */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">HOW TO USE BTC SEER</h3>
-        <p className="text-text-muted text-[10px] mb-3">New here? Follow these 5 steps to get started:</p>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:howToUse.title')}</h3>
+        <p className="text-text-muted text-[10px] mb-3">{t('about:howToUse.subtitle')}</p>
         <div className="space-y-2 text-[11px] text-text-muted">
-          <div className="flex items-start gap-2">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 text-accent-blue text-[10px] font-bold flex items-center justify-center">1</span>
-            <p><span className="text-text-secondary font-semibold">Start on Dashboard</span> — check the live BTC price, dual prediction cards (AI + Quant), trading signals, and market overview at a glance.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 text-accent-blue text-[10px] font-bold flex items-center justify-center">2</span>
-            <p><span className="text-text-secondary font-semibold">Read Signals</span> — view AI-generated entry, target, and stop-loss levels with confidence scores and risk ratings.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 text-accent-blue text-[10px] font-bold flex items-center justify-center">3</span>
-            <p><span className="text-text-secondary font-semibold">Check Sentiment</span> — browse news sentiment, Fear & Greed index, influencer mood, and social volume to gauge market emotion.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 text-accent-blue text-[10px] font-bold flex items-center justify-center">4</span>
-            <p><span className="text-text-secondary font-semibold">Dive Deeper</span> — explore technical analysis (45+ indicators), Power Law, Elliott Wave, liquidation maps, on-chain metrics, and ETF flows.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 text-accent-blue text-[10px] font-bold flex items-center justify-center">5</span>
-            <p><span className="text-text-secondary font-semibold">Practice First</span> — use Paper Trading to test strategies with virtual money before risking real capital.</p>
-          </div>
+          {steps.map((step) => (
+            <div key={step.num} className="flex items-start gap-2">
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 text-accent-blue text-[10px] font-bold flex items-center justify-center">{step.num}</span>
+              <p><span className="text-text-secondary font-semibold">{step.label}</span>{step.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -98,48 +109,29 @@ export default function About() {
       <div className="bg-bg-card rounded-2xl p-4 gradient-border">
         <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:architecture.title').toUpperCase()}</h3>
         <div className="space-y-2">
-          {[
-            { nameKey: 'about:architecture.models.tft', weight: '40%', desc: 'Multi-horizon attention model — captures long-range dependencies and variable-importance weighting', color: 'text-accent-green' },
-            { nameKey: 'about:architecture.models.xgboost', weight: '25%', desc: 'Gradient-boosted trees — excels at feature-based classification with 192 engineered inputs', color: 'text-accent-blue' },
-            { nameKey: 'about:architecture.models.lstm', weight: '20%', desc: 'Recurrent neural network — detects sequential patterns in 168-hour (1 week) lookback windows', color: 'text-accent-purple' },
-            { nameKey: 'about:architecture.models.timesfm', weight: '15%', desc: 'Zero-shot foundation model — provides a baseline from pre-trained time-series knowledge', color: 'text-accent-yellow' },
-          ].map((model) => (
+          {models.map((model) => (
             <div key={model.nameKey} className="p-2.5 rounded-xl bg-white/[0.02]">
               <div className="flex items-center justify-between mb-0.5">
                 <span className="text-text-primary text-xs font-semibold">{t(model.nameKey)}</span>
                 <span className={`text-[10px] font-bold ${model.color}`}>{model.weight}</span>
               </div>
-              <p className="text-text-muted text-[10px]">{model.desc}</p>
+              <p className="text-text-muted text-[10px]">{t(model.descKey)}</p>
             </div>
           ))}
         </div>
         <p className="text-text-muted text-[10px] mt-2">
-          Weights are adaptive — the system shifts allocation based on each model's recent accuracy. A sentiment modifier (up to ±50%) amplifies or dampens the ensemble signal based on real-time market mood.
+          {t('about:architecture.adaptiveNote')}
         </p>
       </div>
 
-      {/* 192 Features — 13 Categories */}
+      {/* 192 Features -- 13 Categories */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">192 FEATURES ACROSS 13 CATEGORIES</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:featuresCategories.title')}</h3>
         <div className="space-y-1.5">
-          {[
-            ['Technical (111)', 'EMAs, RSI, MACD, Bollinger, Ichimoku, Donchian, Keltner, GARCH volatility, Hurst exponent, wavelets, candlestick patterns, and 45 Pandas-TA indicators'],
-            ['Sentiment (13)', 'News sentiment 1h/4h/24h, Reddit & social sentiment, bullish/bearish %, Fear & Greed index'],
-            ['Derivatives Extended (12)', 'Long/short ratio, taker buy/sell, liquidations, DVOL, leverage ratio, top trader positions'],
-            ['Exchange Flows (9)', 'Exchange reserves, NVT signal, MVRV Z-score, SOPR, Puell multiple, coin days destroyed'],
-            ['Macro (8)', 'DXY, gold, S&P 500, NASDAQ, VIX, EUR/USD, 10Y Treasury'],
-            ['On-Chain (7)', 'Hash rate, mempool size/fees, tx volume, active addresses, difficulty, large tx count'],
-            ['Event Memory (7)', 'Expected impact 1h/4h/24h, confidence, severity, sentiment predictiveness, active event count'],
-            ['ETF Flows (6)', 'Net flow, total holdings, IBIT (BlackRock), FBTC (Fidelity), GBTC (Grayscale), ETF volume'],
-            ['Stablecoin (5)', 'USDT/USDC market caps, total stablecoin supply, 7d supply change, DeFi TVL'],
-            ['Dominance (4)', 'BTC dominance, ETH dominance, total market cap, market cap change'],
-            ['Supply/Mining (4)', '% mined, daily issuance, blocks until halving, halving cycle position'],
-            ['Derivatives (3)', 'Funding rate, open interest, mark/index spread'],
-            ['Phrase Analysis (3)', 'Top bullish/bearish phrase scores, net sentiment signal from news language patterns'],
-          ].map(([cat, desc]) => (
-            <div key={cat} className="flex gap-2 py-1.5 border-b border-white/[0.03] last:border-0">
-              <span className="text-accent-blue text-[10px] font-bold w-28 flex-shrink-0 leading-tight">{cat}</span>
-              <span className="text-text-muted text-[10px] leading-tight">{desc}</span>
+          {featureCategoryKeys.map((key) => (
+            <div key={key} className="flex gap-2 py-1.5 border-b border-white/[0.03] last:border-0">
+              <span className="text-accent-blue text-[10px] font-bold w-28 flex-shrink-0 leading-tight">{t(`about:featuresCategories.${key}.name`)}</span>
+              <span className="text-text-muted text-[10px] leading-tight">{t(`about:featuresCategories.${key}.desc`)}</span>
             </div>
           ))}
         </div>
@@ -147,23 +139,12 @@ export default function About() {
 
       {/* Data Pipeline */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">REAL-TIME DATA PIPELINE</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:dataPipeline.title')}</h3>
         <div className="space-y-1.5">
-          {[
-            ['Every 1 min', 'BTC price from Binance (OHLCV candles)'],
-            ['Every 2 min', 'News from 25+ RSS feeds, CryptoPanic, Reddit, Binance announcements'],
-            ['Every 2 min', 'Alt-coin prices (ETH, SOL, XRP and more)'],
-            ['Every 5 min', 'Event classification — news categorized into regulatory, technical, market, macro, supply, exchange events'],
-            ['Every 10 min', 'Influencer tweets — weighted by market impact (Elon, Saylor, CZ, Cathie Wood, etc.)'],
-            ['Every 30 min', 'Funding rates, open interest, and derivatives data from Binance perpetuals'],
-            ['Every 1 hr', 'Macro indicators (DXY, gold, S&P 500, VIX, treasuries), on-chain metrics, BTC dominance, technical snapshot, phrase analysis'],
-            ['Configurable', 'AI predictions (ensemble + quant theory), prediction evaluation, Telegram alerts'],
-            ['Every 6 hrs', 'Auto-retraining, continuous learning, A/B testing of candidate models'],
-            ['Every 24 hrs', 'Data cleanup (90d price/news, 180d macro/on-chain), subscription checks'],
-          ].map(([freq, desc]) => (
-            <div key={desc} className="flex gap-2 py-1 border-b border-white/[0.03] last:border-0">
-              <span className="text-accent-green text-[10px] font-bold w-20 flex-shrink-0">{freq}</span>
-              <span className="text-text-muted text-[10px]">{desc}</span>
+          {(t('about:dataPipeline.items', { returnObjects: true }) || []).map((item, idx) => (
+            <div key={idx} className="flex gap-2 py-1 border-b border-white/[0.03] last:border-0">
+              <span className="text-accent-green text-[10px] font-bold w-20 flex-shrink-0">{item.freq}</span>
+              <span className="text-text-muted text-[10px]">{item.desc}</span>
             </div>
           ))}
         </div>
@@ -171,42 +152,20 @@ export default function About() {
 
       {/* How the AI Works */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">HOW THE AI WORKS</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:howAiWorks.title')}</h3>
         <div className="space-y-2 text-[11px] text-text-muted">
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">1</span>
-            <p><span className="text-text-secondary font-semibold">Ensemble Voting:</span> 4 models independently analyze 192 features and vote on each prediction. TFT leads at 40%, but weights adapt based on recent performance — reducing individual model bias.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">2</span>
-            <p><span className="text-text-secondary font-semibold">Continuous Learning:</span> Models auto-retrain every 6 hours using the latest market data. If accuracy drops below 55% or 50+ new predictions are evaluated, retraining triggers immediately.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">3</span>
-            <p><span className="text-text-secondary font-semibold">Event Memory:</span> The system stores up to 500 historical events, tracking their actual impact at 1h, 4h, 24h, and 7d. When similar events occur, it pattern-matches to predict expected impact.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">4</span>
-            <p><span className="text-text-secondary font-semibold">Phrase Analyzer:</span> Learns which specific news words and phrases historically move the market. Over time, this builds a language-to-price correlation map that improves sentiment accuracy.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">5</span>
-            <p><span className="text-text-secondary font-semibold">A/B Testing:</span> New model candidates compete against production models before promotion. Only models that outperform the current ensemble get deployed — ensuring quality never regresses.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">6</span>
-            <p><span className="text-text-secondary font-semibold">Hot Swapping:</span> When retraining produces better weights, the ensemble hot-swaps them without stopping the prediction pipeline. Zero downtime, continuous improvement.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">7</span>
-            <p><span className="text-text-secondary font-semibold">Accuracy Tracking:</span> Every prediction is evaluated against actual price movements and scored. Full transparency — you can see exactly how well the models perform over time.</p>
-          </div>
+          {aiSteps.map((step) => (
+            <div key={step.num} className="flex items-start gap-2">
+              <span className="text-accent-blue font-bold text-xs mt-0.5">{step.num}</span>
+              <p><span className="text-text-secondary font-semibold">{step.label}</span>{step.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* How It Helps */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">HOW IT HELPS YOU</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:howItHelps.title')}</h3>
         <div className="space-y-2">
           {[
             { icon: I(<><path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" /></>), titleKey: 'about:features.predictions', descKey: 'about:features.predictionsDesc' },
@@ -217,48 +176,30 @@ export default function About() {
             { icon: I(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />), titleKey: 'about:features.elliott', descKey: 'about:features.elliottDesc' },
             { icon: I(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />), titleKey: 'about:features.liquidations', descKey: 'about:features.liquidationsDesc' },
             { icon: I(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>), titleKey: 'about:features.news', descKey: 'about:features.newsDesc' },
-            { icon: I(<><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5 1-2.5 2s1 2 2.5 2 2.5 1 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5" /><path d="M12 6.5v1M12 16.5v1" /></>), title: 'Coins & Market Data', desc: 'Track BTC, ETH, SOL, XRP, and more — search any coin, generate AI analysis reports' },
+            { icon: I(<><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5 1-2.5 2s1 2 2.5 2 2.5 1 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5" /><path d="M12 6.5v1M12 16.5v1" /></>), titleKey: 'about:howItHelps.coinsMarket', descKey: 'about:howItHelps.coinsMarketDesc' },
             { icon: I(<><path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" /><path d="M12 18a4 4 0 01-4-4c0-2.5 2-4.5 4-7" /></>), titleKey: 'about:features.onChain', descKey: 'about:features.onChainDesc' },
             { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>), titleKey: 'about:features.paperTrading', descKey: 'about:features.paperTradingDesc' },
-            { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>), title: 'Accuracy & Transparency', desc: 'Every prediction scored against actual results — see model performance, hit rates, and confidence calibration' },
+            { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>), titleKey: 'about:howItHelps.accuracyTransparency', descKey: 'about:howItHelps.accuracyTransparencyDesc' },
           ].map((item) => (
-            <div key={item.titleKey || item.title} className="flex items-start gap-3 p-2 rounded-xl bg-white/[0.02]">
+            <div key={item.titleKey} className="flex items-start gap-3 p-2 rounded-xl bg-white/[0.02]">
               <span className="mt-0.5 shrink-0">{item.icon}</span>
               <div>
-                <div className="text-text-primary text-xs font-semibold">{item.titleKey ? t(item.titleKey) : item.title}</div>
-                <div className="text-text-muted text-[10px]">{item.descKey ? t(item.descKey) : item.desc}</div>
+                <div className="text-text-primary text-xs font-semibold">{t(item.titleKey)}</div>
+                <div className="text-text-muted text-[10px]">{t(item.descKey)}</div>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* What's Inside — All Pages */}
+      {/* What's Inside -- All Pages */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">WHAT'S INSIDE</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:whatsInside.title')}</h3>
         <div className="space-y-1.5">
-          {[
-            ['Dashboard', 'Live BTC price, dual prediction cards, trading signals, Fear & Greed, news, on-chain, dominance, supply, and macro overview'],
-            ['Signals', 'Actionable entry/target/stop-loss levels with confidence, risk rating, and signal strength'],
-            ['Advisor', 'AI-powered trade plans with position sizing, risk management, and reversal detection'],
-            ['Technical', 'Charts with 45+ indicators — RSI, MACD, Bollinger, Ichimoku, GARCH, wavelets, and more'],
-            ['Power Law', 'Long-term fair value model based on BTC logarithmic adoption growth'],
-            ['Elliott Wave', 'Wave-based analysis of market structure, trend phases, and reversal points'],
-            ['Liquidations', 'Leveraged position clusters and liquidation cascade risk zones'],
-            ['Coins', 'Track BTC, ETH, SOL, XRP — search any coin, generate AI analysis reports'],
-            ['News', 'Real-time news from 25+ sources with AI sentiment scoring and phrase analysis'],
-            ['Events', 'Market-moving events with AI impact predictions based on historical pattern matching'],
-            ['History', 'Past predictions and their outcomes — full accuracy audit trail'],
-            ['Paper Trading', 'Practice with virtual money — track P&L without risk'],
-            ['Learn', 'Trading education — basics, strategies, technical analysis, psychology, and patterns'],
-            ['Tools', 'Calculators and utilities for position sizing, risk management, and trade planning'],
-            ['Resources', 'Curated links, guides, and reference material for Bitcoin traders'],
-            ['Settings', 'Customize alerts, notifications, and display preferences'],
-            ['Premium', 'Unlock advanced features, faster updates, and priority access'],
-          ].map(([page, desc]) => (
-            <div key={page} className="flex gap-2 py-1 border-b border-white/[0.03] last:border-0">
-              <span className="text-accent-blue text-[11px] font-bold w-24 flex-shrink-0">{page}</span>
-              <span className="text-text-muted text-[10px]">{desc}</span>
+          {whatsInsideKeys.map((key) => (
+            <div key={key} className="flex gap-2 py-1 border-b border-white/[0.03] last:border-0">
+              <span className="text-accent-blue text-[11px] font-bold w-24 flex-shrink-0">{t(`about:whatsInside.${key}.name`)}</span>
+              <span className="text-text-muted text-[10px]">{t(`about:whatsInside.${key}.desc`)}</span>
             </div>
           ))}
         </div>
@@ -270,7 +211,7 @@ export default function About() {
         <div className="grid grid-cols-2 gap-2">
           {[
             { icon: I(<><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2a7 7 0 00-4 12.9V17h8v-2.1A7 7 0 0012 2z" /></>, true), labelKey: 'about:features.predictions' },
-            { icon: I(<><polyline points="22 17 13.5 8.5 8.5 13.5 2 7" /><polyline points="16 17 22 17 22 11" /></>, true), label: 'Quant Theory' },
+            { icon: I(<><polyline points="22 17 13.5 8.5 8.5 13.5 2 7" /><polyline points="16 17 22 17 22 11" /></>, true), labelKey: 'about:features.quantTheory' },
             { icon: I(<><path d="M3 3v18h18" /><path d="M3 17C7 15 11 9 21 5" /></>, true), labelKey: 'about:features.powerLaw' },
             { icon: I(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />, true), labelKey: 'about:features.elliott' },
             { icon: I(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />, true), labelKey: 'about:features.liquidations' },
@@ -278,17 +219,17 @@ export default function About() {
             { icon: I(<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>, true), labelKey: 'about:features.signals' },
             { icon: I(<><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" /></>, true), labelKey: 'about:features.advisor' },
             { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>, true), labelKey: 'about:features.paperTrading' },
-            { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>, true), label: 'Accuracy Tracking' },
+            { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>, true), labelKey: 'about:features.accuracyTracking' },
             { icon: I(<><path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" /></>, true), labelKey: 'about:features.onChain' },
-            { icon: I(<><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5 1-2.5 2s1 2 2.5 2 2.5 1 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5" /><path d="M12 6.5v1M12 16.5v1" /></>, true), label: 'Coins & Tokens' },
+            { icon: I(<><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5 1-2.5 2s1 2 2.5 2 2.5 1 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5" /><path d="M12 6.5v1M12 16.5v1" /></>, true), labelKey: 'about:features.coinsTokens' },
             { icon: I(<><path d="M3 3v18h18" /><path d="M7 16l4-6 4 4 5-8" /></>, true), labelKey: 'about:features.technical' },
-            { icon: I(<><path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /></>, true), label: 'ETF Flows' },
-            { icon: I(<><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></>, true), label: 'Learn & Educate' },
-            { icon: I(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>, true), label: 'Event Memory' },
+            { icon: I(<><path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /></>, true), labelKey: 'about:features.etfFlows' },
+            { icon: I(<><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></>, true), labelKey: 'about:features.learnEducate' },
+            { icon: I(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>, true), labelKey: 'about:features.eventMemory' },
           ].map((f) => (
-            <div key={f.labelKey || f.label} className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02]">
+            <div key={f.labelKey} className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02]">
               <span className="shrink-0">{f.icon}</span>
-              <span className="text-text-primary text-xs font-medium">{f.labelKey ? t(f.labelKey) : f.label}</span>
+              <span className="text-text-primary text-xs font-medium">{t(f.labelKey)}</span>
             </div>
           ))}
         </div>
@@ -298,9 +239,7 @@ export default function About() {
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
         <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('about:credits.title').toUpperCase()}</h3>
         <div className="text-text-muted text-[11px] space-y-2">
-          <p>
-            Created by <span className="text-text-secondary font-semibold">Salakhitdinov Khidayotullo</span> — full-stack developer, AI researcher, and crypto enthusiast.
-          </p>
+          <p dangerouslySetInnerHTML={{ __html: t('about:credits.createdBy') }} />
           <p>
             {t('about:credits.builtWith')}
           </p>
@@ -310,7 +249,7 @@ export default function About() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 mt-1 px-3 py-1.5 rounded-lg bg-accent-blue/10 text-accent-blue text-[11px] font-semibold border border-accent-blue/20"
           >
-            Join on Telegram
+            {t('about:credits.joinTelegram')}
           </a>
         </div>
       </div>

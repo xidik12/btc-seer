@@ -12,8 +12,8 @@ const CATEGORIES = [
 
 const RESOURCES = {
   exchanges: {
-    title: 'EXCHANGES & TRADING PLATFORMS',
-    description: 'Where to trade. Ranked by experts for reliability, fees, and features.',
+    titleKey: 'resources:exchanges.title',
+    descriptionKey: 'resources:exchanges.description',
     items: [
       {
         name: 'Binance',
@@ -60,8 +60,8 @@ const RESOURCES = {
     ],
   },
   analysis: {
-    title: 'CHARTING & ANALYSIS TOOLS',
-    description: 'Technical analysis, charting, and market research platforms.',
+    titleKey: 'resources:analysis.title',
+    descriptionKey: 'resources:analysis.description',
     items: [
       {
         name: 'TradingView',
@@ -108,8 +108,8 @@ const RESOURCES = {
     ],
   },
   onchain: {
-    title: 'ON-CHAIN ANALYTICS',
-    description: 'Blockchain data, whale tracking, and smart money analysis.',
+    titleKey: 'resources:onchain.title',
+    descriptionKey: 'resources:onchain.description',
     items: [
       {
         name: 'Glassnode',
@@ -163,8 +163,8 @@ const RESOURCES = {
     ],
   },
   portfolio: {
-    title: 'PORTFOLIO & TAX TOOLS',
-    description: 'Track your holdings, calculate taxes, and manage your portfolio.',
+    titleKey: 'resources:portfolio.title',
+    descriptionKey: 'resources:portfolio.description',
     items: [
       {
         name: 'CoinTracker',
@@ -211,8 +211,8 @@ const RESOURCES = {
     ],
   },
   bots: {
-    title: 'TRADING BOTS & AUTOMATION',
-    description: 'Automated trading, grid bots, copy trading, and algorithmic strategies.',
+    titleKey: 'resources:bots.title',
+    descriptionKey: 'resources:bots.description',
     items: [
       {
         name: 'Cryptohopper',
@@ -245,8 +245,8 @@ const RESOURCES = {
     ],
   },
   learn: {
-    title: 'LEARNING RESOURCES',
-    description: 'Education, courses, communities, and research for all levels.',
+    titleKey: 'resources:learn.title',
+    descriptionKey: 'resources:learn.description',
     items: [
       {
         name: 'Investopedia',
@@ -337,9 +337,9 @@ export default function Resources() {
 
   return (
     <div className="px-4 pt-4 space-y-3 pb-20">
-      <h1 className="text-lg font-bold">Resources & Tools</h1>
+      <h1 className="text-lg font-bold">{t('resources:title')}</h1>
       <p className="text-text-muted text-[11px]">
-        Expert-curated platforms and tools used by professional traders. Based on community recommendations, expert reviews, and real-world performance.
+        {t('resources:subtitle')}
       </p>
 
       {/* Category tabs */}
@@ -358,8 +358,8 @@ export default function Resources() {
 
       {/* Category content */}
       <div>
-        <h2 className="text-text-secondary text-xs font-semibold mb-1">{category.title}</h2>
-        <p className="text-text-muted text-[10px] mb-3">{category.description}</p>
+        <h2 className="text-text-secondary text-xs font-semibold mb-1">{t(`resources:${activeCategory}.title`)}</h2>
+        <p className="text-text-muted text-[10px] mb-3">{t(`resources:${activeCategory}.description`)}</p>
         <div className="space-y-2">
           {category.items.map(item => (
             <ResourceCard key={item.name} item={item} />
@@ -372,16 +372,16 @@ export default function Resources() {
         <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('resources:tierGuide').toUpperCase()}</h3>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { tier: 'Essential', desc: 'Must-have tools every trader needs' },
-            { tier: 'Beginner', desc: 'Easy to use, great starting point' },
-            { tier: 'Pro', desc: 'Advanced features for experienced traders' },
-            { tier: 'Free', desc: 'No cost, no account required' },
-          ].map(t => (
-            <div key={t.tier} className="flex items-start gap-2">
-              <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0 mt-0.5 ${TIER_COLORS[t.tier]}`}>
-                {t.tier}
+            { tier: 'Essential', descKey: 'resources:tiers.essential.desc' },
+            { tier: 'Beginner', descKey: 'resources:tiers.beginner.desc' },
+            { tier: 'Pro', descKey: 'resources:tiers.pro.desc' },
+            { tier: 'Free', descKey: 'resources:tiers.free.desc' },
+          ].map(tier => (
+            <div key={tier.tier} className="flex items-start gap-2">
+              <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0 mt-0.5 ${TIER_COLORS[tier.tier]}`}>
+                {tier.tier}
               </span>
-              <span className="text-text-muted text-[10px]">{t.desc}</span>
+              <span className="text-text-muted text-[10px]">{t(tier.descKey)}</span>
             </div>
           ))}
         </div>
@@ -393,22 +393,22 @@ export default function Resources() {
         <div className="space-y-2 text-[11px] text-text-muted">
           <div className="flex gap-2">
             <span className="text-accent-green font-bold text-xs w-4">1</span>
-            <p><span className="text-text-secondary font-semibold">Beginner:</span> Start with Coinbase (exchange) + TradingView (charts) + CoinMarketCap (research). Learn the basics.</p>
+            <p><span className="text-text-secondary font-semibold">{t('resources:gettingStarted.beginner_label')}</span>{t('resources:gettingStarted.beginner_desc')}</p>
           </div>
           <div className="flex gap-2">
             <span className="text-accent-blue font-bold text-xs w-4">2</span>
-            <p><span className="text-text-secondary font-semibold">Intermediate:</span> Add CoinGlass (liquidations/funding) + Glassnode free tier (on-chain) + a portfolio tracker. Start using indicators.</p>
+            <p><span className="text-text-secondary font-semibold">{t('resources:gettingStarted.intermediate_label')}</span>{t('resources:gettingStarted.intermediate_desc')}</p>
           </div>
           <div className="flex gap-2">
             <span className="text-purple-400 font-bold text-xs w-4">3</span>
-            <p><span className="text-text-secondary font-semibold">Advanced:</span> Layer in Nansen (smart money) + Dune (custom analytics) + trading bots. Build systematic strategies.</p>
+            <p><span className="text-text-secondary font-semibold">{t('resources:gettingStarted.advanced_label')}</span>{t('resources:gettingStarted.advanced_desc')}</p>
           </div>
         </div>
       </div>
 
       {/* Key metrics everyone should track */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">KEY METRICS EVERY TRADER SHOULD TRACK</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('resources:keyMetrics.title').toUpperCase()}</h3>
         <div className="space-y-2">
           {[
             { name: 'Fear & Greed Index', source: 'CoinMarketCap / Alternative.me', why: 'Market sentiment at a glance. Extreme fear = potential buy, extreme greed = potential sell.' },

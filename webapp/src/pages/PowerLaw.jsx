@@ -57,7 +57,7 @@ function StatsGrid({ data, t }) {
   ]
 
   const labelMap = {
-    daysGenesis: 'Days Since Genesis',
+    daysGenesis: t('market:powerLaw.daysGenesis'),
     fairValue: t('market:powerLaw.fairValue'),
     deviation: t('market:powerLaw.deviation'),
     toSupport: t('market:powerLaw.support'),
@@ -136,20 +136,20 @@ function PowerLawChart({ historicalData, t }) {
             dataKey="topResistance"
             stroke="none"
             fill="rgba(255,77,106,0.08)"
-            name="Top Resistance"
+            name={t('market:powerLaw.resistance')}
           />
           <Area
             dataKey="support"
             stroke="none"
             fill="rgba(0,200,83,0.08)"
-            name="Support"
+            name={t('market:powerLaw.support')}
           />
           <Line
             dataKey="fairValue"
             stroke="#4a9eff"
             strokeWidth={2}
             dot={false}
-            name="Fair Value"
+            name={t('market:powerLaw.fairValue')}
           />
           <Line
             dataKey="support"
@@ -157,7 +157,7 @@ function PowerLawChart({ historicalData, t }) {
             strokeWidth={1}
             strokeDasharray="4 4"
             dot={false}
-            name="Support"
+            name={t('market:powerLaw.support')}
           />
           <Line
             dataKey="topResistance"
@@ -165,14 +165,14 @@ function PowerLawChart({ historicalData, t }) {
             strokeWidth={1}
             strokeDasharray="4 4"
             dot={false}
-            name="Resistance"
+            name={t('market:powerLaw.resistance')}
           />
           <Line
             dataKey="actualPrice"
             stroke="#ffc107"
             strokeWidth={1.5}
             dot={false}
-            name="BTC Price"
+            name={t('common:price.btcPrice')}
             connectNulls
           />
         </ComposedChart>
@@ -304,21 +304,9 @@ export default function PowerLaw() {
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
         <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('market:powerLaw.title').toUpperCase()}</h3>
         <div className="text-text-muted text-[11px] space-y-2">
-          <p>
-            The Bitcoin Power Law model describes BTC's long-term price trajectory using
-            a power law relationship: <span className="text-text-secondary font-mono">Price = 10^(-17.016 + 5.845 * log10(days))</span>
-          </p>
-          <p>
-            <span className="text-text-secondary font-semibold">How it works:</span> BTC's price
-            follows a straight line on a log-log chart, with R² &gt; 0.95 over its entire history.
-            The model provides a "fair value" corridor — price tends to oscillate between support (0.42x)
-            and resistance (1.5x) of the fair value line.
-          </p>
-          <p>
-            <span className="text-text-secondary font-semibold">Limitations:</span> Past performance
-            doesn't guarantee future results. The model assumes continued adoption growth and doesn't
-            account for black swan events or regulatory changes.
-          </p>
+          <p>{t('market:powerLaw.description')}</p>
+          <p>{t('market:powerLaw.howItWorks')}</p>
+          <p>{t('market:powerLaw.limitations')}</p>
         </div>
       </div>
     </div>

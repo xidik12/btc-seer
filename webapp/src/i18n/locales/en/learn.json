@@ -23,73 +23,104 @@
     "whatIsBitcoin": {
       "title": "What is Bitcoin?",
       "p1": "Bitcoin is a decentralized digital currency that operates without a central bank or single administrator. It was created in 2009 by an anonymous person/group known as Satoshi Nakamoto.",
-      "p2": "Key properties: <b>Fixed supply</b> (21 million max), <b>decentralized</b> (no single point of control), <b>transparent</b> (all transactions on public blockchain)."
+      "p2_prefix": "Key properties: ",
+      "p2_fixedSupply": "Fixed supply",
+      "p2_fixedSupplyDesc": " (21 million max), ",
+      "p2_decentralized": "decentralized",
+      "p2_decentralizedDesc": " (no single point of control), ",
+      "p2_transparent": "transparent",
+      "p2_transparentDesc": " (all transactions on public blockchain)."
     },
     "howTrading": {
       "title": "How Does Trading Work?",
       "p1": "Trading means buying and selling Bitcoin to profit from price changes. You buy when you think the price will go up, and sell when you think it will go down.",
-      "spot": "<b>Spot trading:</b> Buy/sell actual Bitcoin. You own the asset.",
-      "futures": "<b>Futures/Derivatives:</b> Trade contracts that track Bitcoin's price. Can use leverage (borrowed money) to amplify gains — and losses.",
-      "longShort": "<b>Long:</b> Betting price goes UP. <b>Short:</b> Betting price goes DOWN."
+      "spot_label": "Spot trading:",
+      "spot_desc": " Buy/sell actual Bitcoin. You own the asset.",
+      "futures_label": "Futures/Derivatives:",
+      "futures_desc": " Trade contracts that track Bitcoin's price. Can use leverage (borrowed money) to amplify gains — and losses.",
+      "long_label": "Long:",
+      "long_desc": " Betting price goes UP. ",
+      "short_label": "Short:",
+      "short_desc": " Betting price goes DOWN."
     },
     "whatMoves": {
       "title": "What Moves Bitcoin's Price?",
-      "supply": "<b>Supply & Demand:</b> More buyers than sellers = price up. More sellers = price down.",
-      "halvings": "<b>Halvings:</b> Every ~4 years, new BTC created per block is cut in half. Reduces supply, historically bullish.",
-      "macro": "<b>Macro events:</b> Interest rates, inflation, dollar strength (DXY), geopolitical events.",
-      "sentiment": "<b>Sentiment:</b> News, social media, fear & greed. Markets are driven by human emotion.",
-      "whales": "<b>Whale activity:</b> Large holders (1000+ BTC) moving coins to/from exchanges can signal buying or selling."
+      "supply_label": "Supply & Demand:",
+      "supply_desc": " More buyers than sellers = price up. More sellers = price down.",
+      "halvings_label": "Halvings:",
+      "halvings_desc": " Every ~4 years, new BTC created per block is cut in half. Reduces supply, historically bullish.",
+      "macro_label": "Macro events:",
+      "macro_desc": " Interest rates, inflation, dollar strength (DXY), geopolitical events.",
+      "sentiment_label": "Sentiment:",
+      "sentiment_desc": " News, social media, fear & greed. Markets are driven by human emotion.",
+      "whales_label": "Whale activity:",
+      "whales_desc": " Large holders (1000+ BTC) moving coins to/from exchanges can signal buying or selling."
     },
     "marketCap": {
       "title": "What is Market Cap?",
-      "p1": "<b>Market Cap</b> = Price x Circulating Supply. It measures the total value of all coins in circulation.",
+      "p1_label": "Market Cap",
+      "p1_desc": " = Price x Circulating Supply. It measures the total value of all coins in circulation.",
       "p2": "BTC at $97,000 with 19.8M coins = ~$1.92 trillion market cap.",
       "p3": "Higher market cap = more established, lower volatility. Lower market cap = more speculative, higher risk/reward."
     },
     "wallet": {
       "title": "What is a Wallet?",
       "p1": "A crypto wallet stores your private keys — the passwords that prove you own your Bitcoin.",
-      "hot": "<b>Hot wallet:</b> Connected to internet (exchange accounts, mobile apps). Convenient but less secure.",
-      "cold": "<b>Cold wallet:</b> Offline hardware devices (Ledger, Trezor). Most secure for large holdings.",
+      "hot_label": "Hot wallet:",
+      "hot_desc": " Connected to internet (exchange accounts, mobile apps). Convenient but less secure.",
+      "cold_label": "Cold wallet:",
+      "cold_desc": " Offline hardware devices (Ledger, Trezor). Most secure for large holdings.",
       "warning": "\"Not your keys, not your coins\" — if the exchange gets hacked, you lose your funds. Self-custody is safest for large amounts."
     }
   },
   "orders": {
     "market": {
       "title": "Market Order",
-      "p1": "Buys or sells <b>immediately</b> at the current market price.",
+      "p1_prefix": "Buys or sells ",
+      "p1_bold": "immediately",
+      "p1_suffix": " at the current market price.",
       "pros": "Pros: Instant execution, guaranteed fill.",
       "cons": "Cons: You may get a slightly different price than expected (slippage), especially in volatile markets.",
       "useWhen": "Use when: You need to enter/exit NOW and price precision doesn't matter much."
     },
     "limit": {
       "title": "Limit Order",
-      "p1": "Sets a <b>specific price</b> at which you want to buy or sell. Only executes if the market reaches that price.",
+      "p1_prefix": "Sets a ",
+      "p1_bold": "specific price",
+      "p1_suffix": " at which you want to buy or sell. Only executes if the market reaches that price.",
       "pros": "Pros: You control the exact price. No slippage.",
       "cons": "Cons: May never fill if price doesn't reach your level.",
       "useWhen": "Use when: You have a specific target price and can wait for it."
     },
     "stopLoss": {
       "title": "Stop-Loss Order",
-      "p1": "Automatically sells when price drops to a set level, <b>limiting your loss</b>.",
+      "p1_prefix": "Automatically sells when price drops to a set level, ",
+      "p1_bold": "limiting your loss",
+      "p1_suffix": ".",
       "example": "Example: Buy at $97,000, set stop-loss at $95,000. If price drops to $95K, it auto-sells. Max loss = $2,000 per BTC.",
       "useWhen": "Use when: ALWAYS. Every trade should have a stop-loss. No exceptions."
     },
     "takeProfit": {
       "title": "Take-Profit Order",
-      "p1": "Automatically sells when price <b>rises to your target</b>, locking in profit.",
+      "p1_prefix": "Automatically sells when price ",
+      "p1_bold": "rises to your target",
+      "p1_suffix": ", locking in profit.",
       "example": "Example: Buy at $97,000, set take-profit at $103,000. Locks in $6,000 profit per BTC.",
       "useWhen": "Use when: Always set alongside stop-loss. Have BOTH exit points before entering."
     },
     "stopLimit": {
       "title": "Stop-Limit Order",
-      "p1": "Combines stop and limit: when price hits the stop price, a <b>limit order is placed</b> (not a market order).",
+      "p1_prefix": "Combines stop and limit: when price hits the stop price, a ",
+      "p1_bold": "limit order is placed",
+      "p1_suffix": " (not a market order).",
       "pros": "Pros: More price control than a regular stop-loss.",
       "cons": "Cons: In fast crashes, the limit order may not fill, leaving you exposed."
     },
     "trailingStop": {
       "title": "Trailing Stop",
-      "p1": "A stop-loss that <b>moves up with the price</b>. Locks in profit as price rises, triggers if price drops by a set amount.",
+      "p1_prefix": "A stop-loss that ",
+      "p1_bold": "moves up with the price",
+      "p1_suffix": ". Locks in profit as price rises, triggers if price drops by a set amount.",
       "example": "Example: Set 3% trailing stop. Price rises from $97K to $103K, stop follows to $99,910. If price drops 3%, it sells at ~$99,910.",
       "useWhen": "Use when: You're in a winning trade and want to ride the trend while protecting gains."
     }
@@ -105,46 +136,331 @@
     "ichimoku": { "name": "Ichimoku Cloud", "level": "Advanced", "desc": "All-in-one indicator showing support/resistance, trend direction, and momentum. Price above cloud = bullish. Below = bearish.", "tip": "The cloud itself acts as support/resistance. Thick cloud = strong. Thin cloud = weak, breakout likely." },
     "fearGreed": { "name": "Fear & Greed Index", "level": "Essential", "desc": "Market sentiment score 0-100. Extreme Fear (0-25) = potential buy. Extreme Greed (75-100) = potential sell. Uses volatility, volume, social media, and dominance.", "tip": "\"Be fearful when others are greedy, greedy when others are fearful\" — Warren Buffett." },
     "fundingRate": { "name": "Funding Rate", "level": "Intermediate", "desc": "Shows if the derivatives market is over-leveraged long or short. High positive = too many longs (bearish signal). Negative = too many shorts (bullish signal).", "tip": "Extreme funding rates often precede liquidation cascades and sharp reversals." },
-    "proTip": "Pro tip: {{tip}}",
+    "proTip": "Pro tip:",
     "learnFirst": "Learn first",
     "essential": "Essential",
     "intermediate": "Intermediate",
     "advanced": "Advanced"
   },
   "strategies": {
-    "hodl": { "title": "HODLing (Buy & Hold)", "p1": "The simplest strategy. Buy Bitcoin and hold for years regardless of short-term price swings.", "bestFor": "Best for: Beginners. Historically, anyone who held BTC for 4+ years has been profitable.", "risk": "Risk: Low (if you can handle seeing -50% drops without panic selling)." },
-    "dca": { "title": "Dollar Cost Averaging (DCA)", "p1": "Invest a fixed amount at regular intervals (weekly/monthly) regardless of price. Removes the stress of timing the market.", "bestFor": "Best for: Beginners and long-term investors. Proven to outperform most timing strategies.", "example": "Example: $100/week for 2 years. You buy more BTC when cheap, less when expensive. Average cost smooths out." },
-    "swing": { "title": "Swing Trading", "p1": "Hold positions for days to weeks, capturing medium-term price swings using technical analysis.", "bestFor": "Best for: Intermediate traders. Requires understanding of charts, indicators, and risk management.", "tools": "Key tools: Support/resistance, RSI, MACD, volume. Enter at support, exit at resistance." },
-    "day": { "title": "Day Trading", "p1": "Open and close positions within the same day. Requires constant monitoring and fast execution.", "bestFor": "Best for: Advanced traders only. 95% of day traders lose money — this is a statistical fact.", "warning": "Warning: High stress, high fees, requires discipline. Start with paper trading (practice with fake money)." },
-    "onePercent": { "title": "The 1% Risk Rule", "p1": "Never risk more than 1% of your total portfolio on a single trade. This is THE most important rule in trading.", "example": "Example: $10,000 account = max $100 risk per trade. If your stop-loss is 2% below entry, your position size = $5,000.", "p2": "With the 1% rule, you can lose 10 trades in a row and only be down 10%. Without it, one bad trade can destroy your account." },
-    "srTrading": { "title": "Support/Resistance Trading", "p1": "Identify key price levels where BTC repeatedly bounces (support) or gets rejected (resistance).", "strategy": "Strategy: Buy near support with stop-loss just below. Sell near resistance or set take-profit there.", "confirmation": "Confirmation: Wait for a bounce (don't buy into a falling knife). Volume + RSI turning up = stronger signal." }
+    "hodl": {
+      "title": "HODLing (Buy & Hold)",
+      "p1": "The simplest strategy. Buy Bitcoin and hold for years regardless of short-term price swings.",
+      "bestFor_label": "Best for:",
+      "bestFor_desc": " Beginners. Historically, anyone who held BTC for 4+ years has been profitable.",
+      "risk_label": "Risk:",
+      "risk_desc": " Low (if you can handle seeing -50% drops without panic selling)."
+    },
+    "dca": {
+      "title": "Dollar Cost Averaging (DCA)",
+      "p1": "Invest a fixed amount at regular intervals (weekly/monthly) regardless of price. Removes the stress of timing the market.",
+      "bestFor_label": "Best for:",
+      "bestFor_desc": " Beginners and long-term investors. Proven to outperform most timing strategies.",
+      "example_label": "Example:",
+      "example_desc": " $100/week for 2 years. You buy more BTC when cheap, less when expensive. Average cost smooths out."
+    },
+    "swing": {
+      "title": "Swing Trading",
+      "p1": "Hold positions for days to weeks, capturing medium-term price swings using technical analysis.",
+      "bestFor_label": "Best for:",
+      "bestFor_desc": " Intermediate traders. Requires understanding of charts, indicators, and risk management.",
+      "tools_label": "Key tools:",
+      "tools_desc": " Support/resistance, RSI, MACD, volume. Enter at support, exit at resistance."
+    },
+    "day": {
+      "title": "Day Trading",
+      "p1": "Open and close positions within the same day. Requires constant monitoring and fast execution.",
+      "bestFor_label": "Best for:",
+      "bestFor_desc": " Advanced traders only. 95% of day traders lose money — this is a statistical fact.",
+      "warning_label": "Warning:",
+      "warning_desc": " High stress, high fees, requires discipline. Start with paper trading (practice with fake money)."
+    },
+    "onePercent": {
+      "title": "The 1% Risk Rule",
+      "p1": "Never risk more than 1% of your total portfolio on a single trade. This is THE most important rule in trading.",
+      "example_label": "Example:",
+      "example_desc": " $10,000 account = max $100 risk per trade. If your stop-loss is 2% below entry, your position size = $5,000.",
+      "p2": "With the 1% rule, you can lose 10 trades in a row and only be down 10%. Without it, one bad trade can destroy your account."
+    },
+    "srTrading": {
+      "title": "Support/Resistance Trading",
+      "p1": "Identify key price levels where BTC repeatedly bounces (support) or gets rejected (resistance).",
+      "strategy_label": "Strategy:",
+      "strategy_desc": " Buy near support with stop-loss just below. Sell near resistance or set take-profit there.",
+      "confirmation_label": "Confirmation:",
+      "confirmation_desc": " Wait for a bounce (don't buy into a falling knife). Volume + RSI turning up = stronger signal."
+    }
   },
   "risk": {
-    "onePercent": { "title": "The 1% Rule (Expanded)", "p1": "Never risk more than <b>1% of your total account</b> on any single trade. This is the foundation of survival in trading.", "formula": "Formula: Max Risk = Account Size x 0.01", "example": "Worked example:", "tip": "Even 10 consecutive losses = only -10%. You survive. Without the 1% rule, one bad trade can end your career." },
-    "riskReward": { "title": "Risk-to-Reward Ratio", "p1": "The ratio between how much you risk (stop-loss distance) and how much you stand to gain (take-profit distance).", "minimum": "Minimum target: 1:2 — risk $1 to make $2. This means you only need to win 34% of trades to be profitable.", "tip": "Never take a trade with R:R below 1:1.5. If the setup doesn't offer good R:R, skip it — there will always be another trade." },
-    "stopLoss": { "title": "Stop-Loss Placement", "p1": "Where you place your stop-loss matters more than whether you use one. A badly placed stop gets hit by normal market noise.", "tip": "A good stop-loss is placed where your trade thesis is invalidated — if price reaches that level, your reason for entering no longer holds." },
-    "positionSizing": { "title": "Position Sizing", "p1": "The exact formula to calculate how big your position should be:", "formula": "Position Size = Risk Amount / (Entry Price - Stop-Loss Price)" },
-    "portfolioHeat": { "title": "Portfolio Heat", "p1": "<b>Portfolio heat</b> = the total risk across ALL your open positions combined.", "max": "Max recommended: 6% total portfolio risk at any time.", "tip": "Most blown accounts come from having too many positions open at once during a market crash. Portfolio heat is your defense." },
-    "leverage": { "title": "Leverage Dangers", "p1": "Leverage amplifies both gains AND losses. Here's the math most people ignore:", "safe": "Safe leverage: 2-5x maximum, with tight stop-losses. Most professional traders use 1-3x. If you need high leverage to make money, your position sizing is wrong." },
-    "drawdown": { "title": "Drawdown Recovery", "p1": "Losses are not symmetrical. Recovering from a loss requires a <b>larger percentage gain</b> than the percentage you lost:", "tip": "This is why protecting capital is more important than making gains. A 50% loss requires a 100% gain just to break even. Prevention > cure.", "loss": "-{{pct}}% loss", "recovery": "+{{pct}}% needed to recover" }
+    "onePercent": {
+      "title": "The 1% Rule (Expanded)",
+      "p1_prefix": "Never risk more than ",
+      "p1_bold": "1% of your total account",
+      "p1_suffix": " on any single trade. This is the foundation of survival in trading.",
+      "formula_label": "Formula:",
+      "formula_desc": " Max Risk = Account Size x 0.01",
+      "example_title": "Worked example:",
+      "example_account": "Account: $10,000. Max risk per trade: $10,000 x 0.01 = ",
+      "example_risk": "$100",
+      "example_entry": "Entry: $97,000. Stop-loss: $96,000. Risk per BTC = $1,000.",
+      "example_position_prefix": "Position size: $100 / $1,000 = ",
+      "example_position_value": "0.1 BTC",
+      "example_position_suffix": " ($9,700 position).",
+      "tip": "Even 10 consecutive losses = only -10%. You survive. Without the 1% rule, one bad trade can end your career."
+    },
+    "riskReward": {
+      "title": "Risk-to-Reward Ratio",
+      "p1": "The ratio between how much you risk (stop-loss distance) and how much you stand to gain (take-profit distance).",
+      "minimum_label": "Minimum target: 1:2",
+      "minimum_desc": " — risk $1 to make $2. This means you only need to win 34% of trades to be profitable.",
+      "howTo_label": "How to calculate:",
+      "howTo_entry": "Entry: $97,000. Stop-loss: $96,000 (risk = $1,000). Take-profit: $99,000 (reward = $2,000).",
+      "howTo_result_prefix": "R:R = $1,000 : $2,000 = ",
+      "howTo_result_value": "1:2",
+      "howTo_result_suffix": ".",
+      "tip": "Never take a trade with R:R below 1:1.5. If the setup doesn't offer good R:R, skip it — there will always be another trade."
+    },
+    "stopLoss": {
+      "title": "Stop-Loss Placement",
+      "p1": "Where you place your stop-loss matters more than whether you use one. A badly placed stop gets hit by normal market noise.",
+      "belowSupport_label": "Below support:",
+      "belowSupport_desc": " Place stop just below a key support level, not at an arbitrary %. If support is at $95,000, set stop at $94,800.",
+      "atr_label": "ATR-based:",
+      "atr_desc": " Use the Average True Range indicator. Stop = Entry - (1.5 x ATR). This adapts to current volatility.",
+      "neverDo_label": "Never do:",
+      "neverDo_desc": " \"I'll set my stop at -5% because that feels right.\" Random percentages have no relation to market structure.",
+      "tip": "A good stop-loss is placed where your trade thesis is invalidated — if price reaches that level, your reason for entering no longer holds."
+    },
+    "positionSizing": {
+      "title": "Position Sizing",
+      "p1": "The exact formula to calculate how big your position should be:",
+      "formula": "Position Size = Risk Amount / (Entry Price - Stop-Loss Price)",
+      "example_label": "Example:",
+      "example_account": "Account: $20,000. Risk: 1% = $200.",
+      "example_entry": "Entry: $97,000. Stop-loss: $95,500. Distance = $1,500.",
+      "example_position_prefix": "Position: $200 / $1,500 = ",
+      "example_position_value": "0.133 BTC",
+      "example_position_suffix": " (~$12,933).",
+      "example_note": "This means you're using ~65% of your account but only risking 1%. The stop-loss controls the risk, not the position size alone."
+    },
+    "portfolioHeat": {
+      "title": "Portfolio Heat",
+      "p1_prefix": "",
+      "p1_bold": "Portfolio heat",
+      "p1_suffix": " = the total risk across ALL your open positions combined.",
+      "max_label": "Max recommended:",
+      "max_desc": " 6% total portfolio risk at any time.",
+      "p3": "If you risk 1% per trade, that means maximum 6 open trades. But if your trades are correlated (e.g., all crypto), the real risk is higher.",
+      "correlated_label": "Correlated positions:",
+      "correlated_desc": " If you're long BTC and long ETH, those aren't truly separate bets — they tend to move together. Count them as 1.5-2x risk.",
+      "tip": "Most blown accounts come from having too many positions open at once during a market crash. Portfolio heat is your defense."
+    },
+    "leverage": {
+      "title": "Leverage Dangers",
+      "p1": "Leverage amplifies both gains AND losses. Here's the math most people ignore:",
+      "2x": "2x leverage: 50% drop = liquidation. BTC drops 50% roughly once per cycle.",
+      "5x": "5x leverage: 20% drop = liquidation. BTC drops 20% several times per year.",
+      "10x": "10x leverage: 10% drop = liquidation. BTC moves 10% in a single week regularly.",
+      "25x": "25x leverage: 4% drop = liquidation. This can happen in minutes.",
+      "100x": "100x leverage: 1% drop = liquidation. You are gambling, not trading.",
+      "safe": "Safe leverage: 2-5x maximum, with tight stop-losses. Most professional traders use 1-3x. If you need high leverage to make money, your position sizing is wrong."
+    },
+    "drawdown": {
+      "title": "Drawdown Recovery",
+      "p1_prefix": "Losses are not symmetrical. Recovering from a loss requires a ",
+      "p1_bold": "larger percentage gain",
+      "p1_suffix": " than the percentage you lost:",
+      "loss": "-{{pct}} loss",
+      "recovery": "+{{pct}} needed to recover",
+      "tip": "This is why protecting capital is more important than making gains. A 50% loss requires a 100% gain just to break even. Prevention > cure."
+    }
   },
   "psychology": {
-    "fomo": { "title": "FOMO (Fear of Missing Out)", "p1": "That painful feeling when price is pumping and you're not in the trade. Your brain screams \"BUY NOW before it goes higher!\"", "tip": "The market is open 24/7, 365 days a year. There is ALWAYS another opportunity. Missing one trade is nothing — buying the top is everything." },
-    "revenge": { "title": "Revenge Trading", "p1": "You just lost money. You feel angry, frustrated, humiliated. Your instinct is to immediately open a bigger trade to \"win it back.\"", "tip": "Professional traders have a rule: after 2-3 consecutive losses, stop trading for the day. The market will be there tomorrow. Your capital might not be." },
-    "confirmation": { "title": "Confirmation Bias", "p1": "When you have a position, your brain automatically filters information to support your view and ignores evidence against it.", "tip": "The best traders are always looking for reasons they might be wrong. The worst traders only look for reasons they're right." },
-    "overtrading": { "title": "Overtrading", "p1": "More trades does NOT mean more profit. Each trade has fees, slippage, and emotional cost. Most traders would be more profitable making fewer, higher-quality trades." },
-    "tradingPlan": { "title": "The Trading Plan", "p1": "Write your plan BEFORE you enter the trade, while you're thinking clearly. Once money is on the line, emotions take over.", "tip": "If you can't write a plan for a trade, don't take the trade. \"I just feel like it'll go up\" is not a plan." },
-    "detachment": { "title": "Emotional Detachment", "p1": "Every trade is a probability, not a certainty. Even the best setups fail 30-40% of the time. Treating trades as statistics instead of personal wins/losses is the key to longevity.", "tip": "Think of yourself as a casino, not a gambler. The casino doesn't celebrate every hand — it trusts the math over thousands of hands." },
-    "whenNot": { "title": "When NOT to Trade", "p1": "Some of the best trades are the ones you don't take. Knowing when to stay out is a skill:", "tip": "The market rewards patience. Sitting in cash waiting for a perfect setup IS trading. The best traders spend most of their time doing nothing." }
+    "fomo": {
+      "title": "FOMO (Fear of Missing Out)",
+      "p1": "That painful feeling when price is pumping and you're not in the trade. Your brain screams \"BUY NOW before it goes higher!\"",
+      "whyDangerous_label": "Why it's dangerous:",
+      "whyDangerous_desc": " FOMO makes you buy at the top. The best entries happen when the market is quiet and boring — not when everyone is excited.",
+      "howToFight_label": "How to fight it:",
+      "howToFight_1": "1. Remind yourself: if you missed the move, you missed the move. There will be another one.",
+      "howToFight_2": "2. Never chase a green candle. Wait for a pullback to support before entering.",
+      "howToFight_3": "3. If you feel intense urgency to buy, that's usually the worst time to buy.",
+      "tip": "The market is open 24/7, 365 days a year. There is ALWAYS another opportunity. Missing one trade is nothing — buying the top is everything."
+    },
+    "revenge": {
+      "title": "Revenge Trading",
+      "p1": "You just lost money. You feel angry, frustrated, humiliated. Your instinct is to immediately open a bigger trade to \"win it back.\"",
+      "whyKiller_label": "Why it's the #1 account killer:",
+      "whyKiller_desc": " Revenge trades are emotional, not strategic. You increase size, ignore your plan, and usually lose again — now even more. This spiral has destroyed more accounts than any market crash.",
+      "howToFight_label": "How to fight it:",
+      "howToFight_1_prefix": "1. Set a ",
+      "howToFight_1_bold": "daily loss limit",
+      "howToFight_1_suffix": " (e.g., max 3% per day). Hit it = done for the day. No exceptions.",
+      "howToFight_2": "2. After a loss, take at least 30 minutes away from the screen.",
+      "howToFight_3": "3. Never increase position size after a loss. If anything, reduce it.",
+      "tip": "Professional traders have a rule: after 2-3 consecutive losses, stop trading for the day. The market will be there tomorrow. Your capital might not be."
+    },
+    "confirmation": {
+      "title": "Confirmation Bias",
+      "p1": "When you have a position, your brain automatically filters information to support your view and ignores evidence against it.",
+      "example_label": "Example:",
+      "example_desc": " You're long BTC. You read 10 bullish tweets and feel great. You see a bearish analysis and dismiss it as \"FUD.\" Meanwhile, the bearish analysis was right.",
+      "howToFight_label": "How to fight it:",
+      "howToFight_1": "1. Actively seek out the opposite view before entering any trade.",
+      "howToFight_2": "2. Ask yourself: \"What would make this trade wrong?\" Write that down.",
+      "howToFight_3": "3. Follow analysts who disagree with you — they'll catch what you miss.",
+      "tip": "The best traders are always looking for reasons they might be wrong. The worst traders only look for reasons they're right."
+    },
+    "overtrading": {
+      "title": "Overtrading",
+      "p1": "More trades does NOT mean more profit. Each trade has fees, slippage, and emotional cost. Most traders would be more profitable making fewer, higher-quality trades.",
+      "signs_label": "Signs you're overtrading:",
+      "signs_1": "- Trading out of boredom when there's no clear setup",
+      "signs_2": "- Opening positions just to \"be in the market\"",
+      "signs_3": "- Feeling anxious when you don't have an open trade",
+      "signs_4": "- Taking setups that don't meet all your criteria",
+      "fix_label": "Fix:",
+      "fix_desc": " Quality over quantity. 2-3 high-conviction trades per week beat 20 random trades. If there's no clear setup, doing nothing IS a valid position."
+    },
+    "tradingPlan": {
+      "title": "The Trading Plan",
+      "p1_prefix": "Write your plan ",
+      "p1_bold": "BEFORE",
+      "p1_suffix": " you enter the trade, while you're thinking clearly. Once money is on the line, emotions take over.",
+      "must_label": "Every trade plan must include:",
+      "must_1_label": "Entry reason:",
+      "must_1_desc": " Why are you entering? What's the setup?",
+      "must_2_label": "Entry price:",
+      "must_2_desc": " Exact price or zone.",
+      "must_3_label": "Stop-loss:",
+      "must_3_desc": " Where is your thesis invalidated?",
+      "must_4_label": "Take-profit:",
+      "must_4_desc": " Where do you take gains?",
+      "must_5_label": "Position size:",
+      "must_5_desc": " Based on 1% rule and stop distance.",
+      "must_6_label": "Max daily loss:",
+      "must_6_desc": " When do you stop for the day?",
+      "tip": "If you can't write a plan for a trade, don't take the trade. \"I just feel like it'll go up\" is not a plan."
+    },
+    "detachment": {
+      "title": "Emotional Detachment",
+      "p1": "Every trade is a probability, not a certainty. Even the best setups fail 30-40% of the time. Treating trades as statistics instead of personal wins/losses is the key to longevity.",
+      "mindset_label": "Mindset shift:",
+      "mindset_1": "- Don't say \"I lost\" — say \"The trade was stopped out.\" It's not personal.",
+      "mindset_2": "- Don't celebrate winning trades — you might have won for the wrong reason.",
+      "mindset_3": "- Focus on whether you followed your plan, not the outcome. A losing trade executed well is better than a winning trade based on luck.",
+      "tip": "Think of yourself as a casino, not a gambler. The casino doesn't celebrate every hand — it trusts the math over thousands of hands."
+    },
+    "whenNot": {
+      "title": "When NOT to Trade",
+      "p1": "Some of the best trades are the ones you don't take. Knowing when to stay out is a skill:",
+      "dontTrade_label": "Don't trade when:",
+      "dontTrade_1": "- You're tired, sick, or sleep-deprived",
+      "dontTrade_2": "- You're emotional (angry, euphoric, stressed, or sad)",
+      "dontTrade_3": "- Right after a big win (overconfidence)",
+      "dontTrade_4": "- Right after a big loss (revenge trading urge)",
+      "dontTrade_5": "- There's no clear setup in the market",
+      "dontTrade_6": "- Major uncertain news events are about to drop (FOMC, CPI)",
+      "dontTrade_7": "- You're checking your P&L every 30 seconds",
+      "tip": "The market rewards patience. Sitting in cash waiting for a perfect setup IS trading. The best traders spend most of their time doing nothing."
+    }
   },
   "patterns": {
-    "sr": { "title": "Support & Resistance", "tip": "S/R is the single most important concept in trading. Master this before anything else." },
-    "doubleTopBottom": { "title": "Double Top / Double Bottom", "tip": "Wait for the neckline break with volume confirmation. Many double tops/bottoms fail — the break is the signal, not the second touch." },
-    "headShoulders": { "title": "Head & Shoulders", "tip": "The neckline doesn't have to be perfectly horizontal — it can be slightly angled. Volume should decrease on the right shoulder and spike on the neckline break." },
-    "triangles": { "title": "Triangles (Ascending, Descending, Symmetrical)", "tip": "Breakouts in the last 25% of the triangle (near the apex) are weaker. The best breakouts happen in the first 50-75% of the pattern." },
-    "flags": { "title": "Flags & Pennants", "tip": "Flags should form quickly (5-15 candles). If consolidation takes too long, the pattern weakens and may not work." },
-    "cup": { "title": "Cup & Handle", "tip": "The handle should NOT drop more than 50% of the cup's depth. If it does, the pattern is weakening." },
-    "candlestick": { "title": "Candlestick Basics", "tip": "Single candles are weak signals alone. Always combine with S/R levels and volume. A hammer AT support with high volume = strong. A hammer in the middle of nowhere = meaningless." }
+    "sr": {
+      "title": "Support & Resistance",
+      "support_label": "Support",
+      "support_desc": " = a price level where buying pressure is strong enough to prevent the price from falling further. The price \"bounces\" off this level.",
+      "resistance_label": "Resistance",
+      "resistance_desc": " = a price level where selling pressure prevents the price from rising further. The price gets \"rejected\" here.",
+      "rules_label": "Key rules:",
+      "rules_1": "1. The more times a level is tested, the stronger it is.",
+      "rules_2": "2. When support breaks, it becomes resistance (and vice versa) — this is called a \"flip.\"",
+      "rules_3": "3. Round numbers ($50K, $100K) act as psychological S/R levels.",
+      "rules_4": "4. S/R levels are zones, not exact prices. Think $94,800-$95,200, not $95,000 exactly.",
+      "tip": "S/R is the single most important concept in trading. Master this before anything else."
+    },
+    "doubleTopBottom": {
+      "title": "Double Top / Double Bottom",
+      "p1_prefix": "A ",
+      "p1_bold": "reversal pattern",
+      "p1_suffix": " where price tests the same level twice and fails to break through.",
+      "doubleTop_label": "Double Top (bearish):",
+      "doubleTop_desc": " Price hits resistance twice, forming an \"M\" shape. Signals a potential drop. Sell/short when price breaks below the neckline (the low between the two peaks).",
+      "doubleBottom_label": "Double Bottom (bullish):",
+      "doubleBottom_desc": " Price hits support twice, forming a \"W\" shape. Signals a potential rise. Buy when price breaks above the neckline (the high between the two dips).",
+      "target_label": "Target:",
+      "target_desc": " Measure the distance from peak to neckline — that's your expected move from the breakout point.",
+      "tip": "Wait for the neckline break with volume confirmation. Many double tops/bottoms fail — the break is the signal, not the second touch."
+    },
+    "headShoulders": {
+      "title": "Head & Shoulders",
+      "p1_prefix": "One of the most reliable ",
+      "p1_bold": "reversal patterns",
+      "p1_suffix": ". Three peaks: left shoulder, head (highest), right shoulder.",
+      "regular_label": "Regular H&S (bearish):",
+      "regular_desc": " After an uptrend. The neckline connects the lows between the three peaks. Break below the neckline = sell signal.",
+      "inverse_label": "Inverse H&S (bullish):",
+      "inverse_desc": " After a downtrend. Three troughs with the middle being the lowest. Break above the neckline = buy signal.",
+      "target_label": "Target:",
+      "target_desc": " Distance from head to neckline, projected from the breakout point.",
+      "tip": "The neckline doesn't have to be perfectly horizontal — it can be slightly angled. Volume should decrease on the right shoulder and spike on the neckline break."
+    },
+    "triangles": {
+      "title": "Triangles (Ascending, Descending, Symmetrical)",
+      "p1": "Price consolidates between converging trendlines, building pressure before a breakout.",
+      "ascending_label": "Ascending Triangle (bullish bias):",
+      "ascending_desc": " Flat top resistance + rising lower trendline. Buyers are getting more aggressive. Usually breaks upward.",
+      "descending_label": "Descending Triangle (bearish bias):",
+      "descending_desc": " Flat bottom support + falling upper trendline. Sellers are getting more aggressive. Usually breaks downward.",
+      "symmetrical_label": "Symmetrical Triangle (neutral):",
+      "symmetrical_desc": " Both trendlines converging equally. Can break either way — wait for direction confirmation.",
+      "entry_label": "Entry:",
+      "entry_desc": " Trade the breakout direction with a stop-loss on the other side of the triangle.",
+      "tip": "Breakouts in the last 25% of the triangle (near the apex) are weaker. The best breakouts happen in the first 50-75% of the pattern."
+    },
+    "flags": {
+      "title": "Flags & Pennants",
+      "p1_prefix": "Short consolidation patterns after a strong, sharp move (the \"flagpole\"). They signal ",
+      "p1_bold": "continuation",
+      "p1_suffix": " of the previous trend.",
+      "bullFlag_label": "Bull Flag:",
+      "bullFlag_desc": " Strong move up (flagpole), then price drifts down in a small parallel channel (flag). Breakout upward continues the move.",
+      "bearFlag_label": "Bear Flag:",
+      "bearFlag_desc": " Strong move down, then price drifts up in a small channel. Breakout downward continues the move.",
+      "pennant_label": "Pennant:",
+      "pennant_desc": " Same as a flag but the consolidation forms a small symmetrical triangle instead of a channel.",
+      "target_label": "Target:",
+      "target_desc": " Measure the flagpole length and project it from the breakout point.",
+      "tip": "Flags should form quickly (5-15 candles). If consolidation takes too long, the pattern weakens and may not work."
+    },
+    "cup": {
+      "title": "Cup & Handle",
+      "p1_prefix": "A ",
+      "p1_bold": "bullish continuation",
+      "p1_suffix": " pattern that looks like a tea cup from the side. Usually forms over weeks to months.",
+      "cup_label": "Cup:",
+      "cup_desc": " A U-shaped (not V-shaped) decline and recovery. Price drops, rounds out at a bottom, and recovers back to the starting level.",
+      "handle_label": "Handle:",
+      "handle_desc": " A small pullback/consolidation near the right side of the cup. This is the final shakeout before breakout.",
+      "entry_label": "Entry:",
+      "entry_desc": " Buy when price breaks above the rim of the cup (the resistance level) with volume.",
+      "target_label": "Target:",
+      "target_desc": " Depth of the cup projected upward from the breakout.",
+      "tip": "The handle should NOT drop more than 50% of the cup's depth. If it does, the pattern is weakening."
+    },
+    "candlestick": {
+      "title": "Candlestick Basics",
+      "p1": "Individual candles can signal reversals or continuation. Here are the most important ones:",
+      "doji_label": "Doji:",
+      "doji_desc": " Open and close at nearly the same price. Body is tiny or nonexistent. Shows indecision — neither buyers nor sellers won. At the top of a trend = potential reversal.",
+      "hammer_label": "Hammer:",
+      "hammer_desc": " Small body at the top, long lower wick (2x+ body length). Appears at bottoms — buyers rejected the low. Bullish reversal signal.",
+      "shootingStar_label": "Shooting Star:",
+      "shootingStar_desc": " Small body at the bottom, long upper wick. Appears at tops — sellers rejected the high. Bearish reversal signal.",
+      "engulfing_label": "Engulfing:",
+      "engulfing_desc": " A candle that completely covers the previous candle's body. Bullish engulfing = green candle swallows red. Bearish engulfing = red swallows green. Strong reversal signal.",
+      "tip": "Single candles are weak signals alone. Always combine with S/R levels and volume. A hammer AT support with high volume = strong. A hammer in the middle of nowhere = meaningless."
+    }
   },
   "glossary": {
     "ATH": "All-Time High — the highest price ever reached",

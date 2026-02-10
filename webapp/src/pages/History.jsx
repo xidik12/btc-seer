@@ -198,7 +198,7 @@ function ConfidenceChart({ history }) {
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <h3 className="text-text-secondary text-xs font-semibold mb-1">{t('market:history.calibration').toUpperCase()}</h3>
-      <p className="text-text-muted text-[9px] mb-3">Higher confidence should = higher accuracy. Dots sized by sample count.</p>
+      <p className="text-text-muted text-[9px] mb-3">{t('market:history.calibrationDesc')}</p>
       <div className="h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
@@ -307,6 +307,7 @@ function DirectionBreakdown({ history }) {
 // ── Prediction Row (Expanded) ──
 
 function PredictionRow({ p, tf }) {
+  const { t } = useTranslation(['market', 'common'])
   const [expanded, setExpanded] = useState(false)
   const priceDelta = p.actual_price && p.current_price
     ? ((p.actual_price - p.current_price) / p.current_price * 100)
@@ -336,7 +337,7 @@ function PredictionRow({ p, tf }) {
               {p.direction === 'bullish' ? '▲' : p.direction === 'bearish' ? '▼' : '◄►'}{' '}
               {p.direction.charAt(0).toUpperCase() + p.direction.slice(1)}
             </span>
-            <span className="text-text-muted text-[10px] tabular-nums">{p.confidence?.toFixed(0)}% conf</span>
+            <span className="text-text-muted text-[10px] tabular-nums">{p.confidence?.toFixed(0)}% {t('market:history.conf')}</span>
           </div>
           <div className="text-[10px] text-text-muted mt-0.5 tabular-nums">
             {formatDate(p.timestamp)} {formatTime(p.timestamp)}
@@ -355,7 +356,7 @@ function PredictionRow({ p, tf }) {
               → {formatPrice(p.actual_price)} ({priceDelta >= 0 ? '+' : ''}{priceDelta.toFixed(2)}%)
             </div>
           ) : (
-            <div className="text-[10px] text-text-muted">Pending...</div>
+            <div className="text-[10px] text-text-muted">{t('market:history.pending')}</div>
           )}
         </div>
       </div>
@@ -365,17 +366,17 @@ function PredictionRow({ p, tf }) {
         <div className="px-3 pb-3 pt-0 border-t border-white/5">
           <div className="grid grid-cols-3 gap-2 mt-2 text-[10px]">
             <div>
-              <span className="text-text-muted">Timeframe</span>
+              <span className="text-text-muted">{t('market:history.timeframe')}</span>
               <div className="text-text-primary font-medium">{tf.toUpperCase()}</div>
             </div>
             <div>
-              <span className="text-text-muted">Predicted</span>
+              <span className="text-text-muted">{t('market:history.predicted')}</span>
               <div className="text-text-primary font-medium tabular-nums">
                 {p.predicted_price ? formatPrice(p.predicted_price) : '--'}
               </div>
             </div>
             <div>
-              <span className="text-text-muted">Actual Move</span>
+              <span className="text-text-muted">{t('market:history.actualMove')}</span>
               <div className={`font-medium tabular-nums ${
                 priceDelta != null ? (priceDelta >= 0 ? 'text-accent-green' : 'text-accent-red') : 'text-text-muted'
               }`}>

@@ -2,13 +2,16 @@
   "title": "交易工具",
   "positionSize": {
     "title": "仓位计算器",
+    "description": "根据账户风险计算理想仓位大小。专业交易员每笔交易风险控制在1-2%。",
     "accountBalance": "账户余额 ($)",
     "riskPercent": "每笔风险 (%)",
     "entryPrice": "入场价 ($)",
     "stopLoss": "止损价 ($)",
     "calculate": "计算",
     "result": "仓位大小",
-    "riskAmount": "风险金额"
+    "riskAmount": "风险金额",
+    "stopDistance": "止损距离",
+    "positionValue": "仓位价值"
   },
   "pnl": {
     "title": "盈亏计算器",
@@ -23,20 +26,29 @@
     "profit": "盈利",
     "loss": "亏损",
     "pnl": "盈亏",
-    "roi": "收益率"
+    "roi": "收益率",
+    "breakEven": "盈亏平衡"
   },
   "riskReward": {
     "title": "风险回报计算器",
+    "description": "专业交易员目标至少1:2的风险回报比。比率越高，即使频繁失误也能保持盈利。",
     "entryPrice": "入场价 ($)",
     "stopLoss": "止损价 ($)",
     "takeProfit": "止盈价 ($)",
     "calculate": "计算",
     "ratio": "风险回报比",
     "riskPercent": "风险 %",
-    "rewardPercent": "回报 %"
+    "rewardPercent": "回报 %",
+    "winRateNeeded": "所需胜率",
+    "quality": "质量",
+    "qualityExcellent": "优秀",
+    "qualityGood": "良好",
+    "qualityFair": "一般",
+    "qualityPoor": "较差"
   },
   "dca": {
     "title": "定投计算器",
+    "description": "定投策略降低择时风险。无论价格如何，持续买入。",
     "investmentAmount": "每期投入金额 ($)",
     "frequency": "频率",
     "duration": "持续时间（月）",
@@ -47,10 +59,17 @@
     "finalValue": "最终价值",
     "avgPrice": "平均成本",
     "totalBtc": "总 BTC 数量",
+    "totalBuys": "总购买次数",
     "roi": "收益率",
+    "daily": "每天",
     "weekly": "每周",
     "biweekly": "每两周",
-    "monthly": "每月"
+    "monthly": "每月",
+    "priceScenarios": "价格情景",
+    "scenarioBear": "熊市 (-30%)",
+    "scenarioFlat": "横盘 (0%)",
+    "scenarioBull": "牛市 (+50%)",
+    "scenarioMoon": "暴涨 (+100%)"
   },
   "proRules": {
     "title": "专业风控准则",

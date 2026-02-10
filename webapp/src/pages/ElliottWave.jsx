@@ -367,12 +367,12 @@ function StatsGrid({ data, t }) {
   ]
 
   const labelMap = {
-    pattern: 'Pattern',
+    pattern: t('market:elliott.pattern'),
     currentWave: t('market:elliott.currentWave'),
-    direction: 'Direction',
+    direction: t('market:elliott.direction'),
     confidence: t('common:confidence'),
     divergences: t('market:elliott.divergence'),
-    waveCount: 'Wave Count',
+    waveCount: t('market:elliott.waveCount'),
   }
 
   return (
@@ -480,26 +480,10 @@ export default function ElliottWave() {
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
         <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('market:elliott.title').toUpperCase()}</h3>
         <div className="text-text-muted text-[11px] space-y-2">
-          <p>
-            <span className="text-text-secondary font-semibold">Elliott Wave Theory</span> identifies
-            recurring fractal wave patterns in market prices. Markets move in 5-wave impulses
-            (with the trend) and 3-wave corrections (against the trend).
-          </p>
-          <p>
-            <span className="text-text-secondary font-semibold">Three inviolable rules:</span>{' '}
-            (1) Wave 2 never retraces more than 100% of Wave 1.{' '}
-            (2) Wave 3 is never the shortest impulse wave.{' '}
-            (3) Wave 4 never enters Wave 1 price territory.
-          </p>
-          <p>
-            <span className="text-text-secondary font-semibold">Fibonacci ratios</span> guide
-            wave projections: Wave 3 often extends to 1.618x of Wave 1, Wave 4 retraces
-            to 0.382x of Wave 3, and Wave 5 often equals Wave 1 in length.
-          </p>
-          <p>
-            <span className="text-text-secondary font-semibold">Divergences</span> (price vs RSI/MACD)
-            at swing points help confirm wave completions, especially at Wave 5 endings.
-          </p>
+          <p>{t('market:elliott.theoryDescription')}</p>
+          <p>{t('market:elliott.threeRules')}</p>
+          <p>{t('market:elliott.fibRatios')}</p>
+          <p>{t('market:elliott.divergenceInfo')}</p>
         </div>
       </div>
     </div>

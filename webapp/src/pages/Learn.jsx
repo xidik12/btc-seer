@@ -36,107 +36,110 @@ function Accordion({ title, children, color }) {
 }
 
 function Basics() {
+  const { t } = useTranslation(['learn'])
   return (
     <div className="space-y-2">
-      <Accordion title="What is Bitcoin?">
-        <p>Bitcoin is a decentralized digital currency that operates without a central bank or single administrator. It was created in 2009 by an anonymous person/group known as Satoshi Nakamoto.</p>
-        <p>Key properties: <span className="text-text-secondary font-semibold">Fixed supply</span> (21 million max), <span className="text-text-secondary font-semibold">decentralized</span> (no single point of control), <span className="text-text-secondary font-semibold">transparent</span> (all transactions on public blockchain).</p>
+      <Accordion title={t('learn:basics.whatIsBitcoin.title')}>
+        <p>{t('learn:basics.whatIsBitcoin.p1')}</p>
+        <p>{t('learn:basics.whatIsBitcoin.p2_prefix')}<span className="text-text-secondary font-semibold">{t('learn:basics.whatIsBitcoin.p2_fixedSupply')}</span>{t('learn:basics.whatIsBitcoin.p2_fixedSupplyDesc')}<span className="text-text-secondary font-semibold">{t('learn:basics.whatIsBitcoin.p2_decentralized')}</span>{t('learn:basics.whatIsBitcoin.p2_decentralizedDesc')}<span className="text-text-secondary font-semibold">{t('learn:basics.whatIsBitcoin.p2_transparent')}</span>{t('learn:basics.whatIsBitcoin.p2_transparentDesc')}</p>
       </Accordion>
-      <Accordion title="How Does Trading Work?">
-        <p>Trading means buying and selling Bitcoin to profit from price changes. You buy when you think the price will go up, and sell when you think it will go down.</p>
-        <p><span className="text-text-secondary font-semibold">Spot trading:</span> Buy/sell actual Bitcoin. You own the asset.</p>
-        <p><span className="text-text-secondary font-semibold">Futures/Derivatives:</span> Trade contracts that track Bitcoin's price. Can use leverage (borrowed money) to amplify gains — and losses.</p>
-        <p><span className="text-text-secondary font-semibold">Long:</span> Betting price goes UP. <span className="text-text-secondary font-semibold">Short:</span> Betting price goes DOWN.</p>
+      <Accordion title={t('learn:basics.howTrading.title')}>
+        <p>{t('learn:basics.howTrading.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:basics.howTrading.spot_label')}</span>{t('learn:basics.howTrading.spot_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:basics.howTrading.futures_label')}</span>{t('learn:basics.howTrading.futures_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:basics.howTrading.long_label')}</span>{t('learn:basics.howTrading.long_desc')}<span className="text-text-secondary font-semibold">{t('learn:basics.howTrading.short_label')}</span>{t('learn:basics.howTrading.short_desc')}</p>
       </Accordion>
-      <Accordion title="What Moves Bitcoin's Price?">
-        <p><span className="text-text-secondary font-semibold">Supply & Demand:</span> More buyers than sellers = price up. More sellers = price down.</p>
-        <p><span className="text-text-secondary font-semibold">Halvings:</span> Every ~4 years, new BTC created per block is cut in half. Reduces supply, historically bullish.</p>
-        <p><span className="text-text-secondary font-semibold">Macro events:</span> Interest rates, inflation, dollar strength (DXY), geopolitical events.</p>
-        <p><span className="text-text-secondary font-semibold">Sentiment:</span> News, social media, fear & greed. Markets are driven by human emotion.</p>
-        <p><span className="text-text-secondary font-semibold">Whale activity:</span> Large holders (1000+ BTC) moving coins to/from exchanges can signal buying or selling.</p>
+      <Accordion title={t('learn:basics.whatMoves.title')}>
+        <p><span className="text-text-secondary font-semibold">{t('learn:basics.whatMoves.supply_label')}</span>{t('learn:basics.whatMoves.supply_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:basics.whatMoves.halvings_label')}</span>{t('learn:basics.whatMoves.halvings_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:basics.whatMoves.macro_label')}</span>{t('learn:basics.whatMoves.macro_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:basics.whatMoves.sentiment_label')}</span>{t('learn:basics.whatMoves.sentiment_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:basics.whatMoves.whales_label')}</span>{t('learn:basics.whatMoves.whales_desc')}</p>
       </Accordion>
-      <Accordion title="What is Market Cap?">
-        <p><span className="text-text-secondary font-semibold">Market Cap</span> = Price x Circulating Supply. It measures the total value of all coins in circulation.</p>
-        <p>BTC at $97,000 with 19.8M coins = ~$1.92 trillion market cap.</p>
-        <p>Higher market cap = more established, lower volatility. Lower market cap = more speculative, higher risk/reward.</p>
+      <Accordion title={t('learn:basics.marketCap.title')}>
+        <p><span className="text-text-secondary font-semibold">{t('learn:basics.marketCap.p1_label')}</span>{t('learn:basics.marketCap.p1_desc')}</p>
+        <p>{t('learn:basics.marketCap.p2')}</p>
+        <p>{t('learn:basics.marketCap.p3')}</p>
       </Accordion>
-      <Accordion title="What is a Wallet?">
-        <p>A crypto wallet stores your private keys — the passwords that prove you own your Bitcoin.</p>
-        <p><span className="text-text-secondary font-semibold">Hot wallet:</span> Connected to internet (exchange accounts, mobile apps). Convenient but less secure.</p>
-        <p><span className="text-text-secondary font-semibold">Cold wallet:</span> Offline hardware devices (Ledger, Trezor). Most secure for large holdings.</p>
-        <p className="text-accent-yellow">"Not your keys, not your coins" — if the exchange gets hacked, you lose your funds. Self-custody is safest for large amounts.</p>
+      <Accordion title={t('learn:basics.wallet.title')}>
+        <p>{t('learn:basics.wallet.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:basics.wallet.hot_label')}</span>{t('learn:basics.wallet.hot_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:basics.wallet.cold_label')}</span>{t('learn:basics.wallet.cold_desc')}</p>
+        <p className="text-accent-yellow">{t('learn:basics.wallet.warning')}</p>
       </Accordion>
     </div>
   )
 }
 
 function Orders() {
+  const { t } = useTranslation(['learn'])
   return (
     <div className="space-y-2">
-      <Accordion title="Market Order" color="text-accent-green">
-        <p>Buys or sells <span className="text-text-secondary font-semibold">immediately</span> at the current market price.</p>
-        <p>Pros: Instant execution, guaranteed fill.</p>
-        <p>Cons: You may get a slightly different price than expected (slippage), especially in volatile markets.</p>
-        <p className="text-text-secondary">Use when: You need to enter/exit NOW and price precision doesn't matter much.</p>
+      <Accordion title={t('learn:orders.market.title')} color="text-accent-green">
+        <p>{t('learn:orders.market.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:orders.market.p1_bold')}</span>{t('learn:orders.market.p1_suffix')}</p>
+        <p>{t('learn:orders.market.pros')}</p>
+        <p>{t('learn:orders.market.cons')}</p>
+        <p className="text-text-secondary">{t('learn:orders.market.useWhen')}</p>
       </Accordion>
-      <Accordion title="Limit Order" color="text-accent-blue">
-        <p>Sets a <span className="text-text-secondary font-semibold">specific price</span> at which you want to buy or sell. Only executes if the market reaches that price.</p>
-        <p>Pros: You control the exact price. No slippage.</p>
-        <p>Cons: May never fill if price doesn't reach your level.</p>
-        <p className="text-text-secondary">Use when: You have a specific target price and can wait for it.</p>
+      <Accordion title={t('learn:orders.limit.title')} color="text-accent-blue">
+        <p>{t('learn:orders.limit.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:orders.limit.p1_bold')}</span>{t('learn:orders.limit.p1_suffix')}</p>
+        <p>{t('learn:orders.limit.pros')}</p>
+        <p>{t('learn:orders.limit.cons')}</p>
+        <p className="text-text-secondary">{t('learn:orders.limit.useWhen')}</p>
       </Accordion>
-      <Accordion title="Stop-Loss Order" color="text-accent-red">
-        <p>Automatically sells when price drops to a set level, <span className="text-text-secondary font-semibold">limiting your loss</span>.</p>
-        <p>Example: Buy at $97,000, set stop-loss at $95,000. If price drops to $95K, it auto-sells. Max loss = $2,000 per BTC.</p>
-        <p className="text-text-secondary">Use when: ALWAYS. Every trade should have a stop-loss. No exceptions.</p>
+      <Accordion title={t('learn:orders.stopLoss.title')} color="text-accent-red">
+        <p>{t('learn:orders.stopLoss.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:orders.stopLoss.p1_bold')}</span>{t('learn:orders.stopLoss.p1_suffix')}</p>
+        <p>{t('learn:orders.stopLoss.example')}</p>
+        <p className="text-text-secondary">{t('learn:orders.stopLoss.useWhen')}</p>
       </Accordion>
-      <Accordion title="Take-Profit Order" color="text-accent-green">
-        <p>Automatically sells when price <span className="text-text-secondary font-semibold">rises to your target</span>, locking in profit.</p>
-        <p>Example: Buy at $97,000, set take-profit at $103,000. Locks in $6,000 profit per BTC.</p>
-        <p className="text-text-secondary">Use when: Always set alongside stop-loss. Have BOTH exit points before entering.</p>
+      <Accordion title={t('learn:orders.takeProfit.title')} color="text-accent-green">
+        <p>{t('learn:orders.takeProfit.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:orders.takeProfit.p1_bold')}</span>{t('learn:orders.takeProfit.p1_suffix')}</p>
+        <p>{t('learn:orders.takeProfit.example')}</p>
+        <p className="text-text-secondary">{t('learn:orders.takeProfit.useWhen')}</p>
       </Accordion>
-      <Accordion title="Stop-Limit Order">
-        <p>Combines stop and limit: when price hits the stop price, a <span className="text-text-secondary font-semibold">limit order is placed</span> (not a market order).</p>
-        <p>Pros: More price control than a regular stop-loss.</p>
-        <p>Cons: In fast crashes, the limit order may not fill, leaving you exposed.</p>
+      <Accordion title={t('learn:orders.stopLimit.title')}>
+        <p>{t('learn:orders.stopLimit.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:orders.stopLimit.p1_bold')}</span>{t('learn:orders.stopLimit.p1_suffix')}</p>
+        <p>{t('learn:orders.stopLimit.pros')}</p>
+        <p>{t('learn:orders.stopLimit.cons')}</p>
       </Accordion>
-      <Accordion title="Trailing Stop">
-        <p>A stop-loss that <span className="text-text-secondary font-semibold">moves up with the price</span>. Locks in profit as price rises, triggers if price drops by a set amount.</p>
-        <p>Example: Set 3% trailing stop. Price rises from $97K to $103K, stop follows to $99,910. If price drops 3%, it sells at ~$99,910.</p>
-        <p className="text-text-secondary">Use when: You're in a winning trade and want to ride the trend while protecting gains.</p>
+      <Accordion title={t('learn:orders.trailingStop.title')}>
+        <p>{t('learn:orders.trailingStop.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:orders.trailingStop.p1_bold')}</span>{t('learn:orders.trailingStop.p1_suffix')}</p>
+        <p>{t('learn:orders.trailingStop.example')}</p>
+        <p className="text-text-secondary">{t('learn:orders.trailingStop.useWhen')}</p>
       </Accordion>
     </div>
   )
 }
 
 function Indicators() {
-  const items = [
-    { name: 'RSI (Relative Strength Index)', level: 'Learn first', desc: 'Measures momentum on a 0-100 scale. Above 70 = overbought (potential drop). Below 30 = oversold (potential bounce). Most reliable on higher timeframes (4h, 1D).', tip: 'Don\'t buy just because RSI is low. Wait for RSI to turn UP from oversold.' },
-    { name: 'MACD', level: 'Learn first', desc: 'Shows trend direction and momentum. The MACD line crossing above the signal line = bullish. Crossing below = bearish. Histogram shows the gap between the two lines.', tip: 'MACD + RSI together is the most popular combo. MACD for trend, RSI for timing.' },
-    { name: 'Moving Averages (EMA/SMA)', level: 'Learn first', desc: 'Smooth out price data to show trends. EMA 9 & 21 for short-term, EMA 50 & 200 for long-term. Price above the average = bullish trend.', tip: 'Golden Cross (50 crosses above 200) = very bullish. Death Cross (50 below 200) = bearish.' },
-    { name: 'Bollinger Bands', level: 'Essential', desc: 'Shows volatility range. Price near upper band = potentially overbought. Near lower band = oversold. Bands narrowing = big move coming (breakout).', tip: 'Best used WITH volume. Breakout + high volume = real move. Low volume = likely fakeout.' },
-    { name: 'Volume', level: 'Essential', desc: 'Number of coins traded. High volume = strong conviction. Low volume = weak move. Volume precedes price — watch for volume spikes before big moves.', tip: 'Price up + volume up = strong trend. Price up + volume down = weakening, potential reversal.' },
-    { name: 'Support & Resistance', level: 'Essential', desc: 'Price levels where buying (support) or selling (resistance) pressure is strong. Price bounces off these levels repeatedly.', tip: 'Once support breaks, it becomes resistance (and vice versa). These are the most important levels to watch.' },
-    { name: 'Fibonacci Retracement', level: 'Intermediate', desc: 'Key levels (23.6%, 38.2%, 50%, 61.8%) where price often bounces during pullbacks. Based on the golden ratio.', tip: 'The 0.618 level is the most important. If price holds there during a pullback, the trend is likely intact.' },
-    { name: 'Ichimoku Cloud', level: 'Advanced', desc: 'All-in-one indicator showing support/resistance, trend direction, and momentum. Price above cloud = bullish. Below = bearish.', tip: 'The cloud itself acts as support/resistance. Thick cloud = strong. Thin cloud = weak, breakout likely.' },
-    { name: 'Fear & Greed Index', level: 'Essential', desc: 'Market sentiment score 0-100. Extreme Fear (0-25) = potential buy. Extreme Greed (75-100) = potential sell. Uses volatility, volume, social media, and dominance.', tip: '"Be fearful when others are greedy, greedy when others are fearful" — Warren Buffett.' },
-    { name: 'Funding Rate', level: 'Intermediate', desc: 'Shows if the derivatives market is over-leveraged long or short. High positive = too many longs (bearish signal). Negative = too many shorts (bullish signal).', tip: 'Extreme funding rates often precede liquidation cascades and sharp reversals.' },
-  ]
+  const { t } = useTranslation(['learn'])
+  const indicatorKeys = ['rsi', 'macd', 'movingAverages', 'bollinger', 'volume', 'supportResistance', 'fibonacci', 'ichimoku', 'fearGreed', 'fundingRate']
+
+  const items = indicatorKeys.map((key) => ({
+    key,
+    name: t(`learn:indicators.${key}.name`),
+    level: t(`learn:indicators.${key}.level`),
+    desc: t(`learn:indicators.${key}.desc`),
+    tip: t(`learn:indicators.${key}.tip`),
+  }))
+
+  const learnFirst = t('learn:indicators.learnFirst')
+  const advanced = t('learn:indicators.advanced')
 
   return (
     <div className="space-y-2">
       {items.map((item) => (
-        <Accordion key={item.name} title={`${item.name}`} color={item.level === 'Learn first' ? 'text-accent-green' : item.level === 'Advanced' ? 'text-purple-400' : 'text-accent-blue'}>
+        <Accordion key={item.key} title={item.name} color={item.level === learnFirst ? 'text-accent-green' : item.level === advanced ? 'text-purple-400' : 'text-accent-blue'}>
           <div className="flex items-center gap-2 mb-1">
             <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${
-              item.level === 'Learn first' ? 'bg-accent-green/15 text-accent-green border-accent-green/30' :
-              item.level === 'Essential' ? 'bg-accent-blue/15 text-accent-blue border-accent-blue/30' :
-              item.level === 'Intermediate' ? 'bg-accent-yellow/15 text-accent-yellow border-accent-yellow/30' :
+              item.level === learnFirst ? 'bg-accent-green/15 text-accent-green border-accent-green/30' :
+              item.level === t('learn:indicators.essential') ? 'bg-accent-blue/15 text-accent-blue border-accent-blue/30' :
+              item.level === t('learn:indicators.intermediate') ? 'bg-accent-yellow/15 text-accent-yellow border-accent-yellow/30' :
               'bg-purple-500/15 text-purple-400 border-purple-500/30'
             }`}>{item.level}</span>
           </div>
           <p>{item.desc}</p>
-          <p className="text-accent-yellow mt-1">Pro tip: {item.tip}</p>
+          <p className="text-accent-yellow mt-1">{t('learn:indicators.proTip')} {item.tip}</p>
         </Accordion>
       ))}
     </div>
@@ -144,102 +147,104 @@ function Indicators() {
 }
 
 function Strategies() {
+  const { t } = useTranslation(['learn'])
   return (
     <div className="space-y-2">
-      <Accordion title="HODLing (Buy & Hold)" color="text-accent-green">
-        <p>The simplest strategy. Buy Bitcoin and hold for years regardless of short-term price swings.</p>
-        <p><span className="text-text-secondary font-semibold">Best for:</span> Beginners. Historically, anyone who held BTC for 4+ years has been profitable.</p>
-        <p><span className="text-text-secondary font-semibold">Risk:</span> Low (if you can handle seeing -50% drops without panic selling).</p>
+      <Accordion title={t('learn:strategies.hodl.title')} color="text-accent-green">
+        <p>{t('learn:strategies.hodl.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:strategies.hodl.bestFor_label')}</span>{t('learn:strategies.hodl.bestFor_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:strategies.hodl.risk_label')}</span>{t('learn:strategies.hodl.risk_desc')}</p>
       </Accordion>
-      <Accordion title="Dollar Cost Averaging (DCA)" color="text-accent-green">
-        <p>Invest a fixed amount at regular intervals (weekly/monthly) regardless of price. Removes the stress of timing the market.</p>
-        <p><span className="text-text-secondary font-semibold">Best for:</span> Beginners and long-term investors. Proven to outperform most timing strategies.</p>
-        <p><span className="text-text-secondary font-semibold">Example:</span> $100/week for 2 years. You buy more BTC when cheap, less when expensive. Average cost smooths out.</p>
+      <Accordion title={t('learn:strategies.dca.title')} color="text-accent-green">
+        <p>{t('learn:strategies.dca.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:strategies.dca.bestFor_label')}</span>{t('learn:strategies.dca.bestFor_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:strategies.dca.example_label')}</span>{t('learn:strategies.dca.example_desc')}</p>
       </Accordion>
-      <Accordion title="Swing Trading" color="text-accent-blue">
-        <p>Hold positions for days to weeks, capturing medium-term price swings using technical analysis.</p>
-        <p><span className="text-text-secondary font-semibold">Best for:</span> Intermediate traders. Requires understanding of charts, indicators, and risk management.</p>
-        <p><span className="text-text-secondary font-semibold">Key tools:</span> Support/resistance, RSI, MACD, volume. Enter at support, exit at resistance.</p>
+      <Accordion title={t('learn:strategies.swing.title')} color="text-accent-blue">
+        <p>{t('learn:strategies.swing.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:strategies.swing.bestFor_label')}</span>{t('learn:strategies.swing.bestFor_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:strategies.swing.tools_label')}</span>{t('learn:strategies.swing.tools_desc')}</p>
       </Accordion>
-      <Accordion title="Day Trading" color="text-accent-red">
-        <p>Open and close positions within the same day. Requires constant monitoring and fast execution.</p>
-        <p><span className="text-text-secondary font-semibold">Best for:</span> Advanced traders only. 95% of day traders lose money — this is a statistical fact.</p>
-        <p><span className="text-text-secondary font-semibold">Warning:</span> High stress, high fees, requires discipline. Start with paper trading (practice with fake money).</p>
+      <Accordion title={t('learn:strategies.day.title')} color="text-accent-red">
+        <p>{t('learn:strategies.day.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:strategies.day.bestFor_label')}</span>{t('learn:strategies.day.bestFor_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:strategies.day.warning_label')}</span>{t('learn:strategies.day.warning_desc')}</p>
       </Accordion>
-      <Accordion title="The 1% Risk Rule">
-        <p>Never risk more than 1% of your total portfolio on a single trade. This is THE most important rule in trading.</p>
-        <p><span className="text-text-secondary font-semibold">Example:</span> $10,000 account = max $100 risk per trade. If your stop-loss is 2% below entry, your position size = $5,000.</p>
-        <p>With the 1% rule, you can lose 10 trades in a row and only be down 10%. Without it, one bad trade can destroy your account.</p>
+      <Accordion title={t('learn:strategies.onePercent.title')}>
+        <p>{t('learn:strategies.onePercent.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:strategies.onePercent.example_label')}</span>{t('learn:strategies.onePercent.example_desc')}</p>
+        <p>{t('learn:strategies.onePercent.p2')}</p>
       </Accordion>
-      <Accordion title="Support/Resistance Trading">
-        <p>Identify key price levels where BTC repeatedly bounces (support) or gets rejected (resistance).</p>
-        <p><span className="text-text-secondary font-semibold">Strategy:</span> Buy near support with stop-loss just below. Sell near resistance or set take-profit there.</p>
-        <p><span className="text-text-secondary font-semibold">Confirmation:</span> Wait for a bounce (don't buy into a falling knife). Volume + RSI turning up = stronger signal.</p>
+      <Accordion title={t('learn:strategies.srTrading.title')}>
+        <p>{t('learn:strategies.srTrading.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:strategies.srTrading.strategy_label')}</span>{t('learn:strategies.srTrading.strategy_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:strategies.srTrading.confirmation_label')}</span>{t('learn:strategies.srTrading.confirmation_desc')}</p>
       </Accordion>
     </div>
   )
 }
 
 function RiskManagement() {
+  const { t } = useTranslation(['learn'])
   return (
     <div className="space-y-2">
-      <Accordion title="The 1% Rule (Expanded)" color="text-accent-red">
-        <p>Never risk more than <span className="text-text-secondary font-semibold">1% of your total account</span> on any single trade. This is the foundation of survival in trading.</p>
-        <p><span className="text-text-secondary font-semibold">Formula:</span> Max Risk = Account Size x 0.01</p>
-        <p><span className="text-text-secondary font-semibold">Worked example:</span></p>
-        <p>Account: $10,000. Max risk per trade: $10,000 x 0.01 = <span className="text-accent-red font-semibold">$100</span>.</p>
-        <p>Entry: $97,000. Stop-loss: $96,000. Risk per BTC = $1,000.</p>
-        <p>Position size: $100 / $1,000 = <span className="text-accent-blue font-semibold">0.1 BTC</span> ($9,700 position).</p>
-        <p className="text-accent-yellow">Even 10 consecutive losses = only -10%. You survive. Without the 1% rule, one bad trade can end your career.</p>
+      <Accordion title={t('learn:risk.onePercent.title')} color="text-accent-red">
+        <p>{t('learn:risk.onePercent.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:risk.onePercent.p1_bold')}</span>{t('learn:risk.onePercent.p1_suffix')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.onePercent.formula_label')}</span>{t('learn:risk.onePercent.formula_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.onePercent.example_title')}</span></p>
+        <p>{t('learn:risk.onePercent.example_account')}<span className="text-accent-red font-semibold">{t('learn:risk.onePercent.example_risk')}</span>.</p>
+        <p>{t('learn:risk.onePercent.example_entry')}</p>
+        <p>{t('learn:risk.onePercent.example_position_prefix')}<span className="text-accent-blue font-semibold">{t('learn:risk.onePercent.example_position_value')}</span>{t('learn:risk.onePercent.example_position_suffix')}</p>
+        <p className="text-accent-yellow">{t('learn:risk.onePercent.tip')}</p>
       </Accordion>
 
-      <Accordion title="Risk-to-Reward Ratio" color="text-accent-blue">
-        <p>The ratio between how much you risk (stop-loss distance) and how much you stand to gain (take-profit distance).</p>
-        <p><span className="text-text-secondary font-semibold">Minimum target: 1:2</span> — risk $1 to make $2. This means you only need to win 34% of trades to be profitable.</p>
-        <p><span className="text-text-secondary font-semibold">How to calculate:</span></p>
-        <p>Entry: $97,000. Stop-loss: $96,000 (risk = $1,000). Take-profit: $99,000 (reward = $2,000).</p>
-        <p>R:R = $1,000 : $2,000 = <span className="text-accent-green font-semibold">1:2</span>.</p>
-        <p className="text-accent-yellow">Never take a trade with R:R below 1:1.5. If the setup doesn't offer good R:R, skip it — there will always be another trade.</p>
+      <Accordion title={t('learn:risk.riskReward.title')} color="text-accent-blue">
+        <p>{t('learn:risk.riskReward.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.riskReward.minimum_label')}</span>{t('learn:risk.riskReward.minimum_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.riskReward.howTo_label')}</span></p>
+        <p>{t('learn:risk.riskReward.howTo_entry')}</p>
+        <p>{t('learn:risk.riskReward.howTo_result_prefix')}<span className="text-accent-green font-semibold">{t('learn:risk.riskReward.howTo_result_value')}</span>{t('learn:risk.riskReward.howTo_result_suffix')}</p>
+        <p className="text-accent-yellow">{t('learn:risk.riskReward.tip')}</p>
       </Accordion>
 
-      <Accordion title="Stop-Loss Placement" color="text-accent-red">
-        <p>Where you place your stop-loss matters more than whether you use one. A badly placed stop gets hit by normal market noise.</p>
-        <p><span className="text-text-secondary font-semibold">Below support:</span> Place stop just below a key support level, not at an arbitrary %. If support is at $95,000, set stop at $94,800.</p>
-        <p><span className="text-text-secondary font-semibold">ATR-based:</span> Use the Average True Range indicator. Stop = Entry - (1.5 x ATR). This adapts to current volatility.</p>
-        <p><span className="text-text-secondary font-semibold">Never do:</span> "I'll set my stop at -5% because that feels right." Random percentages have no relation to market structure.</p>
-        <p className="text-accent-yellow">A good stop-loss is placed where your trade thesis is invalidated — if price reaches that level, your reason for entering no longer holds.</p>
+      <Accordion title={t('learn:risk.stopLoss.title')} color="text-accent-red">
+        <p>{t('learn:risk.stopLoss.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.stopLoss.belowSupport_label')}</span>{t('learn:risk.stopLoss.belowSupport_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.stopLoss.atr_label')}</span>{t('learn:risk.stopLoss.atr_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.stopLoss.neverDo_label')}</span>{t('learn:risk.stopLoss.neverDo_desc')}</p>
+        <p className="text-accent-yellow">{t('learn:risk.stopLoss.tip')}</p>
       </Accordion>
 
-      <Accordion title="Position Sizing" color="text-accent-blue">
-        <p>The exact formula to calculate how big your position should be:</p>
-        <p className="text-text-secondary font-semibold text-xs">Position Size = Risk Amount / (Entry Price - Stop-Loss Price)</p>
-        <p><span className="text-text-secondary font-semibold">Example:</span></p>
-        <p>Account: $20,000. Risk: 1% = $200.</p>
-        <p>Entry: $97,000. Stop-loss: $95,500. Distance = $1,500.</p>
-        <p>Position: $200 / $1,500 = <span className="text-accent-blue font-semibold">0.133 BTC</span> (~$12,933).</p>
-        <p>This means you're using ~65% of your account but only risking 1%. The stop-loss controls the risk, not the position size alone.</p>
+      <Accordion title={t('learn:risk.positionSizing.title')} color="text-accent-blue">
+        <p>{t('learn:risk.positionSizing.p1')}</p>
+        <p className="text-text-secondary font-semibold text-xs">{t('learn:risk.positionSizing.formula')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.positionSizing.example_label')}</span></p>
+        <p>{t('learn:risk.positionSizing.example_account')}</p>
+        <p>{t('learn:risk.positionSizing.example_entry')}</p>
+        <p>{t('learn:risk.positionSizing.example_position_prefix')}<span className="text-accent-blue font-semibold">{t('learn:risk.positionSizing.example_position_value')}</span>{t('learn:risk.positionSizing.example_position_suffix')}</p>
+        <p>{t('learn:risk.positionSizing.example_note')}</p>
       </Accordion>
 
-      <Accordion title="Portfolio Heat" color="text-accent-yellow">
-        <p><span className="text-text-secondary font-semibold">Portfolio heat</span> = the total risk across ALL your open positions combined.</p>
-        <p><span className="text-text-secondary font-semibold">Max recommended:</span> 6% total portfolio risk at any time.</p>
-        <p>If you risk 1% per trade, that means maximum 6 open trades. But if your trades are correlated (e.g., all crypto), the real risk is higher.</p>
-        <p><span className="text-text-secondary font-semibold">Correlated positions:</span> If you're long BTC and long ETH, those aren't truly separate bets — they tend to move together. Count them as 1.5-2x risk.</p>
-        <p className="text-accent-yellow">Most blown accounts come from having too many positions open at once during a market crash. Portfolio heat is your defense.</p>
+      <Accordion title={t('learn:risk.portfolioHeat.title')} color="text-accent-yellow">
+        <p>{t('learn:risk.portfolioHeat.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:risk.portfolioHeat.p1_bold')}</span>{t('learn:risk.portfolioHeat.p1_suffix')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.portfolioHeat.max_label')}</span>{t('learn:risk.portfolioHeat.max_desc')}</p>
+        <p>{t('learn:risk.portfolioHeat.p3')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.portfolioHeat.correlated_label')}</span>{t('learn:risk.portfolioHeat.correlated_desc')}</p>
+        <p className="text-accent-yellow">{t('learn:risk.portfolioHeat.tip')}</p>
       </Accordion>
 
-      <Accordion title="Leverage Dangers" color="text-accent-red">
-        <p>Leverage amplifies both gains AND losses. Here's the math most people ignore:</p>
-        <p><span className="text-text-secondary font-semibold">2x leverage:</span> 50% drop = liquidation. BTC drops 50% roughly once per cycle.</p>
-        <p><span className="text-text-secondary font-semibold">5x leverage:</span> 20% drop = liquidation. BTC drops 20% several times per year.</p>
-        <p><span className="text-text-secondary font-semibold">10x leverage:</span> 10% drop = liquidation. BTC moves 10% in a single week regularly.</p>
-        <p><span className="text-text-secondary font-semibold">25x leverage:</span> 4% drop = liquidation. This can happen in minutes.</p>
-        <p><span className="text-text-secondary font-semibold">100x leverage:</span> 1% drop = liquidation. You are gambling, not trading.</p>
-        <p className="text-accent-yellow">Safe leverage: 2-5x maximum, with tight stop-losses. Most professional traders use 1-3x. If you need high leverage to make money, your position sizing is wrong.</p>
+      <Accordion title={t('learn:risk.leverage.title')} color="text-accent-red">
+        <p>{t('learn:risk.leverage.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.leverage.2x')}</span></p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.leverage.5x')}</span></p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.leverage.10x')}</span></p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.leverage.25x')}</span></p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:risk.leverage.100x')}</span></p>
+        <p className="text-accent-yellow">{t('learn:risk.leverage.safe')}</p>
       </Accordion>
 
-      <Accordion title="Drawdown Recovery" color="text-accent-red">
-        <p>Losses are not symmetrical. Recovering from a loss requires a <span className="text-text-secondary font-semibold">larger percentage gain</span> than the percentage you lost:</p>
+      <Accordion title={t('learn:risk.drawdown.title')} color="text-accent-red">
+        <p>{t('learn:risk.drawdown.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:risk.drawdown.p1_bold')}</span>{t('learn:risk.drawdown.p1_suffix')}</p>
         <div className="mt-1 space-y-0.5">
           {[
             ['10%', '11%'],
@@ -253,208 +258,192 @@ function RiskManagement() {
             ['90%', '900%'],
           ].map(([loss, gain]) => (
             <div key={loss} className="flex gap-2 text-[10px]">
-              <span className="text-accent-red w-16">-{loss} loss</span>
+              <span className="text-accent-red w-16">{t('learn:risk.drawdown.loss', { pct: loss })}</span>
               <span className="text-text-muted">=</span>
-              <span className="text-accent-green">+{gain} needed to recover</span>
+              <span className="text-accent-green">{t('learn:risk.drawdown.recovery', { pct: gain })}</span>
             </div>
           ))}
         </div>
-        <p className="text-accent-yellow mt-2">This is why protecting capital is more important than making gains. A 50% loss requires a 100% gain just to break even. Prevention &gt; cure.</p>
+        <p className="text-accent-yellow mt-2">{t('learn:risk.drawdown.tip')}</p>
       </Accordion>
     </div>
   )
 }
 
 function Psychology() {
+  const { t } = useTranslation(['learn'])
   return (
     <div className="space-y-2">
-      <Accordion title="FOMO (Fear of Missing Out)" color="text-accent-yellow">
-        <p>That painful feeling when price is pumping and you're not in the trade. Your brain screams "BUY NOW before it goes higher!"</p>
-        <p><span className="text-text-secondary font-semibold">Why it's dangerous:</span> FOMO makes you buy at the top. The best entries happen when the market is quiet and boring — not when everyone is excited.</p>
-        <p><span className="text-text-secondary font-semibold">How to fight it:</span></p>
-        <p>1. Remind yourself: if you missed the move, you missed the move. There will be another one.</p>
-        <p>2. Never chase a green candle. Wait for a pullback to support before entering.</p>
-        <p>3. If you feel intense urgency to buy, that's usually the worst time to buy.</p>
-        <p className="text-accent-yellow">The market is open 24/7, 365 days a year. There is ALWAYS another opportunity. Missing one trade is nothing — buying the top is everything.</p>
+      <Accordion title={t('learn:psychology.fomo.title')} color="text-accent-yellow">
+        <p>{t('learn:psychology.fomo.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:psychology.fomo.whyDangerous_label')}</span>{t('learn:psychology.fomo.whyDangerous_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:psychology.fomo.howToFight_label')}</span></p>
+        <p>{t('learn:psychology.fomo.howToFight_1')}</p>
+        <p>{t('learn:psychology.fomo.howToFight_2')}</p>
+        <p>{t('learn:psychology.fomo.howToFight_3')}</p>
+        <p className="text-accent-yellow">{t('learn:psychology.fomo.tip')}</p>
       </Accordion>
 
-      <Accordion title="Revenge Trading" color="text-accent-red">
-        <p>You just lost money. You feel angry, frustrated, humiliated. Your instinct is to immediately open a bigger trade to "win it back."</p>
-        <p><span className="text-text-secondary font-semibold">Why it's the #1 account killer:</span> Revenge trades are emotional, not strategic. You increase size, ignore your plan, and usually lose again — now even more. This spiral has destroyed more accounts than any market crash.</p>
-        <p><span className="text-text-secondary font-semibold">How to fight it:</span></p>
-        <p>1. Set a <span className="text-accent-red font-semibold">daily loss limit</span> (e.g., max 3% per day). Hit it = done for the day. No exceptions.</p>
-        <p>2. After a loss, take at least 30 minutes away from the screen.</p>
-        <p>3. Never increase position size after a loss. If anything, reduce it.</p>
-        <p className="text-accent-yellow">Professional traders have a rule: after 2-3 consecutive losses, stop trading for the day. The market will be there tomorrow. Your capital might not be.</p>
+      <Accordion title={t('learn:psychology.revenge.title')} color="text-accent-red">
+        <p>{t('learn:psychology.revenge.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:psychology.revenge.whyKiller_label')}</span>{t('learn:psychology.revenge.whyKiller_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:psychology.revenge.howToFight_label')}</span></p>
+        <p>{t('learn:psychology.revenge.howToFight_1_prefix')}<span className="text-accent-red font-semibold">{t('learn:psychology.revenge.howToFight_1_bold')}</span>{t('learn:psychology.revenge.howToFight_1_suffix')}</p>
+        <p>{t('learn:psychology.revenge.howToFight_2')}</p>
+        <p>{t('learn:psychology.revenge.howToFight_3')}</p>
+        <p className="text-accent-yellow">{t('learn:psychology.revenge.tip')}</p>
       </Accordion>
 
-      <Accordion title="Confirmation Bias" color="text-accent-yellow">
-        <p>When you have a position, your brain automatically filters information to support your view and ignores evidence against it.</p>
-        <p><span className="text-text-secondary font-semibold">Example:</span> You're long BTC. You read 10 bullish tweets and feel great. You see a bearish analysis and dismiss it as "FUD." Meanwhile, the bearish analysis was right.</p>
-        <p><span className="text-text-secondary font-semibold">How to fight it:</span></p>
-        <p>1. Actively seek out the opposite view before entering any trade.</p>
-        <p>2. Ask yourself: "What would make this trade wrong?" Write that down.</p>
-        <p>3. Follow analysts who disagree with you — they'll catch what you miss.</p>
-        <p className="text-accent-yellow">The best traders are always looking for reasons they might be wrong. The worst traders only look for reasons they're right.</p>
+      <Accordion title={t('learn:psychology.confirmation.title')} color="text-accent-yellow">
+        <p>{t('learn:psychology.confirmation.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:psychology.confirmation.example_label')}</span>{t('learn:psychology.confirmation.example_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:psychology.confirmation.howToFight_label')}</span></p>
+        <p>{t('learn:psychology.confirmation.howToFight_1')}</p>
+        <p>{t('learn:psychology.confirmation.howToFight_2')}</p>
+        <p>{t('learn:psychology.confirmation.howToFight_3')}</p>
+        <p className="text-accent-yellow">{t('learn:psychology.confirmation.tip')}</p>
       </Accordion>
 
-      <Accordion title="Overtrading" color="text-accent-blue">
-        <p>More trades does NOT mean more profit. Each trade has fees, slippage, and emotional cost. Most traders would be more profitable making fewer, higher-quality trades.</p>
-        <p><span className="text-text-secondary font-semibold">Signs you're overtrading:</span></p>
-        <p>- Trading out of boredom when there's no clear setup</p>
-        <p>- Opening positions just to "be in the market"</p>
-        <p>- Feeling anxious when you don't have an open trade</p>
-        <p>- Taking setups that don't meet all your criteria</p>
-        <p><span className="text-text-secondary font-semibold">Fix:</span> Quality over quantity. 2-3 high-conviction trades per week beat 20 random trades. If there's no clear setup, doing nothing IS a valid position.</p>
+      <Accordion title={t('learn:psychology.overtrading.title')} color="text-accent-blue">
+        <p>{t('learn:psychology.overtrading.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:psychology.overtrading.signs_label')}</span></p>
+        <p>{t('learn:psychology.overtrading.signs_1')}</p>
+        <p>{t('learn:psychology.overtrading.signs_2')}</p>
+        <p>{t('learn:psychology.overtrading.signs_3')}</p>
+        <p>{t('learn:psychology.overtrading.signs_4')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:psychology.overtrading.fix_label')}</span>{t('learn:psychology.overtrading.fix_desc')}</p>
       </Accordion>
 
-      <Accordion title="The Trading Plan" color="text-accent-green">
-        <p>Write your plan <span className="text-text-secondary font-semibold">BEFORE</span> you enter the trade, while you're thinking clearly. Once money is on the line, emotions take over.</p>
-        <p><span className="text-text-secondary font-semibold">Every trade plan must include:</span></p>
-        <p>1. <span className="text-text-secondary">Entry reason:</span> Why are you entering? What's the setup?</p>
-        <p>2. <span className="text-text-secondary">Entry price:</span> Exact price or zone.</p>
-        <p>3. <span className="text-text-secondary">Stop-loss:</span> Where is your thesis invalidated?</p>
-        <p>4. <span className="text-text-secondary">Take-profit:</span> Where do you take gains?</p>
-        <p>5. <span className="text-text-secondary">Position size:</span> Based on 1% rule and stop distance.</p>
-        <p>6. <span className="text-text-secondary">Max daily loss:</span> When do you stop for the day?</p>
-        <p className="text-accent-yellow">If you can't write a plan for a trade, don't take the trade. "I just feel like it'll go up" is not a plan.</p>
+      <Accordion title={t('learn:psychology.tradingPlan.title')} color="text-accent-green">
+        <p>{t('learn:psychology.tradingPlan.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:psychology.tradingPlan.p1_bold')}</span>{t('learn:psychology.tradingPlan.p1_suffix')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:psychology.tradingPlan.must_label')}</span></p>
+        <p>1. <span className="text-text-secondary">{t('learn:psychology.tradingPlan.must_1_label')}</span>{t('learn:psychology.tradingPlan.must_1_desc')}</p>
+        <p>2. <span className="text-text-secondary">{t('learn:psychology.tradingPlan.must_2_label')}</span>{t('learn:psychology.tradingPlan.must_2_desc')}</p>
+        <p>3. <span className="text-text-secondary">{t('learn:psychology.tradingPlan.must_3_label')}</span>{t('learn:psychology.tradingPlan.must_3_desc')}</p>
+        <p>4. <span className="text-text-secondary">{t('learn:psychology.tradingPlan.must_4_label')}</span>{t('learn:psychology.tradingPlan.must_4_desc')}</p>
+        <p>5. <span className="text-text-secondary">{t('learn:psychology.tradingPlan.must_5_label')}</span>{t('learn:psychology.tradingPlan.must_5_desc')}</p>
+        <p>6. <span className="text-text-secondary">{t('learn:psychology.tradingPlan.must_6_label')}</span>{t('learn:psychology.tradingPlan.must_6_desc')}</p>
+        <p className="text-accent-yellow">{t('learn:psychology.tradingPlan.tip')}</p>
       </Accordion>
 
-      <Accordion title="Emotional Detachment" color="text-accent-blue">
-        <p>Every trade is a probability, not a certainty. Even the best setups fail 30-40% of the time. Treating trades as statistics instead of personal wins/losses is the key to longevity.</p>
-        <p><span className="text-text-secondary font-semibold">Mindset shift:</span></p>
-        <p>- Don't say "I lost" — say "The trade was stopped out." It's not personal.</p>
-        <p>- Don't celebrate winning trades — you might have won for the wrong reason.</p>
-        <p>- Focus on whether you followed your plan, not the outcome. A losing trade executed well is better than a winning trade based on luck.</p>
-        <p className="text-accent-yellow">Think of yourself as a casino, not a gambler. The casino doesn't celebrate every hand — it trusts the math over thousands of hands.</p>
+      <Accordion title={t('learn:psychology.detachment.title')} color="text-accent-blue">
+        <p>{t('learn:psychology.detachment.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:psychology.detachment.mindset_label')}</span></p>
+        <p>{t('learn:psychology.detachment.mindset_1')}</p>
+        <p>{t('learn:psychology.detachment.mindset_2')}</p>
+        <p>{t('learn:psychology.detachment.mindset_3')}</p>
+        <p className="text-accent-yellow">{t('learn:psychology.detachment.tip')}</p>
       </Accordion>
 
-      <Accordion title="When NOT to Trade" color="text-accent-red">
-        <p>Some of the best trades are the ones you don't take. Knowing when to stay out is a skill:</p>
-        <p><span className="text-accent-red font-semibold">Don't trade when:</span></p>
-        <p>- You're tired, sick, or sleep-deprived</p>
-        <p>- You're emotional (angry, euphoric, stressed, or sad)</p>
-        <p>- Right after a big win (overconfidence)</p>
-        <p>- Right after a big loss (revenge trading urge)</p>
-        <p>- There's no clear setup in the market</p>
-        <p>- Major uncertain news events are about to drop (FOMC, CPI)</p>
-        <p>- You're checking your P&L every 30 seconds</p>
-        <p className="text-accent-yellow">The market rewards patience. Sitting in cash waiting for a perfect setup IS trading. The best traders spend most of their time doing nothing.</p>
+      <Accordion title={t('learn:psychology.whenNot.title')} color="text-accent-red">
+        <p>{t('learn:psychology.whenNot.p1')}</p>
+        <p><span className="text-accent-red font-semibold">{t('learn:psychology.whenNot.dontTrade_label')}</span></p>
+        <p>{t('learn:psychology.whenNot.dontTrade_1')}</p>
+        <p>{t('learn:psychology.whenNot.dontTrade_2')}</p>
+        <p>{t('learn:psychology.whenNot.dontTrade_3')}</p>
+        <p>{t('learn:psychology.whenNot.dontTrade_4')}</p>
+        <p>{t('learn:psychology.whenNot.dontTrade_5')}</p>
+        <p>{t('learn:psychology.whenNot.dontTrade_6')}</p>
+        <p>{t('learn:psychology.whenNot.dontTrade_7')}</p>
+        <p className="text-accent-yellow">{t('learn:psychology.whenNot.tip')}</p>
       </Accordion>
     </div>
   )
 }
 
 function Patterns() {
+  const { t } = useTranslation(['learn'])
   return (
     <div className="space-y-2">
-      <Accordion title="Support & Resistance" color="text-accent-green">
-        <p><span className="text-text-secondary font-semibold">Support</span> = a price level where buying pressure is strong enough to prevent the price from falling further. The price "bounces" off this level.</p>
-        <p><span className="text-text-secondary font-semibold">Resistance</span> = a price level where selling pressure prevents the price from rising further. The price gets "rejected" here.</p>
-        <p><span className="text-text-secondary font-semibold">Key rules:</span></p>
-        <p>1. The more times a level is tested, the stronger it is.</p>
-        <p>2. When support breaks, it becomes resistance (and vice versa) — this is called a "flip."</p>
-        <p>3. Round numbers ($50K, $100K) act as psychological S/R levels.</p>
-        <p>4. S/R levels are zones, not exact prices. Think $94,800-$95,200, not $95,000 exactly.</p>
-        <p className="text-accent-yellow">S/R is the single most important concept in trading. Master this before anything else.</p>
+      <Accordion title={t('learn:patterns.sr.title')} color="text-accent-green">
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.sr.support_label')}</span>{t('learn:patterns.sr.support_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.sr.resistance_label')}</span>{t('learn:patterns.sr.resistance_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.sr.rules_label')}</span></p>
+        <p>{t('learn:patterns.sr.rules_1')}</p>
+        <p>{t('learn:patterns.sr.rules_2')}</p>
+        <p>{t('learn:patterns.sr.rules_3')}</p>
+        <p>{t('learn:patterns.sr.rules_4')}</p>
+        <p className="text-accent-yellow">{t('learn:patterns.sr.tip')}</p>
       </Accordion>
 
-      <Accordion title="Double Top / Double Bottom" color="text-accent-blue">
-        <p>A <span className="text-text-secondary font-semibold">reversal pattern</span> where price tests the same level twice and fails to break through.</p>
-        <p><span className="text-text-secondary font-semibold">Double Top (bearish):</span> Price hits resistance twice, forming an "M" shape. Signals a potential drop. Sell/short when price breaks below the neckline (the low between the two peaks).</p>
-        <p><span className="text-text-secondary font-semibold">Double Bottom (bullish):</span> Price hits support twice, forming a "W" shape. Signals a potential rise. Buy when price breaks above the neckline (the high between the two dips).</p>
-        <p><span className="text-text-secondary font-semibold">Target:</span> Measure the distance from peak to neckline — that's your expected move from the breakout point.</p>
-        <p className="text-accent-yellow">Wait for the neckline break with volume confirmation. Many double tops/bottoms fail — the break is the signal, not the second touch.</p>
+      <Accordion title={t('learn:patterns.doubleTopBottom.title')} color="text-accent-blue">
+        <p>{t('learn:patterns.doubleTopBottom.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:patterns.doubleTopBottom.p1_bold')}</span>{t('learn:patterns.doubleTopBottom.p1_suffix')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.doubleTopBottom.doubleTop_label')}</span>{t('learn:patterns.doubleTopBottom.doubleTop_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.doubleTopBottom.doubleBottom_label')}</span>{t('learn:patterns.doubleTopBottom.doubleBottom_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.doubleTopBottom.target_label')}</span>{t('learn:patterns.doubleTopBottom.target_desc')}</p>
+        <p className="text-accent-yellow">{t('learn:patterns.doubleTopBottom.tip')}</p>
       </Accordion>
 
-      <Accordion title="Head & Shoulders" color="text-accent-blue">
-        <p>One of the most reliable <span className="text-text-secondary font-semibold">reversal patterns</span>. Three peaks: left shoulder, head (highest), right shoulder.</p>
-        <p><span className="text-text-secondary font-semibold">Regular H&S (bearish):</span> After an uptrend. The neckline connects the lows between the three peaks. Break below the neckline = sell signal.</p>
-        <p><span className="text-text-secondary font-semibold">Inverse H&S (bullish):</span> After a downtrend. Three troughs with the middle being the lowest. Break above the neckline = buy signal.</p>
-        <p><span className="text-text-secondary font-semibold">Target:</span> Distance from head to neckline, projected from the breakout point.</p>
-        <p className="text-accent-yellow">The neckline doesn't have to be perfectly horizontal — it can be slightly angled. Volume should decrease on the right shoulder and spike on the neckline break.</p>
+      <Accordion title={t('learn:patterns.headShoulders.title')} color="text-accent-blue">
+        <p>{t('learn:patterns.headShoulders.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:patterns.headShoulders.p1_bold')}</span>{t('learn:patterns.headShoulders.p1_suffix')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.headShoulders.regular_label')}</span>{t('learn:patterns.headShoulders.regular_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.headShoulders.inverse_label')}</span>{t('learn:patterns.headShoulders.inverse_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.headShoulders.target_label')}</span>{t('learn:patterns.headShoulders.target_desc')}</p>
+        <p className="text-accent-yellow">{t('learn:patterns.headShoulders.tip')}</p>
       </Accordion>
 
-      <Accordion title="Triangles (Ascending, Descending, Symmetrical)" color="text-accent-blue">
-        <p>Price consolidates between converging trendlines, building pressure before a breakout.</p>
-        <p><span className="text-text-secondary font-semibold">Ascending Triangle (bullish bias):</span> Flat top resistance + rising lower trendline. Buyers are getting more aggressive. Usually breaks upward.</p>
-        <p><span className="text-text-secondary font-semibold">Descending Triangle (bearish bias):</span> Flat bottom support + falling upper trendline. Sellers are getting more aggressive. Usually breaks downward.</p>
-        <p><span className="text-text-secondary font-semibold">Symmetrical Triangle (neutral):</span> Both trendlines converging equally. Can break either way — wait for direction confirmation.</p>
-        <p><span className="text-text-secondary font-semibold">Entry:</span> Trade the breakout direction with a stop-loss on the other side of the triangle.</p>
-        <p className="text-accent-yellow">Breakouts in the last 25% of the triangle (near the apex) are weaker. The best breakouts happen in the first 50-75% of the pattern.</p>
+      <Accordion title={t('learn:patterns.triangles.title')} color="text-accent-blue">
+        <p>{t('learn:patterns.triangles.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.triangles.ascending_label')}</span>{t('learn:patterns.triangles.ascending_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.triangles.descending_label')}</span>{t('learn:patterns.triangles.descending_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.triangles.symmetrical_label')}</span>{t('learn:patterns.triangles.symmetrical_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.triangles.entry_label')}</span>{t('learn:patterns.triangles.entry_desc')}</p>
+        <p className="text-accent-yellow">{t('learn:patterns.triangles.tip')}</p>
       </Accordion>
 
-      <Accordion title="Flags & Pennants" color="text-accent-green">
-        <p>Short consolidation patterns after a strong, sharp move (the "flagpole"). They signal <span className="text-text-secondary font-semibold">continuation</span> of the previous trend.</p>
-        <p><span className="text-text-secondary font-semibold">Bull Flag:</span> Strong move up (flagpole), then price drifts down in a small parallel channel (flag). Breakout upward continues the move.</p>
-        <p><span className="text-text-secondary font-semibold">Bear Flag:</span> Strong move down, then price drifts up in a small channel. Breakout downward continues the move.</p>
-        <p><span className="text-text-secondary font-semibold">Pennant:</span> Same as a flag but the consolidation forms a small symmetrical triangle instead of a channel.</p>
-        <p><span className="text-text-secondary font-semibold">Target:</span> Measure the flagpole length and project it from the breakout point.</p>
-        <p className="text-accent-yellow">Flags should form quickly (5-15 candles). If consolidation takes too long, the pattern weakens and may not work.</p>
+      <Accordion title={t('learn:patterns.flags.title')} color="text-accent-green">
+        <p>{t('learn:patterns.flags.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:patterns.flags.p1_bold')}</span>{t('learn:patterns.flags.p1_suffix')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.flags.bullFlag_label')}</span>{t('learn:patterns.flags.bullFlag_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.flags.bearFlag_label')}</span>{t('learn:patterns.flags.bearFlag_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.flags.pennant_label')}</span>{t('learn:patterns.flags.pennant_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.flags.target_label')}</span>{t('learn:patterns.flags.target_desc')}</p>
+        <p className="text-accent-yellow">{t('learn:patterns.flags.tip')}</p>
       </Accordion>
 
-      <Accordion title="Cup & Handle" color="text-accent-green">
-        <p>A <span className="text-text-secondary font-semibold">bullish continuation</span> pattern that looks like a tea cup from the side. Usually forms over weeks to months.</p>
-        <p><span className="text-text-secondary font-semibold">Cup:</span> A U-shaped (not V-shaped) decline and recovery. Price drops, rounds out at a bottom, and recovers back to the starting level.</p>
-        <p><span className="text-text-secondary font-semibold">Handle:</span> A small pullback/consolidation near the right side of the cup. This is the final shakeout before breakout.</p>
-        <p><span className="text-text-secondary font-semibold">Entry:</span> Buy when price breaks above the rim of the cup (the resistance level) with volume.</p>
-        <p><span className="text-text-secondary font-semibold">Target:</span> Depth of the cup projected upward from the breakout.</p>
-        <p className="text-accent-yellow">The handle should NOT drop more than 50% of the cup's depth. If it does, the pattern is weakening.</p>
+      <Accordion title={t('learn:patterns.cup.title')} color="text-accent-green">
+        <p>{t('learn:patterns.cup.p1_prefix')}<span className="text-text-secondary font-semibold">{t('learn:patterns.cup.p1_bold')}</span>{t('learn:patterns.cup.p1_suffix')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.cup.cup_label')}</span>{t('learn:patterns.cup.cup_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.cup.handle_label')}</span>{t('learn:patterns.cup.handle_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.cup.entry_label')}</span>{t('learn:patterns.cup.entry_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.cup.target_label')}</span>{t('learn:patterns.cup.target_desc')}</p>
+        <p className="text-accent-yellow">{t('learn:patterns.cup.tip')}</p>
       </Accordion>
 
-      <Accordion title="Candlestick Basics" color="text-accent-blue">
-        <p>Individual candles can signal reversals or continuation. Here are the most important ones:</p>
-        <p><span className="text-text-secondary font-semibold">Doji:</span> Open and close at nearly the same price. Body is tiny or nonexistent. Shows indecision — neither buyers nor sellers won. At the top of a trend = potential reversal.</p>
-        <p><span className="text-text-secondary font-semibold">Hammer:</span> Small body at the top, long lower wick (2x+ body length). Appears at bottoms — buyers rejected the low. Bullish reversal signal.</p>
-        <p><span className="text-text-secondary font-semibold">Shooting Star:</span> Small body at the bottom, long upper wick. Appears at tops — sellers rejected the high. Bearish reversal signal.</p>
-        <p><span className="text-text-secondary font-semibold">Engulfing:</span> A candle that completely covers the previous candle's body. Bullish engulfing = green candle swallows red. Bearish engulfing = red swallows green. Strong reversal signal.</p>
-        <p className="text-accent-yellow">Single candles are weak signals alone. Always combine with S/R levels and volume. A hammer AT support with high volume = strong. A hammer in the middle of nowhere = meaningless.</p>
+      <Accordion title={t('learn:patterns.candlestick.title')} color="text-accent-blue">
+        <p>{t('learn:patterns.candlestick.p1')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.candlestick.doji_label')}</span>{t('learn:patterns.candlestick.doji_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.candlestick.hammer_label')}</span>{t('learn:patterns.candlestick.hammer_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.candlestick.shootingStar_label')}</span>{t('learn:patterns.candlestick.shootingStar_desc')}</p>
+        <p><span className="text-text-secondary font-semibold">{t('learn:patterns.candlestick.engulfing_label')}</span>{t('learn:patterns.candlestick.engulfing_desc')}</p>
+        <p className="text-accent-yellow">{t('learn:patterns.candlestick.tip')}</p>
       </Accordion>
     </div>
   )
 }
 
 function Glossary() {
-  const terms = [
-    ['ATH', 'All-Time High — the highest price ever reached'],
-    ['ATL', 'All-Time Low — the lowest price ever recorded'],
-    ['Bearish', 'Expecting price to go DOWN'],
-    ['Bullish', 'Expecting price to go UP'],
-    ['Candle', 'A chart bar showing open, high, low, close price for a time period'],
-    ['DCA', 'Dollar Cost Averaging — buying fixed amounts at regular intervals'],
-    ['DeFi', 'Decentralized Finance — financial services on blockchain without banks'],
-    ['DYOR', 'Do Your Own Research — never blindly follow others\' advice'],
-    ['FOMO', 'Fear Of Missing Out — emotional buying during rallies'],
-    ['FUD', 'Fear, Uncertainty, Doubt — negative news/sentiment (sometimes manufactured)'],
-    ['Gas', 'Transaction fees paid to blockchain miners/validators'],
-    ['Halving', 'Bitcoin event every ~4 years that cuts block rewards in half'],
-    ['HODL', 'Hold On for Dear Life — long-term holding strategy'],
-    ['Leverage', 'Borrowing money to trade larger positions (amplifies gains AND losses)'],
-    ['Liquidation', 'Forced closing of a leveraged position when losses exceed margin'],
-    ['Long', 'A trade betting the price will go UP'],
-    ['MACD', 'Moving Average Convergence Divergence — trend/momentum indicator'],
-    ['Market Cap', 'Total value = Price x Circulating Supply'],
-    ['MVRV', 'Market Value to Realized Value — on-chain valuation metric'],
-    ['OI', 'Open Interest — total value of open futures/derivatives contracts'],
-    ['RSI', 'Relative Strength Index — momentum oscillator (0-100)'],
-    ['Satoshi', 'Smallest BTC unit (0.00000001 BTC). Named after creator.'],
-    ['Short', 'A trade betting the price will go DOWN'],
-    ['Slippage', 'Difference between expected and actual execution price'],
-    ['Stop-Loss', 'Order that auto-sells if price drops to a set level'],
-    ['Support', 'Price level where buying pressure prevents further drops'],
-    ['Resistance', 'Price level where selling pressure prevents further rises'],
-    ['Take-Profit', 'Order that auto-sells when price reaches your profit target'],
-    ['TVL', 'Total Value Locked — money deposited in DeFi protocols'],
-    ['Whale', 'Entity holding large amounts of crypto (1000+ BTC)'],
+  const { t } = useTranslation(['learn'])
+  const termKeys = [
+    'ATH', 'ATL', 'Bearish', 'Bullish', 'Candle', 'DCA', 'DeFi', 'DYOR',
+    'FOMO', 'FUD', 'Gas', 'Halving', 'HODL', 'Leverage', 'Liquidation',
+    'Long', 'MACD', 'MarketCap', 'MVRV', 'OI', 'RSI', 'Satoshi', 'Short',
+    'Slippage', 'StopLoss', 'Support', 'Resistance', 'TakeProfit', 'TVL', 'Whale',
   ]
+
+  // Display names for glossary terms (some differ from JSON keys)
+  const displayNames = {
+    MarketCap: 'Market Cap',
+    StopLoss: 'Stop-Loss',
+    TakeProfit: 'Take-Profit',
+  }
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <div className="space-y-1.5">
-        {terms.map(([term, def]) => (
-          <div key={term} className="flex gap-2 py-1 border-b border-white/[0.03] last:border-0">
-            <span className="text-accent-blue text-[11px] font-bold w-20 flex-shrink-0">{term}</span>
-            <span className="text-text-muted text-[11px]">{def}</span>
+        {termKeys.map((key) => (
+          <div key={key} className="flex gap-2 py-1 border-b border-white/[0.03] last:border-0">
+            <span className="text-accent-blue text-[11px] font-bold w-20 flex-shrink-0">{displayNames[key] || key}</span>
+            <span className="text-text-muted text-[11px]">{t(`learn:glossary.${key}`)}</span>
           </div>
         ))}
       </div>

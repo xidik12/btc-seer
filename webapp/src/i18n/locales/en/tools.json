@@ -2,13 +2,16 @@
   "title": "Trading Tools",
   "positionSize": {
     "title": "Position Size Calculator",
+    "description": "Calculate your ideal position size based on account risk. Pros risk 1-2% per trade.",
     "accountBalance": "Account Balance ($)",
     "riskPercent": "Risk per Trade (%)",
     "entryPrice": "Entry Price ($)",
     "stopLoss": "Stop Loss ($)",
     "calculate": "Calculate",
     "result": "Position Size",
-    "riskAmount": "Risk Amount"
+    "riskAmount": "Risk Amount",
+    "stopDistance": "Stop Distance",
+    "positionValue": "Position Value"
   },
   "pnl": {
     "title": "P&L Calculator",
@@ -23,20 +26,29 @@
     "profit": "Profit",
     "loss": "Loss",
     "pnl": "P&L",
-    "roi": "ROI"
+    "roi": "ROI",
+    "breakEven": "Break-Even"
   },
   "riskReward": {
     "title": "Risk/Reward Calculator",
+    "description": "Pros aim for at least 1:2 R:R. Higher ratios mean you can be wrong more often and still profit.",
     "entryPrice": "Entry Price ($)",
     "stopLoss": "Stop Loss ($)",
     "takeProfit": "Take Profit ($)",
     "calculate": "Calculate",
     "ratio": "R:R Ratio",
     "riskPercent": "Risk %",
-    "rewardPercent": "Reward %"
+    "rewardPercent": "Reward %",
+    "winRateNeeded": "Win Rate Needed",
+    "quality": "Quality",
+    "qualityExcellent": "Excellent",
+    "qualityGood": "Good",
+    "qualityFair": "Fair",
+    "qualityPoor": "Poor"
   },
   "dca": {
     "title": "DCA Calculator",
+    "description": "Dollar Cost Averaging reduces timing risk. Consistent buying regardless of price.",
     "investmentAmount": "Investment per Period ($)",
     "frequency": "Frequency",
     "duration": "Duration (months)",
@@ -47,10 +59,17 @@
     "finalValue": "Final Value",
     "avgPrice": "Average Price",
     "totalBtc": "Total BTC",
+    "totalBuys": "Total Buys",
     "roi": "ROI",
+    "daily": "Daily",
     "weekly": "Weekly",
     "biweekly": "Biweekly",
-    "monthly": "Monthly"
+    "monthly": "Monthly",
+    "priceScenarios": "PRICE SCENARIOS",
+    "scenarioBear": "Bear (-30%)",
+    "scenarioFlat": "Flat (0%)",
+    "scenarioBull": "Bull (+50%)",
+    "scenarioMoon": "Moon (+100%)"
   },
   "proRules": {
     "title": "Pro Risk Management Rules",
