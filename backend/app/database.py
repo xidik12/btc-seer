@@ -52,7 +52,7 @@ class Price(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime)
     open: Mapped[float] = mapped_column(Float)
     high: Mapped[float] = mapped_column(Float)
     low: Mapped[float] = mapped_column(Float)
@@ -161,7 +161,7 @@ class InfluencerTweet(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     influencer_name: Mapped[str] = mapped_column(String(100))
     username: Mapped[str] = mapped_column(String(100), index=True)
     role: Mapped[str] = mapped_column(String(200))
