@@ -25,7 +25,8 @@ pytorch-lightning>=2.0.0
 
 # Technical Analysis
 ta==0.11.0
-pandas_ta==0.3.14b1
+# pandas_ta removed: 0.3.x yanked from PyPI, 0.4.x requires numpy>=2.2 (conflicts with pytorch-forecasting)
+# Code gracefully falls back when pandas_ta is unavailable (PANDAS_TA_AVAILABLE=False)
 
 # Advanced quantitative analysis
 arch>=7.0        # GARCH volatility models
