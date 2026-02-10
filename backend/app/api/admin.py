@@ -478,6 +478,7 @@ async def admin_migrate_sqlite(request: Request):
 
     import sqlite3
     from pathlib import Path
+    from sqlalchemy import text as sa_text, inspect as sa_inspect
 
     sqlite_path = Path("/data/btc_oracle.db")
     if not sqlite_path.exists():
@@ -486,9 +487,41 @@ async def admin_migrate_sqlite(request: Request):
     if not settings.is_postgres:
         raise HTTPException(status_code=400, detail="Current DB is not PostgreSQL — migration not needed")
 
+    # Get PG column types to know which columns need datetime conversion
+    pg_col_types = {}
+    async with async_session() as session:
+        conn = await session.connection()
+        inspector = await conn.run_sync(lambda sync_conn: sa_inspect(sync_conn))
+        pg_tables = await conn.run_sync(lambda sync_conn: sa_inspect(sync_conn).get_table_names())
+        for tname in pg_tables:
+            cols = await conn.run_sync(lambda sync_conn, t=tname: sa_inspect(sync_conn).get_columns(t))
+            pg_col_types[tname] = {c["name"]: str(c["type"]) for c in cols}
+
+    def _convert_row(table_name, columns, row):
+        """Convert SQLite string values to Python types for asyncpg."""
+        result = {}
+        type_map = pg_col_types.get(table_name, {})
+        for col, val in zip(columns, row):
+            if val is None:
+                result[col] = val
+                continue
+            col_type = type_map.get(col, "").upper()
+            if "TIMESTAMP" in col_type or "DATETIME" in col_type:
+                if isinstance(val, str):
+                    # Parse various datetime formats from SQLite
+                    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"):
+                        try:
+                            val = datetime.strptime(val, fmt)
+                            break
+                        except ValueError:
+                            continue
+            elif "BOOLEAN" in col_type:
+                val = bool(val) if not isinstance(val, bool) else val
+            result[col] = val
+        return result
+
     results = {}
     conn_sqlite = sqlite3.connect(str(sqlite_path))
-    conn_sqlite.row_factory = sqlite3.Row
     try:
         cursor = conn_sqlite.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
@@ -518,11 +551,10 @@ async def admin_migrate_sqlite(request: Request):
                     placeholders = ", ".join(f":{c}" for c in columns)
                     insert_sql = f'INSERT INTO "{table_name}" ({col_list}) VALUES ({placeholders}) ON CONFLICT DO NOTHING'
 
+                    converted = [_convert_row(table_name, columns, row) for row in rows]
+
                     async with async_session() as session:
-                        await session.execute(
-                            __import__("sqlalchemy").text(insert_sql),
-                            [dict(zip(columns, row)) for row in rows],
-                        )
+                        await session.execute(sa_text(insert_sql), converted)
                         await session.commit()
 
                     migrated += len(rows)
@@ -533,16 +565,12 @@ async def admin_migrate_sqlite(request: Request):
                     async with async_session() as session:
                         try:
                             seq_result = await session.execute(
-                                __import__("sqlalchemy").text(
-                                    f"SELECT pg_get_serial_sequence('{table_name}', 'id')"
-                                )
+                                sa_text(f"SELECT pg_get_serial_sequence('{table_name}', 'id')")
                             )
                             seq = seq_result.scalar()
                             if seq:
                                 await session.execute(
-                                    __import__("sqlalchemy").text(
-                                        f"SELECT setval('{seq}', COALESCE((SELECT MAX(id) FROM \"{table_name}\"), 0) + 1, false)"
-                                    )
+                                    sa_text(f"SELECT setval('{seq}', COALESCE((SELECT MAX(id) FROM \"{table_name}\"), 0) + 1, false)")
                                 )
                                 await session.commit()
                         except Exception:
