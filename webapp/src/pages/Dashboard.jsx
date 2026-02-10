@@ -122,6 +122,11 @@ const quickIcons = {
       <line x1="12" y1="8" x2="12.01" y2="8" />
     </svg>
   ),
+  premium: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    </svg>
+  ),
   tools: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
@@ -175,6 +180,7 @@ const CATEGORIES = [
       { path: '/learn', label: 'Learn', icon: 'learn' },
       { path: '/resources', label: 'Resources', icon: 'resources' },
       { path: '/tools', label: 'Tools', icon: 'tools' },
+      { path: '/subscription', label: 'Premium', icon: 'premium' },
       { path: '/settings', label: 'Settings', icon: 'settings' },
       { path: '/about', label: 'About', icon: 'about' },
     ],
