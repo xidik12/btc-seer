@@ -16,6 +16,7 @@ const MARKET_TABS = [
 import {
   ResponsiveContainer,
   ComposedChart,
+  Bar,
   Line,
   XAxis,
   YAxis,
@@ -105,6 +106,31 @@ function WaveStatusCard({ data }) {
   )
 }
 
+function CandlestickShape(props) {
+  const { x, y, width, height, payload } = props
+  if (!payload || payload.open == null || payload.price == null) return null
+
+  const isGreen = payload.price >= payload.open
+  const color = isGreen ? '#00c853' : '#ff4d6a'
+  const yScale = props.yAxis
+  if (!yScale) return null
+
+  const highY = yScale.scale(payload.high)
+  const lowY = yScale.scale(payload.low)
+  const openY = yScale.scale(payload.open)
+  const closeY = yScale.scale(payload.price)
+  const bodyTop = Math.min(openY, closeY)
+  const bodyHeight = Math.max(Math.abs(openY - closeY), 1)
+  const wickX = x + width / 2
+
+  return (
+    <g>
+      <line x1={wickX} y1={highY} x2={wickX} y2={lowY} stroke={color} strokeWidth={1} />
+      <rect x={x + 1} y={bodyTop} width={Math.max(width - 2, 2)} height={bodyHeight} fill={color} rx={1} />
+    </g>
+  )
+}
+
 function WaveChart({ historicalData }) {
   if (!historicalData?.points?.length) {
     return (
@@ -114,16 +140,17 @@ function WaveChart({ historicalData }) {
     )
   }
 
-  const chartData = historicalData.points
-    .filter((_, i) => i % 2 === 0)
-    .map((p) => ({
-      date: p.date?.slice(0, 10),
-      price: p.price,
-      high: p.high,
-      low: p.low,
-      swingPrice: p.is_swing ? p.price : null,
-      waveLabel: p.wave_label,
-    }))
+  const chartData = historicalData.points.map((p) => ({
+    date: p.date?.slice(0, 10),
+    price: p.price,
+    open: p.open,
+    high: p.high,
+    low: p.low,
+    candleRange: p.high && p.low ? [p.low, p.high] : [0, 0],
+    swingPrice: p.is_swing ? p.price : null,
+    swingType: p.swing_type,
+    waveLabel: p.wave_label,
+  }))
 
   const fibLevels = historicalData.fib_levels || []
 
@@ -148,6 +175,7 @@ function WaveChart({ historicalData }) {
               interval="preserveStartEnd"
             />
             <YAxis
+              yAxisId="price"
               tick={{ fontSize: 9, fill: '#888' }}
               tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`}
               domain={['auto', 'auto']}
@@ -161,12 +189,16 @@ function WaveChart({ historicalData }) {
               }}
               formatter={(v, name) => {
                 if (name === 'swingPrice') return [v ? `$${v.toLocaleString()}` : '--', 'Swing']
+                if (name === 'candleRange') return null
+                if (Array.isArray(v)) return null
                 return [v ? `$${v.toLocaleString()}` : '--', name]
               }}
+              labelFormatter={(label) => label}
             />
             {fibLevels.slice(0, 6).map((fib, i) => (
               <ReferenceLine
                 key={i}
+                yAxisId="price"
                 y={fib.price}
                 stroke={fib.type === 'support' ? '#00c853' : '#ff4d6a'}
                 strokeDasharray="4 4"
@@ -179,29 +211,57 @@ function WaveChart({ historicalData }) {
                 }}
               />
             ))}
+            <Bar
+              dataKey="candleRange"
+              yAxisId="price"
+              shape={(props) => <CandlestickShape {...props} yAxis={props.yAxis || props.background?.props?.yAxis} />}
+              isAnimationActive={false}
+            />
             <Line
               dataKey="price"
-              stroke="#ffc107"
-              strokeWidth={1.5}
+              yAxisId="price"
+              stroke="rgba(255,193,7,0.4)"
+              strokeWidth={1}
               dot={false}
               name="Price"
               connectNulls
+              isAnimationActive={false}
             />
             <Scatter
               dataKey="swingPrice"
+              yAxisId="price"
               fill="#4a9eff"
               r={4}
               name="swingPrice"
               shape={(props) => {
                 if (!props.payload?.swingPrice) return null
                 const label = props.payload.waveLabel
+                const isHigh = props.payload.swingType === 'high'
+                const labelY = isHigh ? props.cy - 20 : props.cy + 14
                 return (
                   <g>
-                    <circle cx={props.cx} cy={props.cy} r={4} fill="#4a9eff" stroke="#fff" strokeWidth={1} />
+                    <circle cx={props.cx} cy={props.cy} r={5} fill="#4a9eff" stroke="#fff" strokeWidth={1.5} />
                     {label && (
-                      <text x={props.cx} y={props.cy - 8} textAnchor="middle" fill="#4a9eff" fontSize={10} fontWeight="bold">
-                        {label}
-                      </text>
+                      <g>
+                        <rect
+                          x={props.cx - 14}
+                          y={labelY - 9}
+                          width={28}
+                          height={18}
+                          rx={9}
+                          fill="#4a9eff"
+                        />
+                        <text
+                          x={props.cx}
+                          y={labelY + 4}
+                          textAnchor="middle"
+                          fill="#fff"
+                          fontSize={10}
+                          fontWeight="bold"
+                        >
+                          {label}
+                        </text>
+                      </g>
                     )}
                   </g>
                 )

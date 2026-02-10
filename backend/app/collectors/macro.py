@@ -16,6 +16,9 @@ class MacroCollector(BaseCollector):
         "gold": "XAU/USD",
         "sp500": "SPX",
         "treasury_10y": "TNX",
+        "nasdaq": "NDX",
+        "vix": "VIX",
+        "eurusd": "EUR/USD",
     }
 
     # Yahoo Finance v8 chart symbols (v7 quote API is deprecated/blocked)
@@ -24,6 +27,9 @@ class MacroCollector(BaseCollector):
         "gold": ["GC=F", "GLD"],
         "sp500": ["^GSPC", "SPY"],
         "treasury_10y": ["^TNX", "TLT"],
+        "nasdaq": ["^NDX", "QQQ"],
+        "vix": ["^VIX"],
+        "eurusd": ["EURUSD=X"],
     }
 
     # Cache last successful values
@@ -36,6 +42,9 @@ class MacroCollector(BaseCollector):
             "gold": None,
             "sp500": None,
             "treasury_10y": None,
+            "nasdaq": None,
+            "vix": None,
+            "eurusd": None,
             "timestamp": self.now().isoformat(),
         }
 
@@ -48,7 +57,7 @@ class MacroCollector(BaseCollector):
                     MacroCollector._last_good[key] = value
 
         # For any missing data, try Yahoo Finance v8 chart API
-        for key in ["dxy", "gold", "sp500", "treasury_10y"]:
+        for key in ["dxy", "gold", "sp500", "treasury_10y", "nasdaq", "vix", "eurusd"]:
             if result[key] is None:
                 for symbol in self.YF_SYMBOLS.get(key, []):
                     yf_quote = await self._fetch_yahoo_v8(symbol)

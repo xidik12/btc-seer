@@ -407,6 +407,9 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
                 "gold": live.get("gold"),
                 "sp500": live.get("sp500"),
                 "treasury_10y": live.get("treasury_10y"),
+                "nasdaq": live.get("nasdaq"),
+                "vix": live.get("vix"),
+                "eurusd": live.get("eurusd"),
                 "fear_greed_index": None,
                 "fear_greed_label": None,
                 "timestamp": live.get("timestamp"),
@@ -415,6 +418,7 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
             logger.warning(f"Live macro fallback failed: {e}")
             return {
                 "dxy": None, "gold": None, "sp500": None, "treasury_10y": None,
+                "nasdaq": None, "vix": None, "eurusd": None,
                 "fear_greed_index": None, "fear_greed_label": None, "timestamp": None,
             }
 
@@ -467,6 +471,21 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
             macro.treasury_10y,
             prev_macro.treasury_10y if prev_macro else None,
             daily_macro.treasury_10y if daily_macro else None,
+        ),
+        "nasdaq": build_macro_item(
+            macro.nasdaq,
+            prev_macro.nasdaq if prev_macro else None,
+            daily_macro.nasdaq if daily_macro else None,
+        ),
+        "vix": build_macro_item(
+            macro.vix,
+            prev_macro.vix if prev_macro else None,
+            daily_macro.vix if daily_macro else None,
+        ),
+        "eurusd": build_macro_item(
+            macro.eurusd,
+            prev_macro.eurusd if prev_macro else None,
+            daily_macro.eurusd if daily_macro else None,
         ),
         "fear_greed_index": macro.fear_greed_index,
         "fear_greed_label": macro.fear_greed_label,

@@ -91,6 +91,9 @@ class MacroData(Base):
     gold: Mapped[float] = mapped_column(Float, nullable=True)
     sp500: Mapped[float] = mapped_column(Float, nullable=True)
     treasury_10y: Mapped[float] = mapped_column(Float, nullable=True)
+    nasdaq: Mapped[float] = mapped_column(Float, nullable=True)
+    vix: Mapped[float] = mapped_column(Float, nullable=True)
+    eurusd: Mapped[float] = mapped_column(Float, nullable=True)
     fear_greed_index: Mapped[int] = mapped_column(Integer, nullable=True)
     fear_greed_label: Mapped[str] = mapped_column(String(30), nullable=True)
 

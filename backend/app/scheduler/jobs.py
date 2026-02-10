@@ -269,11 +269,14 @@ async def collect_macro_data():
         gold = macro_data.get("gold", {}).get("price") if isinstance(macro_data.get("gold"), dict) else None
         sp500 = macro_data.get("sp500", {}).get("price") if isinstance(macro_data.get("sp500"), dict) else None
         treasury_10y = macro_data.get("treasury_10y", {}).get("price") if isinstance(macro_data.get("treasury_10y"), dict) else None
+        nasdaq = macro_data.get("nasdaq", {}).get("price") if isinstance(macro_data.get("nasdaq"), dict) else None
+        vix = macro_data.get("vix", {}).get("price") if isinstance(macro_data.get("vix"), dict) else None
+        eurusd = macro_data.get("eurusd", {}).get("price") if isinstance(macro_data.get("eurusd"), dict) else None
         fear_greed_index = fear_greed.get("value")
         fear_greed_label = fear_greed.get("label")
 
         # Don't save a row where ALL values are None
-        if dxy is None and gold is None and sp500 is None and treasury_10y is None and fear_greed_index is None:
+        if dxy is None and gold is None and sp500 is None and treasury_10y is None and nasdaq is None and vix is None and eurusd is None and fear_greed_index is None:
             logger.warning("Macro collection returned all None values, skipping DB save")
             return
 
@@ -284,13 +287,16 @@ async def collect_macro_data():
                 gold=gold,
                 sp500=sp500,
                 treasury_10y=treasury_10y,
+                nasdaq=nasdaq,
+                vix=vix,
+                eurusd=eurusd,
                 fear_greed_index=fear_greed_index,
                 fear_greed_label=fear_greed_label,
             )
             session.add(macro)
             await session.commit()
 
-        logger.info(f"Macro data collected: DXY={dxy}, Gold={gold}, SP500={sp500}, 10Y={treasury_10y}")
+        logger.info(f"Macro data collected: DXY={dxy}, Gold={gold}, SP500={sp500}, 10Y={treasury_10y}, NDQ={nasdaq}, VIX={vix}, EURUSD={eurusd}")
 
     except Exception as e:
         logger.error(f"Macro collection error: {e}")

@@ -7,6 +7,9 @@ const MACRO_ITEMS = [
   { key: 'gold', label: 'Gold', icon: 'Au' },
   { key: 'sp500', label: 'S&P 500', icon: 'SP' },
   { key: 'treasury_10y', label: '10Y Treasury', icon: '10Y' },
+  { key: 'nasdaq', label: 'Nasdaq 100', icon: 'NDQ' },
+  { key: 'vix', label: 'VIX', icon: 'VX' },
+  { key: 'eurusd', label: 'EUR/USD', icon: 'EU' },
 ]
 
 const KEY_ALIASES = {
@@ -14,6 +17,9 @@ const KEY_ALIASES = {
   gold: ['gold', 'GOLD', 'xauusd', 'XAUUSD'],
   sp500: ['sp500', 'SP500', 'spx', 'SPX', 's&p500', 'sp_500'],
   treasury_10y: ['treasury_10y', 'treasury10y', '10y', '10Y', 'us10y', 'US10Y'],
+  nasdaq: ['nasdaq', 'NASDAQ', 'ndx', 'NDX', 'nasdaq100'],
+  vix: ['vix', 'VIX', 'cboe_vix'],
+  eurusd: ['eurusd', 'EURUSD', 'eur_usd', 'EUR/USD'],
 }
 
 function findValue(data, key) {
@@ -124,8 +130,8 @@ export default function MacroDashboard() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 gap-2">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
             <div
               key={i}
               className="bg-bg-secondary rounded-xl p-3 animate-pulse min-h-[80px]"
@@ -147,7 +153,7 @@ export default function MacroDashboard() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {MACRO_ITEMS.map(({ key, label, icon }) => {
             const raw = findValue(macroData, key)
             const price = extractPrice(raw)

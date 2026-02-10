@@ -29,6 +29,11 @@ MIGRATIONS = [
     "ALTER TABLE model_versions ADD COLUMN is_candidate BOOLEAN DEFAULT 0",
     "ALTER TABLE model_versions ADD COLUMN ab_test_accuracy FLOAT",
     "ALTER TABLE model_versions ADD COLUMN ensemble_weight FLOAT",
+
+    # MacroData: add Nasdaq, VIX, EUR/USD columns
+    "ALTER TABLE macro_data ADD COLUMN nasdaq FLOAT",
+    "ALTER TABLE macro_data ADD COLUMN vix FLOAT",
+    "ALTER TABLE macro_data ADD COLUMN eurusd FLOAT",
 ]
 
 

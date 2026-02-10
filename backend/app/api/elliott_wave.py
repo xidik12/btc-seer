@@ -613,6 +613,7 @@ async def get_elliott_wave_historical(
         points.append({
             "date": row["timestamp"].isoformat(),
             "price": round(float(row["close"]), 2),
+            "open": round(float(row["open"]), 2),
             "high": round(float(row["high"]), 2),
             "low": round(float(row["low"]), 2),
             "wave_label": None,
