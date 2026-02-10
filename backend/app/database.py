@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Text, Float, Integer, String, JSON, DateTime, Boolean, Index, func, text, inspect
+from sqlalchemy import Text, Float, Integer, BigInteger, String, JSON, DateTime, Boolean, Index, func, text, inspect
 from sqlalchemy.sql import extract
 from datetime import datetime
 
@@ -275,7 +275,7 @@ class FundingRate(Base):
     funding_rate: Mapped[float] = mapped_column(Float, nullable=True)
     mark_price: Mapped[float] = mapped_column(Float, nullable=True)
     index_price: Mapped[float] = mapped_column(Float, nullable=True)
-    next_funding_time: Mapped[int] = mapped_column(Integer, nullable=True)  # Unix ms
+    next_funding_time: Mapped[int] = mapped_column(BigInteger, nullable=True)  # Unix ms
     open_interest: Mapped[float] = mapped_column(Float, nullable=True)  # BTC
 
 
@@ -308,7 +308,7 @@ class AlertLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
-    telegram_id: Mapped[int] = mapped_column(Integer, index=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
     alert_type: Mapped[str] = mapped_column(String(30))  # hourly, breaking
     status: Mapped[str] = mapped_column(String(20))  # sent, failed
     error: Mapped[str] = mapped_column(Text, nullable=True)
@@ -351,7 +351,7 @@ class BotUser(Base):
     __tablename__ = "bot_users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    telegram_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
     username: Mapped[str] = mapped_column(String(100), nullable=True)
     subscribed: Mapped[bool] = mapped_column(Boolean, default=False)
     alert_interval: Mapped[str] = mapped_column(String(10), default="4h")  # 1h, 4h, 24h
@@ -373,7 +373,7 @@ class PaymentHistory(Base):
     __tablename__ = "payment_history"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    telegram_id: Mapped[int] = mapped_column(Integer, index=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
     tier: Mapped[str] = mapped_column(String(20))  # monthly, quarterly, yearly
     days: Mapped[int] = mapped_column(Integer)
     stars_amount: Mapped[int] = mapped_column(Integer)
@@ -386,7 +386,7 @@ class PortfolioState(Base):
     __tablename__ = "portfolio_states"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    telegram_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -421,7 +421,7 @@ class TradeAdvice(Base):
     __tablename__ = "trade_advices"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    telegram_id: Mapped[int] = mapped_column(Integer, index=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
 
     # Plan
@@ -477,7 +477,7 @@ class TradeResult(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     trade_advice_id: Mapped[int] = mapped_column(Integer, index=True)
-    telegram_id: Mapped[int] = mapped_column(Integer, index=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
     direction: Mapped[str] = mapped_column(String(10))
@@ -608,9 +608,9 @@ class ApiKey(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    key_prefix: Mapped[str] = mapped_column(String(8))  # First 8 chars for identification
+    key_prefix: Mapped[str] = mapped_column(String(20))  # Prefix for identification
     owner: Mapped[str] = mapped_column(String(200))
-    telegram_id: Mapped[int] = mapped_column(Integer, nullable=True, index=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=True, index=True)
     tier: Mapped[str] = mapped_column(String(20), default="free")  # free, basic, pro, enterprise
     rate_limit: Mapped[int] = mapped_column(Integer, default=60)  # requests per hour
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
