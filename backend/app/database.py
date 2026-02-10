@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Text, Float, Integer, String, JSON, DateTime, Boolean, Index, func, text, inspect, case
+from sqlalchemy import Text, Float, Integer, String, JSON, DateTime, Boolean, Index, func, text, inspect
 from sqlalchemy.sql import extract
 from datetime import datetime
 
@@ -643,11 +643,17 @@ def _add_missing_columns(connection):
         for col in table.columns:
             if col.name not in existing_cols:
                 col_type = col.type.compile(connection.dialect)
-                nullable = "NULL" if col.nullable else "NOT NULL DEFAULT ''"
                 if col.nullable:
                     nullable = "NULL"
                 else:
-                    nullable = "NOT NULL DEFAULT ''"
+                    # Use dialect-appropriate defaults for NOT NULL columns
+                    type_str = str(col_type).upper()
+                    if any(t in type_str for t in ("INT", "FLOAT", "REAL", "NUMERIC", "DOUBLE")):
+                        nullable = "NOT NULL DEFAULT 0"
+                    elif "BOOL" in type_str:
+                        nullable = "NOT NULL DEFAULT false"
+                    else:
+                        nullable = "NOT NULL DEFAULT ''"
                 try:
                     connection.execute(
                         text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col_type} {nullable}')
@@ -658,9 +664,15 @@ def _add_missing_columns(connection):
 
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        await conn.run_sync(_add_missing_columns)
+    _db_logger.info(f"Connecting to database: {engine.url!s}")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(_add_missing_columns)
+        _db_logger.info("Database tables ready")
+    except Exception as e:
+        _db_logger.error(f"Database init failed: {e}", exc_info=True)
+        raise
 
 
 async def get_session() -> AsyncSession:
