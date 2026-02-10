@@ -2,15 +2,18 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 async function fetchAPI(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`
+  const { headers: extraHeaders, ...rest } = options
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    ...rest,
   })
   if (!res.ok) {
     let detail = `API error: ${res.status}`
     try {
       const body = await res.json()
-      if (body.detail) detail = body.detail
+      if (body.detail) {
+        detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail)
+      }
     } catch {}
     throw new Error(detail)
   }
