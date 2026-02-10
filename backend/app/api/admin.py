@@ -219,6 +219,9 @@ async def admin_users(request: Request, page: int = 1, search: str = ""):
     """List all users with pagination and search."""
     _require_admin(request)
 
+    if len(search) > 100:
+        raise HTTPException(400, "Search query too long")
+
     per_page = 50
     offset = (page - 1) * per_page
 
@@ -423,4 +426,46 @@ async def admin_system(request: Request):
             "prediction_interval_minutes": settings.prediction_interval_minutes,
             "admin_telegram_id": settings.admin_telegram_id,
         },
+    }
+
+
+@router.get("/bot-status")
+async def admin_bot_status(request: Request):
+    """Check if the Telegram bot is running and can reach the API."""
+    _require_admin(request)
+
+    bot_ok = False
+    bot_info = None
+    bot_error = None
+
+    if settings.telegram_bot_token:
+        try:
+            from aiogram import Bot
+            bot = Bot(token=settings.telegram_bot_token)
+            me = await bot.get_me()
+            bot_info = {
+                "id": me.id,
+                "username": me.username,
+                "first_name": me.first_name,
+                "can_read_all": me.can_read_all_group_messages,
+            }
+            bot_ok = True
+            await bot.session.close()
+        except Exception as e:
+            bot_error = str(e)
+    else:
+        bot_error = "TELEGRAM_BOT_TOKEN not set"
+
+    # Check DB connectivity for bot_users
+    user_count = 0
+    async with async_session() as session:
+        user_count = (await session.execute(select(func.count(BotUser.id)))).scalar() or 0
+
+    return {
+        "bot_ok": bot_ok,
+        "bot_info": bot_info,
+        "bot_error": bot_error,
+        "bot_users_count": user_count,
+        "token_set": bool(settings.telegram_bot_token),
+        "database_url": settings.database_url[:30] + "...",
     }

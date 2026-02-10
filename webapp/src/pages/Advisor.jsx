@@ -191,7 +191,16 @@ function ClosedTradeRow({ trade }) {
           <span className={`text-[9px] w-5 h-5 rounded-full flex items-center justify-center ${
             won ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red'
           }`}>
-            {won ? '\u2713' : '\u2717'}
+            {won ? (
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            )}
           </span>
           <span className={`text-[10px] font-bold ${isLong ? 'text-accent-green' : 'text-accent-red'}`}>
             {isLong ? 'LONG' : 'SHORT'}

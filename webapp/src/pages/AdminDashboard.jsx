@@ -246,11 +246,78 @@ function PredictionsTab({ predictions }) {
   )
 }
 
-function SystemTab({ system }) {
+function BotStatusCard({ initData }) {
+  const [status, setStatus] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetchStatus = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await api.getAdminBotStatus(initData)
+      setStatus(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [initData])
+
+  useEffect(() => { fetchStatus() }, [fetchStatus])
+
+  if (loading) return <div className="animate-pulse h-20 bg-bg-card rounded-xl" />
+
+  return (
+    <div className={`bg-bg-card rounded-xl border p-3 ${status?.bot_ok ? 'border-accent-green/20' : 'border-accent-red/20'}`}>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-text-secondary text-xs font-semibold">Bot Status</span>
+        <button onClick={fetchStatus} className="text-accent-blue text-[9px] hover:underline">Refresh</button>
+      </div>
+      {error ? (
+        <div className="text-accent-red text-[10px]">{error}</div>
+      ) : (
+        <div className="space-y-1 text-[10px]">
+          <div className="flex justify-between">
+            <span className="text-text-muted">Status</span>
+            <span className={status.bot_ok ? 'text-accent-green font-bold' : 'text-accent-red font-bold'}>
+              {status.bot_ok ? 'CONNECTED' : 'DOWN'}
+            </span>
+          </div>
+          {status.bot_info && (
+            <div className="flex justify-between">
+              <span className="text-text-muted">Username</span>
+              <span className="text-text-primary font-mono">@{status.bot_info.username}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-text-muted">Bot Users in DB</span>
+            <span className="text-text-primary font-bold">{status.bot_users_count}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-text-muted">Token Set</span>
+            <span className={status.token_set ? 'text-accent-green' : 'text-accent-red'}>{status.token_set ? 'Yes' : 'No'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-text-muted">DB</span>
+            <span className="text-text-muted font-mono">{status.database_url}</span>
+          </div>
+          {status.bot_error && (
+            <div className="text-accent-red mt-1">{status.bot_error}</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SystemTab({ system, initData }) {
   if (!system) return <div className="animate-pulse"><div className="h-32 bg-bg-card rounded-2xl" /></div>
 
   return (
     <div className="space-y-3">
+      <BotStatusCard initData={initData} />
+
       <div className="text-text-secondary text-xs font-semibold">Latest Price</div>
       <div className="bg-bg-card rounded-xl border border-white/5 p-3">
         <span className="text-text-primary text-lg font-bold">{formatPrice(system.latest_price?.price)}</span>
@@ -389,7 +456,7 @@ export default function AdminDashboard() {
       {tab === 'overview' && <OverviewTab stats={stats} />}
       {tab === 'users' && <UsersTab initData={initData} />}
       {tab === 'predictions' && <PredictionsTab predictions={predictions} />}
-      {tab === 'system' && <SystemTab system={system} />}
+      {tab === 'system' && <SystemTab system={system} initData={initData} />}
     </div>
   )
 }

@@ -450,7 +450,15 @@ function TradingInsight({ data, stats }) {
   if (fundingRate != null) {
     if (Math.abs(fundingRate) > 0.001) {
       insights.push({
-        icon: fundingRate > 0 ? '⚠️' : '✅',
+        icon: fundingRate > 0 ? (
+          <svg className="w-4 h-4 text-accent-yellow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        ) : (
+          <svg className="w-4 h-4 text-accent-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+        ),
         text: fundingRate > 0
           ? `High positive funding (${(fundingRate * 100).toFixed(4)}%) — longs are paying premium. Price may correct down.`
           : `Negative funding (${(fundingRate * 100).toFixed(4)}%) — shorts are paying. Potential squeeze upward.`,
@@ -464,7 +472,11 @@ function TradingInsight({ data, stats }) {
     const smartBias = topRatio > 1 ? 'long' : 'short'
     if (retailBias !== smartBias) {
       insights.push({
-        icon: '🧠',
+        icon: (
+          <svg className="w-4 h-4 text-accent-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 18h6M10 22h4" /><path d="M12 2a7 7 0 00-4 12.9V17h8v-2.1A7 7 0 0012 2z" />
+          </svg>
+        ),
         text: `Smart money divergence: Retail is ${retailBias} (${lsRatio.toFixed(2)}) while top traders are ${smartBias} (${topRatio.toFixed(2)}). Follow the smart money.`,
       })
     }
@@ -475,13 +487,21 @@ function TradingInsight({ data, stats }) {
   const shortCluster = summary.nearest_short_cluster
   if (longCluster && longCluster.distance_pct < 3) {
     insights.push({
-      icon: '🔴',
+      icon: (
+        <svg className="w-4 h-4 text-accent-red" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+        </svg>
+      ),
       text: `Long liquidation cluster just ${longCluster.distance_pct.toFixed(1)}% below price ($${formatNumber(longCluster.volume)}). A dip could cascade.`,
     })
   }
   if (shortCluster && shortCluster.distance_pct < 3) {
     insights.push({
-      icon: '🟢',
+      icon: (
+        <svg className="w-4 h-4 text-accent-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" /><polyline points="16 10 11 15 8 12" />
+        </svg>
+      ),
       text: `Short squeeze zone just ${shortCluster.distance_pct.toFixed(1)}% above price ($${formatNumber(shortCluster.volume)}). A pump could cascade.`,
     })
   }
@@ -494,7 +514,7 @@ function TradingInsight({ data, stats }) {
       <div className="space-y-2">
         {insights.map((ins, i) => (
           <div key={i} className="flex items-start gap-2 text-[11px]">
-            <span className="text-base shrink-0 mt-[-2px]">{ins.icon}</span>
+            <span className="shrink-0 mt-0.5">{ins.icon}</span>
             <p className="text-text-secondary">{ins.text}</p>
           </div>
         ))}

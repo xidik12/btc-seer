@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Text, Float, Integer, String, JSON, DateTime, Boolean, func, text, inspect
+from sqlalchemy import Text, Float, Integer, String, JSON, DateTime, Boolean, Index, func, text, inspect
 from datetime import datetime
 
 _db_logger = logging.getLogger(__name__)
@@ -18,6 +18,9 @@ class Base(DeclarativeBase):
 
 class Price(Base):
     __tablename__ = "prices"
+    __table_args__ = (
+        Index("ix_prices_timestamp", "timestamp"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, index=True)
@@ -31,6 +34,9 @@ class Price(Base):
 
 class News(Base):
     __tablename__ = "news"
+    __table_args__ = (
+        Index("ix_news_published_at", "timestamp"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
@@ -51,6 +57,9 @@ class Feature(Base):
 
 class Prediction(Base):
     __tablename__ = "predictions"
+    __table_args__ = (
+        Index("ix_predictions_timestamp_timeframe", "timestamp", "timeframe"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
@@ -68,6 +77,9 @@ class Prediction(Base):
 
 class Signal(Base):
     __tablename__ = "signals"
+    __table_args__ = (
+        Index("ix_signals_timestamp_timeframe", "timestamp", "timeframe"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
@@ -115,6 +127,9 @@ class OnChainData(Base):
 
 class InfluencerTweet(Base):
     __tablename__ = "influencer_tweets"
+    __table_args__ = (
+        Index("ix_influencer_tweets_timestamp", "timestamp"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())

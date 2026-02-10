@@ -13,16 +13,46 @@ import {
 
 const POLL_INTERVAL = 60_000
 
+const ACTION_ICONS = {
+  strong_buy: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M12 19V5M5 12l7-7 7 7" />
+      <path d="M5 5h14" />
+    </svg>
+  ),
+  buy: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M12 19V5M5 12l7-7 7 7" />
+    </svg>
+  ),
+  hold: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M5 12h14" />
+    </svg>
+  ),
+  sell: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M12 5v14M5 12l7 7 7-7" />
+    </svg>
+  ),
+  strong_sell: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d="M12 5v14M5 12l7 7 7-7" />
+      <path d="M5 19h14" />
+    </svg>
+  ),
+}
+
 const ACTION_DISPLAY = {
-  strong_buy: { label: 'Strong Buy', emoji: '\uD83D\uDE80' },
-  buy: { label: 'Buy', emoji: '\u2705' },
-  hold: { label: 'Hold', emoji: '\u23F8\uFE0F' },
-  sell: { label: 'Sell', emoji: '\u26A0\uFE0F' },
-  strong_sell: { label: 'Strong Sell', emoji: '\uD83D\uDEA8' },
+  strong_buy: { label: 'Strong Buy' },
+  buy: { label: 'Buy' },
+  hold: { label: 'Hold' },
+  sell: { label: 'Sell' },
+  strong_sell: { label: 'Strong Sell' },
 }
 
 function getActionDisplay(action) {
-  return ACTION_DISPLAY[action] ?? { label: action ?? 'Unknown', emoji: '\u2753' }
+  return ACTION_DISPLAY[action] ?? { label: action ?? 'Unknown' }
 }
 
 export default function SignalPanel() {
@@ -110,7 +140,7 @@ export default function SignalPanel() {
         <div
           className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border text-lg font-bold ${actionBgClass} ${actionColorClass}`}
         >
-          <span className="text-xl">{display.emoji}</span>
+          <span>{ACTION_ICONS[action] || ACTION_ICONS.hold}</span>
           <span>{display.label}</span>
         </div>
       </div>

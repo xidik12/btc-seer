@@ -158,8 +158,22 @@ async def lifespan(app: FastAPI):
             id="send_alerts",
         )
 
-        # Start polling in background
-        bot_task = asyncio.create_task(dp.start_polling(bot))
+        # Clear stale webhooks before polling (avoids 409 Conflict)
+        try:
+            await bot.delete_webhook(drop_pending_updates=False)
+            logger.info("Cleared webhook, starting polling")
+        except Exception as e:
+            logger.warning(f"delete_webhook failed: {e}")
+
+        # Start polling in background with error handling
+        async def _run_bot_polling():
+            try:
+                logger.info("Bot polling starting...")
+                await dp.start_polling(bot)
+            except Exception as e:
+                logger.error(f"Bot polling crashed: {e}", exc_info=True)
+
+        bot_task = asyncio.create_task(_run_bot_polling())
         logger.info("Telegram bot started")
     else:
         logger.warning("TELEGRAM_BOT_TOKEN not set — bot disabled")
@@ -220,7 +234,13 @@ app = FastAPI(
 # CORS for Mini App
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Telegram Web App needs this
+    allow_origins=[
+        "https://web.telegram.org",
+        "https://webk.telegram.org",
+        "https://webz.telegram.org",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -278,11 +298,19 @@ if WEBAPP_DIST.exists():
     # Mount static assets
     app.mount("/assets", StaticFiles(directory=WEBAPP_DIST / "assets"), name="static")
 
-    # Handle 404s by serving the SPA (for client-side routing)
+    # Handle 404s by serving static files or the SPA (for client-side routing)
     @app.exception_handler(StarletteHTTPException)
     async def spa_404_handler(request: Request, exc: StarletteHTTPException):
-        """Serve SPA for 404s on non-API routes."""
+        """Serve static files from dist root, or SPA for 404s on non-API routes."""
         if exc.status_code == 404 and not request.url.path.startswith("/api"):
+            # Try to serve static file from dist root (images, etc.)
+            static_file = (WEBAPP_DIST / request.url.path.lstrip("/")).resolve()
+            if (
+                static_file.exists()
+                and static_file.is_file()
+                and str(static_file).startswith(str(WEBAPP_DIST.resolve()))
+            ):
+                return FileResponse(static_file)
             return FileResponse(WEBAPP_DIST / "index.html")
         # Re-raise the exception for API routes
         raise exc

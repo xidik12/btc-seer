@@ -1,3 +1,9 @@
+const I = (children, sm) => (
+  <svg className={sm ? 'w-4 h-4 text-accent-blue' : 'w-5 h-5 text-accent-blue'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    {children}
+  </svg>
+)
+
 export default function About() {
   return (
     <div className="px-4 pt-4 space-y-3 pb-4">
@@ -66,18 +72,18 @@ export default function About() {
         <h3 className="text-text-secondary text-xs font-semibold mb-3">HOW IT HELPS YOU</h3>
         <div className="space-y-2">
           {[
-            { icon: '📊', title: 'Prediction Cards', desc: 'Confidence scores to gauge market direction across multiple timeframes' },
-            { icon: '📈', title: 'Trading Signals', desc: 'Entry, target, and stop-loss levels with AI-calculated confidence' },
-            { icon: '📐', title: 'Power Law Analysis', desc: 'Long-term fair value model to understand where BTC stands historically' },
-            { icon: '🌊', title: 'Elliott Wave Analysis', desc: 'Wave-based market structure to identify trend phases and potential reversals' },
-            { icon: '💥', title: 'Liquidation Map', desc: 'See where leveraged positions cluster and where liquidation cascades may trigger' },
-            { icon: '📰', title: 'News Sentiment', desc: 'Real-time tracking of what the market is feeling through news analysis' },
-            { icon: '🤖', title: 'AI Advisor', desc: 'Get personalized market commentary and trading suggestions powered by AI' },
-            { icon: '💰', title: 'Paper Trading', desc: 'Practice trading with virtual money — test strategies without risking real capital' },
-            { icon: '🎯', title: 'Accuracy Tracking', desc: 'Every prediction is evaluated and scored — full transparency on model performance' },
+            { icon: I(<><path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" /></>), title: 'Prediction Cards', desc: 'Confidence scores to gauge market direction across multiple timeframes' },
+            { icon: I(<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>), title: 'Trading Signals', desc: 'Entry, target, and stop-loss levels with AI-calculated confidence' },
+            { icon: I(<><path d="M3 3v18h18" /><path d="M3 17C7 15 11 9 21 5" /></>), title: 'Power Law Analysis', desc: 'Long-term fair value model to understand where BTC stands historically' },
+            { icon: I(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />), title: 'Elliott Wave Analysis', desc: 'Wave-based market structure to identify trend phases and potential reversals' },
+            { icon: I(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />), title: 'Liquidation Map', desc: 'See where leveraged positions cluster and where liquidation cascades may trigger' },
+            { icon: I(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>), title: 'News Sentiment', desc: 'Real-time tracking of what the market is feeling through news analysis' },
+            { icon: I(<><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" /></>), title: 'AI Advisor', desc: 'Get personalized market commentary and trading suggestions powered by AI' },
+            { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>), title: 'Paper Trading', desc: 'Practice trading with virtual money — test strategies without risking real capital' },
+            { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>), title: 'Accuracy Tracking', desc: 'Every prediction is evaluated and scored — full transparency on model performance' },
           ].map((item) => (
             <div key={item.title} className="flex items-start gap-3 p-2 rounded-xl bg-white/[0.02]">
-              <span className="text-lg mt-0.5">{item.icon}</span>
+              <span className="mt-0.5 shrink-0">{item.icon}</span>
               <div>
                 <div className="text-text-primary text-xs font-semibold">{item.title}</div>
                 <div className="text-text-muted text-[10px]">{item.desc}</div>
@@ -146,21 +152,21 @@ export default function About() {
         <h3 className="text-text-secondary text-xs font-semibold mb-3">FEATURES</h3>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { icon: '🧠', label: 'AI Predictions' },
-            { icon: '📉', label: 'Quant Theory' },
-            { icon: '📐', label: 'Power Law' },
-            { icon: '🌊', label: 'Elliott Wave' },
-            { icon: '💥', label: 'Liquidation Map' },
-            { icon: '📰', label: 'News Sentiment' },
-            { icon: '📈', label: 'Trading Signals' },
-            { icon: '🤖', label: 'AI Advisor' },
-            { icon: '💰', label: 'Paper Trading' },
-            { icon: '🎯', label: 'Accuracy Tracking' },
-            { icon: '📚', label: 'Learn & Educate' },
-            { icon: '🔑', label: 'API Access' },
+            { icon: I(<><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2a7 7 0 00-4 12.9V17h8v-2.1A7 7 0 0012 2z" /></>, true), label: 'AI Predictions' },
+            { icon: I(<><polyline points="22 17 13.5 8.5 8.5 13.5 2 7" /><polyline points="16 17 22 17 22 11" /></>, true), label: 'Quant Theory' },
+            { icon: I(<><path d="M3 3v18h18" /><path d="M3 17C7 15 11 9 21 5" /></>, true), label: 'Power Law' },
+            { icon: I(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />, true), label: 'Elliott Wave' },
+            { icon: I(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />, true), label: 'Liquidation Map' },
+            { icon: I(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>, true), label: 'News Sentiment' },
+            { icon: I(<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>, true), label: 'Trading Signals' },
+            { icon: I(<><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" /></>, true), label: 'AI Advisor' },
+            { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>, true), label: 'Paper Trading' },
+            { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>, true), label: 'Accuracy Tracking' },
+            { icon: I(<><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></>, true), label: 'Learn & Educate' },
+            { icon: I(<><circle cx="15.5" cy="8.5" r="3.5" /><path d="M12 12L4 20" /><path d="M8 16l3 3" /></>, true), label: 'API Access' },
           ].map((f) => (
             <div key={f.label} className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02]">
-              <span className="text-base">{f.icon}</span>
+              <span className="shrink-0">{f.icon}</span>
               <span className="text-text-primary text-xs font-medium">{f.label}</span>
             </div>
           ))}

@@ -143,23 +143,43 @@ const quickIcons = {
   ),
 }
 
-const QUICK_LINKS = [
-  { path: '/technical', label: 'Technical', icon: 'technical' },
-  { path: '/signals', label: 'Signals', icon: 'signals' },
-  { path: '/liquidations', label: 'Liquidations', icon: 'liquidations' },
-  { path: '/powerlaw', label: 'Power Law', icon: 'powerlaw' },
-  { path: '/elliott-wave', label: 'Elliott Wave', icon: 'elliott' },
-  { path: '/events', label: 'Events', icon: 'events' },
-  { path: '/coins', label: 'Coins', icon: 'coins' },
-  { path: '/advisor', label: 'Advisor', icon: 'advisor' },
-  { path: '/mock-trading', label: 'Paper Trade', icon: 'advisor' },
-  { path: '/tools', label: 'Tools', icon: 'tools' },
-  { path: '/resources', label: 'Resources', icon: 'resources' },
-  { path: '/learn', label: 'Learn', icon: 'learn' },
-  { path: '/history', label: 'History', icon: 'history' },
-  { path: '/news', label: 'News', icon: 'news' },
-  { path: '/settings', label: 'Settings', icon: 'settings' },
-  { path: '/about', label: 'About', icon: 'about' },
+const CATEGORIES = [
+  {
+    title: 'Trading',
+    links: [
+      { path: '/signals', label: 'Signals', icon: 'signals' },
+      { path: '/advisor', label: 'Advisor', icon: 'advisor' },
+      { path: '/mock-trading', label: 'Paper Trade', icon: 'advisor' },
+    ],
+  },
+  {
+    title: 'Analysis',
+    links: [
+      { path: '/technical', label: 'Technical', icon: 'technical' },
+      { path: '/powerlaw', label: 'Power Law', icon: 'powerlaw' },
+      { path: '/elliott-wave', label: 'Elliott Wave', icon: 'elliott' },
+      { path: '/liquidations', label: 'Liquidations', icon: 'liquidations' },
+    ],
+  },
+  {
+    title: 'Market',
+    links: [
+      { path: '/coins', label: 'Coins', icon: 'coins' },
+      { path: '/news', label: 'News', icon: 'news' },
+      { path: '/events', label: 'Events', icon: 'events' },
+      { path: '/history', label: 'History', icon: 'history' },
+    ],
+  },
+  {
+    title: 'More',
+    links: [
+      { path: '/learn', label: 'Learn', icon: 'learn' },
+      { path: '/resources', label: 'Resources', icon: 'resources' },
+      { path: '/tools', label: 'Tools', icon: 'tools' },
+      { path: '/settings', label: 'Settings', icon: 'settings' },
+      { path: '/about', label: 'About', icon: 'about' },
+    ],
+  },
 ]
 
 const ADMIN_TELEGRAM_ID = 598965469
@@ -168,19 +188,31 @@ function QuickAccessGrid() {
   const navigate = useNavigate()
   const { user } = useTelegram()
   const isAdmin = user?.id === ADMIN_TELEGRAM_ID
-  const links = isAdmin ? [...QUICK_LINKS, { path: '/admin', label: 'Admin', icon: 'settings' }] : QUICK_LINKS
+
   return (
-    <div className="grid grid-cols-4 gap-2">
-      {links.map((link) => (
-        <button
-          key={link.path}
-          onClick={() => navigate(link.path)}
-          className="bg-bg-card rounded-xl border border-white/5 p-3 flex flex-col items-center gap-1.5 hover:border-white/15 active:scale-95 transition-all"
-        >
-          <span className="w-5 h-5 text-text-secondary">{quickIcons[link.icon]}</span>
-          <span className="text-[10px] text-text-secondary font-medium leading-tight text-center">{link.label}</span>
-        </button>
-      ))}
+    <div className="space-y-3">
+      {CATEGORIES.map((cat) => {
+        const links = cat.title === 'More' && isAdmin
+          ? [...cat.links, { path: '/admin', label: 'Admin', icon: 'settings' }]
+          : cat.links
+        return (
+          <div key={cat.title}>
+            <h3 className="text-text-muted text-[10px] font-semibold uppercase tracking-wider mb-1.5 px-1">{cat.title}</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {links.map((link) => (
+                <button
+                  key={link.path}
+                  onClick={() => navigate(link.path)}
+                  className="bg-bg-card rounded-xl border border-white/5 p-3 flex flex-col items-center gap-1.5 hover:border-white/15 active:scale-95 transition-all"
+                >
+                  <span className="w-5 h-5 text-text-secondary">{quickIcons[link.icon]}</span>
+                  <span className="text-[10px] text-text-secondary font-medium leading-tight text-center">{link.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

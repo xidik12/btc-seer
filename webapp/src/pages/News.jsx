@@ -28,15 +28,22 @@ export default function News() {
   useEffect(() => { loadNews() }, [])
 
   function getSentimentDot(score) {
-    if (score == null) return '⚪'
-    if (score > 0.1) return '🟢'
-    if (score < -0.1) return '🔴'
-    return '🟡'
+    const color = score == null ? '#5a5a70' : score > 0.1 ? '#00d68f' : score < -0.1 ? '#ff4d6a' : '#ffc107'
+    return (
+      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10">
+        <circle cx="5" cy="5" r="4.5" fill={color} />
+      </svg>
+    )
   }
 
   return (
     <div className="px-4 pt-4">
-      <h1 className="text-lg font-bold mb-4">📰 News Feed</h1>
+      <h1 className="text-lg font-bold mb-4 flex items-center gap-2">
+        <svg className="w-5 h-5 text-text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+        News Feed
+      </h1>
 
       {sentiment && (
         <div className="bg-bg-card rounded-xl p-4 mb-4 border border-white/5">
@@ -95,7 +102,11 @@ export default function News() {
         </div>
       ) : news.length === 0 ? (
         <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
-          <div className="text-3xl mb-2">&#x1F4F0;</div>
+          <div className="flex justify-center mb-2">
+            <svg className="w-8 h-8 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+          </div>
           <p className="text-text-secondary text-sm font-medium">No News Yet</p>
           <p className="text-text-muted text-xs mt-1">News articles will appear here as they are collected and analyzed for sentiment.</p>
           <button onClick={loadNews} className="text-accent-blue text-xs mt-3 hover:underline">Refresh</button>
@@ -109,7 +120,7 @@ export default function News() {
               className="w-full text-left bg-bg-card rounded-xl p-3 border border-white/5 hover:bg-bg-hover transition-colors slide-up"
             >
               <div className="flex items-start gap-2">
-                <span className="text-sm mt-0.5">{getSentimentDot(n.sentiment_score)}</span>
+                <span className="mt-1 shrink-0">{getSentimentDot(n.sentiment_score)}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-text-primary leading-snug line-clamp-2">
                     {n.title}

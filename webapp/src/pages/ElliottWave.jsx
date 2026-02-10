@@ -108,25 +108,24 @@ function WaveStatusCard({ data }) {
 
 function CandlestickShape(props) {
   const { x, y, width, height, payload } = props
-  if (!payload || payload.open == null || payload.price == null) return null
+  if (!payload || payload.open == null || payload.price == null || !height) return null
 
   const isGreen = payload.price >= payload.open
   const color = isGreen ? '#00c853' : '#ff4d6a'
-  const yScale = props.yAxis
-  if (!yScale) return null
+  const range = payload.high - payload.low
+  if (range <= 0) return null
 
-  const highY = yScale.scale(payload.high)
-  const lowY = yScale.scale(payload.low)
-  const openY = yScale.scale(payload.open)
-  const closeY = yScale.scale(payload.price)
+  // y = top of bar (high), y + height = bottom of bar (low)
+  const openY = y + ((payload.high - payload.open) / range) * height
+  const closeY = y + ((payload.high - payload.price) / range) * height
   const bodyTop = Math.min(openY, closeY)
   const bodyHeight = Math.max(Math.abs(openY - closeY), 1)
   const wickX = x + width / 2
 
   return (
     <g>
-      <line x1={wickX} y1={highY} x2={wickX} y2={lowY} stroke={color} strokeWidth={1} />
-      <rect x={x + 1} y={bodyTop} width={Math.max(width - 2, 2)} height={bodyHeight} fill={color} rx={1} />
+      <line x1={wickX} y1={y} x2={wickX} y2={y + height} stroke={color} strokeWidth={0.8} />
+      <rect x={x + 0.5} y={bodyTop} width={Math.max(width - 1, 1.5)} height={bodyHeight} fill={color} />
     </g>
   )
 }
@@ -231,38 +230,36 @@ function WaveChart({ historicalData }) {
               dataKey="swingPrice"
               yAxisId="price"
               fill="#4a9eff"
-              r={4}
               name="swingPrice"
               shape={(props) => {
                 if (!props.payload?.swingPrice) return null
                 const label = props.payload.waveLabel
                 const isHigh = props.payload.swingType === 'high'
-                const labelY = isHigh ? props.cy - 20 : props.cy + 14
+                if (!label) {
+                  return <circle cx={props.cx} cy={props.cy} r={2} fill="#4a9eff" opacity={0.6} />
+                }
+                const labelY = isHigh ? props.cy - 12 : props.cy + 12
                 return (
                   <g>
-                    <circle cx={props.cx} cy={props.cy} r={5} fill="#4a9eff" stroke="#fff" strokeWidth={1.5} />
-                    {label && (
-                      <g>
-                        <rect
-                          x={props.cx - 14}
-                          y={labelY - 9}
-                          width={28}
-                          height={18}
-                          rx={9}
-                          fill="#4a9eff"
-                        />
-                        <text
-                          x={props.cx}
-                          y={labelY + 4}
-                          textAnchor="middle"
-                          fill="#fff"
-                          fontSize={10}
-                          fontWeight="bold"
-                        >
-                          {label}
-                        </text>
-                      </g>
-                    )}
+                    <circle cx={props.cx} cy={props.cy} r={2.5} fill="#4a9eff" stroke="#fff" strokeWidth={0.8} />
+                    <rect
+                      x={props.cx - 8}
+                      y={labelY - 6}
+                      width={16}
+                      height={12}
+                      rx={6}
+                      fill="#4a9eff"
+                    />
+                    <text
+                      x={props.cx}
+                      y={labelY + 3}
+                      textAnchor="middle"
+                      fill="#fff"
+                      fontSize={7}
+                      fontWeight="bold"
+                    >
+                      {label}
+                    </text>
                   </g>
                 )
               }}

@@ -58,7 +58,11 @@ function ConfirmModal({ tier, onConfirm, onCancel, loading }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center mb-4">
-          <div className="text-2xl mb-2">&#11088;</div>
+          <div className="mb-2">
+            <svg className="w-7 h-7 mx-auto text-accent-yellow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+          </div>
           <h3 className="text-text-primary font-bold text-base">Subscribe to Premium</h3>
           <p className="text-text-muted text-xs mt-1">
             {tier.name} plan &middot; {tier.duration}
@@ -103,7 +107,11 @@ function ConfirmModal({ tier, onConfirm, onCancel, loading }) {
 function SuccessMessage() {
   return (
     <div className="bg-accent-green/10 border border-accent-green/30 rounded-xl p-4 text-center">
-      <div className="text-xl mb-1">&#10003;</div>
+      <div className="mb-1">
+        <svg className="w-6 h-6 mx-auto text-accent-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </div>
       <p className="text-accent-green font-semibold text-sm">Payment Successful!</p>
       <p className="text-text-muted text-xs mt-1">Your Premium access is now active.</p>
     </div>
@@ -216,8 +224,8 @@ export default function Settings() {
                       {tier.savings}
                     </span>
                   )}
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-text-muted">
-                    <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                  <svg className="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
                   </svg>
                 </div>
               </div>
@@ -238,7 +246,9 @@ export default function Settings() {
           <ul className="space-y-1.5">
             {PREMIUM_FEATURES.map((feat) => (
               <li key={feat} className="flex items-start gap-2 text-xs text-text-secondary">
-                <span className="text-accent-green mt-0.5 text-[10px]">&#10003;</span>
+                <svg className="w-3 h-3 text-accent-green mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
                 {feat}
               </li>
             ))}

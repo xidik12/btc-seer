@@ -1,6 +1,8 @@
+from collections import defaultdict
 from datetime import datetime, timedelta
+import time
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,10 +10,23 @@ from app.database import get_session, Prediction
 
 router = APIRouter(prefix="/api/predictions", tags=["predictions"])
 
+_request_counts: dict[str, list[float]] = defaultdict(list)
+
+
+def _rate_check(ip: str, limit: int = 60, window: float = 60.0):
+    """Simple per-IP rate limiter. Raises 429 if exceeded."""
+    now = time.time()
+    bucket = _request_counts[ip]
+    _request_counts[ip] = [t for t in bucket if t > now - window]
+    if len(_request_counts[ip]) >= limit:
+        raise HTTPException(429, "Rate limit exceeded. Please slow down.")
+    _request_counts[ip].append(now)
+
 
 @router.get("/current")
-async def get_current_predictions(session: AsyncSession = Depends(get_session)):
+async def get_current_predictions(request: Request, session: AsyncSession = Depends(get_session)):
     """Get the latest predictions for all timeframes."""
+    _rate_check(request.client.host)
     result = await session.execute(
         select(Prediction)
         .order_by(desc(Prediction.timestamp))
@@ -40,11 +55,13 @@ async def get_current_predictions(session: AsyncSession = Depends(get_session)):
 
 @router.get("/history")
 async def get_prediction_history(
+    request: Request,
     timeframe: str = Query("1h", pattern="^(1h|4h|24h|1w|1mo)$"),
     days: int = Query(7, ge=1, le=90),
     session: AsyncSession = Depends(get_session),
 ):
     """Get prediction history for accuracy tracking."""
+    _rate_check(request.client.host)
     since = datetime.utcnow() - timedelta(days=days)
 
     result = await session.execute(

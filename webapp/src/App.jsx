@@ -1,29 +1,31 @@
-import { Component } from 'react'
+import { Component, lazy, Suspense } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useTelegram } from './hooks/useTelegram'
-import Dashboard from './pages/Dashboard'
-import Technical from './pages/Technical'
-import Signals from './pages/Signals'
-import News from './pages/News'
-import History from './pages/History'
-import PowerLaw from './pages/PowerLaw'
-import Liquidations from './pages/Liquidations'
-import About from './pages/About'
-import EventMemory from './pages/EventMemory'
-import ElliottWave from './pages/ElliottWave'
-import Advisor from './pages/Advisor'
-import MockTrading from './pages/MockTrading'
-import AdminDashboard from './pages/AdminDashboard'
-import More from './pages/More'
-import Settings from './pages/Settings'
-import Coins from './pages/Coins'
-import CoinDetail from './pages/CoinDetail'
-import CoinSearch from './pages/CoinSearch'
-import CoinReport from './pages/CoinReport'
-import Tools from './pages/Tools'
-import Resources from './pages/Resources'
-import Learn from './pages/Learn'
 import NavBar from './components/NavBar'
+
+// Lazy-load all pages for code splitting
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Technical = lazy(() => import('./pages/Technical'))
+const Signals = lazy(() => import('./pages/Signals'))
+const News = lazy(() => import('./pages/News'))
+const History = lazy(() => import('./pages/History'))
+const PowerLaw = lazy(() => import('./pages/PowerLaw'))
+const Liquidations = lazy(() => import('./pages/Liquidations'))
+const About = lazy(() => import('./pages/About'))
+const EventMemory = lazy(() => import('./pages/EventMemory'))
+const ElliottWave = lazy(() => import('./pages/ElliottWave'))
+const Advisor = lazy(() => import('./pages/Advisor'))
+const MockTrading = lazy(() => import('./pages/MockTrading'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const More = lazy(() => import('./pages/More'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Coins = lazy(() => import('./pages/Coins'))
+const CoinDetail = lazy(() => import('./pages/CoinDetail'))
+const CoinSearch = lazy(() => import('./pages/CoinSearch'))
+const CoinReport = lazy(() => import('./pages/CoinReport'))
+const Tools = lazy(() => import('./pages/Tools'))
+const Resources = lazy(() => import('./pages/Resources'))
+const Learn = lazy(() => import('./pages/Learn'))
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -65,6 +67,14 @@ class ErrorBoundary extends Component {
   }
 }
 
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="w-6 h-6 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
+
 export default function App() {
   useTelegram()
   const location = useLocation()
@@ -73,6 +83,7 @@ export default function App() {
     <ErrorBoundary>
       <div className="min-h-screen bg-bg-primary text-text-primary pb-20">
         <div key={location.pathname} className="page-enter">
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           {/* Analysis group */}
@@ -102,6 +113,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
+        </Suspense>
         </div>
         <NavBar />
       </div>

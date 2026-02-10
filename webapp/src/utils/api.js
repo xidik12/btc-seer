@@ -115,6 +115,7 @@ export const api = {
   getAdminPredictions: (initData, limit = 50) =>
     fetchAPI(`/admin/predictions?limit=${limit}`, { headers: { 'X-Telegram-Init-Data': initData } }),
   getAdminSystem: (initData) => fetchAPI('/admin/system', { headers: { 'X-Telegram-Init-Data': initData } }),
+  getAdminBotStatus: (initData) => fetchAPI('/admin/bot-status', { headers: { 'X-Telegram-Init-Data': initData } }),
 
   // Subscription
   createInvoice: (tier) => fetchAPI(`/subscription/create-invoice?tier=${tier}`),

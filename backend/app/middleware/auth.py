@@ -89,7 +89,10 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                 key_record = result.scalar_one_or_none()
         except Exception as e:
             logger.error(f"API key lookup error: {e}")
-            return await call_next(request)  # Fail open on DB errors
+            return JSONResponse(
+                status_code=503,
+                content={"error": "Service temporarily unavailable. Please retry."},
+            )
 
         if not key_record:
             return JSONResponse(
