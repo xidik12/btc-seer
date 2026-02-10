@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -85,6 +86,7 @@ function StreakBadge({ history }) {
 // ── Accuracy Over Time Chart ──
 
 function AccuracyTrendChart({ history, timeframe }) {
+  const { t } = useTranslation(['market', 'common'])
   const dailyData = useMemo(() => {
     if (!history?.length) return []
     const byDay = {}
@@ -110,7 +112,7 @@ function AccuracyTrendChart({ history, timeframe }) {
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <h3 className="text-text-secondary text-xs font-semibold mb-3">
-        {timeframe.toUpperCase()} ACCURACY TREND
+        {timeframe.toUpperCase()} {t('market:history.trend30d').toUpperCase()}
       </h3>
       <div className="h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -141,7 +143,7 @@ function AccuracyTrendChart({ history, timeframe }) {
             <Tooltip
               contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
               formatter={(v, name) => {
-                if (name === 'accuracy') return [`${v}%`, 'Accuracy']
+                if (name === 'accuracy') return [`${v}%`, t('market:history.accuracy')]
                 return [v, name]
               }}
               labelFormatter={(d) => formatDate(d)}
@@ -169,6 +171,7 @@ function AccuracyTrendChart({ history, timeframe }) {
 // ── Confidence vs Accuracy Chart ──
 
 function ConfidenceChart({ history }) {
+  const { t } = useTranslation(['market', 'common'])
   const data = useMemo(() => {
     if (!history?.length) return []
     // Group by confidence bucket (5% increments)
@@ -193,20 +196,20 @@ function ConfidenceChart({ history }) {
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-1">CONFIDENCE vs ACCURACY</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-1">{t('market:history.calibration').toUpperCase()}</h3>
       <p className="text-text-muted text-[9px] mb-3">Higher confidence should = higher accuracy. Dots sized by sample count.</p>
       <div className="h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 6" stroke="#1e1e30" />
             <XAxis
-              dataKey="confidence" type="number" name="Confidence"
+              dataKey="confidence" type="number" name={t('common:confidence')}
               domain={[20, 100]} tick={{ fontSize: 9, fill: '#5a5a70' }}
               axisLine={false} tickLine={false}
-              label={{ value: 'Model Confidence %', position: 'insideBottom', offset: -2, fontSize: 9, fill: '#5a5a70' }}
+              label={{ value: `${t('common:confidence')} %`, position: 'insideBottom', offset: -2, fontSize: 9, fill: '#5a5a70' }}
             />
             <YAxis
-              dataKey="accuracy" type="number" name="Accuracy"
+              dataKey="accuracy" type="number" name={t('market:history.accuracy')}
               domain={[0, 100]} tick={{ fontSize: 9, fill: '#5a5a70' }}
               axisLine={false} tickLine={false}
               tickFormatter={v => `${v}%`}
@@ -218,8 +221,8 @@ function ConfidenceChart({ history }) {
             <Tooltip
               contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
               formatter={(v, name) => {
-                if (name === 'Accuracy') return [`${v}%`, name]
-                if (name === 'Confidence') return [`${v}%`, name]
+                if (name === t('market:history.accuracy')) return [`${v}%`, name]
+                if (name === t('common:confidence')) return [`${v}%`, name]
                 return [v, name]
               }}
             />
@@ -242,6 +245,7 @@ function ConfidenceChart({ history }) {
 // ── Win/Loss Distribution Bar ──
 
 function WinLossBar({ history }) {
+  const { t } = useTranslation(['market', 'common'])
   const evaluated = (history || []).filter(p => p.was_correct !== null)
   if (!evaluated.length) return null
   const wins = evaluated.filter(p => p.was_correct).length
@@ -251,7 +255,7 @@ function WinLossBar({ history }) {
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-text-secondary text-xs font-semibold">WIN / LOSS</h3>
+        <h3 className="text-text-secondary text-xs font-semibold">{t('market:history.win').toUpperCase()} / {t('market:history.loss').toUpperCase()}</h3>
         <StreakBadge history={history} />
       </div>
       <div className="flex h-3 rounded-full overflow-hidden">
@@ -270,6 +274,7 @@ function WinLossBar({ history }) {
 // ── Direction Breakdown ──
 
 function DirectionBreakdown({ history }) {
+  const { t } = useTranslation(['market', 'common'])
   const evaluated = (history || []).filter(p => p.was_correct !== null)
   if (!evaluated.length) return null
 
@@ -285,12 +290,12 @@ function DirectionBreakdown({ history }) {
   return (
     <div className="grid grid-cols-2 gap-2">
       <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-        <div className="text-[9px] text-text-muted font-medium mb-1">BULLISH CALLS</div>
+        <div className="text-[9px] text-text-muted font-medium mb-1">{t('common:direction.bullish').toUpperCase()} CALLS</div>
         <div className="text-accent-green text-lg font-bold tabular-nums">{bullAcc}%</div>
         <div className="text-[9px] text-text-muted">{bullWins}/{bulls.length} correct</div>
       </div>
       <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-        <div className="text-[9px] text-text-muted font-medium mb-1">BEARISH CALLS</div>
+        <div className="text-[9px] text-text-muted font-medium mb-1">{t('common:direction.bearish').toUpperCase()} CALLS</div>
         <div className="text-accent-red text-lg font-bold tabular-nums">{bearAcc}%</div>
         <div className="text-[9px] text-text-muted">{bearWins}/{bears.length} correct</div>
       </div>
@@ -386,6 +391,7 @@ function PredictionRow({ p, tf }) {
 // ── Main Page ──
 
 export default function History() {
+  const { t } = useTranslation(['market', 'common'])
   const [timeframe, setTimeframe] = useState('1h')
   const [days, setDays] = useState(14)
   const [predictions, setPredictions] = useState([])
@@ -425,7 +431,7 @@ export default function History() {
   return (
     <div className="px-4 pt-4 pb-20 space-y-3">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">Prediction History</h1>
+        <h1 className="text-lg font-bold">{t('market:history.title')}</h1>
         <select
           value={days}
           onChange={e => setDays(+e.target.value)}
@@ -439,7 +445,7 @@ export default function History() {
 
       {/* Per-Timeframe Accuracy Rings */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-4">ACCURACY BY TIMEFRAME</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-4">{t('market:history.byTimeframe').toUpperCase()}</h3>
         <div className="flex justify-around">
           {TIMEFRAMES.map(tf => {
             const d = allTfData[tf]
@@ -497,11 +503,11 @@ export default function History() {
           {/* Prediction List */}
           <div>
             <h3 className="text-text-secondary text-xs font-semibold mb-2">
-              {timeframe.toUpperCase()} PREDICTIONS ({predictions.length})
+              {timeframe.toUpperCase()} {t('market:history.records').toUpperCase()} ({predictions.length})
             </h3>
             {predictions.length === 0 ? (
               <div className="text-center text-text-muted py-10 text-sm">
-                No {timeframe} predictions in the last {days} days
+                {t('common:app.noData')}
               </div>
             ) : (
               <div className="space-y-2">

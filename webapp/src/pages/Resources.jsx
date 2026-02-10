@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const CATEGORIES = [
-  { key: 'exchanges', label: 'Exchanges' },
-  { key: 'analysis', label: 'Analysis' },
-  { key: 'onchain', label: 'On-Chain' },
-  { key: 'portfolio', label: 'Portfolio' },
-  { key: 'bots', label: 'Bots' },
-  { key: 'learn', label: 'Learn' },
+  { key: 'exchanges', labelKey: 'resources:categories.exchanges' },
+  { key: 'analysis', labelKey: 'resources:categories.analysis' },
+  { key: 'onchain', labelKey: 'resources:categories.onChain' },
+  { key: 'portfolio', labelKey: 'resources:categories.portfolio' },
+  { key: 'bots', labelKey: 'resources:categories.bots' },
+  { key: 'learn', labelKey: 'resources:categories.learn' },
 ]
 
 const RESOURCES = {
@@ -330,6 +331,7 @@ function ResourceCard({ item }) {
 }
 
 export default function Resources() {
+  const { t } = useTranslation(['resources', 'common'])
   const [activeCategory, setActiveCategory] = useState('exchanges')
   const category = RESOURCES[activeCategory]
 
@@ -349,7 +351,7 @@ export default function Resources() {
                 ? 'bg-accent-blue/20 text-accent-blue border border-accent-blue/30'
                 : 'text-text-muted border border-white/5'
             }`}>
-            {c.label}
+            {t(c.labelKey)}
           </button>
         ))}
       </div>
@@ -367,7 +369,7 @@ export default function Resources() {
 
       {/* Legend */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-2">TIER GUIDE</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('resources:tierGuide').toUpperCase()}</h3>
         <div className="grid grid-cols-2 gap-2">
           {[
             { tier: 'Essential', desc: 'Must-have tools every trader needs' },
@@ -387,7 +389,7 @@ export default function Resources() {
 
       {/* Getting started guide */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">GETTING STARTED PATH</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('resources:gettingStarted.title').toUpperCase()}</h3>
         <div className="space-y-2 text-[11px] text-text-muted">
           <div className="flex gap-2">
             <span className="text-accent-green font-bold text-xs w-4">1</span>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../utils/api'
 import { formatCoinPrice, formatPercent, formatMarketCap, formatSupply, formatDate } from '../utils/format'
@@ -15,6 +16,7 @@ const CHART_PERIODS = [
 export default function CoinDetail() {
   const { coinId } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation('coins')
   const [detail, setDetail] = useState(null)
   const [chart, setChart] = useState([])
   const [period, setPeriod] = useState(7)
@@ -52,8 +54,8 @@ export default function CoinDetail() {
   if (!detail) {
     return (
       <div className="px-4 pt-4 pb-20">
-        <button onClick={() => navigate('/coins')} className="text-accent-blue text-sm mb-4">&larr; Back</button>
-        <p className="text-text-muted text-center">Coin not found</p>
+        <button onClick={() => navigate('/coins')} className="text-accent-blue text-sm mb-4">&larr; {t('title')}</button>
+        <p className="text-text-muted text-center">{t('noResults')}</p>
       </div>
     )
   }
@@ -67,7 +69,7 @@ export default function CoinDetail() {
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
       {/* Back + Header */}
-      <button onClick={() => navigate('/coins')} className="text-accent-blue text-sm">&larr; Coins</button>
+      <button onClick={() => navigate('/coins')} className="text-accent-blue text-sm">&larr; {t('title')}</button>
 
       <div className="flex items-center gap-3">
         {detail.image ? (
@@ -97,25 +99,25 @@ export default function CoinDetail() {
       </div>
 
       {/* Chart */}
-      <ChartSection chart={chart} chartLoading={chartLoading} chartColor={chartColor} period={period} setPeriod={setPeriod} />
+      <ChartSection chart={chart} chartLoading={chartLoading} chartColor={chartColor} period={period} setPeriod={setPeriod} t={t} />
 
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Market Cap" value={formatMarketCap(md.market_cap)} />
-        <StatCard label="Volume 24h" value={formatMarketCap(md.volume_24h)} />
-        <StatCard label="Circulating" value={formatSupply(md.circulating_supply, detail.symbol)} />
-        <StatCard label="Total Supply" value={formatSupply(md.total_supply, detail.symbol)} />
-        <StatCard label="ATH" value={formatCoinPrice(md.ath)} sub={md.ath_date ? formatDate(md.ath_date) : null} />
-        <StatCard label="ATL" value={formatCoinPrice(md.atl)} sub={md.atl_date ? formatDate(md.atl_date) : null} />
-        <StatCard label="7d Change" value={formatPercent(md.change_7d)} color={md.change_7d >= 0 ? 'text-accent-green' : 'text-accent-red'} />
-        <StatCard label="30d Change" value={formatPercent(md.change_30d)} color={md.change_30d >= 0 ? 'text-accent-green' : 'text-accent-red'} />
+        <StatCard label={t('detail.marketCap')} value={formatMarketCap(md.market_cap)} />
+        <StatCard label={t('detail.volume24h')} value={formatMarketCap(md.volume_24h)} />
+        <StatCard label={t('detail.circulatingSupply')} value={formatSupply(md.circulating_supply, detail.symbol)} />
+        <StatCard label={t('detail.totalSupply')} value={formatSupply(md.total_supply, detail.symbol)} />
+        <StatCard label={t('detail.allTimeHigh')} value={formatCoinPrice(md.ath)} sub={md.ath_date ? formatDate(md.ath_date) : null} />
+        <StatCard label={t('detail.allTimeLow')} value={formatCoinPrice(md.atl)} sub={md.atl_date ? formatDate(md.atl_date) : null} />
+        <StatCard label="7d" value={formatPercent(md.change_7d)} color={md.change_7d >= 0 ? 'text-accent-green' : 'text-accent-red'} />
+        <StatCard label="30d" value={formatPercent(md.change_30d)} color={md.change_30d >= 0 ? 'text-accent-green' : 'text-accent-red'} />
       </div>
 
       {/* FDV */}
       {md.fully_diluted_valuation && (
         <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-          <p className="text-[10px] text-text-muted mb-1">Fully Diluted Valuation</p>
+          <p className="text-[10px] text-text-muted mb-1">FDV</p>
           <p className="text-sm font-bold">{formatMarketCap(md.fully_diluted_valuation)}</p>
         </div>
       )}
@@ -123,7 +125,7 @@ export default function CoinDetail() {
       {/* Contract Addresses */}
       {detail.platforms && Object.keys(detail.platforms).length > 0 && (
         <div className="bg-bg-card rounded-xl p-4 border border-white/5">
-          <h3 className="text-xs font-semibold text-text-muted mb-2">CONTRACT ADDRESSES</h3>
+          <h3 className="text-xs font-semibold text-text-muted mb-2">{t('detail.contracts')}</h3>
           <div className="space-y-2">
             {Object.entries(detail.platforms).filter(([, addr]) => addr).map(([chain, addr]) => (
               <div key={chain} className="flex items-center justify-between">
@@ -143,7 +145,7 @@ export default function CoinDetail() {
   )
 }
 
-function ChartSection({ chart, chartLoading, chartColor, period, setPeriod }) {
+function ChartSection({ chart, chartLoading, chartColor, period, setPeriod, t }) {
   const { data: visibleChart, bindGestures, isZoomed, resetZoom } = useChartZoom(chart)
 
   return (
@@ -163,12 +165,12 @@ function ChartSection({ chart, chartLoading, chartColor, period, setPeriod }) {
           </button>
         ))}
         {isZoomed && (
-          <button onClick={resetZoom} className="ml-auto text-[10px] text-accent-blue">Reset</button>
+          <button onClick={resetZoom} className="ml-auto text-[10px] text-accent-blue">{t('chart.reset', { ns: 'common' })}</button>
         )}
       </div>
 
       {chartLoading ? (
-        <div className="h-40 flex items-center justify-center text-text-muted text-xs">Loading chart...</div>
+        <div className="h-40 flex items-center justify-center text-text-muted text-xs">{t('chart.loading', { ns: 'common' })}</div>
       ) : chart.length > 0 ? (
         <div {...bindGestures}>
           <ResponsiveContainer width="100%" height={160}>
@@ -184,16 +186,16 @@ function ChartSection({ chart, chartLoading, chartColor, period, setPeriod }) {
               <Tooltip
                 contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
                 labelFormatter={v => new Date(v).toLocaleDateString()}
-                formatter={v => [formatCoinPrice(v), 'Price']}
+                formatter={v => [formatCoinPrice(v), t('detail.price')]}
               />
               <Area type="monotone" dataKey="price" stroke={chartColor} fill="url(#chartGrad)" strokeWidth={2} dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       ) : (
-        <div className="h-40 flex items-center justify-center text-text-muted text-xs">No chart data</div>
+        <div className="h-40 flex items-center justify-center text-text-muted text-xs">{t('chart.noData', { ns: 'common' })}</div>
       )}
-      <p className="text-text-muted text-[9px] text-center mt-1.5">Pinch to zoom &middot; Drag to pan</p>
+      <p className="text-text-muted text-[9px] text-center mt-1.5">{t('chart.pinchZoom', { ns: 'common' })}</p>
     </div>
   )
 }

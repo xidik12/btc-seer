@@ -1,0 +1,36 @@
+{
+  "title": "币种",
+  "search": "搜索",
+  "searchPlaceholder": "按名称或地址搜索...",
+  "searchTitle": "币种搜索",
+  "tracked": "已关注币种",
+  "trending": "热门",
+  "noResults": "未找到结果",
+  "detail": {
+    "price": "价格",
+    "change24h": "24小时涨跌",
+    "marketCap": "市值",
+    "volume24h": "24小时成交量",
+    "circulatingSupply": "流通量",
+    "totalSupply": "总供应量",
+    "allTimeHigh": "历史最高价",
+    "allTimeLow": "历史最低价",
+    "contracts": "合约地址",
+    "timeframes": {
+      "1d": "1日",
+      "7d": "7日",
+      "30d": "30日",
+      "90d": "90日"
+    }
+  },
+  "report": {
+    "title": "代币报告",
+    "overview": "市场概览",
+    "riskAssessment": "风险评估",
+    "categories": "分类",
+    "description": "描述",
+    "contract": "合约地址",
+    "shareReport": "分享报告",
+    "generating": "正在生成报告..."
+  }
+}

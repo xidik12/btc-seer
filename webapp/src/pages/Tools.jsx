@@ -1,16 +1,18 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import SubTabBar from '../components/SubTabBar'
 
 const MARKET_TABS = [
-  { path: '/liquidations', label: 'Liquidations' },
-  { path: '/powerlaw', label: 'Power Law' },
-  { path: '/elliott-wave', label: 'Elliott Wave' },
-  { path: '/events', label: 'Events' },
-  { path: '/tools', label: 'Tools' },
-  { path: '/learn', label: 'Learn' },
+  { path: '/liquidations', labelKey: 'common:link.liquidations' },
+  { path: '/powerlaw', labelKey: 'common:link.powerLaw' },
+  { path: '/elliott-wave', labelKey: 'common:link.elliottWave' },
+  { path: '/events', labelKey: 'common:link.events' },
+  { path: '/tools', labelKey: 'common:link.tools' },
+  { path: '/learn', labelKey: 'common:link.learn' },
 ]
 
 function PositionSizeCalc() {
+  const { t } = useTranslation(['tools', 'common'])
   const [capital, setCapital] = useState('')
   const [riskPct, setRiskPct] = useState('2')
   const [entry, setEntry] = useState('')
@@ -28,37 +30,37 @@ function PositionSizeCalc() {
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">POSITION SIZE CALCULATOR</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('tools:positionSize.title').toUpperCase()}</h3>
       <p className="text-text-muted text-[10px] mb-3">
         Calculate your ideal position size based on account risk. Pros risk 1-2% per trade.
       </p>
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <label className="text-text-muted text-[10px]">Account Balance ($)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:positionSize.accountBalance')}</label>
           <input type="number" value={capital} onChange={e => setCapital(e.target.value)}
             placeholder="10000" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
         <div>
-          <label className="text-text-muted text-[10px]">Risk Per Trade (%)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:positionSize.riskPercent')}</label>
           <input type="number" value={riskPct} onChange={e => setRiskPct(e.target.value)}
             placeholder="2" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
         <div>
-          <label className="text-text-muted text-[10px]">Entry Price ($)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:positionSize.entryPrice')}</label>
           <input type="number" value={entry} onChange={e => setEntry(e.target.value)}
             placeholder="97000" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
         <div>
-          <label className="text-text-muted text-[10px]">Stop Loss ($)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:positionSize.stopLoss')}</label>
           <input type="number" value={stopLoss} onChange={e => setStopLoss(e.target.value)}
             placeholder="95000" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
       </div>
       {capitalNum > 0 && entryNum > 0 && slNum > 0 && (
         <div className="grid grid-cols-2 gap-2">
-          <ResultBox label="Risk Amount" value={`$${riskAmount.toFixed(2)}`} />
+          <ResultBox label={t('tools:positionSize.riskAmount')} value={`$${riskAmount.toFixed(2)}`} />
           <ResultBox label="Stop Distance" value={`$${stopDist.toFixed(2)}`} />
-          <ResultBox label="Position Size" value={`${positionSize.toFixed(6)} BTC`} highlight />
+          <ResultBox label={t('tools:positionSize.result')} value={`${positionSize.toFixed(6)} BTC`} highlight />
           <ResultBox label="Position Value" value={`$${positionValue.toFixed(2)}`} highlight />
         </div>
       )}
@@ -67,6 +69,7 @@ function PositionSizeCalc() {
 }
 
 function PnLCalc() {
+  const { t } = useTranslation(['tools', 'common'])
   const [entry, setEntry] = useState('')
   const [exit, setExit] = useState('')
   const [amount, setAmount] = useState('')
@@ -92,7 +95,7 @@ function PnLCalc() {
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">PROFIT / LOSS CALCULATOR</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('tools:pnl.title').toUpperCase()}</h3>
       <div className="flex gap-1 mb-3">
         {['long', 'short'].map(d => (
           <button key={d} onClick={() => setDirection(d)}
@@ -101,40 +104,40 @@ function PnLCalc() {
                 ? d === 'long' ? 'bg-accent-green/20 text-accent-green border border-accent-green/30' : 'bg-accent-red/20 text-accent-red border border-accent-red/30'
                 : 'text-text-muted border border-white/5'
             }`}>
-            {d.toUpperCase()}
+            {d === 'long' ? t('tools:pnl.long').toUpperCase() : t('tools:pnl.short').toUpperCase()}
           </button>
         ))}
       </div>
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <label className="text-text-muted text-[10px]">Entry Price ($)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:pnl.entryPrice')}</label>
           <input type="number" value={entry} onChange={e => setEntry(e.target.value)}
             placeholder="97000" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
         <div>
-          <label className="text-text-muted text-[10px]">Exit Price ($)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:pnl.exitPrice')}</label>
           <input type="number" value={exit} onChange={e => setExit(e.target.value)}
             placeholder="100000" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
         <div>
-          <label className="text-text-muted text-[10px]">Investment ($)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:pnl.positionSize')}</label>
           <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
             placeholder="1000" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
         <div>
-          <label className="text-text-muted text-[10px]">Leverage (x)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:pnl.leverage')}</label>
           <input type="number" value={leverage} onChange={e => setLeverage(e.target.value)}
             placeholder="1" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
       </div>
       {entryNum > 0 && exitNum > 0 && (
         <div className="grid grid-cols-2 gap-2">
-          <ResultBox label="P&L" value={`${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`}
+          <ResultBox label={t('tools:pnl.pnl')} value={`${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`}
             color={pnl >= 0 ? 'text-accent-green' : 'text-accent-red'} highlight />
-          <ResultBox label="ROI" value={`${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%`}
+          <ResultBox label={t('tools:pnl.roi')} value={`${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%`}
             color={pnlPct >= 0 ? 'text-accent-green' : 'text-accent-red'} highlight />
           {leverageNum > 1 && (
-            <ResultBox label="Liquidation Price" value={`$${liqPrice.toFixed(2)}`} color="text-accent-red" />
+            <ResultBox label={t('common:trade.liqPrice')} value={`$${liqPrice.toFixed(2)}`} color="text-accent-red" />
           )}
           <ResultBox label="Break-Even" value={`$${entryNum.toFixed(2)}`} />
         </div>
@@ -144,6 +147,7 @@ function PnLCalc() {
 }
 
 function RiskRewardCalc() {
+  const { t } = useTranslation(['tools', 'common'])
   const [entry, setEntry] = useState('')
   const [target, setTarget] = useState('')
   const [stopLoss, setStopLoss] = useState('')
@@ -159,23 +163,23 @@ function RiskRewardCalc() {
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">RISK / REWARD CALCULATOR</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('tools:riskReward.title').toUpperCase()}</h3>
       <p className="text-text-muted text-[10px] mb-3">
         Pros aim for at least 1:2 R:R. Higher ratios mean you can be wrong more often and still profit.
       </p>
       <div className="grid grid-cols-3 gap-2 mb-3">
         <div>
-          <label className="text-text-muted text-[10px]">Entry ($)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:riskReward.entryPrice')}</label>
           <input type="number" value={entry} onChange={e => setEntry(e.target.value)}
             placeholder="97000" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
         <div>
-          <label className="text-text-muted text-[10px]">Target ($)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:riskReward.takeProfit')}</label>
           <input type="number" value={target} onChange={e => setTarget(e.target.value)}
             placeholder="103000" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
         <div>
-          <label className="text-text-muted text-[10px]">Stop ($)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:riskReward.stopLoss')}</label>
           <input type="number" value={stopLoss} onChange={e => setStopLoss(e.target.value)}
             placeholder="95000" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
@@ -195,7 +199,7 @@ function RiskRewardCalc() {
             <span className="text-accent-green text-[10px] font-bold w-16 text-right">+${reward.toFixed(0)}</span>
           </div>
           <div className="grid grid-cols-3 gap-2 mt-2">
-            <ResultBox label="R:R Ratio"
+            <ResultBox label={t('tools:riskReward.ratio')}
               value={`1:${rrRatio.toFixed(2)}`}
               color={rrRatio >= 2 ? 'text-accent-green' : rrRatio >= 1 ? 'text-accent-yellow' : 'text-accent-red'}
               highlight />
@@ -211,6 +215,7 @@ function RiskRewardCalc() {
 }
 
 function DCACalc() {
+  const { t } = useTranslation(['tools', 'common'])
   const [investment, setInvestment] = useState('100')
   const [frequency, setFrequency] = useState('weekly')
   const [months, setMonths] = useState('12')
@@ -236,33 +241,33 @@ function DCACalc() {
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">DCA CALCULATOR</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('tools:dca.title').toUpperCase()}</h3>
       <p className="text-text-muted text-[10px] mb-3">
         Dollar Cost Averaging reduces timing risk. Consistent buying regardless of price.
       </p>
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <label className="text-text-muted text-[10px]">Amount Per Buy ($)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:dca.investmentAmount')}</label>
           <input type="number" value={investment} onChange={e => setInvestment(e.target.value)}
             placeholder="100" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
         <div>
-          <label className="text-text-muted text-[10px]">Frequency</label>
+          <label className="text-text-muted text-[10px]">{t('tools:dca.frequency')}</label>
           <select value={frequency} onChange={e => setFrequency(e.target.value)}
             className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5">
             <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="biweekly">Bi-Weekly</option>
-            <option value="monthly">Monthly</option>
+            <option value="weekly">{t('tools:dca.weekly')}</option>
+            <option value="biweekly">{t('tools:dca.biweekly')}</option>
+            <option value="monthly">{t('tools:dca.monthly')}</option>
           </select>
         </div>
         <div>
-          <label className="text-text-muted text-[10px]">Duration (months)</label>
+          <label className="text-text-muted text-[10px]">{t('tools:dca.duration')}</label>
           <input type="number" value={months} onChange={e => setMonths(e.target.value)}
             placeholder="12" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
         <div>
-          <label className="text-text-muted text-[10px]">Current BTC Price ($)</label>
+          <label className="text-text-muted text-[10px]">{t('common:price.btcPrice')} ($)</label>
           <input type="number" value={currentPrice} onChange={e => setCurrentPrice(e.target.value)}
             placeholder="97000" className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary mt-0.5" />
         </div>
@@ -270,9 +275,9 @@ function DCACalc() {
       {invNum > 0 && monthsNum > 0 && (
         <>
           <div className="grid grid-cols-3 gap-2 mb-3">
-            <ResultBox label="Total Invested" value={`$${totalInvested.toLocaleString()}`} />
+            <ResultBox label={t('tools:dca.totalInvested')} value={`$${totalInvested.toLocaleString()}`} />
             <ResultBox label="Total Buys" value={totalBuys.toString()} />
-            <ResultBox label="BTC Accumulated" value={`${btcAccumulated.toFixed(6)}`} highlight />
+            <ResultBox label={t('tools:dca.totalBtc')} value={`${btcAccumulated.toFixed(6)}`} highlight />
           </div>
           <div className="text-text-muted text-[9px] font-semibold mb-1.5">PRICE SCENARIOS</div>
           <div className="grid grid-cols-2 gap-2">
@@ -309,19 +314,20 @@ function ResultBox({ label, value, color, highlight }) {
 }
 
 export default function Tools() {
+  const { t } = useTranslation(['tools', 'common'])
   const [activeCalc, setActiveCalc] = useState('position')
 
   const calcs = [
-    { key: 'position', label: 'Position Size' },
-    { key: 'pnl', label: 'P&L' },
-    { key: 'rr', label: 'Risk/Reward' },
-    { key: 'dca', label: 'DCA' },
+    { key: 'position', labelKey: 'tools:positionSize.title' },
+    { key: 'pnl', labelKey: 'tools:pnl.title' },
+    { key: 'rr', labelKey: 'tools:riskReward.title' },
+    { key: 'dca', labelKey: 'tools:dca.title' },
   ]
 
   return (
     <div className="px-4 pt-4 space-y-3 pb-20">
-      <SubTabBar tabs={MARKET_TABS} />
-      <h1 className="text-lg font-bold">Trading Tools</h1>
+      <SubTabBar tabs={MARKET_TABS.map(tab => ({ ...tab, label: t(tab.labelKey) }))} />
+      <h1 className="text-lg font-bold">{t('tools:title')}</h1>
 
       {/* Calculator tabs */}
       <div className="flex gap-1 bg-bg-card rounded-xl p-1 border border-white/5">
@@ -332,7 +338,7 @@ export default function Tools() {
                 ? 'bg-accent-blue/20 text-accent-blue border border-accent-blue/30'
                 : 'text-text-muted'
             }`}>
-            {c.label}
+            {t(c.labelKey)}
           </button>
         ))}
       </div>
@@ -344,48 +350,25 @@ export default function Tools() {
 
       {/* Pro tips */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">PRO RISK MANAGEMENT RULES</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('tools:proRules.title').toUpperCase()}</h3>
         <div className="space-y-2 text-[11px] text-text-muted">
-          <div className="flex gap-2">
-            <span className="text-accent-blue font-bold">1</span>
-            <p><span className="text-text-secondary font-semibold">1-2% Rule:</span> Never risk more than 1-2% of your total capital on a single trade. This ensures survival through losing streaks.</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-accent-blue font-bold">2</span>
-            <p><span className="text-text-secondary font-semibold">Portfolio Heat:</span> Keep total capital at risk across all open positions below 6%. More exposure = more risk of ruin.</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-accent-blue font-bold">3</span>
-            <p><span className="text-text-secondary font-semibold">R:R Minimum 1:2:</span> Only take trades with at least 1:2 risk-to-reward. You can be wrong 60% of the time and still profit.</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-accent-blue font-bold">4</span>
-            <p><span className="text-text-secondary font-semibold">ATR-Based Stops:</span> Set stop-losses based on ATR (volatility), not arbitrary percentages. Avoids getting stopped out by normal price noise.</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-accent-blue font-bold">5</span>
-            <p><span className="text-text-secondary font-semibold">Trading Journal:</span> Log every trade with entry reason, exit, and lesson learned. Successful traders review and learn from every trade.</p>
-          </div>
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="flex gap-2">
+              <span className="text-accent-blue font-bold">{i}</span>
+              <p>{t(`tools:proRules.rules.rule${i}`)}</p>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Common mistakes */}
       <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/10">
-        <h3 className="text-accent-red text-xs font-semibold mb-3">COMMON MISTAKES TO AVOID</h3>
+        <h3 className="text-accent-red text-xs font-semibold mb-3">{t('tools:mistakes.title').toUpperCase()}</h3>
         <div className="space-y-1.5 text-[11px] text-text-muted">
-          {[
-            'FOMO buying during rallies — if everyone is talking about it, you\'re late',
-            'Revenge trading after a loss — step away, reassess, come back with a plan',
-            'Moving your stop-loss further away — accept the loss, protect your capital',
-            'Over-leveraging — leverage amplifies losses just as much as gains',
-            'No exit plan — always know your target AND stop before entering',
-            'Trading without a journal — you can\'t improve what you don\'t measure',
-            'Ignoring fees — frequent trading eats into profits significantly',
-            'All-in on one position — diversify to survive black swan events',
-          ].map((m, i) => (
+          {[1, 2, 3, 4, 5].map(i => (
             <div key={i} className="flex items-start gap-2">
               <span className="text-accent-red mt-0.5">x</span>
-              <p>{m}</p>
+              <p>{t(`tools:mistakes.items.item${i}`)}</p>
             </div>
           ))}
         </div>

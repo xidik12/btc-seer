@@ -1,0 +1,111 @@
+{
+  "nav": {
+    "back": "Назад",
+    "home": "Главная",
+    "forward": "Вперёд"
+  },
+  "app": {
+    "title": "BTC Seer",
+    "live": "LIVE",
+    "reload": "Обновить",
+    "error": "Что-то пошло не так",
+    "retry": "Повторить",
+    "loading": "Загрузка...",
+    "noData": "Нет данных",
+    "disclaimer": "Это не финансовая рекомендация. Прогнозы генерируются ИИ и могут быть неточными. Всегда проводите собственное исследование. Прошлая точность не гарантирует будущих результатов.",
+    "paper": "ДЕМО"
+  },
+  "time": {
+    "justNow": "только что",
+    "mAgo": "{{count}} мин. назад",
+    "hAgo": "{{count}} ч. назад",
+    "dAgo": "{{count}} д. назад"
+  },
+  "direction": {
+    "bullish": "Бычий",
+    "bearish": "Медвежий",
+    "neutral": "Нейтральный",
+    "long": "ЛОНГ",
+    "short": "ШОРТ"
+  },
+  "signal": {
+    "buy": "ПОКУПКА",
+    "sell": "ПРОДАЖА",
+    "hold": "УДЕРЖАНИЕ",
+    "strongBuy": "Активная покупка",
+    "strongSell": "Активная продажа",
+    "overallSignal": "Общий сигнал"
+  },
+  "trade": {
+    "entry": "Вход",
+    "target": "Цель",
+    "stopLoss": "Стоп-лосс",
+    "takeProfit": "Тейк-профит",
+    "leverage": "Плечо",
+    "margin": "Маржа",
+    "notional": "Номинал",
+    "pnl": "П/У",
+    "current": "Текущая",
+    "liqPrice": "Цена ликв.",
+    "direction": "Направление",
+    "maxLoss": "Макс. убыток",
+    "maxGain": "Макс. прибыль",
+    "rrRatio": "Соотн. Р/У",
+    "closePosition": "Закрыть позицию",
+    "openPosition": "Открыть {{direction}}",
+    "opening": "Открытие...",
+    "btcUsdt": "BTC/USDT"
+  },
+  "category": {
+    "trading": "Торговля",
+    "analysis": "Анализ",
+    "market": "Рынок",
+    "more": "Ещё"
+  },
+  "link": {
+    "signals": "Сигналы",
+    "advisor": "Советник",
+    "paperTrade": "Бумажная торговля",
+    "technical": "Теханализ",
+    "powerLaw": "Power Law",
+    "elliottWave": "Волны Эллиотта",
+    "liquidations": "Ликвидации",
+    "coins": "Монеты",
+    "news": "Новости",
+    "events": "События",
+    "history": "История",
+    "learn": "Обучение",
+    "resources": "Ресурсы",
+    "tools": "Инструменты",
+    "premium": "Премиум",
+    "settings": "Настройки",
+    "about": "О приложении",
+    "admin": "Админ"
+  },
+  "btn": {
+    "cancel": "Отмена",
+    "confirm": "Подтвердить",
+    "save": "Сохранить",
+    "close": "Закрыть",
+    "submit": "Отправить",
+    "resetZoom": "Сбросить масштаб"
+  },
+  "price": {
+    "btcPrice": "Цена BTC",
+    "price": "Цена",
+    "high": "Максимум",
+    "low": "Минимум",
+    "volume": "Объём",
+    "change24h": "Изменение за 24ч",
+    "marketCap": "Рыночная капитализация"
+  },
+  "widget": {
+    "failedToLoad": "{{name}} не удалось загрузить"
+  },
+  "chart": {
+    "pinchToZoom": "Сведите пальцы для масштабирования · Перетащите для прокрутки"
+  },
+  "confidence": "Уверенность",
+  "risk": "Риск",
+  "riskLevel": "Уровень риска"
+}

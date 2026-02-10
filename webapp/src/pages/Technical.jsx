@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatPricePrecise, formatPrice, formatTimeAgo } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
@@ -15,8 +16,8 @@ import {
 } from 'recharts'
 
 const ANALYSIS_TABS = [
-  { path: '/technical', label: 'Technical' },
-  { path: '/signals', label: 'Signals' },
+  { path: '/technical', labelKey: 'link.technical' },
+  { path: '/signals', labelKey: 'link.signals' },
 ]
 
 const POLL_INTERVAL = 60_000
@@ -264,6 +265,8 @@ function IndicatorHistory() {
 // ── Main Component ──
 
 export default function Technical() {
+  const { t } = useTranslation(['market', 'common'])
+  const tabs = useMemo(() => ANALYSIS_TABS.map(tab => ({ ...tab, label: t(tab.labelKey, { ns: 'common' }) })), [t])
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -285,7 +288,7 @@ export default function Technical() {
   if (loading) {
     return (
       <div className="px-4 pt-4 space-y-4">
-        <h1 className="text-lg font-bold">Technical Analysis</h1>
+        <h1 className="text-lg font-bold">{t('technical.title')}</h1>
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="bg-bg-card rounded-2xl p-4 border border-white/5 animate-pulse">
             <div className="h-5 w-40 bg-bg-hover rounded mb-4" />
@@ -302,10 +305,10 @@ export default function Technical() {
   if (error) {
     return (
       <div className="px-4 pt-4">
-        <h1 className="text-lg font-bold mb-4">Technical Analysis</h1>
+        <h1 className="text-lg font-bold mb-4">{t('technical.title')}</h1>
         <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/20">
           <p className="text-accent-red text-sm">{error}</p>
-          <button onClick={fetchData} className="text-accent-blue text-xs mt-1 underline">Retry</button>
+          <button onClick={fetchData} className="text-accent-blue text-xs mt-1 underline">{t('app.retry', { ns: 'common' })}</button>
         </div>
       </div>
     )
@@ -349,7 +352,7 @@ export default function Technical() {
   const bearCount = signals.filter(s => s === 'bearish').length
   const neutralCount = signals.length - bullCount - bearCount
   const overall = bullCount > bearCount ? 'bullish' : bearCount > bullCount ? 'bearish' : 'neutral'
-  const overallLabel = overall === 'bullish' ? 'Bullish' : overall === 'bearish' ? 'Bearish' : 'Neutral'
+  const overallLabel = overall === 'bullish' ? t('direction.bullish', { ns: 'common' }) : overall === 'bearish' ? t('direction.bearish', { ns: 'common' }) : t('direction.neutral', { ns: 'common' })
   const overallColor = overall === 'bullish' ? 'text-accent-green' : overall === 'bearish' ? 'text-accent-red' : 'text-accent-yellow'
   const overallBg = overall === 'bullish' ? 'bg-accent-green/15 border-accent-green/30' : overall === 'bearish' ? 'bg-accent-red/15 border-accent-red/30' : 'bg-accent-yellow/15 border-accent-yellow/30'
 
@@ -361,9 +364,9 @@ export default function Technical() {
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
-      <SubTabBar tabs={ANALYSIS_TABS} />
+      <SubTabBar tabs={tabs} />
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">Technical Analysis</h1>
+        <h1 className="text-lg font-bold">{t('technical.title')}</h1>
         {data?.timestamp && (
           <span className="text-text-muted text-[10px]">{formatTimeAgo(data.timestamp)}</span>
         )}
@@ -372,21 +375,21 @@ export default function Technical() {
       {/* ── Overall Summary ── */}
       <div className={`rounded-2xl p-4 border ${overallBg}`}>
         <div className="flex items-center justify-between mb-1">
-          <span className="text-text-secondary text-xs">Overall Signal</span>
+          <span className="text-text-secondary text-xs">{t('technical.overallSignal')}</span>
           <span className={`text-lg font-bold ${overallColor}`}>{overallLabel}</span>
         </div>
         <div className="flex items-center gap-3 text-xs mb-2">
-          <span className="text-accent-green">{bullCount} Buy</span>
+          <span className="text-accent-green">{t('technical.buyCount', { count: bullCount })}</span>
           <span className="text-text-muted">/</span>
-          <span className="text-accent-red">{bearCount} Sell</span>
+          <span className="text-accent-red">{t('technical.sellCount', { count: bearCount })}</span>
           <span className="text-text-muted">/</span>
-          <span className="text-accent-yellow">{neutralCount} Neutral</span>
-          <span className="text-text-muted ml-auto">of {signals.length}</span>
+          <span className="text-accent-yellow">{t('technical.neutralCount', { count: neutralCount })}</span>
+          <span className="text-text-muted ml-auto">{t('technical.ofTotal', { total: signals.length })}</span>
         </div>
         <p className="text-text-muted text-[10px] leading-relaxed">{overallExplain}</p>
         {price && (
           <div className="mt-2 pt-2 border-t border-white/10">
-            <span className="text-text-muted text-xs">BTC Price: </span>
+            <span className="text-text-muted text-xs">{t('technical.btcPrice')}: </span>
             <span className="text-text-primary text-sm font-bold">{formatPricePrecise(price)}</span>
           </div>
         )}
@@ -394,9 +397,9 @@ export default function Technical() {
 
       {/* ── Trend Direction ── */}
       <Section
-        title="Trend Direction"
+        title={t('technical.trend.title')}
         color="text-accent-blue"
-        explain="Is the Bitcoin price going up, down, or sideways? We check over different time windows. An ascending trend means higher highs — like climbing stairs. Descending means falling. Sideways means the price is stuck in a range."
+        explain={t('technical.trend.explain')}
       >
         {[
           { label: 'Short-term (20 hours)', val: trend.short_term, what: 'What happened in the last ~1 day' },
@@ -416,9 +419,9 @@ export default function Technical() {
 
       {/* ── RSI ── */}
       <Section
-        title="RSI (Relative Strength Index)"
+        title={t('technical.rsi.title')}
         color="text-accent-blue"
-        explain="Think of RSI like a speedometer for buyers vs sellers. It goes from 0 to 100. Above 70 = too many buyers (overbought, price likely to drop). Below 30 = too many sellers (oversold, price likely to bounce). Between 30-70 = normal."
+        explain={t('technical.rsi.explain')}
       >
         <GaugeBar
           value={mom.rsi}
@@ -433,9 +436,9 @@ export default function Technical() {
           explanation={rsiExplain(mom.rsi)}
         />
         <div className="flex justify-between text-[9px] text-text-muted -mt-1 mb-2">
-          <span>Oversold (buy zone)</span>
-          <span>Neutral</span>
-          <span>Overbought (sell zone)</span>
+          <span>{t('technical.rsi.oversold')}</span>
+          <span>{t('technical.rsi.neutral')}</span>
+          <span>{t('technical.rsi.overbought')}</span>
         </div>
         <IndicatorRow label="RSI (7) — fast" value={mom.rsi_7} signal={getRsiSignal(mom.rsi_7)}
           description={mom.rsi_7 != null ? `Looks at the last 7 hours only. Quick reactions — ${mom.rsi_7 > 70 ? 'showing overbought, short-term drop likely' : mom.rsi_7 < 30 ? 'showing oversold, short-term bounce likely' : 'nothing extreme right now'}.` : null}
@@ -450,9 +453,9 @@ export default function Technical() {
 
       {/* ── MACD ── */}
       <Section
-        title="MACD (Moving Average Convergence Divergence)"
+        title={t('technical.macd.title')}
         color="text-accent-purple"
-        explain="MACD measures the momentum (speed) of price changes. It compares fast and slow moving averages. When the MACD line crosses above the signal line, it's a buy signal. When it crosses below, it's a sell signal. The histogram shows the difference — positive = bullish push, negative = bearish push."
+        explain={t('technical.macd.explain')}
       >
         <IndicatorRow label="MACD Line" value={mom.macd} signal={getMacdSignal(mom.macd)}
           description={mom.macd != null ? (mom.macd > 0 ? 'Positive — the fast average is above the slow average, meaning recent price action is stronger than the longer trend. Bullish.' : 'Negative — the fast average is below the slow average, meaning recent price action is weaker than the longer trend. Bearish.') : null}
@@ -467,9 +470,9 @@ export default function Technical() {
 
       {/* ── Moving Averages ── */}
       <Section
-        title="Moving Averages"
+        title={t('technical.movingAverages.title')}
         color="text-accent-blue"
-        explain="A moving average smooths out the price over time. If today's price is ABOVE the average, it means BTC is doing better than its recent history (bullish). If BELOW, it's doing worse (bearish). Shorter averages react faster, longer ones show the big picture."
+        explain={t('technical.movingAverages.explain')}
       >
         {[
           { label: 'EMA 9', val: ma.ema_9, desc: 'Average price over last 9 hours. Very fast — shows what happened today.' },
@@ -499,9 +502,9 @@ export default function Technical() {
 
       {/* ── Bollinger Bands ── */}
       <Section
-        title="Bollinger Bands"
+        title={t('technical.bollinger.title')}
         color="text-accent-yellow"
-        explain="Imagine two rubber bands around the price — one above, one below. The price usually stays between them. When it touches the top band, it's expensive (might drop). When it touches the bottom band, it's cheap (might rise). When the bands squeeze together, a big move is coming."
+        explain={t('technical.bollinger.explain')}
       >
         <IndicatorRow label="Upper Band (ceiling)" value={vol.bb_upper ? formatPricePrecise(vol.bb_upper) : null}
           description="The upper limit of normal price range. If price touches this, it may be overextended."
@@ -528,17 +531,17 @@ export default function Technical() {
           explanation={bbExplain(vol.bb_position, vol.bb_width)}
         />
         <div className="flex justify-between text-[9px] text-text-muted -mt-1">
-          <span>Near floor (cheap)</span>
-          <span>Middle (fair)</span>
-          <span>Near ceiling (expensive)</span>
+          <span>{t('technical.bollinger.nearFloor')}</span>
+          <span>{t('technical.bollinger.middleFair')}</span>
+          <span>{t('technical.bollinger.nearCeiling')}</span>
         </div>
       </Section>
 
       {/* ── Volume ── */}
       <Section
-        title="Volume Analysis"
+        title={t('technical.volume.title')}
         color="text-accent-green"
-        explain="Volume = how much Bitcoin is being traded. High volume means many people are buying/selling (strong conviction). Low volume means few people are trading (weak moves that can reverse easily). Volume confirms trends — a price move WITH high volume is trustworthy."
+        explain={t('technical.volume.explain')}
       >
         <IndicatorRow label="Volume Ratio" value={volume.volume_ratio} signal={getVolSignal(volume.volume_ratio)}
           description={
@@ -562,9 +565,9 @@ export default function Technical() {
 
       {/* ── Support & Resistance ── */}
       <Section
-        title="Support & Resistance"
+        title={t('technical.supportResistance.title')}
         color="text-accent-red"
-        explain="Support = a price level where Bitcoin stops falling (like a floor — buyers step in). Resistance = a price level where it stops rising (like a ceiling — sellers step in). These levels help predict where price will bounce or get rejected."
+        explain={t('technical.supportResistance.explain')}
       >
         <IndicatorRow label="Resistance (ceiling)" value={levels.resistance_1 ? formatPricePrecise(levels.resistance_1) : null}
           description={levels.resistance_1 && price ? `Bitcoin may struggle to go above ${formatPrice(levels.resistance_1)}. If it breaks through, that's very bullish — the next move up could be strong. Price is ${price < levels.resistance_1 ? `$${(levels.resistance_1 - price).toFixed(0)} away from this ceiling` : 'already above this level — bullish breakout'}.` : 'The estimated price ceiling based on recent highs and lows.'}
@@ -579,9 +582,9 @@ export default function Technical() {
 
       {/* ── Trend Strength (ADX) ── */}
       <Section
-        title="Trend Strength"
+        title={t('technical.trendStrength.title')}
         color="text-accent-purple"
-        explain="Is the current trend strong or weak? ADX measures this. It doesn't tell you the direction (up/down), only HOW STRONG the move is. Below 20 = no real trend (choppy market). Above 25 = definite trend. Above 50 = very strong trend."
+        explain={t('technical.trendStrength.explain')}
       >
         <GaugeBar
           value={mom.adx || 0}
@@ -601,9 +604,9 @@ export default function Technical() {
           }
         />
         <div className="flex justify-between text-[9px] text-text-muted -mt-1 mb-2">
-          <span>No trend</span>
-          <span>Moderate trend</span>
-          <span>Strong trend</span>
+          <span>{t('technical.trendStrength.noTrend')}</span>
+          <span>{t('technical.trendStrength.moderateTrend')}</span>
+          <span>{t('technical.trendStrength.strongTrend')}</span>
         </div>
         <IndicatorRow label="ATR (Average True Range)" value={vol.atr}
           description={vol.atr ? `Bitcoin's average price swing is $${vol.atr.toFixed(0)} per hour. This tells you how much the price typically moves — useful for setting stop-losses. Bigger = more volatile.` : null}

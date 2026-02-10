@@ -1,24 +1,25 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import SubTabBar from '../components/SubTabBar'
 
 const MARKET_TABS = [
-  { path: '/liquidations', label: 'Liquidations' },
-  { path: '/powerlaw', label: 'Power Law' },
-  { path: '/elliott-wave', label: 'Elliott Wave' },
-  { path: '/events', label: 'Events' },
-  { path: '/tools', label: 'Tools' },
-  { path: '/learn', label: 'Learn' },
+  { path: '/liquidations', labelKey: 'common:link.liquidations' },
+  { path: '/powerlaw', labelKey: 'common:link.powerLaw' },
+  { path: '/elliott-wave', labelKey: 'common:link.elliottWave' },
+  { path: '/events', labelKey: 'common:link.events' },
+  { path: '/tools', labelKey: 'common:link.tools' },
+  { path: '/learn', labelKey: 'common:link.learn' },
 ]
 
 const SECTIONS = [
-  { key: 'basics', label: 'Basics' },
-  { key: 'orders', label: 'Orders' },
-  { key: 'indicators', label: 'Indicators' },
-  { key: 'strategies', label: 'Strategies' },
-  { key: 'risk', label: 'Risk Mgmt' },
-  { key: 'psychology', label: 'Psychology' },
-  { key: 'patterns', label: 'Patterns' },
-  { key: 'glossary', label: 'Glossary' },
+  { key: 'basics', labelKey: 'learn:sections.basics' },
+  { key: 'orders', labelKey: 'learn:sections.orders' },
+  { key: 'indicators', labelKey: 'learn:sections.indicators' },
+  { key: 'strategies', labelKey: 'learn:sections.strategies' },
+  { key: 'risk', labelKey: 'learn:sections.risk' },
+  { key: 'psychology', labelKey: 'learn:sections.psychology' },
+  { key: 'patterns', labelKey: 'learn:sections.patterns' },
+  { key: 'glossary', labelKey: 'learn:sections.glossary' },
 ]
 
 function Accordion({ title, children, color }) {
@@ -462,19 +463,22 @@ function Glossary() {
 }
 
 export default function Learn() {
+  const { t } = useTranslation(['learn', 'common'])
+  const tabs = useMemo(() => MARKET_TABS.map(tab => ({ ...tab, label: t(tab.labelKey) })), [t])
+  const sections = useMemo(() => SECTIONS.map(s => ({ ...s, label: t(s.labelKey) })), [t])
   const [section, setSection] = useState('basics')
 
   return (
     <div className="px-4 pt-4 space-y-3 pb-20">
-      <SubTabBar tabs={MARKET_TABS} />
-      <h1 className="text-lg font-bold">Learn Trading</h1>
+      <SubTabBar tabs={tabs} />
+      <h1 className="text-lg font-bold">{t('learn:title')}</h1>
       <p className="text-text-muted text-[11px]">
-        Everything you need to know to start trading Bitcoin, from zero to confident. Built from expert guides, community wisdom, and professional best practices.
+        {t('learn:subtitle')}
       </p>
 
       {/* Section tabs */}
       <div className="flex gap-1 overflow-x-auto no-scrollbar">
-        {SECTIONS.map(s => (
+        {sections.map(s => (
           <button key={s.key} onClick={() => setSection(s.key)}
             className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
               section === s.key
@@ -496,13 +500,13 @@ export default function Learn() {
       {section === 'glossary' && <Glossary />}
 
       <div className="bg-bg-card rounded-2xl p-4 border border-accent-yellow/15">
-        <h3 className="text-accent-yellow text-xs font-semibold mb-2">REMEMBER</h3>
+        <h3 className="text-accent-yellow text-xs font-semibold mb-2">{t('learn:remember.title')}</h3>
         <div className="text-text-muted text-[10px] space-y-1">
-          <p>1. Never invest more than you can afford to lose</p>
-          <p>2. Always use a stop-loss on every trade</p>
-          <p>3. Start small — learn with amounts that don't cause stress</p>
-          <p>4. Paper trade first — practice without real money until consistent</p>
-          <p>5. The market will always be there tomorrow — no trade is worth your mental health</p>
+          <p>{t('learn:remember.rule1')}</p>
+          <p>{t('learn:remember.rule2')}</p>
+          <p>{t('learn:remember.rule3')}</p>
+          <p>{t('learn:remember.rule4')}</p>
+          <p>{t('learn:remember.rule5')}</p>
         </div>
       </div>
     </div>

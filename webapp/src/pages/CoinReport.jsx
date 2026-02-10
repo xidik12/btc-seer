@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatCoinPrice, formatPercent, formatMarketCap, formatSupply, formatDate } from '../utils/format'
 
@@ -22,6 +23,7 @@ const RISK_COLORS = {
 export default function CoinReport() {
   const { address } = useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation('coins')
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -76,14 +78,14 @@ export default function CoinReport() {
   if (error) {
     return (
       <div className="px-4 pt-4 pb-20">
-        <button onClick={() => navigate('/coins')} className="text-accent-blue text-sm mb-4">&larr; Coins</button>
+        <button onClick={() => navigate('/coins')} className="text-accent-blue text-sm mb-4">&larr; {t('title')}</button>
         <div className="bg-bg-card rounded-xl p-6 border border-accent-red/20 text-center">
           <p className="text-accent-red text-sm mb-3">{error}</p>
           <button
             onClick={() => { setLoading(true); setError(null); api.getCoinReport(address).then(d => { if (d.error) setError(d.error); else setReport(d); setLoading(false) }).catch(e => { setError(e.message); setLoading(false) }) }}
             className="text-accent-blue text-xs underline"
           >
-            Retry
+            {t('app.retry', { ns: 'common' })}
           </button>
         </div>
       </div>
@@ -97,7 +99,7 @@ export default function CoinReport() {
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
-      <button onClick={() => navigate(-1)} className="text-accent-blue text-sm">&larr; Back</button>
+      <button onClick={() => navigate(-1)} className="text-accent-blue text-sm">&larr; {t('nav.back', { ns: 'common' })}</button>
 
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -109,7 +111,7 @@ export default function CoinReport() {
           </div>
         )}
         <div className="flex-1">
-          <h1 className="text-lg font-bold">{report.basic?.name || 'Unknown Token'}</h1>
+          <h1 className="text-lg font-bold">{report.basic?.name || t('report.unknownToken')}</h1>
           <div className="flex items-center gap-2">
             <span className="text-xs text-text-muted">{report.basic?.symbol}</span>
             <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${chainClass}`}>{report.chain}</span>
@@ -119,28 +121,28 @@ export default function CoinReport() {
 
       {/* Market Overview */}
       <div className="bg-bg-card rounded-xl p-4 border border-white/5">
-        <h3 className="text-xs font-semibold text-text-muted mb-3">MARKET OVERVIEW</h3>
+        <h3 className="text-xs font-semibold text-text-muted mb-3">{t('report.overview')}</h3>
         <div className="space-y-3">
           <div className="flex justify-between items-baseline">
-            <span className="text-text-muted text-xs">Price</span>
+            <span className="text-text-muted text-xs">{t('detail.price')}</span>
             <span className="text-lg font-bold">{formatCoinPrice(report.market?.price_usd)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted text-xs">Market Cap</span>
+            <span className="text-text-muted text-xs">{t('detail.marketCap')}</span>
             <span className="text-sm font-semibold">{formatMarketCap(report.market?.market_cap)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted text-xs">Volume 24h</span>
+            <span className="text-text-muted text-xs">{t('detail.volume24h')}</span>
             <span className="text-sm font-semibold">{formatMarketCap(report.market?.volume_24h)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted text-xs">24h Change</span>
+            <span className="text-text-muted text-xs">{t('detail.change24h')}</span>
             <span className={`text-sm font-semibold ${(report.market?.change_24h || 0) >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
               {formatPercent(report.market?.change_24h)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted text-xs">7d Change</span>
+            <span className="text-text-muted text-xs">7d</span>
             <span className={`text-sm font-semibold ${(report.market?.change_7d || 0) >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
               {formatPercent(report.market?.change_7d)}
             </span>
@@ -153,39 +155,39 @@ export default function CoinReport() {
         <div className="grid grid-cols-2 gap-3">
           {report.detail.market_cap_rank && (
             <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-              <p className="text-[10px] text-text-muted mb-1">Rank</p>
+              <p className="text-[10px] text-text-muted mb-1">{t('report.rank')}</p>
               <p className="text-sm font-bold">#{report.detail.market_cap_rank}</p>
             </div>
           )}
           {report.detail.ath && (
             <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-              <p className="text-[10px] text-text-muted mb-1">ATH</p>
+              <p className="text-[10px] text-text-muted mb-1">{t('report.ath')}</p>
               <p className="text-sm font-bold">{formatCoinPrice(report.detail.ath)}</p>
               {report.detail.ath_date && <p className="text-[10px] text-text-muted">{formatDate(report.detail.ath_date)}</p>}
             </div>
           )}
           {report.detail.atl && (
             <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-              <p className="text-[10px] text-text-muted mb-1">ATL</p>
+              <p className="text-[10px] text-text-muted mb-1">{t('report.atl')}</p>
               <p className="text-sm font-bold">{formatCoinPrice(report.detail.atl)}</p>
               {report.detail.atl_date && <p className="text-[10px] text-text-muted">{formatDate(report.detail.atl_date)}</p>}
             </div>
           )}
           {report.detail.circulating_supply && (
             <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-              <p className="text-[10px] text-text-muted mb-1">Circulating</p>
+              <p className="text-[10px] text-text-muted mb-1">{t('report.circulating')}</p>
               <p className="text-sm font-bold">{formatSupply(report.detail.circulating_supply, report.basic?.symbol)}</p>
             </div>
           )}
           {report.detail.total_supply && (
             <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-              <p className="text-[10px] text-text-muted mb-1">Total Supply</p>
+              <p className="text-[10px] text-text-muted mb-1">{t('report.totalSupply')}</p>
               <p className="text-sm font-bold">{formatSupply(report.detail.total_supply, report.basic?.symbol)}</p>
             </div>
           )}
           {report.detail.fully_diluted_valuation && (
             <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-              <p className="text-[10px] text-text-muted mb-1">FDV</p>
+              <p className="text-[10px] text-text-muted mb-1">{t('report.fdv')}</p>
               <p className="text-sm font-bold">{formatMarketCap(report.detail.fully_diluted_valuation)}</p>
             </div>
           )}
@@ -195,18 +197,18 @@ export default function CoinReport() {
       {/* Risk Assessment */}
       {report.risk && (
         <div className="bg-bg-card rounded-xl p-4 border border-white/5">
-          <h3 className="text-xs font-semibold text-text-muted mb-3">RISK ASSESSMENT</h3>
+          <h3 className="text-xs font-semibold text-text-muted mb-3">{t('report.riskAssessment')}</h3>
           <div className="space-y-2">
             <div className="flex justify-between">
-              <span className="text-text-muted text-xs">Tier</span>
+              <span className="text-text-muted text-xs">{t('report.tier')}</span>
               <span className="text-sm font-semibold">{report.risk.tier}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-muted text-xs">Risk Level</span>
+              <span className="text-text-muted text-xs">{t('report.riskLevel')}</span>
               <span className={`text-sm font-bold ${riskClass}`}>{report.risk.risk_level}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-muted text-xs">Vol/MCap Ratio</span>
+              <span className="text-text-muted text-xs">{t('report.volMcapRatio')}</span>
               <span className="text-sm font-semibold">{(report.risk.volume_mcap_ratio * 100).toFixed(2)}%</span>
             </div>
           </div>
@@ -216,7 +218,7 @@ export default function CoinReport() {
       {/* Categories */}
       {report.categories && report.categories.length > 0 && (
         <div className="bg-bg-card rounded-xl p-4 border border-white/5">
-          <h3 className="text-xs font-semibold text-text-muted mb-2">CATEGORIES</h3>
+          <h3 className="text-xs font-semibold text-text-muted mb-2">{t('report.categories')}</h3>
           <div className="flex flex-wrap gap-1.5">
             {report.categories.filter(Boolean).slice(0, 8).map(cat => (
               <span key={cat} className="text-[10px] bg-white/5 text-text-secondary px-2 py-0.5 rounded-full">{cat}</span>
@@ -228,14 +230,14 @@ export default function CoinReport() {
       {/* Description */}
       {report.description && (
         <div className="bg-bg-card rounded-xl p-4 border border-white/5">
-          <h3 className="text-xs font-semibold text-text-muted mb-2">ABOUT</h3>
+          <h3 className="text-xs font-semibold text-text-muted mb-2">{t('report.about')}</h3>
           <p className="text-xs text-text-secondary leading-relaxed">{report.description.replace(/<[^>]*>/g, '')}</p>
         </div>
       )}
 
       {/* Contract Address */}
       <div className="bg-bg-card rounded-xl p-4 border border-white/5">
-        <h3 className="text-xs font-semibold text-text-muted mb-2">CONTRACT</h3>
+        <h3 className="text-xs font-semibold text-text-muted mb-2">{t('report.contract')}</h3>
         <p className="text-[10px] text-text-secondary break-all font-mono">{address}</p>
       </div>
 
@@ -244,11 +246,11 @@ export default function CoinReport() {
         onClick={handleShare}
         className="w-full bg-accent-blue/10 border border-accent-blue/30 text-accent-blue rounded-xl py-3 text-sm font-medium hover:bg-accent-blue/20 transition-colors"
       >
-        {copied ? 'Copied to clipboard!' : 'Share Report'}
+        {copied ? t('report.copied') : t('report.shareReport')}
       </button>
 
       <p className="text-text-muted text-[10px] text-center">
-        Report generated {report.generated_at ? new Date(report.generated_at).toLocaleString() : 'just now'}
+        {t('report.reportGenerated', { time: report.generated_at ? new Date(report.generated_at).toLocaleString() : 'just now' })}
       </p>
     </div>
   )

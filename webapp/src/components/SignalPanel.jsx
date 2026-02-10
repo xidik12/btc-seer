@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import {
   formatPrice,
@@ -43,19 +44,19 @@ const ACTION_ICONS = {
   ),
 }
 
-const ACTION_DISPLAY = {
-  strong_buy: { label: 'Strong Buy' },
-  buy: { label: 'Buy' },
-  hold: { label: 'Hold' },
-  sell: { label: 'Sell' },
-  strong_sell: { label: 'Strong Sell' },
-}
-
-function getActionDisplay(action) {
+function getActionDisplay(action, t) {
+  const ACTION_DISPLAY = {
+    strong_buy: { label: t('common:signal.strongBuy') },
+    buy: { label: t('common:signal.buy') },
+    hold: { label: t('common:signal.hold') },
+    sell: { label: t('common:signal.sell') },
+    strong_sell: { label: t('common:signal.strongSell') },
+  }
   return ACTION_DISPLAY[action] ?? { label: action ?? 'Unknown' }
 }
 
 export default function SignalPanel() {
+  const { t } = useTranslation('dashboard')
   const [signal, setSignal] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -95,12 +96,12 @@ export default function SignalPanel() {
   if (error) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/20">
-        <p className="text-accent-red text-sm">Failed to load signals</p>
+        <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('signalPanel.title') })}</p>
         <button
           onClick={fetchData}
           className="text-accent-blue text-xs mt-1 underline"
         >
-          Retry
+          {t('common:app.retry')}
         </button>
       </div>
     )
@@ -111,7 +112,7 @@ export default function SignalPanel() {
   const s = sigMap['1h'] ?? sigMap['4h'] ?? sigMap['24h'] ?? sigMap ?? {}
 
   const action = s?.action ?? 'hold'
-  const display = getActionDisplay(action)
+  const display = getActionDisplay(action, t)
   const actionColorClass = getActionColor(action)
   const actionBgClass = getActionBg(action)
   const confidence = s?.confidence ?? 0
@@ -132,7 +133,7 @@ export default function SignalPanel() {
   return (
     <div className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
       <h3 className="text-text-primary text-sm font-semibold mb-3">
-        Trading Signal
+        {t('signalPanel.title')}
       </h3>
 
       {/* Action Badge */}
@@ -147,7 +148,7 @@ export default function SignalPanel() {
 
       {/* Confidence */}
       <div className="flex items-center justify-between mb-4 px-1">
-        <span className="text-text-secondary text-xs">Confidence</span>
+        <span className="text-text-secondary text-xs">{t('signalPanel.confidence')}</span>
         <span className={`text-sm font-semibold ${actionColorClass}`}>
           {confidence.toFixed(0)}%
         </span>
@@ -156,20 +157,20 @@ export default function SignalPanel() {
       {/* Price Levels */}
       <div className="space-y-2 mb-4">
         {entry != null && (
-          <PriceRow label="Entry" value={entry} colorClass="text-accent-blue" />
+          <PriceRow label={t('signalPanel.entry')} value={entry} colorClass="text-accent-blue" />
         )}
         {target != null && (
-          <PriceRow label="Target" value={target} colorClass="text-accent-green" />
+          <PriceRow label={t('signalPanel.target')} value={target} colorClass="text-accent-green" />
         )}
         {stopLoss != null && (
-          <PriceRow label="Stop-Loss" value={stopLoss} colorClass="text-accent-red" />
+          <PriceRow label={t('signalPanel.stopLoss')} value={stopLoss} colorClass="text-accent-red" />
         )}
       </div>
 
       {/* Risk Bar */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-text-secondary text-xs">Risk Level</span>
+          <span className="text-text-secondary text-xs">{t('signalPanel.riskLevel')}</span>
           <span className="text-text-primary text-xs font-semibold">
             {riskClamped}/10
           </span>
@@ -181,15 +182,14 @@ export default function SignalPanel() {
           />
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-text-muted text-[10px]">Low</span>
-          <span className="text-text-muted text-[10px]">High</span>
+          <span className="text-text-muted text-[10px]">{t('signalPanel.low', 'Low')}</span>
+          <span className="text-text-muted text-[10px]">{t('signalPanel.high', 'High')}</span>
         </div>
       </div>
 
       {/* Disclaimer */}
       <p className="text-text-muted text-[10px] leading-relaxed border-t border-white/5 pt-3">
-        Not financial advice. AI-generated signals are for informational purposes
-        only. Always do your own research before making trading decisions.
+        {t('signalPanel.disclaimer')}
       </p>
     </div>
   )

@@ -1,0 +1,264 @@
+{
+  "technical": {
+    "title": "Technical Analysis",
+    "overallSignal": "Overall Signal",
+    "buyCount": "{{count}} Buy",
+    "sellCount": "{{count}} Sell",
+    "neutralCount": "{{count}} Neutral",
+    "ofTotal": "of {{total}}",
+    "btcPrice": "BTC Price",
+    "updatesEveryMinute": "Technical indicators update every minute. These are mathematical tools, not crystal balls. They work best when multiple indicators agree. Always combine with your own research.",
+    "overallBullish": "{{count}} out of {{total}} indicators suggest the price will go UP. More tools are pointing to buying than selling — this is a positive sign, but nothing is guaranteed.",
+    "overallBearish": "{{count}} out of {{total}} indicators suggest the price will go DOWN. More tools are pointing to selling than buying — be cautious.",
+    "overallNeutral": "Indicators are split — {{bull}} say buy, {{bear}} say sell, {{neutral}} are undecided. The market is uncertain. Best to wait for a clearer signal.",
+    "trend": {
+      "title": "Trend Direction",
+      "explain": "Is the Bitcoin price going up, down, or sideways? We check over different time windows. An ascending trend means higher highs — like climbing stairs. Descending means falling. Sideways means the price is stuck in a range.",
+      "shortTerm": "Short-term (20 hours)",
+      "mediumTerm": "Medium-term (50 hours)",
+      "longTerm": "Long-term (100 hours)",
+      "ascending": "Ascending",
+      "descending": "Descending",
+      "sideways": "Sideways",
+      "whatShort": "What happened in the last ~1 day",
+      "whatMedium": "What happened in the last ~2 days",
+      "whatLong": "What happened in the last ~4 days",
+      "ascendingDesc": "{{what}}. Price is climbing — each high is higher than the last. Good for buyers.",
+      "descendingDesc": "{{what}}. Price is falling — each low is lower than the last. Sellers are in control.",
+      "sidewaysDesc": "{{what}}. Price is flat — no clear direction. The market is waiting for something to happen."
+    },
+    "rsi": {
+      "title": "RSI (Relative Strength Index)",
+      "explain": "Think of RSI like a speedometer for buyers vs sellers. It goes from 0 to 100. Above 70 = too many buyers (overbought, price likely to drop). Below 30 = too many sellers (oversold, price likely to bounce). Between 30-70 = normal.",
+      "oversold": "Oversold (buy zone)",
+      "neutral": "Neutral",
+      "overbought": "Overbought (sell zone)",
+      "fast": "RSI (7) — fast",
+      "standard": "RSI (14) — standard",
+      "standardDesc": "The most commonly used RSI. This is what most traders look at.",
+      "slow": "RSI (30) — slow"
+    },
+    "macd": {
+      "title": "MACD (Moving Average Convergence Divergence)",
+      "explain": "MACD measures the momentum (speed) of price changes. It compares fast and slow moving averages. When the MACD line crosses above the signal line, it's a buy signal. When it crosses below, it's a sell signal. The histogram shows the difference — positive = bullish push, negative = bearish push.",
+      "line": "MACD Line",
+      "signal": "Signal Line",
+      "signalDesc": "A smoothed version of MACD. When MACD crosses above this line = buy. Below = sell.",
+      "histogram": "Histogram"
+    },
+    "movingAverages": {
+      "title": "Moving Averages",
+      "explain": "A moving average smooths out the price over time. If today's price is ABOVE the average, it means BTC is doing better than its recent history (bullish). If BELOW, it's doing worse (bearish). Shorter averages react faster, longer ones show the big picture.",
+      "aboveBy": "Price is ${{amount}} ABOVE this average — bullish.",
+      "belowBy": "Price is ${{amount}} BELOW this average — bearish."
+    },
+    "bollinger": {
+      "title": "Bollinger Bands",
+      "explain": "Imagine two rubber bands around the price — one above, one below. The price usually stays between them. When it touches the top band, it's expensive (might drop). When it touches the bottom band, it's cheap (might rise). When the bands squeeze together, a big move is coming.",
+      "upper": "Upper Band (ceiling)",
+      "middle": "Middle Band (average)",
+      "lower": "Lower Band (floor)",
+      "width": "Band Width",
+      "position": "Where is price in the bands?",
+      "nearFloor": "Near floor (cheap)",
+      "middleFair": "Middle (fair)",
+      "nearCeiling": "Near ceiling (expensive)"
+    },
+    "volume": {
+      "title": "Volume Analysis",
+      "explain": "Volume = how much Bitcoin is being traded. High volume means many people are buying/selling (strong conviction). Low volume means few people are trading (weak moves that can reverse easily). Volume confirms trends — a price move WITH high volume is trustworthy.",
+      "ratio": "Volume Ratio",
+      "vwap": "VWAP",
+      "obv": "OBV (On Balance Volume)"
+    },
+    "supportResistance": {
+      "title": "Support & Resistance",
+      "explain": "Support = a price level where Bitcoin stops falling (like a floor — buyers step in). Resistance = a price level where it stops rising (like a ceiling — sellers step in). These levels help predict where price will bounce or get rejected.",
+      "resistance": "Resistance (ceiling)",
+      "pivot": "Pivot Point (center)",
+      "support": "Support (floor)"
+    },
+    "trendStrength": {
+      "title": "Trend Strength",
+      "explain": "Is the current trend strong or weak? ADX measures this. It doesn't tell you the direction (up/down), only HOW STRONG the move is. Below 20 = no real trend (choppy market). Above 25 = definite trend. Above 50 = very strong trend.",
+      "adx": "ADX (Trend Strength)",
+      "atr": "ATR (Average True Range)",
+      "volatility24h": "24h Volatility",
+      "noTrend": "No trend",
+      "moderateTrend": "Moderate trend",
+      "strongTrend": "Strong trend"
+    },
+    "btcDominance": {
+      "title": "BTC Dominance",
+      "explain": "BTC Dominance shows what percentage of the TOTAL crypto market belongs to Bitcoin. When dominance rises, money flows FROM altcoins TO Bitcoin (people trust BTC more). When it falls, money flows TO altcoins (people are taking more risk). High dominance = safer market.",
+      "marketShare": "Bitcoin Market Share",
+      "altcoinSeason": "Altcoin season",
+      "normal": "Normal",
+      "btcSeason": "BTC season",
+      "ethDominance": "ETH Dominance",
+      "totalMarket24h": "Total Market 24h Change"
+    },
+    "stochRsi": {
+      "title": "Stochastic RSI",
+      "explain": "This is like RSI on steroids — it measures the RSI of the RSI, making it more sensitive. It swings between 0 and 100 very quickly. Below 20 = extremely oversold (buy opportunity). Above 80 = extremely overbought (sell signal). The %K and %D lines crossing is the actual trade signal.",
+      "kFast": "%K (fast line)",
+      "dSlow": "%D (slow line)",
+      "buyZone": "Buy zone",
+      "neutral": "Neutral",
+      "sellZone": "Sell zone"
+    },
+    "williamsR": {
+      "title": "Williams %R",
+      "explain": "Williams %R tells you where the closing price is relative to the highest high over the last 14 periods. It ranges from -100 (lowest point) to 0 (highest point). Below -80 = oversold (price is near its recent low — might bounce). Above -20 = overbought (near its recent high — might drop).",
+      "nearLows": "Near lows (buy zone)",
+      "midRange": "Mid-range",
+      "nearHighs": "Near highs (sell zone)"
+    },
+    "ichimoku": {
+      "title": "Ichimoku Cloud",
+      "explain": "A Japanese trading system that shows support, resistance, momentum, and trend direction all at once. The 'cloud' is a shaded zone between two lines. Price ABOVE the cloud = bullish (strong uptrend). BELOW = bearish. INSIDE = no clear trend. The Tenkan/Kijun cross gives buy/sell signals.",
+      "tenkan": "Tenkan-sen (conversion)",
+      "kijun": "Kijun-sen (base)",
+      "cloudTop": "Cloud Top (Senkou A)",
+      "cloudBottom": "Cloud Bottom (Senkou B)",
+      "aboveCloud": "Price is ABOVE the cloud — Strong Bullish. The cloud below acts as a safety net (support). This is the best position to be in as a buyer.",
+      "belowCloud": "Price is BELOW the cloud — Strong Bearish. The cloud above acts as a ceiling (resistance). Sellers are in control and it's hard for price to recover.",
+      "insideCloud": "Price is INSIDE the cloud — Uncertain. The market is in transition between bullish and bearish. Wait for a clear breakout above or below the cloud."
+    },
+    "candlestick": {
+      "title": "Candlestick Patterns",
+      "explain": "Each 'candle' on a chart shows the opening price, closing price, highest price, and lowest price for a time period. Certain shapes have names and predict what comes next. Like reading tea leaves — but these patterns have been used by traders for centuries.",
+      "detected": "Detected",
+      "noPatterns": "No special patterns detected on the latest candle. The price action is unremarkable right now — no strong reversal signals.",
+      "bodySize": "Body Size",
+      "upperShadow": "Upper Shadow",
+      "lowerShadow": "Lower Shadow",
+      "doji": "Doji",
+      "hammer": "Hammer",
+      "invertedHammer": "Inverted Hammer",
+      "bullishEngulfing": "Bullish Engulfing",
+      "bearishEngulfing": "Bearish Engulfing",
+      "morningStar": "Morning Star",
+      "eveningStar": "Evening Star"
+    },
+    "advanced": {
+      "title": "Advanced Metrics",
+      "explain": "These are specialized tools used by experienced traders to spot major market turning points. They look at longer-term patterns that can signal whether Bitcoin is at a cycle top (time to sell) or cycle bottom (time to buy).",
+      "mayer": "Mayer Multiple",
+      "piCycle": "Pi Cycle Ratio",
+      "goldenDeath": "Golden/Death Cross",
+      "zScore": "Mean Reversion Z-Score"
+    },
+    "rateOfChange": {
+      "title": "Rate of Change",
+      "explain": "Simply: how much did the price change over different time periods? Positive = price went up. Negative = price went down. Bigger numbers = faster movement. This tells you the SPEED of the price change.",
+      "last1h": "Last 1 Hour",
+      "last6h": "Last 6 Hours",
+      "last12h": "Last 12 Hours",
+      "last24h": "Last 24 Hours"
+    },
+    "indicatorHistory": {
+      "title": "Indicator History",
+      "explain": "How key indicators have changed over time. RSI trending from 30 to 72 tells a story that a single snapshot at 72 misses."
+    }
+  },
+  "powerLaw": {
+    "title": "Power Law Model",
+    "fairValue": "Fair Value",
+    "currentPrice": "Current Price",
+    "deviation": "Deviation",
+    "status": "Status",
+    "undervalued": "Undervalued",
+    "overvalued": "Overvalued",
+    "fairValued": "Fair Valued",
+    "corridorPosition": "Corridor Position",
+    "support": "Support",
+    "resistance": "Resistance",
+    "explain": "The Power Law model maps Bitcoin's price trajectory based on adoption growth patterns. It provides a fair value corridor — prices below the band suggest undervaluation, above suggest overvaluation.",
+    "disclaimer": "The Power Law model is a mathematical framework, not a price prediction. Past patterns may not continue."
+  },
+  "elliott": {
+    "title": "Elliott Wave Analysis",
+    "currentWave": "Current Wave",
+    "waveStatus": "Wave Status",
+    "impulse": "Impulse",
+    "corrective": "Corrective",
+    "fibTargets": "Fibonacci Targets",
+    "divergence": "Divergence Alerts",
+    "timeframes": {
+      "1h": "1H",
+      "4h": "4H",
+      "1d": "1D",
+      "1w": "1W",
+      "1mo": "1M"
+    },
+    "explain": "Elliott Wave Theory identifies repetitive wave patterns in market prices. Markets move in 5 waves in the direction of the trend (impulse), followed by 3 corrective waves.",
+    "disclaimer": "Wave counts are subjective and may change as new price data arrives."
+  },
+  "liquidations": {
+    "title": "Liquidation Map",
+    "riskMeter": "Risk Meter",
+    "heatmap": "Liquidation Heatmap",
+    "fundingRate": "Funding Rate",
+    "openInterest": "Open Interest",
+    "leverageBreakdown": "Leverage Breakdown",
+    "longLiquidations": "Long Liquidations",
+    "shortLiquidations": "Short Liquidations",
+    "insights": "Trading Insights",
+    "explain": "Liquidation data shows where leveraged positions will be force-closed. Clusters of liquidations act as price magnets — price often moves toward them to trigger cascading liquidations.",
+    "disclaimer": "Liquidation data is estimated and may not reflect exact exchange figures."
+  },
+  "events": {
+    "title": "Event Memory",
+    "subtitle": "Historical pattern analysis",
+    "recentEvents": "RECENT EVENTS",
+    "impactHeatmap": "Impact Heatmap",
+    "categoryHeatmap": "Category Impact Heatmap",
+    "heatmapDesc": "Average BTC price change after events by category and timeframe",
+    "eventsTracked": "Events Tracked",
+    "categoriesCount": "Categories",
+    "avgPerDay": "Avg Events/Day",
+    "mostImpactful": "Most Impactful",
+    "categories": {
+      "regulation": "Regulation",
+      "etf": "ETF",
+      "hack": "Hack",
+      "adoption": "Adoption",
+      "macro": "Macro"
+    },
+    "timeframes": {
+      "1h": "1h",
+      "4h": "4h",
+      "24h": "24h",
+      "7d": "7d"
+    },
+    "noEvents": "No recent events",
+    "explain": "Historical event tracking shows how market events affected Bitcoin price across different timeframes."
+  },
+  "news": {
+    "title": "Crypto News",
+    "sentimentOverview": "Sentiment Overview",
+    "bullish": "Bullish",
+    "bearish": "Bearish",
+    "neutral": "Neutral",
+    "last24h": "Last 24 hours",
+    "sources": "{{count}} sources",
+    "noNews": "No news available"
+  },
+  "history": {
+    "title": "Prediction History",
+    "accuracy": "Accuracy",
+    "byTimeframe": "By Timeframe",
+    "trend30d": "30-Day Trend",
+    "calibration": "Confidence Calibration",
+    "distribution": "Win/Loss Distribution",
+    "records": "Prediction Records",
+    "win": "Win",
+    "loss": "Loss",
+    "timeframes": {
+      "1h": "1h",
+      "4h": "4h",
+      "1d": "1d"
+    }
+  }
+}

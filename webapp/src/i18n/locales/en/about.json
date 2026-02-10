@@ -1,0 +1,49 @@
+{
+  "title": "About BTC Seer",
+  "version": "Version",
+  "description": "AI-powered Bitcoin analysis and trading platform",
+  "architecture": {
+    "title": "Architecture",
+    "aiEnsemble": "AI Ensemble",
+    "models": {
+      "tft": "Temporal Fusion Transformer",
+      "xgboost": "XGBoost Gradient Boosting",
+      "lstm": "Long Short-Term Memory",
+      "timesfm": "TimesFM Foundation Model"
+    },
+    "features": "{{count}} features across {{categories}} data categories",
+    "dataCategories": "Data Categories"
+  },
+  "features": {
+    "title": "Features",
+    "predictions": "AI Price Predictions",
+    "predictionsDesc": "Multi-timeframe forecasts using ensemble of 4 ML models",
+    "signals": "Trading Signals",
+    "signalsDesc": "Actionable buy/sell signals with entry, target, and stop-loss",
+    "technical": "Technical Analysis",
+    "technicalDesc": "45+ indicators with beginner-friendly explanations",
+    "onChain": "On-Chain Analytics",
+    "onChainDesc": "Whale tracking, exchange flows, and network metrics",
+    "news": "News Sentiment",
+    "newsDesc": "Real-time news aggregation with AI sentiment analysis",
+    "paperTrading": "Paper Trading",
+    "paperTradingDesc": "Practice trading with $10k virtual funds and real data",
+    "advisor": "Trading Advisor",
+    "advisorDesc": "AI-powered trade suggestions with risk management",
+    "elliott": "Elliott Wave",
+    "elliottDesc": "Wave pattern analysis with Fibonacci targets",
+    "powerLaw": "Power Law",
+    "powerLawDesc": "Bitcoin fair value model based on adoption growth",
+    "liquidations": "Liquidation Map",
+    "liquidationsDesc": "Derivatives market risk visualization"
+  },
+  "disclaimer": {
+    "title": "Disclaimer",
+    "text": "BTC Seer is an educational tool. Nothing in this app constitutes financial advice. AI predictions may be inaccurate. Always do your own research (DYOR) before making any investment decisions. Past performance does not guarantee future results."
+  },
+  "credits": {
+    "title": "Credits",
+    "builtWith": "Built with React, Python, and love for Bitcoin",
+    "poweredBy": "Powered by multiple AI models and real-time market data"
+  }
+}

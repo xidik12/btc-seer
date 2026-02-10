@@ -1,10 +1,12 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useTelegram } from '../hooks/useTelegram'
 
 export default function SubTabBar({ tabs }) {
   const location = useLocation()
   const navigate = useNavigate()
   const { hapticFeedback } = useTelegram()
+  const { t } = useTranslation()
 
   return (
     <div className="flex gap-1 bg-bg-secondary/50 rounded-lg p-0.5 mb-4 overflow-x-auto no-scrollbar">

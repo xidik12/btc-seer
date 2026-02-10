@@ -1,14 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { useTelegram } from '../hooks/useTelegram'
 
-const INTERVALS = [
-  { value: '1h', label: '1 Hour', description: 'Every hour' },
-  { value: '4h', label: '4 Hours', description: 'Every 4 hours' },
-  { value: '24h', label: '24 Hours', description: 'Once daily' },
-]
-
 export default function AlertSettings() {
+  const { t } = useTranslation('settings')
   const { tg } = useTelegram()
   const [selectedInterval, setSelectedInterval] = useState('4h')
   const [subscribed, setSubscribed] = useState(false)
@@ -16,6 +12,12 @@ export default function AlertSettings() {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
   const [dirty, setDirty] = useState(false)
+
+  const INTERVALS = [
+    { value: '1h', label: t('alerts.intervals.1h', '1 Hour'), description: t('alerts.intervals.1hDesc', 'Every hour') },
+    { value: '4h', label: t('alerts.intervals.4h', '4 Hours'), description: t('alerts.intervals.4hDesc', 'Every 4 hours') },
+    { value: '24h', label: t('alerts.intervals.24h', '24 Hours'), description: t('alerts.intervals.24hDesc', 'Once daily') },
+  ]
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
@@ -51,7 +53,7 @@ export default function AlertSettings() {
 
   const handleSave = useCallback(async () => {
     if (!tg?.initData) {
-      showToast('Open in Telegram to save', 'error')
+      showToast(t('alerts.openInTelegram', 'Open in Telegram to save'), 'error')
       return
     }
     setSaving(true)
@@ -59,16 +61,16 @@ export default function AlertSettings() {
       await api.updateAlertPreferences(tg.initData, subscribed, selectedInterval)
       setDirty(false)
       if (subscribed) {
-        showToast(`Alerts set to ${selectedInterval} interval`)
+        showToast(t('alerts.alertsSet', 'Alerts set to {{interval}} interval', { interval: selectedInterval }))
       } else {
-        showToast('Alerts disabled', 'info')
+        showToast(t('alerts.alertsDisabled', 'Alerts disabled'), 'info')
       }
     } catch {
-      showToast('Failed to save. Try again.', 'error')
+      showToast(t('alerts.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
-  }, [tg, subscribed, selectedInterval])
+  }, [tg, subscribed, selectedInterval, t])
 
   if (loading) {
     return (
@@ -83,20 +85,20 @@ export default function AlertSettings() {
   return (
     <div className="bg-bg-card rounded-2xl p-4 slide-up relative">
       <h3 className="text-text-primary font-semibold text-sm mb-1">
-        Alert Settings
+        {t('alerts.title')}
       </h3>
       <p className="text-text-muted text-xs mb-4">
-        Get prediction alerts via Telegram
+        {t('alerts.subtitle', 'Get prediction alerts via Telegram')}
       </p>
 
       {/* Subscribe toggle */}
       <div className="flex items-center justify-between mb-4 bg-bg-secondary rounded-xl p-3">
         <div>
           <p className="text-text-primary text-sm font-medium">
-            Enable Alerts
+            {t('alerts.enable')}
           </p>
           <p className="text-text-muted text-xs mt-0.5">
-            Receive prediction notifications
+            {t('alerts.enableDesc', 'Receive prediction notifications')}
           </p>
         </div>
         <button
@@ -104,7 +106,7 @@ export default function AlertSettings() {
           className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
             subscribed ? 'bg-accent-green' : 'bg-bg-hover'
           }`}
-          aria-label={subscribed ? 'Disable alerts' : 'Enable alerts'}
+          aria-label={subscribed ? t('alerts.disableLabel', 'Disable alerts') : t('alerts.enableLabel', 'Enable alerts')}
         >
           <span
             className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
@@ -117,7 +119,7 @@ export default function AlertSettings() {
       {/* Interval selection */}
       <div className={`space-y-2 mb-4 transition-opacity ${subscribed ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
         <p className="text-text-secondary text-xs font-medium mb-2">
-          Alert Interval
+          {t('alerts.interval')}
         </p>
         {INTERVALS.map((interval) => {
           const isSelected = selectedInterval === interval.value
@@ -169,10 +171,10 @@ export default function AlertSettings() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            Saving...
+            {t('alerts.saving', 'Saving...')}
           </span>
         ) : (
-          'Save Preferences'
+          t('alerts.savePreferences', 'Save Preferences')
         )}
       </button>
 

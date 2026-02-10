@@ -1,0 +1,29 @@
+{
+  "title": "资源",
+  "subtitle": "专家精选的工具和平台",
+  "categories": {
+    "exchanges": "交易所",
+    "analysis": "分析工具",
+    "onChain": "链上数据",
+    "portfolio": "投资组合追踪",
+    "bots": "交易机器人",
+    "learning": "学习平台",
+    "learn": "学习"
+  },
+  "tierGuide": "等级指南",
+  "tiers": {
+    "essential": "必备",
+    "pro": "专业",
+    "beginner": "入门",
+    "free": "免费"
+  },
+  "gettingStarted": {
+    "title": "入门指南",
+    "step1": "从知名交易所开始",
+    "step2": "在教育平台上学习基础知识",
+    "step3": "在使用真实资金前先用模拟交易练习",
+    "step4": "使用分析工具辅助你的决策",
+    "step5": "投资金额不要超过你能承受的损失"
+  },
+  "visitSite": "访问网站"
+}

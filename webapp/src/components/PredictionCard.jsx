@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import { formatPricePrecise, formatTimeAgo } from '../utils/format.js'
 
 const POLL_INTERVAL = 30_000
 
 export default function PredictionCard() {
+  const { t } = useTranslation('dashboard')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -43,8 +45,8 @@ export default function PredictionCard() {
   if (error) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/20">
-        <p className="text-accent-red text-sm">Failed to load AI predictions</p>
-        <button onClick={fetchData} className="text-accent-blue text-xs mt-1 underline">Retry</button>
+        <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('prediction.aiTitle') })}</p>
+        <button onClick={fetchData} className="text-accent-blue text-xs mt-1 underline">{t('common:app.retry')}</button>
       </div>
     )
   }
@@ -113,7 +115,7 @@ export default function PredictionCard() {
                       <span className={`text-xs font-bold ${accent}`}>{formatPricePrecise(price)}</span>
                     ) : (
                       <span className={`text-xs font-semibold ${accent}`}>
-                        {isUp ? 'Up' : isDown ? 'Down' : 'Flat'}
+                        {isUp ? t('common:direction.bullish') : isDown ? t('common:direction.bearish') : t('common:direction.neutral')}
                       </span>
                     )}
                     <span className={`text-[10px] ${accent} opacity-70`}>

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatTimeAgo } from '../utils/format'
 
 export default function News() {
+  const { t } = useTranslation('market')
   const [news, setNews] = useState([])
   const [sentiment, setSentiment] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -19,7 +21,7 @@ export default function News() {
       setNews(newsData.news || [])
       setSentiment(sentData)
     } catch (err) {
-      setError(err.message || 'Failed to load news')
+      setError(err.message || t('news.noNews'))
       setNews([])
     }
     setLoading(false)
@@ -42,21 +44,21 @@ export default function News() {
         <svg className="w-5 h-5 text-text-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
         </svg>
-        News Feed
+        {t('news.title')}
       </h1>
 
       {sentiment && (
         <div className="bg-bg-card rounded-xl p-4 mb-4 border border-white/5">
-          <h3 className="text-sm font-medium text-text-secondary mb-2">24h Sentiment Overview</h3>
+          <h3 className="text-sm font-medium text-text-secondary mb-2">{t('news.sentimentOverview')}</h3>
           <div className="flex justify-between text-sm">
             <span className="text-accent-green">
-              Bullish: {sentiment.bullish_pct?.toFixed(0)}%
+              {t('news.bullish')}: {sentiment.bullish_pct?.toFixed(0)}%
             </span>
             <span className="text-accent-yellow">
-              Neutral: {(100 - (sentiment.bullish_pct || 0) - (sentiment.bearish_pct || 0)).toFixed(0)}%
+              {t('news.neutral')}: {(100 - (sentiment.bullish_pct || 0) - (sentiment.bearish_pct || 0)).toFixed(0)}%
             </span>
             <span className="text-accent-red">
-              Bearish: {sentiment.bearish_pct?.toFixed(0)}%
+              {t('news.bearish')}: {sentiment.bearish_pct?.toFixed(0)}%
             </span>
           </div>
           <div className="flex mt-2 rounded-full overflow-hidden h-2">
@@ -96,9 +98,9 @@ export default function News() {
         </div>
       ) : error ? (
         <div className="bg-bg-card rounded-2xl p-6 border border-accent-red/20 text-center">
-          <p className="text-accent-red text-sm mb-2">Failed to load news</p>
+          <p className="text-accent-red text-sm mb-2">{t('news.noNews')}</p>
           <p className="text-text-muted text-xs mb-3">{error}</p>
-          <button onClick={loadNews} className="text-accent-blue text-xs hover:underline">Retry</button>
+          <button onClick={loadNews} className="text-accent-blue text-xs hover:underline">{t('app.retry', { ns: 'common' })}</button>
         </div>
       ) : news.length === 0 ? (
         <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
@@ -107,9 +109,8 @@ export default function News() {
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
             </svg>
           </div>
-          <p className="text-text-secondary text-sm font-medium">No News Yet</p>
-          <p className="text-text-muted text-xs mt-1">News articles will appear here as they are collected and analyzed for sentiment.</p>
-          <button onClick={loadNews} className="text-accent-blue text-xs mt-3 hover:underline">Refresh</button>
+          <p className="text-text-secondary text-sm font-medium">{t('news.noNews')}</p>
+          <button onClick={loadNews} className="text-accent-blue text-xs mt-3 hover:underline">{t('app.retry', { ns: 'common' })}</button>
         </div>
       ) : (
         <div className="space-y-2">

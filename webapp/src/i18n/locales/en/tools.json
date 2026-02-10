@@ -1,0 +1,75 @@
+{
+  "title": "Trading Tools",
+  "positionSize": {
+    "title": "Position Size Calculator",
+    "accountBalance": "Account Balance ($)",
+    "riskPercent": "Risk per Trade (%)",
+    "entryPrice": "Entry Price ($)",
+    "stopLoss": "Stop Loss ($)",
+    "calculate": "Calculate",
+    "result": "Position Size",
+    "riskAmount": "Risk Amount"
+  },
+  "pnl": {
+    "title": "P&L Calculator",
+    "entryPrice": "Entry Price ($)",
+    "exitPrice": "Exit Price ($)",
+    "positionSize": "Position Size ($)",
+    "leverage": "Leverage",
+    "direction": "Direction",
+    "long": "Long",
+    "short": "Short",
+    "calculate": "Calculate",
+    "profit": "Profit",
+    "loss": "Loss",
+    "pnl": "P&L",
+    "roi": "ROI"
+  },
+  "riskReward": {
+    "title": "Risk/Reward Calculator",
+    "entryPrice": "Entry Price ($)",
+    "stopLoss": "Stop Loss ($)",
+    "takeProfit": "Take Profit ($)",
+    "calculate": "Calculate",
+    "ratio": "R:R Ratio",
+    "riskPercent": "Risk %",
+    "rewardPercent": "Reward %"
+  },
+  "dca": {
+    "title": "DCA Calculator",
+    "investmentAmount": "Investment per Period ($)",
+    "frequency": "Frequency",
+    "duration": "Duration (months)",
+    "startPrice": "Starting Price ($)",
+    "endPrice": "Ending Price ($)",
+    "calculate": "Calculate",
+    "totalInvested": "Total Invested",
+    "finalValue": "Final Value",
+    "avgPrice": "Average Price",
+    "totalBtc": "Total BTC",
+    "roi": "ROI",
+    "weekly": "Weekly",
+    "biweekly": "Biweekly",
+    "monthly": "Monthly"
+  },
+  "proRules": {
+    "title": "Pro Risk Management Rules",
+    "rules": {
+      "rule1": "Never risk more than 1-2% of your portfolio on a single trade",
+      "rule2": "Always use a stop loss — no exceptions",
+      "rule3": "Target a minimum 2:1 reward-to-risk ratio",
+      "rule4": "Size positions based on stop loss distance, not conviction",
+      "rule5": "Reduce position size in high volatility environments"
+    }
+  },
+  "mistakes": {
+    "title": "Common Mistakes to Avoid",
+    "items": {
+      "item1": "Over-leveraging — the #1 account killer",
+      "item2": "Moving your stop loss to avoid a loss",
+      "item3": "Averaging down on a losing trade",
+      "item4": "Trading without a plan or strategy",
+      "item5": "Revenge trading after a loss"
+    }
+  }
+}

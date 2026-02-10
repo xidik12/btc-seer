@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import { formatTimeAgo } from '../utils/format.js'
 
@@ -109,6 +110,7 @@ function TweetItem({ tweet, isLast }) {
 }
 
 export default function InfluencerFeed() {
+  const { t } = useTranslation('dashboard')
   const [tweets, setTweets] = useState([])
   const [sentiment, setSentiment] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -137,12 +139,12 @@ export default function InfluencerFeed() {
   }, [fetchData])
 
   const sentimentLabel = sentiment?.weighted_sentiment != null
-    ? sentiment.weighted_sentiment > 0.1 ? 'Bullish' : sentiment.weighted_sentiment < -0.1 ? 'Bearish' : 'Neutral'
+    ? sentiment.weighted_sentiment > 0.1 ? t('common:direction.bullish') : sentiment.weighted_sentiment < -0.1 ? t('common:direction.bearish') : t('common:direction.neutral')
     : null
 
-  const sentLabelColor = sentimentLabel === 'Bullish'
+  const sentLabelColor = sentimentLabel === t('common:direction.bullish')
     ? 'text-accent-green'
-    : sentimentLabel === 'Bearish'
+    : sentimentLabel === t('common:direction.bearish')
     ? 'text-accent-red'
     : 'text-accent-yellow'
 
@@ -152,7 +154,7 @@ export default function InfluencerFeed() {
       <div className="px-4 pt-3 pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-text-primary font-semibold text-sm">Social Signals</h3>
+            <h3 className="text-text-primary font-semibold text-sm">{t('influencer.title')}</h3>
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-400" />
@@ -187,13 +189,13 @@ export default function InfluencerFeed() {
         </div>
       ) : error ? (
         <div className="px-4 pb-4 flex flex-col items-center justify-center py-6 gap-2">
-          <p className="text-accent-red text-sm">Failed to load social data</p>
-          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">Retry</button>
+          <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('influencer.title') })}</p>
+          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">{t('common:app.retry')}</button>
         </div>
       ) : tweets.length === 0 ? (
         <div className="px-4 pb-4 py-6 text-center">
-          <p className="text-text-secondary text-sm">No influencer data yet</p>
-          <p className="text-text-muted text-xs mt-1">Monitoring 25+ key crypto figures</p>
+          <p className="text-text-secondary text-sm">{t('influencer.noData')}</p>
+          <p className="text-text-muted text-xs mt-1">{t('influencer.monitoring', { count: '25+' })}</p>
         </div>
       ) : (
         <div className="max-h-[350px] overflow-y-auto scrollbar-thin">

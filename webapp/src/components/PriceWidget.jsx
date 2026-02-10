@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip } from 'recharts'
 import { api } from '../utils/api.js'
 import {
@@ -23,6 +24,7 @@ const TIMEFRAMES = [
 ]
 
 export default function PriceWidget() {
+  const { t } = useTranslation('dashboard')
   const [selectedTimeframe, setSelectedTimeframe] = useState('1d')
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -60,12 +62,12 @@ export default function PriceWidget() {
   if (error) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/20">
-        <p className="text-accent-red text-sm">Failed to load price data</p>
+        <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('priceWidget.title') })}</p>
         <button
           onClick={fetchData}
           className="text-accent-blue text-xs mt-1 underline"
         >
-          Retry
+          {t('common:app.retry')}
         </button>
       </div>
     )
@@ -94,7 +96,7 @@ export default function PriceWidget() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-text-secondary text-xs font-medium uppercase tracking-wide">
-            BTC / USD
+            {t('priceWidget.title')}
           </span>
           <div className="flex items-center gap-1">
             <span
@@ -102,7 +104,7 @@ export default function PriceWidget() {
                 isPositive ? 'bg-accent-green' : 'bg-accent-red'
               } pulse-glow`}
             />
-            <span className="text-text-muted text-[10px]">LIVE</span>
+            <span className="text-text-muted text-[10px]">{t('common:app.live')}</span>
           </div>
         </div>
         {updatedAt && (
@@ -134,11 +136,11 @@ export default function PriceWidget() {
       {/* High / Low */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-bg-hover/50 rounded-lg px-3 py-2">
-          <div className="text-text-muted text-[10px] uppercase tracking-wide mb-1">High</div>
+          <div className="text-text-muted text-[10px] uppercase tracking-wide mb-1">{t('common:price.high')}</div>
           <div className="text-text-primary text-sm font-semibold">{formatPrice(high)}</div>
         </div>
         <div className="bg-bg-hover/50 rounded-lg px-3 py-2">
-          <div className="text-text-muted text-[10px] uppercase tracking-wide mb-1">Low</div>
+          <div className="text-text-muted text-[10px] uppercase tracking-wide mb-1">{t('common:price.low')}</div>
           <div className="text-text-primary text-sm font-semibold">{formatPrice(low)}</div>
         </div>
       </div>
@@ -196,7 +198,7 @@ export default function PriceWidget() {
       {/* Volume */}
       <div className="mt-3 pt-3 border-t border-bg-hover">
         <div className="flex items-center justify-between">
-          <span className="text-text-muted text-xs">Volume</span>
+          <span className="text-text-muted text-xs">{t('common:price.volume')}</span>
           <span className="text-text-primary text-xs font-semibold">
             {formatNumber(volume)} BTC
           </span>

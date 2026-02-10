@@ -1,10 +1,12 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useTelegram } from '../hooks/useTelegram'
 
 export default function NavBar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { hapticFeedback } = useTelegram()
+  const { t } = useTranslation()
 
   const isHome = location.pathname === '/'
 
@@ -21,7 +23,7 @@ export default function NavBar() {
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M15 18l-6-6 6-6" />
         </svg>
-        <span className="text-[9px] font-medium">Back</span>
+        <span className="text-[9px] font-medium">{t('nav.back')}</span>
       </button>
 
       {/* Home */}
@@ -35,7 +37,7 @@ export default function NavBar() {
           <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
           <path d="M9 21V12h6v9" />
         </svg>
-        <span className="text-[9px] font-medium">Home</span>
+        <span className="text-[9px] font-medium">{t('nav.home')}</span>
       </button>
 
       {/* Forward */}
@@ -46,7 +48,7 @@ export default function NavBar() {
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M9 18l6-6-6-6" />
         </svg>
-        <span className="text-[9px] font-medium">Forward</span>
+        <span className="text-[9px] font-medium">{t('nav.forward')}</span>
       </button>
     </nav>
   )

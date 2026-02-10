@@ -1,15 +1,16 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatTimeAgo, formatPercent } from '../utils/format'
 import SubTabBar from '../components/SubTabBar'
 
 const MARKET_TABS = [
-  { path: '/liquidations', label: 'Liquidations' },
-  { path: '/powerlaw', label: 'Power Law' },
-  { path: '/elliott-wave', label: 'Elliott Wave' },
-  { path: '/events', label: 'Events' },
-  { path: '/tools', label: 'Tools' },
-  { path: '/learn', label: 'Learn' },
+  { path: '/liquidations', labelKey: 'common:link.liquidations' },
+  { path: '/powerlaw', labelKey: 'common:link.powerLaw' },
+  { path: '/elliott-wave', labelKey: 'common:link.elliottWave' },
+  { path: '/events', labelKey: 'common:link.events' },
+  { path: '/tools', labelKey: 'common:link.tools' },
+  { path: '/learn', labelKey: 'common:link.learn' },
 ]
 
 const TIMEFRAMES = ['1h', '4h', '24h', '7d']
@@ -28,13 +29,13 @@ function getImpactText(impact) {
   return `${impact > 0 ? '+' : ''}${impact.toFixed(2)}%`
 }
 
-function CategoryHeatmap({ stats }) {
+function CategoryHeatmap({ stats, t }) {
   if (!stats?.length) return null
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-1">CATEGORY IMPACT HEATMAP</h3>
-      <p className="text-text-muted text-[9px] mb-3">Average BTC price change after events by category and timeframe</p>
+      <h3 className="text-text-secondary text-xs font-semibold mb-1">{t('market:events.categoryHeatmap').toUpperCase()}</h3>
+      <p className="text-text-muted text-[9px] mb-3">{t('market:events.heatmapDesc')}</p>
 
       <div className="overflow-x-auto">
         <table className="w-full text-[10px]">
@@ -124,14 +125,14 @@ function EventCard({ event }) {
   )
 }
 
-function MemoryStats({ memory }) {
+function MemoryStats({ memory, t }) {
   if (!memory) return null
 
   const stats = [
-    { label: 'Events Tracked', value: memory.total_events || '--' },
-    { label: 'Categories', value: memory.categories || '--' },
-    { label: 'Avg Events/Day', value: memory.avg_per_day?.toFixed(1) || '--' },
-    { label: 'Most Impactful', value: memory.most_impactful_category?.replace(/_/g, ' ') || '--' },
+    { label: t('market:events.eventsTracked'), value: memory.total_events || '--' },
+    { label: t('market:events.categoriesCount'), value: memory.categories || '--' },
+    { label: t('market:events.avgPerDay'), value: memory.avg_per_day?.toFixed(1) || '--' },
+    { label: t('market:events.mostImpactful'), value: memory.most_impactful_category?.replace(/_/g, ' ') || '--' },
   ]
 
   return (
@@ -147,6 +148,8 @@ function MemoryStats({ memory }) {
 }
 
 export default function EventMemory() {
+  const { t } = useTranslation(['market', 'common'])
+  const tabs = useMemo(() => MARKET_TABS.map(tab => ({ ...tab, label: t(tab.labelKey) })), [t])
   const [events, setEvents] = useState([])
   const [categoryStats, setCategoryStats] = useState([])
   const [memory, setMemory] = useState(null)
@@ -176,7 +179,7 @@ export default function EventMemory() {
   if (loading) {
     return (
       <div className="px-4 pt-4 space-y-4">
-        <h1 className="text-lg font-bold">Event Memory</h1>
+        <h1 className="text-lg font-bold">{t('market:events.title')}</h1>
         <div className="animate-pulse space-y-3">
           <div className="h-20 bg-bg-card rounded-2xl" />
           <div className="h-48 bg-bg-card rounded-2xl" />
@@ -189,11 +192,11 @@ export default function EventMemory() {
   if (error) {
     return (
       <div className="px-4 pt-4 space-y-4">
-        <h1 className="text-lg font-bold">Event Memory</h1>
+        <h1 className="text-lg font-bold">{t('market:events.title')}</h1>
         <div className="bg-bg-card rounded-2xl p-6 border border-accent-red/20 text-center">
-          <p className="text-accent-red text-sm mb-2">Failed to load events</p>
+          <p className="text-accent-red text-sm mb-2">{t('common:widget.failedToLoad', { name: t('market:events.title') })}</p>
           <p className="text-text-muted text-xs mb-3">{error}</p>
-          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">Retry</button>
+          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">{t('common:app.retry')}</button>
         </div>
       </div>
     )
@@ -201,10 +204,10 @@ export default function EventMemory() {
 
   return (
     <div className="px-4 pt-4 space-y-3 pb-20">
-      <SubTabBar tabs={MARKET_TABS} />
+      <SubTabBar tabs={tabs} />
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">Event Memory</h1>
-        <span className="text-text-muted text-[10px]">Historical pattern analysis</span>
+        <h1 className="text-lg font-bold">{t('market:events.title')}</h1>
+        <span className="text-text-muted text-[10px]">{t('market:events.subtitle')}</span>
       </div>
 
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
@@ -214,12 +217,12 @@ export default function EventMemory() {
         </p>
       </div>
 
-      <MemoryStats memory={memory} />
-      <CategoryHeatmap stats={categoryStats} />
+      <MemoryStats memory={memory} t={t} />
+      <CategoryHeatmap stats={categoryStats} t={t} />
 
       <div>
         <h3 className="text-text-secondary text-xs font-semibold mb-2">
-          RECENT EVENTS ({Array.isArray(events) ? events.length : 0})
+          {t('market:events.recentEvents')} ({Array.isArray(events) ? events.length : 0})
         </h3>
         {Array.isArray(events) && events.length > 0 ? (
           <div className="space-y-2">

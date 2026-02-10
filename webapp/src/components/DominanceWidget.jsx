@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import { formatPercent } from '../utils/format.js'
 import { useChartZoom } from '../hooks/useChartZoom'
@@ -12,6 +13,7 @@ import {
 } from 'recharts'
 
 export default function DominanceWidget() {
+  const { t } = useTranslation('dashboard')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -61,7 +63,7 @@ export default function DominanceWidget() {
   if (loading) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 slide-up">
-        <h3 className="text-text-primary font-semibold text-sm mb-3">BTC Dominance</h3>
+        <h3 className="text-text-primary font-semibold text-sm mb-3">{t('dominance.title')}</h3>
         <div className="animate-pulse">
           <div className="h-24 bg-bg-secondary rounded-xl" />
         </div>
@@ -72,10 +74,10 @@ export default function DominanceWidget() {
   if (error) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 slide-up">
-        <h3 className="text-text-primary font-semibold text-sm mb-2">BTC Dominance</h3>
+        <h3 className="text-text-primary font-semibold text-sm mb-2">{t('dominance.title')}</h3>
         <div className="flex flex-col items-center py-4 gap-2">
-          <p className="text-accent-red text-sm">Failed to load</p>
-          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">Retry</button>
+          <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('dominance.title') })}</p>
+          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">{t('common:app.retry')}</button>
         </div>
       </div>
     )
@@ -85,10 +87,10 @@ export default function DominanceWidget() {
   if (current == null) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 slide-up">
-        <h3 className="text-text-primary font-semibold text-sm mb-2">BTC Dominance</h3>
+        <h3 className="text-text-primary font-semibold text-sm mb-2">{t('dominance.title')}</h3>
         <div className="flex flex-col items-center py-6 gap-2">
-          <p className="text-text-muted text-sm">Collecting data...</p>
-          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">Refresh</button>
+          <p className="text-text-muted text-sm">{t('common:app.loading')}</p>
+          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">{t('dominance.refresh', 'Refresh')}</button>
         </div>
       </div>
     )
@@ -97,13 +99,13 @@ export default function DominanceWidget() {
   return (
     <div className="bg-bg-card rounded-2xl p-4 slide-up">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-text-primary font-semibold text-sm">BTC Dominance</h3>
+        <h3 className="text-text-primary font-semibold text-sm">{t('dominance.title')}</h3>
         <div className="flex items-center gap-2">
           {isZoomed && (
-            <button onClick={resetZoom} className="text-[10px] text-accent-blue">Reset</button>
+            <button onClick={resetZoom} className="text-[10px] text-accent-blue">{t('common:btn.resetZoom')}</button>
           )}
           <span className="text-text-muted text-[10px]">
-            {isUp ? 'Risk-off (money to BTC)' : 'Risk-on (money to alts)'}
+            {isUp ? t('dominance.riskOff') : t('dominance.riskOn')}
           </span>
         </div>
       </div>
@@ -114,7 +116,7 @@ export default function DominanceWidget() {
         </span>
         {change24h != null && (
           <span className={`text-sm font-medium ${isUp ? 'text-accent-green' : 'text-accent-red'}`}>
-            {formatPercent(change24h)} 24h
+            {formatPercent(change24h)} {t('dominance.change24h')}
           </span>
         )}
       </div>
@@ -133,7 +135,7 @@ export default function DominanceWidget() {
               <YAxis domain={['dataMin - 0.5', 'dataMax + 0.5']} hide />
               <Tooltip
                 contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
-                formatter={(v) => [typeof v === 'number' ? `${v.toFixed(2)}%` : '--', 'Dominance']}
+                formatter={(v) => [typeof v === 'number' ? `${v.toFixed(2)}%` : '--', t('dominance.title')]}
                 labelFormatter={(d) => d || ''}
               />
               <Area
@@ -149,15 +151,15 @@ export default function DominanceWidget() {
         </div>
       )}
       {history.length > 2 && (
-        <p className="text-text-muted text-[9px] text-center mt-1.5">Pinch to zoom &middot; Drag to pan</p>
+        <p className="text-text-muted text-[9px] text-center mt-1.5">{t('common:chart.pinchToZoom')}</p>
       )}
 
       <p className="text-text-muted text-[10px] mt-2">
         {current > 55
-          ? 'High dominance signals capital flowing into BTC as a safe haven. Altcoins may underperform.'
+          ? t('dominance.highDesc', 'High dominance signals capital flowing into BTC as a safe haven. Altcoins may underperform.')
           : current < 45
-          ? 'Low dominance signals alt season. Capital is flowing into riskier assets.'
-          : 'Moderate dominance. Market is balanced between BTC and altcoins.'}
+          ? t('dominance.lowDesc', 'Low dominance signals alt season. Capital is flowing into riskier assets.')
+          : t('dominance.moderateDesc', 'Moderate dominance. Market is balanced between BTC and altcoins.')}
       </p>
     </div>
   )

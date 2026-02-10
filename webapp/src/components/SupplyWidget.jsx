@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 
 // Halving countdown (reused from HalvingWidget logic)
@@ -24,11 +25,11 @@ function getTimeLeft() {
 }
 
 function formatBtc(n) {
-  if (n == null) return '—'
+  if (n == null) return '\u2014'
   return n.toLocaleString(undefined, { maximumFractionDigits: 0 })
 }
 
-function DonutRing({ percent }) {
+function DonutRing({ percent, t }) {
   const r = 36
   const stroke = 6
   const circumference = 2 * Math.PI * r
@@ -54,13 +55,14 @@ function DonutRing({ percent }) {
         {percent?.toFixed(1)}%
       </text>
       <text x="44" y="53" textAnchor="middle" className="fill-text-muted text-[8px]">
-        mined
+        {t('supply.mined').toLowerCase()}
       </text>
     </svg>
   )
 }
 
 export default function SupplyWidget() {
+  const { t } = useTranslation('dashboard')
   const [supply, setSupply] = useState(null)
   const [time, setTime] = useState(getTimeLeft)
   const [error, setError] = useState(false)
@@ -88,8 +90,8 @@ export default function SupplyWidget() {
   if (error && !supply) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 slide-up">
-        <h3 className="text-text-primary font-semibold text-sm">Bitcoin Supply</h3>
-        <p className="text-text-muted text-xs mt-2">Failed to load supply data</p>
+        <h3 className="text-text-primary font-semibold text-sm">{t('supply.title')}</h3>
+        <p className="text-text-muted text-xs mt-2">{t('common:widget.failedToLoad', { name: t('supply.title') })}</p>
       </div>
     )
   }
@@ -105,25 +107,25 @@ export default function SupplyWidget() {
     <div className="bg-bg-card rounded-2xl p-4 slide-up space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-text-primary font-semibold text-sm">Bitcoin Supply</h3>
+        <h3 className="text-text-primary font-semibold text-sm">{t('supply.title')}</h3>
         <span className="text-text-muted text-[10px]">21M cap</span>
       </div>
 
       {/* Donut + Stats */}
       <div className="flex items-center gap-4">
-        <DonutRing percent={percentMined} />
+        <DonutRing percent={percentMined} t={t} />
         <div className="flex-1 space-y-1.5">
           <div>
-            <div className="text-[9px] text-text-muted uppercase tracking-wider">Mined</div>
+            <div className="text-[9px] text-text-muted uppercase tracking-wider">{t('supply.mined')}</div>
             <div className="text-text-primary text-sm font-bold">{formatBtc(totalMined)} BTC</div>
           </div>
           <div>
-            <div className="text-[9px] text-text-muted uppercase tracking-wider">Remaining</div>
+            <div className="text-[9px] text-text-muted uppercase tracking-wider">{t('supply.remaining')}</div>
             <div className="text-accent-orange text-sm font-bold">{formatBtc(remaining)} BTC</div>
           </div>
           <div>
-            <div className="text-[9px] text-text-muted uppercase tracking-wider">Daily Mining</div>
-            <div className="text-text-secondary text-xs">~{btcPerDay} BTC/day ({blockReward} per block)</div>
+            <div className="text-[9px] text-text-muted uppercase tracking-wider">{t('supply.dailyMining')}</div>
+            <div className="text-text-secondary text-xs">~{btcPerDay} BTC/day ({blockReward} {t('supply.perBlock', 'per block')})</div>
           </div>
         </div>
       </div>
@@ -131,25 +133,25 @@ export default function SupplyWidget() {
       {/* Halving Countdown */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">Next Halving</span>
-          <span className="text-text-muted text-[10px]">Block {(supply?.next_halving_block ?? 1_050_000).toLocaleString()}</span>
+          <span className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">{t('supply.nextHalving')}</span>
+          <span className="text-text-muted text-[10px]">{t('halving.block', { number: (supply?.next_halving_block ?? 1_050_000).toLocaleString() })}</span>
         </div>
         <div className="flex gap-2 mb-2">
           {[
-            { value: time.days, label: 'DAYS' },
-            { value: time.hours, label: 'HRS' },
-            { value: time.minutes, label: 'MIN' },
-            { value: time.seconds, label: 'SEC' },
-          ].map((t) => (
-            <div key={t.label} className="flex-1 bg-bg-hover rounded-lg py-1.5 text-center">
-              <div className="text-text-primary text-base font-bold tabular-nums">{String(t.value).padStart(2, '0')}</div>
-              <div className="text-text-muted text-[7px] font-semibold">{t.label}</div>
+            { value: time.days, label: t('halving.days').toUpperCase().slice(0, 4) },
+            { value: time.hours, label: t('halving.hours').toUpperCase().slice(0, 3) },
+            { value: time.minutes, label: t('halving.minutes').toUpperCase().slice(0, 3) },
+            { value: time.seconds, label: t('halving.seconds').toUpperCase().slice(0, 3) },
+          ].map((item) => (
+            <div key={item.label} className="flex-1 bg-bg-hover rounded-lg py-1.5 text-center">
+              <div className="text-text-primary text-base font-bold tabular-nums">{String(item.value).padStart(2, '0')}</div>
+              <div className="text-text-muted text-[7px] font-semibold">{item.label}</div>
             </div>
           ))}
         </div>
         <div className="flex items-center justify-between text-[9px] text-text-muted mb-1">
           <span>Apr 2024</span>
-          <span>{time.pct}% through cycle</span>
+          <span>{time.pct}% {t('halving.cycleProgress').toLowerCase()}</span>
           <span>Apr 2028</span>
         </div>
         <div className="h-1.5 bg-bg-hover rounded-full overflow-hidden">
@@ -163,12 +165,12 @@ export default function SupplyWidget() {
       {/* Supply Milestones */}
       {schedule.length > 0 && (
         <div>
-          <div className="text-[10px] text-text-muted font-semibold uppercase tracking-wider mb-1.5">Supply Milestones</div>
+          <div className="text-[10px] text-text-muted font-semibold uppercase tracking-wider mb-1.5">{t('supply.milestones')}</div>
           <div className="space-y-1">
             {schedule.map((s) => (
               <div key={s.year} className="flex items-center justify-between text-[10px]">
                 <span className="text-text-secondary">{s.year}</span>
-                <span className="text-text-muted">{s.reward} BTC/block</span>
+                <span className="text-text-muted">{s.reward} BTC/{t('supply.block', 'block')}</span>
                 <span className="text-text-primary font-medium">{formatBtc(s.total_mined_approx)}</span>
               </div>
             ))}
@@ -177,7 +179,7 @@ export default function SupplyWidget() {
       )}
 
       <p className="text-text-muted text-[10px]">
-        Reward drops from {blockReward} to {blockReward / 2} BTC. Halvings historically precede bull runs within 12-18 months.
+        {t('halving.rewardDrop', { from: String(blockReward), to: String(blockReward / 2) })}. {t('halving.historicalNote', 'Halvings historically precede bull runs within 12-18 months.')}
       </p>
     </div>
   )

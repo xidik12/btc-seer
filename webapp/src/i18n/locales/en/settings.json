@@ -1,0 +1,73 @@
+{
+  "title": "Settings",
+  "language": {
+    "title": "Language",
+    "en": "EN",
+    "ru": "RU",
+    "zh": "ZH"
+  },
+  "alerts": {
+    "title": "Price Alerts",
+    "enable": "Enable Notifications",
+    "interval": "Alert Interval",
+    "intervalOptions": {
+      "1h": "1h",
+      "4h": "4h",
+      "24h": "24h"
+    },
+    "save": "Save",
+    "saved": "Settings saved!",
+    "saveFailed": "Failed to save settings",
+    "loading": "Loading alert settings..."
+  },
+  "subscription": {
+    "title": "Premium Plans",
+    "manage": "Manage Subscription",
+    "manageDesc": "View status, expiry & payment history",
+    "tapToPlan": "Tap a plan to subscribe instantly via Telegram Stars.",
+    "subscribe": "Subscribe",
+    "subscribeTo": "Subscribe to Premium",
+    "processing": "Processing...",
+    "paymentSuccess": "Payment Successful!",
+    "premiumActive": "Your Premium access is now active.",
+    "paymentFailed": "Payment failed. Please try again.",
+    "couldNotStart": "Could not start payment. Please try again later.",
+    "paymentVia": "Payment via Telegram Stars. Secure & instant.",
+    "whatYouGet": "What you get",
+    "bestValue": "Best Value",
+    "monthly": "Monthly",
+    "quarterly": "3 Months",
+    "yearly": "Yearly",
+    "days30": "30 days",
+    "days90": "90 days",
+    "days365": "365 days",
+    "stars": "Stars",
+    "perMonth": "/mo",
+    "save17": "Save 17%",
+    "save25": "Save 25%",
+    "features": {
+      "predictions": "AI-powered price predictions (1h, 4h, 24h)",
+      "signals": "Full trading signals with entry/target/SL",
+      "advisor": "Trading Advisor with auto-sized plans",
+      "sentiment": "Real-time news sentiment analysis",
+      "alerts": "Custom price alerts",
+      "analytics": "On-chain & macro analytics",
+      "elliott": "Elliott Wave analysis",
+      "powerlaw": "Power Law deviation tracking"
+    }
+  },
+  "subscriptionPage": {
+    "title": "Subscription",
+    "tier": "Tier",
+    "status": "Status",
+    "daysRemaining": "Days Remaining",
+    "memberSince": "Member Since",
+    "paymentHistory": "Payment History",
+    "free": "Free",
+    "trial": "Trial",
+    "premium": "Premium",
+    "active": "Active",
+    "expired": "Expired",
+    "noPayments": "No payment history"
+  }
+}

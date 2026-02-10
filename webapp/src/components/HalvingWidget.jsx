@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // Next halving: block 1,050,000 — estimated April 23, 2028
 // Current avg block time: ~10 minutes
@@ -26,6 +27,7 @@ function getTimeLeft() {
 }
 
 export default function HalvingWidget() {
+  const { t } = useTranslation('dashboard')
   const [time, setTime] = useState(getTimeLeft)
 
   useEffect(() => {
@@ -36,21 +38,21 @@ export default function HalvingWidget() {
   return (
     <div className="bg-bg-card rounded-2xl p-4 slide-up">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-text-primary font-semibold text-sm">Bitcoin Halving</h3>
-        <span className="text-text-muted text-[10px]">Block {HALVING_BLOCK.toLocaleString()}</span>
+        <h3 className="text-text-primary font-semibold text-sm">{t('halving.title')}</h3>
+        <span className="text-text-muted text-[10px]">{t('halving.block', { number: HALVING_BLOCK.toLocaleString() })}</span>
       </div>
 
       {/* Countdown */}
       <div className="flex gap-2 mb-3">
         {[
-          { value: time.days, label: 'DAYS' },
-          { value: time.hours, label: 'HRS' },
-          { value: time.minutes, label: 'MIN' },
-          { value: time.seconds, label: 'SEC' },
-        ].map((t) => (
-          <div key={t.label} className="flex-1 bg-bg-hover rounded-lg py-2 text-center">
-            <div className="text-text-primary text-lg font-bold tabular-nums">{String(t.value).padStart(2, '0')}</div>
-            <div className="text-text-muted text-[8px] font-semibold">{t.label}</div>
+          { value: time.days, label: t('halving.days').toUpperCase().slice(0, 4) },
+          { value: time.hours, label: t('halving.hours').toUpperCase().slice(0, 3) },
+          { value: time.minutes, label: t('halving.minutes').toUpperCase().slice(0, 3) },
+          { value: time.seconds, label: t('halving.seconds').toUpperCase().slice(0, 3) },
+        ].map((item) => (
+          <div key={item.label} className="flex-1 bg-bg-hover rounded-lg py-2 text-center">
+            <div className="text-text-primary text-lg font-bold tabular-nums">{String(item.value).padStart(2, '0')}</div>
+            <div className="text-text-muted text-[8px] font-semibold">{item.label}</div>
           </div>
         ))}
       </div>
@@ -58,9 +60,9 @@ export default function HalvingWidget() {
       {/* Progress bar */}
       <div className="mb-2">
         <div className="flex items-center justify-between text-[9px] text-text-muted mb-1">
-          <span>Apr 2024 (last)</span>
-          <span>{time.pct}% through cycle</span>
-          <span>Apr 2028 (next)</span>
+          <span>Apr 2024 ({t('halving.last', 'last')})</span>
+          <span>{time.pct}% {t('halving.cycleProgress').toLowerCase()}</span>
+          <span>Apr 2028 ({t('halving.next', 'next')})</span>
         </div>
         <div className="h-2 bg-bg-hover rounded-full overflow-hidden">
           <div
@@ -71,7 +73,7 @@ export default function HalvingWidget() {
       </div>
 
       <p className="text-text-muted text-[10px]">
-        Block reward drops from 3.125 to 1.5625 BTC. Historically, halvings precede significant bull runs within 12-18 months.
+        {t('halving.rewardDrop', { from: '3.125', to: '1.5625' })}. {t('halving.historicalNote', 'Historically, halvings precede significant bull runs within 12-18 months.')}
       </p>
     </div>
   )

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatCoinPrice, formatPercent } from '../utils/format'
 import { useTelegram } from '../hooks/useTelegram'
@@ -13,6 +14,7 @@ function detectAddressChain(address) {
 export default function CoinSearch() {
   const navigate = useNavigate()
   const { hapticFeedback } = useTelegram()
+  const { t } = useTranslation('coins')
   const inputRef = useRef(null)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -68,7 +70,7 @@ export default function CoinSearch() {
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search coins or paste address..."
+            placeholder={t('searchPlaceholder')}
             className="w-full bg-bg-card rounded-xl px-4 py-3 pl-10 text-sm text-text-primary border border-white/5 focus:border-accent-blue/50 focus:outline-none placeholder:text-text-muted"
           />
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2">
@@ -82,14 +84,14 @@ export default function CoinSearch() {
       {detectedChain && (
         <div className="mb-3 px-3 py-2 bg-accent-blue/10 border border-accent-blue/20 rounded-lg">
           <p className="text-xs text-accent-blue">
-            {loading ? `Searching by address on ${detectedChain}...` : `Detected ${detectedChain} address`}
+            {loading ? t('searchingAddress', { chain: detectedChain }) : t('detectedAddress', { chain: detectedChain })}
           </p>
         </div>
       )}
 
       {/* Loading */}
       {loading && !detectedChain && (
-        <div className="text-center text-text-muted text-xs py-8">Searching...</div>
+        <div className="text-center text-text-muted text-xs py-8">{t('searching')}</div>
       )}
 
       {/* Address Result */}
@@ -152,7 +154,7 @@ export default function CoinSearch() {
 
       {/* Empty State */}
       {!loading && !detectedChain && query.trim() && results.length === 0 && !addressResult && (
-        <p className="text-text-muted text-xs text-center py-8">No coins found for "{query}"</p>
+        <p className="text-text-muted text-xs text-center py-8">{t('noCoinsFound', { query })}</p>
       )}
 
       {!query.trim() && (
@@ -161,7 +163,7 @@ export default function CoinSearch() {
             <circle cx="11" cy="11" r="7" />
             <path d="M21 21l-4.35-4.35" />
           </svg>
-          <p className="text-text-muted text-xs">Search by name, symbol, or contract address</p>
+          <p className="text-text-muted text-xs">{t('searchByNameOrAddress')}</p>
         </div>
       )}
     </div>

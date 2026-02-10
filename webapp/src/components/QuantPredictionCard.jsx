@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import {
   formatPricePrecise,
@@ -9,14 +10,16 @@ const POLL_INTERVAL = 30_000
 
 const TIMEFRAME_LABELS = { '1h': '1H', '4h': '4H', '24h': '24H', '1w': '1W', '1mo': '1MO' }
 
-const ACTION_STYLES = {
-  STRONG_BUY: { label: 'Strong Buy', color: 'text-accent-green', bg: 'bg-accent-green/15', border: 'border-accent-green/30' },
-  BUY: { label: 'Buy', color: 'text-accent-green', bg: 'bg-accent-green/10', border: 'border-accent-green/20' },
-  LEAN_BULLISH: { label: 'Lean Bullish', color: 'text-accent-green', bg: 'bg-accent-green/8', border: 'border-accent-green/15' },
-  NEUTRAL: { label: 'Neutral', color: 'text-accent-yellow', bg: 'bg-accent-yellow/8', border: 'border-accent-yellow/15' },
-  LEAN_BEARISH: { label: 'Lean Bearish', color: 'text-accent-red', bg: 'bg-accent-red/8', border: 'border-accent-red/15' },
-  SELL: { label: 'Sell', color: 'text-accent-red', bg: 'bg-accent-red/10', border: 'border-accent-red/20' },
-  STRONG_SELL: { label: 'Strong Sell', color: 'text-accent-red', bg: 'bg-accent-red/15', border: 'border-accent-red/30' },
+function getActionStyles(t) {
+  return {
+    STRONG_BUY: { label: t('common:signal.strongBuy'), color: 'text-accent-green', bg: 'bg-accent-green/15', border: 'border-accent-green/30' },
+    BUY: { label: t('common:signal.buy'), color: 'text-accent-green', bg: 'bg-accent-green/10', border: 'border-accent-green/20' },
+    LEAN_BULLISH: { label: t('common:direction.bullish'), color: 'text-accent-green', bg: 'bg-accent-green/8', border: 'border-accent-green/15' },
+    NEUTRAL: { label: t('common:direction.neutral'), color: 'text-accent-yellow', bg: 'bg-accent-yellow/8', border: 'border-accent-yellow/15' },
+    LEAN_BEARISH: { label: t('common:direction.bearish'), color: 'text-accent-red', bg: 'bg-accent-red/8', border: 'border-accent-red/15' },
+    SELL: { label: t('common:signal.sell'), color: 'text-accent-red', bg: 'bg-accent-red/10', border: 'border-accent-red/20' },
+    STRONG_SELL: { label: t('common:signal.strongSell'), color: 'text-accent-red', bg: 'bg-accent-red/15', border: 'border-accent-red/30' },
+  }
 }
 
 function ScoreBar({ score }) {
@@ -44,7 +47,7 @@ function ScoreBar({ score }) {
   )
 }
 
-function SignalBreakdown({ breakdown, expanded }) {
+function SignalBreakdown({ breakdown, expanded, t }) {
   if (!expanded || !breakdown) return null
 
   const signals = Object.entries(breakdown).sort((a, b) => {
@@ -55,7 +58,7 @@ function SignalBreakdown({ breakdown, expanded }) {
   return (
     <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
       <p className="text-text-muted text-[10px] font-semibold tracking-wider mb-2">
-        SIGNAL BREAKDOWN ({signals.length} active)
+        {t('prediction.signalBreakdown').toUpperCase()} ({signals.length} {t('prediction.activeSignals')})
       </p>
       {signals.map(([name, sig]) => {
         const dir = sig.direction || 0
@@ -85,10 +88,13 @@ function SignalBreakdown({ breakdown, expanded }) {
 }
 
 export default function QuantPredictionCard() {
+  const { t } = useTranslation('dashboard')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [expanded, setExpanded] = useState(false)
+
+  const ACTION_STYLES = getActionStyles(t)
 
   const fetchData = useCallback(async () => {
     try {
@@ -121,8 +127,8 @@ export default function QuantPredictionCard() {
   if (error) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/20">
-        <p className="text-accent-red text-sm">Failed to load quant prediction</p>
-        <button onClick={fetchData} className="text-accent-blue text-xs mt-1 underline">Retry</button>
+        <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('prediction.quantTitle') })}</p>
+        <button onClick={fetchData} className="text-accent-blue text-xs mt-1 underline">{t('common:app.retry')}</button>
       </div>
     )
   }
@@ -130,8 +136,8 @@ export default function QuantPredictionCard() {
   if (!data) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-primary text-sm font-semibold mb-2">Quant Theory Analysis</h3>
-        <p className="text-text-muted text-xs">Generating first quant prediction...</p>
+        <h3 className="text-text-primary text-sm font-semibold mb-2">{t('prediction.quantTitle')}</h3>
+        <p className="text-text-muted text-xs">{t('common:app.loading')}</p>
       </div>
     )
   }
@@ -146,7 +152,7 @@ export default function QuantPredictionCard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-text-primary text-sm font-semibold">Quant Theory</h3>
+          <h3 className="text-text-primary text-sm font-semibold">{t('prediction.quantTitle')}</h3>
           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${actionStyle.bg} ${actionStyle.border} ${actionStyle.color}`}>
             {actionStyle.label}
           </span>
@@ -161,20 +167,20 @@ export default function QuantPredictionCard() {
       {/* Composite Score Bar */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-text-muted text-[10px]">Bearish</span>
+          <span className="text-text-muted text-[10px]">{t('common:direction.bearish')}</span>
           <span className={`text-xs font-bold tabular-nums ${isUp ? 'text-accent-green' : 'text-accent-red'}`}>
             {score > 0 ? '+' : ''}{score.toFixed(0)}
           </span>
-          <span className="text-text-muted text-[10px]">Bullish</span>
+          <span className="text-text-muted text-[10px]">{t('common:direction.bullish')}</span>
         </div>
         <ScoreBar score={score} />
         <div className="flex items-center justify-between mt-1.5">
           <span className="text-text-muted text-[10px]">
             {data.bullish_signals || 0}B / {data.bearish_signals || 0}S
-            {data.agreement_ratio ? ` (${(data.agreement_ratio * 100).toFixed(0)}% agree)` : ''}
+            {data.agreement_ratio ? ` (${(data.agreement_ratio * 100).toFixed(0)}% ${t('prediction.agreement')})` : ''}
           </span>
           <span className="text-text-muted text-[10px] tabular-nums">
-            {data.active_signals || 0}/{Object.keys(data.signal_breakdown || {}).length} signals
+            {data.active_signals || 0}/{Object.keys(data.signal_breakdown || {}).length} {t('prediction.activeSignals')}
           </span>
         </div>
       </div>
@@ -236,10 +242,10 @@ export default function QuantPredictionCard() {
         onClick={() => setExpanded(!expanded)}
         className="w-full mt-2 text-center text-accent-blue text-[11px] hover:underline"
       >
-        {expanded ? 'Hide signal breakdown' : 'Show signal breakdown'}
+        {expanded ? t('prediction.hideBreakdown', 'Hide signal breakdown') : t('prediction.showBreakdown', 'Show signal breakdown')}
       </button>
 
-      <SignalBreakdown breakdown={data.signal_breakdown} expanded={expanded} />
+      <SignalBreakdown breakdown={data.signal_breakdown} expanded={expanded} t={t} />
     </div>
   )
 }

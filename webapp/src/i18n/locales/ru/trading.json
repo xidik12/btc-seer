@@ -1,0 +1,102 @@
+{
+  "paperTrading": {
+    "title": "Бумажная торговля",
+    "subtitle": "Практикуйтесь без риска",
+    "tutorial": "? Обучение",
+    "tabs": {
+      "newTrade": "Новая сделка",
+      "active": "Активные ({{count}})",
+      "history": "История ({{count}})"
+    },
+    "disclaimer": "Бумажная торговля использует виртуальные деньги. Реальные средства не подвергаются риску. Практикуйте свои стратегии без риска."
+  },
+  "orderForm": {
+    "positionMode": "Режим позиции",
+    "marginMode": "Режим маржи",
+    "oneWay": "Однонаправленный",
+    "hedge": "Хеджирование",
+    "cross": "Кросс",
+    "isolated": "Изолированная",
+    "market": "Рыночный",
+    "limit": "Лимитный",
+    "entryPrice": "Цена входа",
+    "entryMarket": "Цена входа (Рыночная)",
+    "entryLimit": "Цена входа (Лимитная)",
+    "leverage": "Кредитное плечо",
+    "sizeUsdt": "Размер (USDT)",
+    "notional": "Номинал: ${{amount}}",
+    "margin": "Маржа: ${{amount}}",
+    "stopLoss": "Стоп-лосс",
+    "risk": "Риск: ${{amount}}",
+    "tp1": "ТП1 — Закрыть 40%",
+    "tp2": "ТП2 — Закрыть 40%",
+    "tp3": "ТП3 — Закрыть 20%",
+    "rr": "Р/У {{ratio}}",
+    "orderPreview": "ПРЕДПРОСМОТР ОРДЕРА",
+    "openLong": "Открыть ЛОНГ",
+    "openShort": "Открыть ШОРТ",
+    "opening": "Открытие..."
+  },
+  "position": {
+    "noActive": "Нет активных позиций",
+    "startPractice": "Откройте сделку, чтобы начать практику.",
+    "noHistory": "Нет истории сделок",
+    "historyHint": "Завершённые сделки будут отображаться здесь.",
+    "closeConfirm": "Закрыть позицию по {{price}}?"
+  },
+  "portfolio": {
+    "balance": "БАЛАНС",
+    "totalPnl": "ОБЩИЙ П/У",
+    "winRate": "Процент побед",
+    "totalTrades": "Всего сделок",
+    "active": "Активные",
+    "goal": "Цель — $10 000",
+    "start": "$10"
+  },
+  "advisor": {
+    "title": "ИИ-советник по торговле",
+    "tabs": {
+      "advisor": "ИИ-советник",
+      "paperTrading": "Бумажная торговля",
+      "history": "История"
+    },
+    "portfolio": "Портфель",
+    "setUpPortfolio": "Настроить портфель",
+    "balance": "Баланс",
+    "riskLevel": "Уровень риска",
+    "getSuggestion": "Получить рекомендацию",
+    "activeTrades": "Активные сделки",
+    "closedTrades": "Закрытые сделки",
+    "noActiveTrades": "Нет активных сделок",
+    "noClosedTrades": "Пока нет закрытых сделок",
+    "confidence": "Уверенность",
+    "reasoning": "Обоснование",
+    "executeTrade": "Исполнить сделку",
+    "conservative": "Консервативный",
+    "moderate": "Умеренный",
+    "aggressive": "Агрессивный"
+  },
+  "signals": {
+    "title": "Торговые сигналы",
+    "tabs": {
+      "technical": "Технический",
+      "signals": "Сигналы"
+    },
+    "liveSignal": "Текущий сигнал",
+    "signalHistory": "История сигналов",
+    "noSignals": "Нет доступных сигналов",
+    "entry": "Вход",
+    "target": "Цель",
+    "stopLoss": "Стоп-лосс",
+    "action": "Действие",
+    "confidence": "Уверенность",
+    "risk": "Риск",
+    "timeframe": "Таймфрейм",
+    "result": "Результат",
+    "win": "Прибыль",
+    "loss": "Убыток",
+    "pending": "Ожидание"
+  },
+  "loginRequired": "Войдите через Telegram, чтобы сохранить бумажные сделки",
+  "createFailed": "Не удалось создать сделку: {{error}}"
+}

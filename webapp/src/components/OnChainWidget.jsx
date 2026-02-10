@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import { formatNumber } from '../utils/format.js'
 
 export default function OnChainWidget() {
+  const { t } = useTranslation('dashboard')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -28,7 +30,7 @@ export default function OnChainWidget() {
   if (loading) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 slide-up">
-        <h3 className="text-text-primary font-semibold text-sm mb-3">On-Chain Metrics</h3>
+        <h3 className="text-text-primary font-semibold text-sm mb-3">{t('onChain.title')}</h3>
         <div className="grid grid-cols-2 gap-2">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="bg-bg-secondary rounded-xl p-3 animate-pulse min-h-[70px]">
@@ -44,10 +46,10 @@ export default function OnChainWidget() {
   if (error) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 slide-up">
-        <h3 className="text-text-primary font-semibold text-sm mb-2">On-Chain Metrics</h3>
+        <h3 className="text-text-primary font-semibold text-sm mb-2">{t('onChain.title')}</h3>
         <div className="flex flex-col items-center py-4 gap-2">
-          <p className="text-accent-red text-sm">Failed to load on-chain data</p>
-          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">Retry</button>
+          <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('onChain.title') })}</p>
+          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">{t('common:app.retry')}</button>
         </div>
       </div>
     )
@@ -55,33 +57,33 @@ export default function OnChainWidget() {
 
   const metrics = [
     {
-      label: 'Exchange Reserves',
+      label: t('onChain.exchangeReserves'),
       value: data?.exchange_reserve != null ? `${formatNumber(data.exchange_reserve)} BTC` : '--',
       change: data?.reserve_change_24h,
-      desc: data?.reserve_change_24h < 0 ? 'Outflow (bullish)' : 'Inflow (bearish)',
+      desc: data?.reserve_change_24h < 0 ? t('onChain.outflows') + ' (' + t('common:direction.bullish').toLowerCase() + ')' : t('onChain.inflows') + ' (' + t('common:direction.bearish').toLowerCase() + ')',
     },
     {
-      label: 'Large Transactions',
+      label: t('onChain.largeTransactions'),
       value: data?.large_tx_count != null ? formatNumber(data.large_tx_count) : '--',
-      desc: 'Txns > $100K (24h)',
+      desc: t('onChain.largeTxDesc', 'Txns > $100K (24h)'),
     },
     {
-      label: 'Active Addresses',
+      label: t('onChain.activeAddresses'),
       value: data?.active_addresses != null ? formatNumber(data.active_addresses) : '--',
-      desc: 'Unique senders (24h)',
+      desc: t('onChain.24hUnique'),
     },
     {
-      label: 'Hash Rate',
+      label: t('onChain.hashRate'),
       value: data?.hash_rate != null ? `${formatNumber(data.hash_rate)} EH/s` : '--',
-      desc: 'Network security',
+      desc: t('onChain.networkSecurity'),
     },
   ]
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 slide-up">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-text-primary font-semibold text-sm">On-Chain Metrics</h3>
-        <span className="text-text-muted text-[10px]">Whale watching</span>
+        <h3 className="text-text-primary font-semibold text-sm">{t('onChain.title')}</h3>
+        <span className="text-text-muted text-[10px]">{t('onChain.whaleWatching', 'Whale watching')}</span>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {metrics.map((m) => (

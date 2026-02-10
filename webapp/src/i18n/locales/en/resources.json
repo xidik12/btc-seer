@@ -1,0 +1,29 @@
+{
+  "title": "Resources",
+  "subtitle": "Expert-curated tools and platforms",
+  "categories": {
+    "exchanges": "Exchanges",
+    "analysis": "Analysis Tools",
+    "onChain": "On-Chain Data",
+    "portfolio": "Portfolio Trackers",
+    "bots": "Trading Bots",
+    "learning": "Learning Platforms",
+    "learn": "Learn"
+  },
+  "tierGuide": "Tier Guide",
+  "tiers": {
+    "essential": "Essential",
+    "pro": "Pro",
+    "beginner": "Beginner",
+    "free": "Free"
+  },
+  "gettingStarted": {
+    "title": "Getting Started",
+    "step1": "Start with a reputable exchange",
+    "step2": "Learn the basics on educational platforms",
+    "step3": "Practice with paper trading before using real money",
+    "step4": "Use analysis tools to inform your decisions",
+    "step5": "Never invest more than you can afford to lose"
+  },
+  "visitSite": "Visit Site"
+}

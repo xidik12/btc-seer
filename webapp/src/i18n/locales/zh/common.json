@@ -1,0 +1,111 @@
+{
+  "nav": {
+    "back": "返回",
+    "home": "首页",
+    "forward": "前进"
+  },
+  "app": {
+    "title": "BTC Seer",
+    "live": "实时",
+    "reload": "重新加载",
+    "error": "出了点问题",
+    "retry": "重试",
+    "loading": "加载中...",
+    "noData": "暂无数据",
+    "disclaimer": "本内容不构成投资建议。预测由机器学习生成，可能存在偏差。请务必自行研究。过去的准确率不保证未来的结果。",
+    "paper": "模拟"
+  },
+  "time": {
+    "justNow": "刚刚",
+    "mAgo": "{{count}}分钟前",
+    "hAgo": "{{count}}小时前",
+    "dAgo": "{{count}}天前"
+  },
+  "direction": {
+    "bullish": "看涨",
+    "bearish": "看跌",
+    "neutral": "中性",
+    "long": "做多",
+    "short": "做空"
+  },
+  "signal": {
+    "buy": "买入",
+    "sell": "卖出",
+    "hold": "持有",
+    "strongBuy": "强烈买入",
+    "strongSell": "强烈卖出",
+    "overallSignal": "综合信号"
+  },
+  "trade": {
+    "entry": "入场价",
+    "target": "目标价",
+    "stopLoss": "止损",
+    "takeProfit": "止盈",
+    "leverage": "杠杆",
+    "margin": "保证金",
+    "notional": "名义价值",
+    "pnl": "盈亏",
+    "current": "当前",
+    "liqPrice": "强平价",
+    "direction": "方向",
+    "maxLoss": "最大亏损",
+    "maxGain": "最大盈利",
+    "rrRatio": "风险回报比",
+    "closePosition": "平仓",
+    "openPosition": "开{{direction}}仓",
+    "opening": "开仓中...",
+    "btcUsdt": "BTC/USDT"
+  },
+  "category": {
+    "trading": "交易",
+    "analysis": "分析",
+    "market": "市场",
+    "more": "更多"
+  },
+  "link": {
+    "signals": "信号",
+    "advisor": "顾问",
+    "paperTrade": "模拟交易",
+    "technical": "技术分析",
+    "powerLaw": "幂律模型",
+    "elliottWave": "艾略特波浪",
+    "liquidations": "爆仓地图",
+    "coins": "币种",
+    "news": "新闻",
+    "events": "事件",
+    "history": "历史",
+    "learn": "学习",
+    "resources": "资源",
+    "tools": "工具",
+    "premium": "高级版",
+    "settings": "设置",
+    "about": "关于",
+    "admin": "管理"
+  },
+  "btn": {
+    "cancel": "取消",
+    "confirm": "确认",
+    "save": "保存",
+    "close": "关闭",
+    "submit": "提交",
+    "resetZoom": "重置缩放"
+  },
+  "price": {
+    "btcPrice": "BTC 价格",
+    "price": "价格",
+    "high": "最高价",
+    "low": "最低价",
+    "volume": "成交量",
+    "change24h": "24小时涨跌",
+    "marketCap": "市值"
+  },
+  "widget": {
+    "failedToLoad": "{{name}} 加载失败"
+  },
+  "chart": {
+    "pinchToZoom": "双指缩放 · 拖动平移"
+  },
+  "confidence": "置信度",
+  "risk": "风险",
+  "riskLevel": "风险等级"
+}

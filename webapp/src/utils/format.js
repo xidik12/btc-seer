@@ -1,6 +1,14 @@
+import i18n from '../i18n'
+
+const LOCALE_MAP = { en: 'en-US', ru: 'ru-RU', zh: 'zh-CN' }
+
+function getLocale() {
+  return LOCALE_MAP[i18n.language] || 'en-US'
+}
+
 export function formatPrice(price) {
   if (!price && price !== 0) return '--'
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat(getLocale(), {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
@@ -10,7 +18,7 @@ export function formatPrice(price) {
 
 export function formatPricePrecise(price) {
   if (!price && price !== 0) return '--'
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat(getLocale(), {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
@@ -43,23 +51,23 @@ function toUTC(isoString) {
 export function formatTime(isoString) {
   if (!isoString) return '--'
   const date = new Date(toUTC(isoString))
-  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleTimeString(getLocale(), { hour: '2-digit', minute: '2-digit' })
 }
 
 export function formatDate(isoString) {
   if (!isoString) return '--'
   const date = new Date(toUTC(isoString))
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return date.toLocaleDateString(getLocale(), { month: 'short', day: 'numeric' })
 }
 
 export function formatTimeAgo(isoString) {
   if (!isoString) return '--'
   const seconds = Math.floor((Date.now() - new Date(toUTC(isoString))) / 1000)
-  if (seconds < 0) return 'just now'
-  if (seconds < 60) return 'just now'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-  return `${Math.floor(seconds / 86400)}d ago`
+  if (seconds < 0) return i18n.t('time.justNow')
+  if (seconds < 60) return i18n.t('time.justNow')
+  if (seconds < 3600) return i18n.t('time.mAgo', { count: Math.floor(seconds / 60) })
+  if (seconds < 86400) return i18n.t('time.hAgo', { count: Math.floor(seconds / 3600) })
+  return i18n.t('time.dAgo', { count: Math.floor(seconds / 86400) })
 }
 
 export function getDirectionColor(direction) {
@@ -82,10 +90,11 @@ export function getActionBg(action) {
 
 export function formatCoinPrice(price) {
   if (!price && price !== 0) return '--'
-  if (price >= 1000) return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price)
-  if (price >= 1) return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price)
-  if (price >= 0.01) return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(price)
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(price)
+  const locale = getLocale()
+  if (price >= 1000) return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price)
+  if (price >= 1) return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price)
+  if (price >= 0.01) return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(price)
+  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', minimumFractionDigits: 6, maximumFractionDigits: 6 }).format(price)
 }
 
 export function formatMarketCap(value) {

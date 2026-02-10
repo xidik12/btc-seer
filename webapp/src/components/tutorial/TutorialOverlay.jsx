@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import TutorialTooltip from './TutorialTooltip'
-import tutorialSteps from './tutorialSteps'
+import getTutorialSteps from './tutorialSteps'
 
 export default function TutorialOverlay({ tutorial }) {
+  const { t } = useTranslation()
   const { step, totalSteps, next, prev, skip, active } = tutorial
   const [targetRect, setTargetRect] = useState(null)
 
+  const tutorialSteps = getTutorialSteps(t)
   const stepData = tutorialSteps[step] || tutorialSteps[0]
 
   const updatePosition = useCallback(() => {

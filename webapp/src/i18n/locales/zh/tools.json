@@ -1,0 +1,75 @@
+{
+  "title": "交易工具",
+  "positionSize": {
+    "title": "仓位计算器",
+    "accountBalance": "账户余额 ($)",
+    "riskPercent": "每笔风险 (%)",
+    "entryPrice": "入场价 ($)",
+    "stopLoss": "止损价 ($)",
+    "calculate": "计算",
+    "result": "仓位大小",
+    "riskAmount": "风险金额"
+  },
+  "pnl": {
+    "title": "盈亏计算器",
+    "entryPrice": "入场价 ($)",
+    "exitPrice": "出场价 ($)",
+    "positionSize": "仓位大小 ($)",
+    "leverage": "杠杆",
+    "direction": "方向",
+    "long": "做多",
+    "short": "做空",
+    "calculate": "计算",
+    "profit": "盈利",
+    "loss": "亏损",
+    "pnl": "盈亏",
+    "roi": "收益率"
+  },
+  "riskReward": {
+    "title": "风险回报计算器",
+    "entryPrice": "入场价 ($)",
+    "stopLoss": "止损价 ($)",
+    "takeProfit": "止盈价 ($)",
+    "calculate": "计算",
+    "ratio": "风险回报比",
+    "riskPercent": "风险 %",
+    "rewardPercent": "回报 %"
+  },
+  "dca": {
+    "title": "定投计算器",
+    "investmentAmount": "每期投入金额 ($)",
+    "frequency": "频率",
+    "duration": "持续时间（月）",
+    "startPrice": "起始价格 ($)",
+    "endPrice": "结束价格 ($)",
+    "calculate": "计算",
+    "totalInvested": "总投入",
+    "finalValue": "最终价值",
+    "avgPrice": "平均成本",
+    "totalBtc": "总 BTC 数量",
+    "roi": "收益率",
+    "weekly": "每周",
+    "biweekly": "每两周",
+    "monthly": "每月"
+  },
+  "proRules": {
+    "title": "专业风控准则",
+    "rules": {
+      "rule1": "单笔交易风险不超过投资组合的 1-2%",
+      "rule2": "永远设置止损 — 没有例外",
+      "rule3": "目标至少 2:1 的风险回报比",
+      "rule4": "根据止损距离确定仓位大小，而非凭信心",
+      "rule5": "在高波动环境中减小仓位"
+    }
+  },
+  "mistakes": {
+    "title": "常见错误警示",
+    "items": {
+      "item1": "过度使用杠杆 — 头号账户杀手",
+      "item2": "为避免亏损而移动止损",
+      "item3": "在亏损交易上不断加仓摊平",
+      "item4": "没有计划和策略就盲目交易",
+      "item5": "亏损后报复性交易"
+    }
+  }
+}

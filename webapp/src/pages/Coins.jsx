@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatCoinPrice, formatPercent, formatMarketCap } from '../utils/format'
 import { useTelegram } from '../hooks/useTelegram'
@@ -22,6 +23,7 @@ function MiniSparkline({ data, color }) {
 export default function Coins() {
   const navigate = useNavigate()
   const { hapticFeedback } = useTelegram()
+  const { t } = useTranslation('coins')
   const [coins, setCoins] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -70,7 +72,7 @@ export default function Coins() {
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
-      <h1 className="text-lg font-bold">Coins</h1>
+      <h1 className="text-lg font-bold">{t('title')}</h1>
 
       {/* Tracked Coins Grid */}
       {loading ? (
@@ -119,7 +121,7 @@ export default function Coins() {
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search coins or paste address..."
+          placeholder={t('searchPlaceholder')}
           className="w-full bg-bg-card rounded-xl px-4 py-3 pl-10 text-sm text-text-primary border border-white/5 focus:border-accent-blue/50 focus:outline-none placeholder:text-text-muted"
         />
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2">
@@ -140,7 +142,7 @@ export default function Coins() {
 
       {/* Search Results */}
       {searching && (
-        <div className="text-center text-text-muted text-xs py-4">Searching...</div>
+        <div className="text-center text-text-muted text-xs py-4">{t('search')}...</div>
       )}
 
       {searchResults && !searching && (
@@ -172,7 +174,7 @@ export default function Coins() {
           )}
 
           {searchResults.type === 'address' && !searchResults.data && (
-            <p className="text-text-muted text-xs text-center py-2">{searchResults.error || 'Token not found'}</p>
+            <p className="text-text-muted text-xs text-center py-2">{searchResults.error || t('noResults')}</p>
           )}
 
           {searchResults.type === 'name' && searchResults.data?.map(coin => (
@@ -197,7 +199,7 @@ export default function Coins() {
           ))}
 
           {searchResults.type === 'name' && searchResults.data?.length === 0 && (
-            <p className="text-text-muted text-xs text-center py-2">No results found</p>
+            <p className="text-text-muted text-xs text-center py-2">{t('noResults')}</p>
           )}
 
           {searchResults.type === 'error' && (
@@ -209,7 +211,7 @@ export default function Coins() {
       {/* Market Cap Summary */}
       {!search && coins.length > 0 && (
         <div className="bg-bg-card rounded-xl p-4 border border-white/5">
-          <h3 className="text-xs font-semibold text-text-muted mb-3">MARKET OVERVIEW</h3>
+          <h3 className="text-xs font-semibold text-text-muted mb-3">{t('report.overview')}</h3>
           <div className="space-y-2">
             {coins.map(coin => (
               <div key={coin.coin_id} className="flex items-center justify-between text-xs">

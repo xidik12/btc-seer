@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 const I = (children, sm) => (
   <svg className={sm ? 'w-4 h-4 text-accent-blue' : 'w-5 h-5 text-accent-blue'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     {children}
@@ -5,18 +7,20 @@ const I = (children, sm) => (
 )
 
 export default function About() {
+  const { t } = useTranslation(['about', 'common'])
+
   return (
     <div className="px-4 pt-4 space-y-3 pb-4">
       {/* Hero */}
       <div className="bg-bg-card rounded-2xl p-5 gradient-border text-center slide-up">
         <img src="/btc-seer.jpeg" alt="BTC Seer" className="w-full rounded-xl mb-4" />
-        <h1 className="text-xl font-bold mb-1 text-shimmer-gold">BTC Seer</h1>
-        <p className="text-text-secondary text-sm">AI-Powered Bitcoin Intelligence</p>
+        <h1 className="text-xl font-bold mb-1 text-shimmer-gold">{t('common:app.title')}</h1>
+        <p className="text-text-secondary text-sm">{t('about:description')}</p>
         <div className="flex items-center justify-center gap-2 mt-2">
           <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-accent-blue/15 text-accent-blue border border-accent-blue/30">v2.0</span>
           <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-accent-green/15 text-accent-green border border-accent-green/30">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-green pulse-glow" />
-            LIVE
+            {t('common:app.live')}
           </span>
         </div>
         <p className="text-text-muted text-[11px] mt-2">
@@ -92,17 +96,17 @@ export default function About() {
 
       {/* AI Ensemble Architecture */}
       <div className="bg-bg-card rounded-2xl p-4 gradient-border">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">AI ENSEMBLE ARCHITECTURE</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:architecture.title').toUpperCase()}</h3>
         <div className="space-y-2">
           {[
-            { name: 'Temporal Fusion Transformer', weight: '40%', desc: 'Multi-horizon attention model — captures long-range dependencies and variable-importance weighting', color: 'text-accent-green' },
-            { name: 'XGBoost', weight: '25%', desc: 'Gradient-boosted trees — excels at feature-based classification with 192 engineered inputs', color: 'text-accent-blue' },
-            { name: 'LSTM', weight: '20%', desc: 'Recurrent neural network — detects sequential patterns in 168-hour (1 week) lookback windows', color: 'text-accent-purple' },
-            { name: 'Google TimesFM', weight: '15%', desc: 'Zero-shot foundation model — provides a baseline from pre-trained time-series knowledge', color: 'text-accent-yellow' },
+            { nameKey: 'about:architecture.models.tft', weight: '40%', desc: 'Multi-horizon attention model — captures long-range dependencies and variable-importance weighting', color: 'text-accent-green' },
+            { nameKey: 'about:architecture.models.xgboost', weight: '25%', desc: 'Gradient-boosted trees — excels at feature-based classification with 192 engineered inputs', color: 'text-accent-blue' },
+            { nameKey: 'about:architecture.models.lstm', weight: '20%', desc: 'Recurrent neural network — detects sequential patterns in 168-hour (1 week) lookback windows', color: 'text-accent-purple' },
+            { nameKey: 'about:architecture.models.timesfm', weight: '15%', desc: 'Zero-shot foundation model — provides a baseline from pre-trained time-series knowledge', color: 'text-accent-yellow' },
           ].map((model) => (
-            <div key={model.name} className="p-2.5 rounded-xl bg-white/[0.02]">
+            <div key={model.nameKey} className="p-2.5 rounded-xl bg-white/[0.02]">
               <div className="flex items-center justify-between mb-0.5">
-                <span className="text-text-primary text-xs font-semibold">{model.name}</span>
+                <span className="text-text-primary text-xs font-semibold">{t(model.nameKey)}</span>
                 <span className={`text-[10px] font-bold ${model.color}`}>{model.weight}</span>
               </div>
               <p className="text-text-muted text-[10px]">{model.desc}</p>
@@ -205,24 +209,24 @@ export default function About() {
         <h3 className="text-text-secondary text-xs font-semibold mb-3">HOW IT HELPS YOU</h3>
         <div className="space-y-2">
           {[
-            { icon: I(<><path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" /></>), title: 'Dual Prediction Cards', desc: 'AI model + Quant Theory predictions side-by-side with confidence scores across 5 timeframes' },
-            { icon: I(<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>), title: 'Trading Signals', desc: 'Entry, target, and stop-loss levels with confidence scores and risk ratings (1-10)' },
-            { icon: I(<><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" /></>), title: 'AI Advisor', desc: 'Personalized trade plans with position sizing, risk management, take-profit levels, and reversal detection' },
-            { icon: I(<><path d="M3 3v18h18" /><path d="M7 16l4-6 4 4 5-8" /></>), title: 'Technical Analysis', desc: '45+ indicators — RSI, MACD, Bollinger, Ichimoku, Donchian, Keltner, GARCH, wavelets, and more' },
-            { icon: I(<><path d="M3 3v18h18" /><path d="M3 17C7 15 11 9 21 5" /></>), title: 'Power Law Analysis', desc: 'Long-term fair value model based on BTC adoption growth — see where price stands historically' },
-            { icon: I(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />), title: 'Elliott Wave', desc: 'Wave-based market structure analysis to identify trend phases, corrections, and potential reversals' },
-            { icon: I(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />), title: 'Liquidation Map', desc: 'See where leveraged positions cluster and where cascading liquidations may trigger price moves' },
-            { icon: I(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>), title: 'News & Sentiment', desc: 'Real-time news from 25+ sources with AI sentiment scoring, Fear & Greed index, and social volume tracking' },
+            { icon: I(<><path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" /></>), titleKey: 'about:features.predictions', descKey: 'about:features.predictionsDesc' },
+            { icon: I(<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>), titleKey: 'about:features.signals', descKey: 'about:features.signalsDesc' },
+            { icon: I(<><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" /></>), titleKey: 'about:features.advisor', descKey: 'about:features.advisorDesc' },
+            { icon: I(<><path d="M3 3v18h18" /><path d="M7 16l4-6 4 4 5-8" /></>), titleKey: 'about:features.technical', descKey: 'about:features.technicalDesc' },
+            { icon: I(<><path d="M3 3v18h18" /><path d="M3 17C7 15 11 9 21 5" /></>), titleKey: 'about:features.powerLaw', descKey: 'about:features.powerLawDesc' },
+            { icon: I(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />), titleKey: 'about:features.elliott', descKey: 'about:features.elliottDesc' },
+            { icon: I(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />), titleKey: 'about:features.liquidations', descKey: 'about:features.liquidationsDesc' },
+            { icon: I(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>), titleKey: 'about:features.news', descKey: 'about:features.newsDesc' },
             { icon: I(<><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5 1-2.5 2s1 2 2.5 2 2.5 1 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5" /><path d="M12 6.5v1M12 16.5v1" /></>), title: 'Coins & Market Data', desc: 'Track BTC, ETH, SOL, XRP, and more — search any coin, generate AI analysis reports' },
-            { icon: I(<><path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" /><path d="M12 18a4 4 0 01-4-4c0-2.5 2-4.5 4-7" /></>), title: 'On-Chain & Supply', desc: 'Hash rate, mempool, active addresses, exchange flows, MVRV Z-score, halving countdown, and mining metrics' },
-            { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>), title: 'Paper Trading', desc: 'Practice with virtual money — test strategies, track P&L, and learn without risking real capital' },
+            { icon: I(<><path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" /><path d="M12 18a4 4 0 01-4-4c0-2.5 2-4.5 4-7" /></>), titleKey: 'about:features.onChain', descKey: 'about:features.onChainDesc' },
+            { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>), titleKey: 'about:features.paperTrading', descKey: 'about:features.paperTradingDesc' },
             { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>), title: 'Accuracy & Transparency', desc: 'Every prediction scored against actual results — see model performance, hit rates, and confidence calibration' },
           ].map((item) => (
-            <div key={item.title} className="flex items-start gap-3 p-2 rounded-xl bg-white/[0.02]">
+            <div key={item.titleKey || item.title} className="flex items-start gap-3 p-2 rounded-xl bg-white/[0.02]">
               <span className="mt-0.5 shrink-0">{item.icon}</span>
               <div>
-                <div className="text-text-primary text-xs font-semibold">{item.title}</div>
-                <div className="text-text-muted text-[10px]">{item.desc}</div>
+                <div className="text-text-primary text-xs font-semibold">{item.titleKey ? t(item.titleKey) : item.title}</div>
+                <div className="text-text-muted text-[10px]">{item.descKey ? t(item.descKey) : item.desc}</div>
               </div>
             </div>
           ))}
@@ -262,29 +266,29 @@ export default function About() {
 
       {/* Features Grid */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">FEATURES</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('about:features.title').toUpperCase()}</h3>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { icon: I(<><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2a7 7 0 00-4 12.9V17h8v-2.1A7 7 0 0012 2z" /></>, true), label: 'AI Predictions' },
+            { icon: I(<><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2a7 7 0 00-4 12.9V17h8v-2.1A7 7 0 0012 2z" /></>, true), labelKey: 'about:features.predictions' },
             { icon: I(<><polyline points="22 17 13.5 8.5 8.5 13.5 2 7" /><polyline points="16 17 22 17 22 11" /></>, true), label: 'Quant Theory' },
-            { icon: I(<><path d="M3 3v18h18" /><path d="M3 17C7 15 11 9 21 5" /></>, true), label: 'Power Law' },
-            { icon: I(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />, true), label: 'Elliott Wave' },
-            { icon: I(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />, true), label: 'Liquidation Map' },
-            { icon: I(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>, true), label: 'News Sentiment' },
-            { icon: I(<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>, true), label: 'Trading Signals' },
-            { icon: I(<><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" /></>, true), label: 'AI Advisor' },
-            { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>, true), label: 'Paper Trading' },
+            { icon: I(<><path d="M3 3v18h18" /><path d="M3 17C7 15 11 9 21 5" /></>, true), labelKey: 'about:features.powerLaw' },
+            { icon: I(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />, true), labelKey: 'about:features.elliott' },
+            { icon: I(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />, true), labelKey: 'about:features.liquidations' },
+            { icon: I(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>, true), labelKey: 'about:features.news' },
+            { icon: I(<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>, true), labelKey: 'about:features.signals' },
+            { icon: I(<><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" /></>, true), labelKey: 'about:features.advisor' },
+            { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>, true), labelKey: 'about:features.paperTrading' },
             { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>, true), label: 'Accuracy Tracking' },
-            { icon: I(<><path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" /></>, true), label: 'On-Chain Data' },
+            { icon: I(<><path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" /></>, true), labelKey: 'about:features.onChain' },
             { icon: I(<><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5 1-2.5 2s1 2 2.5 2 2.5 1 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5" /><path d="M12 6.5v1M12 16.5v1" /></>, true), label: 'Coins & Tokens' },
-            { icon: I(<><path d="M3 3v18h18" /><path d="M7 16l4-6 4 4 5-8" /></>, true), label: '45+ Indicators' },
+            { icon: I(<><path d="M3 3v18h18" /><path d="M7 16l4-6 4 4 5-8" /></>, true), labelKey: 'about:features.technical' },
             { icon: I(<><path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /></>, true), label: 'ETF Flows' },
             { icon: I(<><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></>, true), label: 'Learn & Educate' },
             { icon: I(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>, true), label: 'Event Memory' },
           ].map((f) => (
-            <div key={f.label} className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02]">
+            <div key={f.labelKey || f.label} className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02]">
               <span className="shrink-0">{f.icon}</span>
-              <span className="text-text-primary text-xs font-medium">{f.label}</span>
+              <span className="text-text-primary text-xs font-medium">{f.labelKey ? t(f.labelKey) : f.label}</span>
             </div>
           ))}
         </div>
@@ -292,13 +296,13 @@ export default function About() {
 
       {/* Creator / Community */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-2">BUILT BY</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('about:credits.title').toUpperCase()}</h3>
         <div className="text-text-muted text-[11px] space-y-2">
           <p>
             Created by <span className="text-text-secondary font-semibold">Salakhitdinov Khidayotullo</span> — full-stack developer, AI researcher, and crypto enthusiast.
           </p>
           <p>
-            BTC Seer is a solo project built with a passion for making production-grade, AI-powered market intelligence accessible to everyone. The entire system — from data collection to model training to the app you're using — is designed, built, and maintained by one person.
+            {t('about:credits.builtWith')}
           </p>
           <a
             href="https://t.me/btc_seer_bot"
@@ -313,13 +317,9 @@ export default function About() {
 
       {/* Disclaimer */}
       <div className="bg-bg-card rounded-2xl p-4 border border-accent-yellow/15">
-        <h3 className="text-accent-yellow text-xs font-semibold mb-2">DISCLAIMER</h3>
+        <h3 className="text-accent-yellow text-xs font-semibold mb-2">{t('about:disclaimer.title').toUpperCase()}</h3>
         <p className="text-text-muted text-[10px]">
-          BTC Seer is not financial advice. All predictions, signals, and analysis are for
-          educational and informational purposes only. Cryptocurrency trading carries significant
-          risk. Always do your own research (DYOR) and never invest more than you can afford to lose.
-          Past performance does not guarantee future results. AI models can and will be wrong —
-          use this tool as one input among many, not as your sole decision-maker.
+          {t('about:disclaimer.text')}
         </p>
       </div>
     </div>

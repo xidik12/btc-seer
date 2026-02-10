@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useTelegram } from './hooks/useTelegram'
+import { useLanguageInit } from './i18n/useLanguage'
 import { api } from './utils/api'
 import NavBar from './components/NavBar'
 
@@ -77,9 +78,16 @@ function PageLoader() {
   )
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  return null
+}
+
 export default function App() {
   const { tg } = useTelegram()
   const location = useLocation()
+  useLanguageInit()
 
   // Auto-register user when Mini App opens
   useEffect(() => {
@@ -90,6 +98,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      <ScrollToTop />
       <div className="min-h-screen bg-bg-primary text-text-primary pb-20">
         <div key={location.pathname} className="page-enter">
         <Suspense fallback={<PageLoader />}>

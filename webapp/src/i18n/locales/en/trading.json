@@ -1,0 +1,102 @@
+{
+  "paperTrading": {
+    "title": "Paper Trading",
+    "subtitle": "Practice risk-free",
+    "tutorial": "? Tutorial",
+    "tabs": {
+      "newTrade": "New Trade",
+      "active": "Active ({{count}})",
+      "history": "History ({{count}})"
+    },
+    "disclaimer": "Paper trading uses virtual money. No real funds at risk. Practice your strategies risk-free."
+  },
+  "orderForm": {
+    "positionMode": "Position Mode",
+    "marginMode": "Margin Mode",
+    "oneWay": "One-Way",
+    "hedge": "Hedge",
+    "cross": "Cross",
+    "isolated": "Isolated",
+    "market": "Market",
+    "limit": "Limit",
+    "entryPrice": "Entry Price",
+    "entryMarket": "Entry Price (Market)",
+    "entryLimit": "Entry Price (Limit)",
+    "leverage": "Leverage",
+    "sizeUsdt": "Size (USDT)",
+    "notional": "Notional: ${{amount}}",
+    "margin": "Margin: ${{amount}}",
+    "stopLoss": "Stop Loss",
+    "risk": "Risk: ${{amount}}",
+    "tp1": "TP1 — Close 40%",
+    "tp2": "TP2 — Close 40%",
+    "tp3": "TP3 — Close 20%",
+    "rr": "R:R {{ratio}}",
+    "orderPreview": "ORDER PREVIEW",
+    "openLong": "Open LONG",
+    "openShort": "Open SHORT",
+    "opening": "Opening..."
+  },
+  "position": {
+    "noActive": "No active positions",
+    "startPractice": "Open a trade to start practicing.",
+    "noHistory": "No trade history",
+    "historyHint": "Completed trades will appear here.",
+    "closeConfirm": "Close position at {{price}}?"
+  },
+  "portfolio": {
+    "balance": "BALANCE",
+    "totalPnl": "TOTAL P&L",
+    "winRate": "Win Rate",
+    "totalTrades": "Total Trades",
+    "active": "Active",
+    "goal": "$10,000 Goal",
+    "start": "$10"
+  },
+  "advisor": {
+    "title": "AI Trading Advisor",
+    "tabs": {
+      "advisor": "AI Advisor",
+      "paperTrading": "Paper Trading",
+      "history": "History"
+    },
+    "portfolio": "Portfolio",
+    "setUpPortfolio": "Set Up Portfolio",
+    "balance": "Balance",
+    "riskLevel": "Risk Level",
+    "getSuggestion": "Get Trade Suggestion",
+    "activeTrades": "Active Trades",
+    "closedTrades": "Closed Trades",
+    "noActiveTrades": "No active trades",
+    "noClosedTrades": "No closed trades yet",
+    "confidence": "Confidence",
+    "reasoning": "Reasoning",
+    "executeTrade": "Execute Trade",
+    "conservative": "Conservative",
+    "moderate": "Moderate",
+    "aggressive": "Aggressive"
+  },
+  "signals": {
+    "title": "Trading Signals",
+    "tabs": {
+      "technical": "Technical",
+      "signals": "Signals"
+    },
+    "liveSignal": "Live Signal",
+    "signalHistory": "Signal History",
+    "noSignals": "No signals available",
+    "entry": "Entry",
+    "target": "Target",
+    "stopLoss": "Stop Loss",
+    "action": "Action",
+    "confidence": "Confidence",
+    "risk": "Risk",
+    "timeframe": "Timeframe",
+    "result": "Result",
+    "win": "Win",
+    "loss": "Loss",
+    "pending": "Pending"
+  },
+  "loginRequired": "Login via Telegram to save paper trades",
+  "createFailed": "Failed to create trade: {{error}}"
+}

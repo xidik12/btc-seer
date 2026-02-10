@@ -1,0 +1,119 @@
+{
+  "title": "BTC Seer",
+  "prediction": {
+    "aiTitle": "AI Prediction",
+    "quantTitle": "Quant Prediction",
+    "compositeScore": "Composite Score",
+    "signalBreakdown": "Signal Breakdown",
+    "activeSignals": "Active signals",
+    "agreement": "Agreement",
+    "noSignals": "No signal data available",
+    "timeframe": "Timeframe",
+    "predicted": "Predicted",
+    "change": "Change"
+  },
+  "priceWidget": {
+    "title": "BTC / USD",
+    "high24h": "24h High",
+    "low24h": "24h Low",
+    "vol24h": "24h Volume",
+    "timeframes": {
+      "1m": "1m",
+      "5m": "5m",
+      "15m": "15m",
+      "1h": "1h",
+      "4h": "4h",
+      "1d": "1D",
+      "1w": "1W",
+      "all": "All"
+    }
+  },
+  "fearGreed": {
+    "title": "Fear & Greed Index",
+    "extremeFear": "Extreme Fear",
+    "fear": "Fear",
+    "neutral": "Neutral",
+    "greed": "Greed",
+    "extremeGreed": "Extreme Greed",
+    "last7Days": "Last 7 Days",
+    "marketSentiment": "Market Sentiment"
+  },
+  "signalPanel": {
+    "title": "Trading Signal",
+    "action": "Action",
+    "entry": "Entry",
+    "target": "Target",
+    "stopLoss": "Stop Loss",
+    "confidence": "Confidence",
+    "riskLevel": "Risk Level",
+    "disclaimer": "AI-generated signal. Not financial advice. Always do your own research before trading."
+  },
+  "news": {
+    "title": "Latest News",
+    "sources": "sources",
+    "new": "NEW",
+    "noNews": "No news available"
+  },
+  "influencer": {
+    "title": "Social Signals",
+    "monitoring": "Monitoring {{count}} figures",
+    "weightedSentiment": "Weighted Sentiment",
+    "noData": "No influencer data available"
+  },
+  "onChain": {
+    "title": "On-Chain Metrics",
+    "exchangeReserves": "Exchange Reserves",
+    "largeTransactions": "Large Transactions",
+    "activeAddresses": "Active Addresses",
+    "hashRate": "Hash Rate",
+    "inflows": "Inflows",
+    "outflows": "Outflows",
+    "24hUnique": "24h unique senders",
+    "networkSecurity": "Network security"
+  },
+  "supply": {
+    "title": "Bitcoin Supply",
+    "mined": "Mined",
+    "remaining": "Remaining",
+    "totalSupply": "Total Supply",
+    "dailyMining": "Daily Mining",
+    "blockReward": "Block Reward",
+    "nextHalving": "Next Halving",
+    "milestones": "Supply Milestones",
+    "percentMined": "{{pct}}% Mined"
+  },
+  "dominance": {
+    "title": "BTC Dominance",
+    "change24h": "24h Change",
+    "interpretation": "Interpretation",
+    "riskOff": "Risk-Off: Money flowing into BTC",
+    "riskOn": "Risk-On: Money flowing into alts"
+  },
+  "macro": {
+    "title": "Macro Dashboard",
+    "dxy": "DXY (Dollar)",
+    "gold": "Gold",
+    "sp500": "S&P 500",
+    "treasury10y": "10Y Treasury",
+    "nasdaq": "Nasdaq",
+    "vix": "VIX",
+    "eurusd": "EUR/USD"
+  },
+  "halving": {
+    "title": "Bitcoin Halving Countdown",
+    "nextHalving": "Next Halving",
+    "block": "Block {{number}}",
+    "days": "days",
+    "hours": "hours",
+    "minutes": "minutes",
+    "seconds": "seconds",
+    "cycleProgress": "Cycle Progress",
+    "rewardDrop": "Reward drops from {{from}} to {{to}} BTC"
+  },
+  "accuracy": {
+    "title": "Prediction Accuracy",
+    "overall": "Overall",
+    "trend30d": "30-Day Trend",
+    "byTimeframe": "By Timeframe"
+  }
+}

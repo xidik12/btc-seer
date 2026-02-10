@@ -1,0 +1,264 @@
+{
+  "technical": {
+    "title": "技术分析",
+    "overallSignal": "综合信号",
+    "buyCount": "{{count}} 买入",
+    "sellCount": "{{count}} 卖出",
+    "neutralCount": "{{count}} 中性",
+    "ofTotal": "共 {{total}} 项",
+    "btcPrice": "BTC 价格",
+    "updatesEveryMinute": "技术指标每分钟更新。这些是数学工具，不是水晶球。当多个指标一致时效果最佳。请务必结合自己的研究。",
+    "overallBullish": "{{total}} 个指标中有 {{count}} 个看涨。更多工具指向买入而非卖出 — 这是积极信号，但不保证盈利。",
+    "overallBearish": "{{total}} 个指标中有 {{count}} 个看跌。更多工具指向卖出而非买入 — 需保持谨慎。",
+    "overallNeutral": "指标分歧明显 — {{bull}} 个看涨，{{bear}} 个看跌，{{neutral}} 个中性。市场不确定，建议等待更明确的信号。",
+    "trend": {
+      "title": "趋势方向",
+      "explain": "比特币价格是在上涨、下跌还是横盘？我们通过不同时间窗口来判断。上升趋势意味着更高的高点——就像爬楼梯。下降意味着回落。横盘意味着价格在一个区间内震荡。",
+      "shortTerm": "短期（20小时）",
+      "mediumTerm": "中期（50小时）",
+      "longTerm": "长期（100小时）",
+      "ascending": "上升",
+      "descending": "下降",
+      "sideways": "横盘",
+      "whatShort": "过去约1天的走势",
+      "whatMedium": "过去约2天的走势",
+      "whatLong": "过去约4天的走势",
+      "ascendingDesc": "{{what}}。价格正在攀升 — 每个高点都比上一个高。利好买方。",
+      "descendingDesc": "{{what}}。价格正在下跌 — 每个低点都比上一个低。卖方占据主导。",
+      "sidewaysDesc": "{{what}}。价格走平 — 没有明确方向。市场在等待催化剂。"
+    },
+    "rsi": {
+      "title": "RSI（相对强弱指数）",
+      "explain": "把 RSI 想象成买方与卖方的速度表。范围从 0 到 100。70以上 = 买方过多（超买，价格可能回落）。30以下 = 卖方过多（超卖，价格可能反弹）。30-70之间 = 正常。",
+      "oversold": "超卖（买入区间）",
+      "neutral": "中性",
+      "overbought": "超买（卖出区间）",
+      "fast": "RSI (7) — 快线",
+      "standard": "RSI (14) — 标准",
+      "standardDesc": "最常用的 RSI，大多数交易者都关注这个。",
+      "slow": "RSI (30) — 慢线"
+    },
+    "macd": {
+      "title": "MACD（移动平均收敛散度）",
+      "explain": "MACD 测量价格变动的动量（速度）。它比较快速和慢速移动平均线。当 MACD 线上穿信号线时，是买入信号；下穿时，是卖出信号。柱状图显示两者差值 — 正值 = 看涨动能，负值 = 看跌动能。",
+      "line": "MACD 线",
+      "signal": "信号线",
+      "signalDesc": "MACD 的平滑版本。MACD 上穿该线 = 买入，下穿 = 卖出。",
+      "histogram": "柱状图"
+    },
+    "movingAverages": {
+      "title": "移动平均线",
+      "explain": "移动平均线将价格随时间平滑化。如果当前价格高于均线，说明 BTC 表现优于近期历史（看涨）；如果低于均线，则表现较差（看跌）。短期均线反应更快，长期均线显示大趋势。",
+      "aboveBy": "价格高于该均线 ${{amount}} — 看涨。",
+      "belowBy": "价格低于该均线 ${{amount}} — 看跌。"
+    },
+    "bollinger": {
+      "title": "布林带",
+      "explain": "想象两条橡皮筋围绕价格 — 一条在上，一条在下。价格通常在两者之间运行。触及上轨说明偏贵（可能下跌），触及下轨说明偏便宜（可能上涨）。当布林带收窄时，一波大行情即将来临。",
+      "upper": "上轨（阻力位）",
+      "middle": "中轨（均值）",
+      "lower": "下轨（支撑位）",
+      "width": "带宽",
+      "position": "价格在布林带中的位置",
+      "nearFloor": "接近下轨（低估）",
+      "middleFair": "中间（合理）",
+      "nearCeiling": "接近上轨（高估）"
+    },
+    "volume": {
+      "title": "成交量分析",
+      "explain": "成交量 = 正在交易的比特币数量。高成交量意味着很多人在买卖（信念强烈）。低成交量意味着交投清淡（走势不稳，容易反转）。成交量验证趋势 — 伴随高成交量的价格变动更可信。",
+      "ratio": "量比",
+      "vwap": "VWAP（成交量加权平均价）",
+      "obv": "OBV（能量潮指标）"
+    },
+    "supportResistance": {
+      "title": "支撑与阻力",
+      "explain": "支撑 = 比特币停止下跌的价位（像地板 — 买方介入）。阻力 = 停止上涨的价位（像天花板 — 卖方介入）。这些水平有助于预测价格将在哪里反弹或被拒绝。",
+      "resistance": "阻力位（上方压力）",
+      "pivot": "枢轴点（中心）",
+      "support": "支撑位（下方支持）"
+    },
+    "trendStrength": {
+      "title": "趋势强度",
+      "explain": "当前趋势是强还是弱？ADX 来衡量。它不告诉你方向（涨/跌），只告诉你走势有多强。20以下 = 没有明确趋势（震荡市）。25以上 = 明确趋势。50以上 = 非常强的趋势。",
+      "adx": "ADX（趋势强度）",
+      "atr": "ATR（平均真实波幅）",
+      "volatility24h": "24小时波动率",
+      "noTrend": "无趋势",
+      "moderateTrend": "中等趋势",
+      "strongTrend": "强趋势"
+    },
+    "btcDominance": {
+      "title": "BTC 市场占比",
+      "explain": "BTC 市场占比显示比特币在整个加密市场中所占的百分比。占比上升，资金从山寨币流入比特币（人们更信任 BTC）。占比下降，资金流入山寨币（人们在承担更多风险）。高占比 = 更安全的市场。",
+      "marketShare": "比特币市场份额",
+      "altcoinSeason": "山寨币季",
+      "normal": "正常",
+      "btcSeason": "BTC 主导季",
+      "ethDominance": "ETH 市场占比",
+      "totalMarket24h": "总市值24小时变化"
+    },
+    "stochRsi": {
+      "title": "随机 RSI",
+      "explain": "这是 RSI 的增强版 — 对 RSI 再做 RSI 计算，使其更加敏感。它在 0 到 100 之间快速波动。20以下 = 极度超卖（买入机会）。80以上 = 极度超买（卖出信号）。%K 和 %D 线的交叉才是实际的交易信号。",
+      "kFast": "%K（快线）",
+      "dSlow": "%D（慢线）",
+      "buyZone": "买入区间",
+      "neutral": "中性",
+      "sellZone": "卖出区间"
+    },
+    "williamsR": {
+      "title": "威廉指标 %R",
+      "explain": "威廉 %R 告诉你收盘价相对于过去14个周期最高价的位置。范围从 -100（最低点）到 0（最高点）。低于 -80 = 超卖（价格接近近期低点，可能反弹）。高于 -20 = 超买（接近近期高点，可能回落）。",
+      "nearLows": "接近低点（买入区间）",
+      "midRange": "中间区域",
+      "nearHighs": "接近高点（卖出区间）"
+    },
+    "ichimoku": {
+      "title": "一目均衡图",
+      "explain": "一种日本交易系统，同时显示支撑、阻力、动量和趋势方向。「云」是两条线之间的阴影区域。价格在云之上 = 看涨（强上升趋势）。之下 = 看跌。之内 = 趋势不明。转换线/基准线的交叉提供买卖信号。",
+      "tenkan": "转换线（Tenkan-sen）",
+      "kijun": "基准线（Kijun-sen）",
+      "cloudTop": "云层上沿（Senkou A）",
+      "cloudBottom": "云层下沿（Senkou B）",
+      "aboveCloud": "价格在云层之上 — 强烈看涨。下方的云层充当安全网（支撑）。这是买方最理想的位置。",
+      "belowCloud": "价格在云层之下 — 强烈看跌。上方的云层充当天花板（阻力）。卖方主导，价格难以回升。",
+      "insideCloud": "价格在云层之内 — 方向不明。市场正在多空转换中。等待价格明确突破云层上方或下方。"
+    },
+    "candlestick": {
+      "title": "K线形态",
+      "explain": "图表上的每根「蜡烛」显示一个时间段的开盘价、收盘价、最高价和最低价。特定形态有其名称并能预测后续走势。就像解读茶叶 — 但这些形态已被交易者使用了数百年。",
+      "detected": "已识别",
+      "noPatterns": "最新K线未检测到特殊形态。当前价格走势平淡 — 没有强烈的反转信号。",
+      "bodySize": "实体大小",
+      "upperShadow": "上影线",
+      "lowerShadow": "下影线",
+      "doji": "十字星",
+      "hammer": "锤子线",
+      "invertedHammer": "倒锤子线",
+      "bullishEngulfing": "看涨吞没",
+      "bearishEngulfing": "看跌吞没",
+      "morningStar": "启明星",
+      "eveningStar": "黄昏星"
+    },
+    "advanced": {
+      "title": "高级指标",
+      "explain": "这些是经验丰富的交易者用来发现重大市场转折点的专业工具。它们关注更长期的模式，可以判断比特币处于周期顶部（适合卖出）还是周期底部（适合买入）。",
+      "mayer": "梅耶倍数",
+      "piCycle": "Pi 周期比率",
+      "goldenDeath": "金叉/死叉",
+      "zScore": "均值回归 Z-Score"
+    },
+    "rateOfChange": {
+      "title": "变化率",
+      "explain": "简单来说：不同时间段内价格变动了多少？正值 = 上涨，负值 = 下跌。数值越大 = 变动越快。这告诉你价格变化的速度。",
+      "last1h": "过去1小时",
+      "last6h": "过去6小时",
+      "last12h": "过去12小时",
+      "last24h": "过去24小时"
+    },
+    "indicatorHistory": {
+      "title": "指标历史",
+      "explain": "关键指标随时间的变化。RSI 从 30 上升到 72 所包含的信息，是单看 72 这个数字无法提供的。"
+    }
+  },
+  "powerLaw": {
+    "title": "幂律模型",
+    "fairValue": "公允价值",
+    "currentPrice": "当前价格",
+    "deviation": "偏差",
+    "status": "状态",
+    "undervalued": "被低估",
+    "overvalued": "被高估",
+    "fairValued": "合理估值",
+    "corridorPosition": "通道位置",
+    "support": "支撑",
+    "resistance": "阻力",
+    "explain": "幂律模型根据比特币的采用增长模式来描绘其价格轨迹。它提供一个公允价值通道 — 价格低于通道表明被低估，高于通道表明被高估。",
+    "disclaimer": "幂律模型是一种数学框架，不是价格预测。过去的模式可能不会持续。"
+  },
+  "elliott": {
+    "title": "艾略特波浪分析",
+    "currentWave": "当前波浪",
+    "waveStatus": "波浪状态",
+    "impulse": "推动浪",
+    "corrective": "调整浪",
+    "fibTargets": "斐波那契目标",
+    "divergence": "背离预警",
+    "timeframes": {
+      "1h": "1小时",
+      "4h": "4小时",
+      "1d": "1日",
+      "1w": "1周",
+      "1mo": "1月"
+    },
+    "explain": "艾略特波浪理论识别市场价格中的重复波浪模式。市场沿趋势方向运行5浪（推动浪），随后是3浪调整（调整浪）。",
+    "disclaimer": "波浪计数具有主观性，可能随新价格数据而改变。"
+  },
+  "liquidations": {
+    "title": "爆仓地图",
+    "riskMeter": "风险指标",
+    "heatmap": "爆仓热力图",
+    "fundingRate": "资金费率",
+    "openInterest": "未平仓合约",
+    "leverageBreakdown": "杠杆分布",
+    "longLiquidations": "多头爆仓",
+    "shortLiquidations": "空头爆仓",
+    "insights": "交易洞察",
+    "explain": "爆仓数据显示杠杆仓位将在哪些价位被强制平仓。爆仓集中区域像磁铁一样吸引价格 — 价格经常向这些区域运动以触发连锁爆仓。",
+    "disclaimer": "爆仓数据为估算值，可能与交易所实际数据存在差异。"
+  },
+  "events": {
+    "title": "事件记忆",
+    "subtitle": "历史模式分析",
+    "recentEvents": "近期事件",
+    "impactHeatmap": "影响热力图",
+    "categoryHeatmap": "分类影响热力图",
+    "heatmapDesc": "各分类和时间周期内事件后BTC价格平均变化",
+    "eventsTracked": "已追踪事件",
+    "categoriesCount": "分类数",
+    "avgPerDay": "日均事件",
+    "mostImpactful": "影响最大",
+    "categories": {
+      "regulation": "监管",
+      "etf": "ETF",
+      "hack": "黑客攻击",
+      "adoption": "采用",
+      "macro": "宏观"
+    },
+    "timeframes": {
+      "1h": "1小时",
+      "4h": "4小时",
+      "24h": "24小时",
+      "7d": "7天"
+    },
+    "noEvents": "暂无近期事件",
+    "explain": "历史事件追踪展示市场事件在不同时间周期内对比特币价格的影响。"
+  },
+  "news": {
+    "title": "加密新闻",
+    "sentimentOverview": "情绪概览",
+    "bullish": "看涨",
+    "bearish": "看跌",
+    "neutral": "中性",
+    "last24h": "过去24小时",
+    "sources": "{{count}} 个来源",
+    "noNews": "暂无新闻"
+  },
+  "history": {
+    "title": "预测历史",
+    "accuracy": "准确率",
+    "byTimeframe": "按时间周期",
+    "trend30d": "30天趋势",
+    "calibration": "置信度校准",
+    "distribution": "盈亏分布",
+    "records": "预测记录",
+    "win": "盈利",
+    "loss": "亏损",
+    "timeframes": {
+      "1h": "1小时",
+      "4h": "4小时",
+      "1d": "1天"
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 
 function getColor(value) {
@@ -9,12 +10,12 @@ function getColor(value) {
   return '#00d68f'
 }
 
-function getLabel(value) {
-  if (value <= 20) return 'Extreme Fear'
-  if (value <= 40) return 'Fear'
-  if (value <= 60) return 'Neutral'
-  if (value <= 80) return 'Greed'
-  return 'Extreme Greed'
+function getLabel(value, t) {
+  if (value <= 20) return t('fearGreed.extremeFear')
+  if (value <= 40) return t('fearGreed.fear')
+  if (value <= 60) return t('fearGreed.neutral')
+  if (value <= 80) return t('fearGreed.greed')
+  return t('fearGreed.extremeGreed')
 }
 
 function getTextClass(value) {
@@ -87,6 +88,7 @@ function GaugeArc({ value, size = 160 }) {
 }
 
 export default function FearGreedWidget() {
+  const { t } = useTranslation('dashboard')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -122,9 +124,9 @@ export default function FearGreedWidget() {
   if (error) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/20">
-        <h3 className="text-text-primary text-sm font-semibold mb-2">Fear & Greed Index</h3>
-        <p className="text-accent-red text-sm">Failed to load data</p>
-        <button onClick={fetchData} className="text-accent-blue text-xs mt-1 underline">Retry</button>
+        <h3 className="text-text-primary text-sm font-semibold mb-2">{t('fearGreed.title')}</h3>
+        <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('fearGreed.title') })}</p>
+        <button onClick={fetchData} className="text-accent-blue text-xs mt-1 underline">{t('common:app.retry')}</button>
       </div>
     )
   }
@@ -133,14 +135,14 @@ export default function FearGreedWidget() {
   if (!current) return null
 
   const value = Math.max(0, Math.min(100, Math.round(current.value)))
-  const label = current.label || getLabel(value)
+  const label = current.label || getLabel(value, t)
   const color = getColor(value)
   const textClass = getTextClass(value)
   const history = (data?.history || []).slice(0, 7).reverse()
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
-      <h3 className="text-text-primary text-sm font-semibold mb-1">Fear & Greed Index</h3>
+      <h3 className="text-text-primary text-sm font-semibold mb-1">{t('fearGreed.title')}</h3>
 
       <GaugeArc value={value} />
 
@@ -150,16 +152,16 @@ export default function FearGreedWidget() {
       </div>
 
       <p className="text-text-muted text-[10px] mt-2 text-center">
-        {value <= 25 ? 'Extreme fear can signal buying opportunities.'
-          : value <= 45 ? 'Fear in the market. Potential accumulation zone.'
-          : value <= 55 ? 'Market is balanced between fear and greed.'
-          : value <= 75 ? 'Greed rising. Be cautious with new entries.'
-          : 'Extreme greed often precedes corrections.'}
+        {value <= 25 ? t('fearGreed.tipExtremeFear', 'Extreme fear can signal buying opportunities.')
+          : value <= 45 ? t('fearGreed.tipFear', 'Fear in the market. Potential accumulation zone.')
+          : value <= 55 ? t('fearGreed.tipNeutral', 'Market is balanced between fear and greed.')
+          : value <= 75 ? t('fearGreed.tipGreed', 'Greed rising. Be cautious with new entries.')
+          : t('fearGreed.tipExtremeGreed', 'Extreme greed often precedes corrections.')}
       </p>
 
       {history.length > 1 && (
         <div className="mt-3">
-          <p className="text-text-muted text-[9px] font-medium mb-1.5">7-Day History</p>
+          <p className="text-text-muted text-[9px] font-medium mb-1.5">{t('fearGreed.last7Days')}</p>
           <div className="flex items-end gap-1 h-8">
             {history.map((h, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-0.5">

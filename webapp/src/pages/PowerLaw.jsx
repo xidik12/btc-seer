@@ -1,17 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatPrice } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
 import SubTabBar from '../components/SubTabBar'
-
-const MARKET_TABS = [
-  { path: '/liquidations', label: 'Liquidations' },
-  { path: '/powerlaw', label: 'Power Law' },
-  { path: '/elliott-wave', label: 'Elliott Wave' },
-  { path: '/events', label: 'Events' },
-  { path: '/tools', label: 'Tools' },
-  { path: '/learn', label: 'Learn' },
-]
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -33,12 +25,12 @@ const VALUATION_COLORS = {
   'Overvalued': { text: 'text-accent-red', bg: 'bg-accent-red/10', border: 'border-accent-red/20' },
 }
 
-function CorridorGauge({ position, bands, currentPrice }) {
+function CorridorGauge({ position, bands, currentPrice, t }) {
   const pct = Math.max(0, Math.min(100, position * 100))
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">CORRIDOR POSITION</h3>
+      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('market:powerLaw.corridorPosition').toUpperCase()}</h3>
       <div className="relative h-4 bg-gradient-to-r from-accent-green/30 via-accent-yellow/30 to-accent-red/30 rounded-full">
         <div
           className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg border-2 border-accent-blue transition-all duration-700"
@@ -46,29 +38,38 @@ function CorridorGauge({ position, bands, currentPrice }) {
         />
       </div>
       <div className="flex justify-between mt-2 text-[10px] text-text-muted">
-        <span>Support {bands?.support ? `$${bands.support.toLocaleString()}` : ''}</span>
-        <span>Fair {bands?.fair ? `$${bands.fair.toLocaleString()}` : ''}</span>
-        <span>Resist {bands?.top_resistance ? `$${bands.top_resistance.toLocaleString()}` : ''}</span>
+        <span>{t('market:powerLaw.support')} {bands?.support ? `$${bands.support.toLocaleString()}` : ''}</span>
+        <span>{t('market:powerLaw.fairValue')} {bands?.fair ? `$${bands.fair.toLocaleString()}` : ''}</span>
+        <span>{t('market:powerLaw.resistance')} {bands?.top_resistance ? `$${bands.top_resistance.toLocaleString()}` : ''}</span>
       </div>
     </div>
   )
 }
 
-function StatsGrid({ data }) {
+function StatsGrid({ data, t }) {
   const stats = [
-    { label: 'Days Since Genesis', value: data?.days_since_genesis?.toLocaleString() },
-    { label: 'Fair Value', value: data?.fair_value ? `$${data.fair_value.toLocaleString()}` : '--' },
-    { label: 'Deviation', value: data?.deviation_pct ? `${data.deviation_pct > 0 ? '+' : ''}${data.deviation_pct.toFixed(1)}%` : '--' },
-    { label: 'To Support', value: data?.distance_to_support_pct ? `${data.distance_to_support_pct.toFixed(1)}%` : '--' },
-    { label: 'To Resistance', value: data?.distance_to_resistance_pct ? `${data.distance_to_resistance_pct.toFixed(1)}%` : '--' },
-    { label: 'Corridor Pos', value: data?.corridor_position ? `${(data.corridor_position * 100).toFixed(0)}%` : '--' },
+    { labelKey: 'daysGenesis', value: data?.days_since_genesis?.toLocaleString() },
+    { labelKey: 'fairValue', value: data?.fair_value ? `$${data.fair_value.toLocaleString()}` : '--' },
+    { labelKey: 'deviation', value: data?.deviation_pct ? `${data.deviation_pct > 0 ? '+' : ''}${data.deviation_pct.toFixed(1)}%` : '--' },
+    { labelKey: 'toSupport', value: data?.distance_to_support_pct ? `${data.distance_to_support_pct.toFixed(1)}%` : '--' },
+    { labelKey: 'toResistance', value: data?.distance_to_resistance_pct ? `${data.distance_to_resistance_pct.toFixed(1)}%` : '--' },
+    { labelKey: 'corridorPos', value: data?.corridor_position ? `${(data.corridor_position * 100).toFixed(0)}%` : '--' },
   ]
+
+  const labelMap = {
+    daysGenesis: 'Days Since Genesis',
+    fairValue: t('market:powerLaw.fairValue'),
+    deviation: t('market:powerLaw.deviation'),
+    toSupport: t('market:powerLaw.support'),
+    toResistance: t('market:powerLaw.resistance'),
+    corridorPos: t('market:powerLaw.corridorPosition'),
+  }
 
   return (
     <div className="grid grid-cols-3 gap-2">
       {stats.map((s) => (
-        <div key={s.label} className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-          <div className="text-text-muted text-[9px] font-medium mb-1">{s.label}</div>
+        <div key={s.labelKey} className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
+          <div className="text-text-muted text-[9px] font-medium mb-1">{labelMap[s.labelKey]}</div>
           <div className="text-text-primary text-sm font-bold tabular-nums">{s.value || '--'}</div>
         </div>
       ))}
@@ -76,11 +77,11 @@ function StatsGrid({ data }) {
   )
 }
 
-function PowerLawChart({ historicalData }) {
+function PowerLawChart({ historicalData, t }) {
   if (!historicalData?.points?.length) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5 h-64 flex items-center justify-center">
-        <span className="text-text-muted text-sm">Loading chart...</span>
+        <span className="text-text-muted text-sm">{t('common:chart.loadingChart')}</span>
       </div>
     )
   }
@@ -101,9 +102,9 @@ function PowerLawChart({ historicalData }) {
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-text-secondary text-xs font-semibold">POWER LAW CORRIDOR</h3>
+        <h3 className="text-text-secondary text-xs font-semibold">{t('market:powerLaw.title').toUpperCase()}</h3>
         {isZoomed && (
-          <button onClick={resetZoom} className="text-[10px] text-accent-blue">Reset</button>
+          <button onClick={resetZoom} className="text-[10px] text-accent-blue">{t('common:btn.resetZoom')}</button>
         )}
       </div>
       <div {...bindGestures}>
@@ -177,16 +178,26 @@ function PowerLawChart({ historicalData }) {
         </ComposedChart>
       </ResponsiveContainer>
       </div>
-      <p className="text-text-muted text-[9px] text-center mt-2">Pinch to zoom &middot; Drag to pan</p>
+      <p className="text-text-muted text-[9px] text-center mt-2">{t('common:chart.pinchZoom')}</p>
     </div>
   )
 }
 
 export default function PowerLaw() {
+  const { t } = useTranslation(['market', 'common'])
   const [current, setCurrent] = useState(null)
   const [historical, setHistorical] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  const MARKET_TABS = [
+    { path: '/liquidations', label: t('common:link.liquidations') },
+    { path: '/powerlaw', label: t('common:link.powerLaw') },
+    { path: '/elliott-wave', label: t('common:link.elliottWave') },
+    { path: '/events', label: t('common:link.events') },
+    { path: '/tools', label: t('common:link.tools') },
+    { path: '/learn', label: t('common:link.learn') },
+  ]
 
   const fetchData = useCallback(async () => {
     try {
@@ -214,7 +225,7 @@ export default function PowerLaw() {
   if (loading) {
     return (
       <div className="px-4 pt-4 space-y-4">
-        <h1 className="text-lg font-bold">Power Law</h1>
+        <h1 className="text-lg font-bold">{t('market:powerLaw.title')}</h1>
         <div className="animate-pulse space-y-3">
           <div className="h-24 bg-bg-card rounded-2xl" />
           <div className="h-64 bg-bg-card rounded-2xl" />
@@ -227,11 +238,11 @@ export default function PowerLaw() {
   if (error && !current) {
     return (
       <div className="px-4 pt-4 space-y-4">
-        <h1 className="text-lg font-bold">Power Law Analysis</h1>
+        <h1 className="text-lg font-bold">{t('market:powerLaw.title')}</h1>
         <div className="bg-bg-card rounded-2xl p-6 border border-accent-red/20 text-center">
-          <p className="text-accent-red text-sm mb-2">Failed to load data</p>
+          <p className="text-accent-red text-sm mb-2">{t('common:widget.failedToLoad', { name: t('market:powerLaw.title') })}</p>
           <p className="text-text-muted text-xs mb-3">{error}</p>
-          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">Retry</button>
+          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">{t('common:app.retry')}</button>
         </div>
       </div>
     )
@@ -242,20 +253,20 @@ export default function PowerLaw() {
   return (
     <div className="px-4 pt-4 space-y-3 pb-20">
       <SubTabBar tabs={MARKET_TABS} />
-      <h1 className="text-lg font-bold">Power Law Analysis</h1>
+      <h1 className="text-lg font-bold">{t('market:powerLaw.title')}</h1>
 
       {/* Valuation Card */}
       {current && (
         <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-text-muted text-[10px] font-medium">CURRENT PRICE</div>
+              <div className="text-text-muted text-[10px] font-medium">{t('market:powerLaw.currentPrice').toUpperCase()}</div>
               <div className="text-text-primary text-xl font-bold tabular-nums">
                 {current.current_price ? formatPrice(current.current_price) : '--'}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-text-muted text-[10px] font-medium">FAIR VALUE</div>
+              <div className="text-text-muted text-[10px] font-medium">{t('market:powerLaw.fairValue').toUpperCase()}</div>
               <div className="text-accent-blue text-xl font-bold tabular-nums">
                 {current.fair_value ? `$${current.fair_value.toLocaleString()}` : '--'}
               </div>
@@ -274,7 +285,7 @@ export default function PowerLaw() {
       )}
 
       {/* Chart */}
-      <PowerLawChart historicalData={historical} />
+      <PowerLawChart historicalData={historical} t={t} />
 
       {/* Corridor Gauge */}
       {current && (
@@ -282,15 +293,16 @@ export default function PowerLaw() {
           position={current.corridor_position}
           bands={current.corridor}
           currentPrice={current.current_price}
+          t={t}
         />
       )}
 
       {/* Stats Grid */}
-      {current && <StatsGrid data={current} />}
+      {current && <StatsGrid data={current} t={t} />}
 
       {/* Educational Section */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-2">ABOUT THE POWER LAW</h3>
+        <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('market:powerLaw.title').toUpperCase()}</h3>
         <div className="text-text-muted text-[11px] space-y-2">
           <p>
             The Bitcoin Power Law model describes BTC's long-term price trajectory using

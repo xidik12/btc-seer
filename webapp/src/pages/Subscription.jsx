@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { useTelegram } from '../hooks/useTelegram'
 
 const TIER_COLORS = {
-  premium: { bg: 'bg-accent-blue/15', border: 'border-accent-blue/40', text: 'text-accent-blue', label: 'Premium' },
-  trial:   { bg: 'bg-accent-yellow/15', border: 'border-accent-yellow/40', text: 'text-accent-yellow', label: 'Trial' },
-  free:    { bg: 'bg-white/10', border: 'border-white/20', text: 'text-text-muted', label: 'Free' },
+  premium: { bg: 'bg-accent-blue/15', border: 'border-accent-blue/40', text: 'text-accent-blue', labelKey: 'subscriptionPage.premium' },
+  trial:   { bg: 'bg-accent-yellow/15', border: 'border-accent-yellow/40', text: 'text-accent-yellow', labelKey: 'subscriptionPage.trial' },
+  free:    { bg: 'bg-white/10', border: 'border-white/20', text: 'text-text-muted', labelKey: 'subscriptionPage.free' },
 }
 
 const PROGRESS_COLORS = {
@@ -16,13 +17,14 @@ const PROGRESS_COLORS = {
 }
 
 function formatDate(iso) {
-  if (!iso) return '—'
+  if (!iso) return '--'
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export default function Subscription() {
   const navigate = useNavigate()
   const { tg } = useTelegram()
+  const { t } = useTranslation('settings')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -31,9 +33,9 @@ export default function Subscription() {
     if (!tg?.initData) return
     api.getSubscriptionStatus(tg.initData)
       .then(setData)
-      .catch(() => setError('Failed to load subscription status'))
+      .catch(() => setError(t('subscription.couldNotStart')))
       .finally(() => setLoading(false))
-  }, [tg])
+  }, [tg, t])
 
   if (loading) {
     return (
@@ -46,9 +48,9 @@ export default function Subscription() {
   if (error || !data) {
     return (
       <div className="px-4 pt-4">
-        <h1 className="text-lg font-bold mb-4">Subscription</h1>
+        <h1 className="text-lg font-bold mb-4">{t('subscriptionPage.title')}</h1>
         <div className="bg-accent-red/10 border border-accent-red/30 rounded-xl px-3 py-2">
-          <p className="text-accent-red text-xs">{error || 'Could not load data'}</p>
+          <p className="text-accent-red text-xs">{error || t('app.noData', { ns: 'common' })}</p>
         </div>
       </div>
     )
@@ -57,17 +59,17 @@ export default function Subscription() {
   const tier = TIER_COLORS[data.tier] || TIER_COLORS.free
   const progressColor = PROGRESS_COLORS[data.tier] || PROGRESS_COLORS.free
 
-  const actionLabel = data.tier === 'free' ? 'Subscribe' : data.tier === 'trial' ? 'Upgrade' : data.days_remaining <= 7 ? 'Renew' : 'Extend'
+  const actionLabel = data.tier === 'free' ? t('subscription.subscribe') : data.tier === 'trial' ? t('subscription.subscribe') : data.days_remaining <= 7 ? t('subscription.subscribe') : t('subscription.subscribe')
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
-      <h1 className="text-lg font-bold">Subscription</h1>
+      <h1 className="text-lg font-bold">{t('subscriptionPage.title')}</h1>
 
       {/* Status Card */}
       <div className={`rounded-xl border p-4 ${tier.bg} ${tier.border}`}>
         <div className="flex items-center justify-between mb-3">
           <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${tier.bg} ${tier.text} border ${tier.border}`}>
-            {tier.label}
+            {t(tier.labelKey)}
           </span>
           {data.is_premium && (
             <svg className="w-5 h-5 text-accent-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -82,7 +84,7 @@ export default function Subscription() {
           <>
             <p className="text-text-muted text-xs mb-2">
               {data.tier === 'premium' ? `Expires ${formatDate(data.subscription_end)}` : `Trial ends ${formatDate(data.trial_end)}`}
-              {' '}&middot; {data.days_remaining}d remaining
+              {' '}&middot; {data.days_remaining}{t('subscriptionPage.daysRemaining')}
             </p>
 
             {/* Progress bar */}
@@ -106,10 +108,10 @@ export default function Subscription() {
 
       {/* Payment History */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-text-primary">Payment History</h2>
+        <h2 className="text-sm font-semibold text-text-primary">{t('subscriptionPage.paymentHistory')}</h2>
         {data.payments.length === 0 ? (
           <div className="bg-bg-card rounded-xl border border-white/5 p-4 text-center">
-            <p className="text-text-muted text-xs">No payments yet</p>
+            <p className="text-text-muted text-xs">{t('subscriptionPage.noPayments')}</p>
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -127,7 +129,7 @@ export default function Subscription() {
                   <p className="text-text-primary text-xs font-medium capitalize">{p.tier} &middot; {p.days}d</p>
                   <p className="text-text-muted text-[10px]">{formatDate(p.created_at)}</p>
                 </div>
-                <span className="text-text-primary text-xs font-semibold shrink-0">{p.stars_amount} Stars</span>
+                <span className="text-text-primary text-xs font-semibold shrink-0">{p.stars_amount} {t('subscription.stars')}</span>
               </div>
             ))}
           </div>
@@ -144,7 +146,7 @@ export default function Subscription() {
             </svg>
           </div>
           <div>
-            <p className="text-text-muted text-[10px]">Member since</p>
+            <p className="text-text-muted text-[10px]">{t('subscriptionPage.memberSince')}</p>
             <p className="text-text-primary text-xs font-medium">{formatDate(data.joined_at)}</p>
           </div>
         </div>

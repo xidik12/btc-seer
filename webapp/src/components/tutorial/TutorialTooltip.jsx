@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function TutorialTooltip({
   step,
@@ -10,6 +11,7 @@ export default function TutorialTooltip({
   position,
   targetRect,
 }) {
+  const { t } = useTranslation('tutorial')
   const isFirst = step === 0
   const isLast = step === totalSteps - 1
   const progress = ((step + 1) / totalSteps) * 100
@@ -79,7 +81,7 @@ export default function TutorialTooltip({
 
       {/* Step counter */}
       <div className="text-[10px] text-text-muted mb-1">
-        Step {step + 1} of {totalSteps}
+        {t('stepOf', 'Step {{current}} of {{total}}', { current: step + 1, total: totalSteps })}
       </div>
 
       {/* Title */}
@@ -97,7 +99,7 @@ export default function TutorialTooltip({
       {/* Example */}
       {stepData?.example && (
         <div className="bg-accent-green/10 border border-accent-green/20 rounded-lg px-3 py-2 mb-3">
-          <div className="text-accent-green text-[10px] font-semibold mb-0.5">TIP</div>
+          <div className="text-accent-green text-[10px] font-semibold mb-0.5">{t('tip', 'TIP')}</div>
           <div className="text-text-secondary text-[11px]">{stepData.example}</div>
         </div>
       )}
@@ -108,7 +110,7 @@ export default function TutorialTooltip({
           onClick={onSkip}
           className="text-text-muted text-[10px] hover:text-text-secondary transition-colors"
         >
-          Skip Tutorial
+          {t('skipTutorial', 'Skip Tutorial')}
         </button>
         <div className="flex gap-2">
           {!isFirst && (
@@ -116,14 +118,14 @@ export default function TutorialTooltip({
               onClick={onPrev}
               className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-bg-hover text-text-secondary hover:bg-bg-hover/80 transition-colors"
             >
-              Back
+              {t('common:nav.back')}
             </button>
           )}
           <button
             onClick={onNext}
             className="px-4 py-1.5 rounded-lg text-[10px] font-bold bg-accent-green text-white hover:bg-accent-green/80 transition-colors"
           >
-            {isLast ? 'Finish' : 'Next'}
+            {isLast ? t('finish', 'Finish') : t('next', 'Next')}
           </button>
         </div>
       </div>

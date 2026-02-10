@@ -1,15 +1,16 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatPrice, formatTime, formatDate, formatTimeAgo, getActionColor, getActionBg } from '../utils/format'
 import SubTabBar from '../components/SubTabBar'
 
 const TIMEFRAMES = ['1h', '4h', '24h']
 const ANALYSIS_TABS = [
-  { path: '/technical', label: 'Technical' },
-  { path: '/signals', label: 'Signals' },
+  { path: '/technical', labelKey: 'signals.tabs.technical' },
+  { path: '/signals', labelKey: 'signals.tabs.signals' },
 ]
 
-function LiveSignalCard({ signal }) {
+function LiveSignalCard({ signal, t }) {
   if (!signal) return null
 
   const isBuy = signal.action?.includes('buy')
@@ -21,7 +22,7 @@ function LiveSignalCard({ signal }) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-blue/15 text-accent-blue font-bold animate-pulse">
-            LIVE
+            {t('signals.liveSignal')}
           </span>
           <span className={`text-sm font-bold uppercase ${getActionColor(signal.action)}`}>
             {signal.action?.replace('_', ' ')}
@@ -32,15 +33,15 @@ function LiveSignalCard({ signal }) {
 
       <div className="grid grid-cols-3 gap-3 text-xs mb-3">
         <div>
-          <div className="text-text-muted text-[9px]">Entry</div>
+          <div className="text-text-muted text-[9px]">{t('signals.entry')}</div>
           <div className="font-mono font-semibold text-sm">{formatPrice(signal.entry_price)}</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">Target</div>
+          <div className="text-text-muted text-[9px]">{t('signals.target')}</div>
           <div className="font-mono font-semibold text-sm text-accent-green">{formatPrice(signal.target_price)}</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">Stop Loss</div>
+          <div className="text-text-muted text-[9px]">{t('signals.stopLoss')}</div>
           <div className="font-mono font-semibold text-sm text-accent-red">{formatPrice(signal.stop_loss)}</div>
         </div>
       </div>
@@ -48,7 +49,7 @@ function LiveSignalCard({ signal }) {
       <div className="flex items-center gap-4 mb-2">
         <div className="flex-1">
           <div className="flex items-center justify-between text-[9px] text-text-muted mb-0.5">
-            <span>Confidence</span>
+            <span>{t('signals.confidence')}</span>
             <span className="font-mono">{signal.confidence?.toFixed(0)}%</span>
           </div>
           <div className="h-1.5 bg-bg-hover rounded-full overflow-hidden">
@@ -61,7 +62,7 @@ function LiveSignalCard({ signal }) {
           </div>
         </div>
         <div className="text-right">
-          <div className="text-text-muted text-[9px]">Risk</div>
+          <div className="text-text-muted text-[9px]">{t('signals.risk')}</div>
           <div className="text-text-primary text-xs font-bold">{signal.risk_rating}/10</div>
         </div>
       </div>
@@ -99,7 +100,7 @@ function WinLossRecord({ signals }) {
   )
 }
 
-function SignalCard({ signal }) {
+function SignalCard({ signal, t }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -116,7 +117,7 @@ function SignalCard({ signal }) {
             <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
               signal.was_correct ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
             }`}>
-              {signal.was_correct ? 'WIN' : 'LOSS'}
+              {signal.was_correct ? t('signals.win') : t('signals.loss')}
             </span>
           )}
         </div>
@@ -125,15 +126,15 @@ function SignalCard({ signal }) {
 
       <div className="grid grid-cols-3 gap-2 text-xs">
         <div>
-          <div className="text-text-muted text-[9px]">Entry</div>
+          <div className="text-text-muted text-[9px]">{t('signals.entry')}</div>
           <div className="font-mono tabular-nums">{formatPrice(signal.entry_price)}</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">Target</div>
+          <div className="text-text-muted text-[9px]">{t('signals.target')}</div>
           <div className="font-mono text-accent-green tabular-nums">{formatPrice(signal.target_price)}</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">Stop</div>
+          <div className="text-text-muted text-[9px]">{t('signals.stopLoss')}</div>
           <div className="font-mono text-accent-red tabular-nums">{formatPrice(signal.stop_loss)}</div>
         </div>
       </div>
@@ -141,8 +142,8 @@ function SignalCard({ signal }) {
       {expanded && (
         <div className="mt-2 pt-2 border-t border-white/5 space-y-1.5">
           <div className="flex items-center justify-between text-[10px]">
-            <span className="text-text-muted">Confidence: {signal.confidence?.toFixed(0)}%</span>
-            <span className="text-text-muted">Risk: {signal.risk_rating}/10</span>
+            <span className="text-text-muted">{t('signals.confidence')}: {signal.confidence?.toFixed(0)}%</span>
+            <span className="text-text-muted">{t('signals.risk')}: {signal.risk_rating}/10</span>
           </div>
           <div className="text-text-muted text-[10px]">
             {formatDate(signal.timestamp)} {formatTime(signal.timestamp)}
@@ -157,11 +158,17 @@ function SignalCard({ signal }) {
 }
 
 export default function Signals() {
+  const { t } = useTranslation('trading')
   const [currentSignal, setCurrentSignal] = useState(null)
   const [allSignals, setAllSignals] = useState({})
   const [timeframe, setTimeframe] = useState('1h')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  const analysisTabs = useMemo(() => ANALYSIS_TABS.map(at => ({
+    ...at,
+    label: t(at.labelKey),
+  })), [t])
 
   useEffect(() => {
     async function load() {
@@ -198,7 +205,7 @@ export default function Signals() {
   if (loading) {
     return (
       <div className="px-4 pt-4 space-y-4">
-        <h1 className="text-lg font-bold">Trading Signals</h1>
+        <h1 className="text-lg font-bold">{t('signals.title')}</h1>
         <div className="animate-pulse space-y-3">
           <div className="h-36 bg-bg-card rounded-2xl" />
           <div className="h-12 bg-bg-card rounded-2xl" />
@@ -213,11 +220,11 @@ export default function Signals() {
   if (error) {
     return (
       <div className="px-4 pt-4 space-y-4">
-        <h1 className="text-lg font-bold">Trading Signals</h1>
+        <h1 className="text-lg font-bold">{t('signals.title')}</h1>
         <div className="bg-bg-card rounded-2xl p-6 border border-accent-red/20 text-center">
-          <p className="text-accent-red text-sm mb-2">Failed to load signals</p>
+          <p className="text-accent-red text-sm mb-2">{t('signals.noSignals')}</p>
           <p className="text-text-muted text-xs mb-3">{error}</p>
-          <button onClick={() => window.location.reload()} className="text-accent-blue text-xs hover:underline">Retry</button>
+          <button onClick={() => window.location.reload()} className="text-accent-blue text-xs hover:underline">{t('app.retry', { ns: 'common' })}</button>
         </div>
       </div>
     )
@@ -225,19 +232,19 @@ export default function Signals() {
 
   return (
     <div className="px-4 pt-4 space-y-3 pb-20">
-      <SubTabBar tabs={ANALYSIS_TABS} />
-      <h1 className="text-lg font-bold">Trading Signals</h1>
+      <SubTabBar tabs={analysisTabs} />
+      <h1 className="text-lg font-bold">{t('signals.title')}</h1>
 
-      {currentSignal && <LiveSignalCard signal={currentSignal} />}
+      {currentSignal && <LiveSignalCard signal={currentSignal} t={t} />}
 
       {stats.evaluated > 0 && (
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-            <div className="text-text-muted text-[9px]">Total Signals</div>
+            <div className="text-text-muted text-[9px]">{t('signals.title')}</div>
             <div className="text-text-primary text-sm font-bold">{stats.total}</div>
           </div>
           <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-            <div className="text-text-muted text-[9px]">Win Rate</div>
+            <div className="text-text-muted text-[9px]">{t('portfolio.winRate')}</div>
             <div className="text-accent-green text-sm font-bold">
               {stats.evaluated > 0 ? `${(stats.wins / stats.evaluated * 100).toFixed(0)}%` : '--'}
             </div>
@@ -268,13 +275,12 @@ export default function Signals() {
 
       {signals.length === 0 ? (
         <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
-          <p className="text-text-muted text-sm">No {timeframe.toUpperCase()} signals in the last 14 days</p>
-          <p className="text-text-muted text-xs mt-1">Signals are generated when the AI identifies high-confidence trading opportunities.</p>
+          <p className="text-text-muted text-sm">{t('signals.noSignals')}</p>
         </div>
       ) : (
         <div className="space-y-2">
           {signals.map((s, i) => (
-            <SignalCard key={s.id || i} signal={s} />
+            <SignalCard key={s.id || i} signal={s} t={t} />
           ))}
         </div>
       )}

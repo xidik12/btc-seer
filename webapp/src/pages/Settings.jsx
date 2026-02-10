@@ -1,54 +1,56 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { useTelegram } from '../hooks/useTelegram'
+import { useLanguageSwitch } from '../i18n/useLanguage'
 import AlertSettings from '../components/AlertSettings'
 
 const TIERS = [
   {
     key: 'monthly',
-    name: 'Monthly',
-    duration: '30 days',
+    nameKey: 'subscription.monthly',
+    durationKey: 'subscription.days30',
     stars: 500,
     usd: '$9.99',
-    perMonth: '$9.99/mo',
-    savings: null,
+    perMonth: '$9.99',
+    savingsKey: null,
     popular: false,
   },
   {
     key: 'quarterly',
-    name: '3 Months',
-    duration: '90 days',
+    nameKey: 'subscription.quarterly',
+    durationKey: 'subscription.days90',
     stars: 1250,
     usd: '$24.99',
-    perMonth: '$8.33/mo',
-    savings: 'Save 17%',
+    perMonth: '$8.33',
+    savingsKey: 'subscription.save17',
     popular: true,
   },
   {
     key: 'yearly',
-    name: 'Yearly',
-    duration: '365 days',
+    nameKey: 'subscription.yearly',
+    durationKey: 'subscription.days365',
     stars: 4500,
     usd: '$89.99',
-    perMonth: '$7.50/mo',
-    savings: 'Save 25%',
+    perMonth: '$7.50',
+    savingsKey: 'subscription.save25',
     popular: false,
   },
 ]
 
-const PREMIUM_FEATURES = [
-  'AI-powered price predictions (1h, 4h, 24h)',
-  'Full trading signals with entry/target/SL',
-  'Trading Advisor with auto-sized plans',
-  'Real-time news sentiment analysis',
-  'Custom price alerts',
-  'On-chain & macro analytics',
-  'Elliott Wave analysis',
-  'Power Law deviation tracking',
+const PREMIUM_FEATURE_KEYS = [
+  'subscription.features.predictions',
+  'subscription.features.signals',
+  'subscription.features.advisor',
+  'subscription.features.sentiment',
+  'subscription.features.alerts',
+  'subscription.features.analytics',
+  'subscription.features.elliott',
+  'subscription.features.powerlaw',
 ]
 
-function ConfirmModal({ tier, onConfirm, onCancel, loading }) {
+function ConfirmModal({ tier, onConfirm, onCancel, loading, t }) {
   if (!tier) return null
 
   return (
@@ -64,22 +66,22 @@ function ConfirmModal({ tier, onConfirm, onCancel, loading }) {
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
             </svg>
           </div>
-          <h3 className="text-text-primary font-bold text-base">Subscribe to Premium</h3>
+          <h3 className="text-text-primary font-bold text-base">{t('subscription.subscribeTo')}</h3>
           <p className="text-text-muted text-xs mt-1">
-            {tier.name} plan &middot; {tier.duration}
+            {t(tier.nameKey)} &middot; {t(tier.durationKey)}
           </p>
         </div>
 
         <div className="bg-bg-secondary rounded-xl p-3 mb-4">
           <div className="flex items-center justify-between">
-            <span className="text-text-secondary text-sm font-medium">{tier.name}</span>
+            <span className="text-text-secondary text-sm font-medium">{t(tier.nameKey)}</span>
             <div className="text-right">
               <span className="text-text-primary font-bold text-lg">{tier.stars}</span>
-              <span className="text-text-muted text-xs ml-1">Stars</span>
+              <span className="text-text-muted text-xs ml-1">{t('subscription.stars')}</span>
             </div>
           </div>
           <div className="flex items-center justify-between mt-1">
-            <span className="text-text-muted text-[10px]">{tier.perMonth}</span>
+            <span className="text-text-muted text-[10px]">{tier.perMonth}{t('subscription.perMonth')}</span>
             <span className="text-text-muted text-[10px]">~{tier.usd}</span>
           </div>
         </div>
@@ -90,14 +92,14 @@ function ConfirmModal({ tier, onConfirm, onCancel, loading }) {
             disabled={loading}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-text-muted bg-bg-secondary active:scale-95 transition-all"
           >
-            Cancel
+            {t('alerts.save') === 'Save' ? 'Cancel' : t('alerts.save')}
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-accent-blue active:scale-95 transition-all disabled:opacity-50"
           >
-            {loading ? 'Processing...' : 'Subscribe'}
+            {loading ? t('subscription.processing') : t('subscription.subscribe')}
           </button>
         </div>
       </div>
@@ -105,7 +107,7 @@ function ConfirmModal({ tier, onConfirm, onCancel, loading }) {
   )
 }
 
-function SuccessMessage() {
+function SuccessMessage({ t }) {
   return (
     <div className="bg-accent-green/10 border border-accent-green/30 rounded-xl p-4 text-center">
       <div className="mb-1">
@@ -113,8 +115,8 @@ function SuccessMessage() {
           <polyline points="20 6 9 17 4 12" />
         </svg>
       </div>
-      <p className="text-accent-green font-semibold text-sm">Payment Successful!</p>
-      <p className="text-text-muted text-xs mt-1">Your Premium access is now active.</p>
+      <p className="text-accent-green font-semibold text-sm">{t('subscription.paymentSuccess')}</p>
+      <p className="text-text-muted text-xs mt-1">{t('subscription.premiumActive')}</p>
     </div>
   )
 }
@@ -122,6 +124,8 @@ function SuccessMessage() {
 export default function Settings() {
   const navigate = useNavigate()
   const { tg } = useTelegram()
+  const { t } = useTranslation('settings')
+  const { currentLang, switchLanguage, supported } = useLanguageSwitch()
   const [selectedTier, setSelectedTier] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -155,7 +159,7 @@ export default function Settings() {
           } else if (status === 'cancelled') {
             // User cancelled — do nothing
           } else if (status === 'failed') {
-            setError('Payment failed. Please try again.')
+            setError(t('subscription.paymentFailed'))
           }
         })
       } else {
@@ -166,11 +170,11 @@ export default function Settings() {
       }
     } catch (err) {
       console.error('Subscription error:', err)
-      setError('Could not start payment. Please try again later.')
+      setError(t('subscription.couldNotStart'))
       setSelectedTier(null)
       setLoading(false)
     }
-  }, [selectedTier, tg])
+  }, [selectedTier, tg, t])
 
   const handleCancel = useCallback(() => {
     if (!loading) {
@@ -180,13 +184,33 @@ export default function Settings() {
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
-      <h1 className="text-lg font-bold">Settings</h1>
+      <h1 className="text-lg font-bold">{t('title')}</h1>
+
+      {/* Language Switcher */}
+      <div className="bg-bg-card rounded-xl border border-white/5 p-3">
+        <div className="text-[10px] text-text-muted font-semibold uppercase tracking-wider mb-2">
+          {t('language.title')}
+        </div>
+        <div className="flex bg-bg-hover rounded-lg p-0.5">
+          {supported.map((lang) => (
+            <button
+              key={lang}
+              onClick={() => switchLanguage(lang)}
+              className={`flex-1 py-1.5 text-[10px] font-semibold rounded-md transition-all ${
+                currentLang === lang ? 'bg-accent-blue text-white' : 'text-text-muted'
+              }`}
+            >
+              {t(`language.${lang}`)}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <AlertSettings />
 
       {/* Subscription Section */}
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-text-primary">Premium Plans</h2>
+        <h2 className="text-sm font-semibold text-text-primary">{t('subscription.title')}</h2>
 
         {/* Manage Subscription link */}
         <button
@@ -199,8 +223,8 @@ export default function Settings() {
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-text-primary text-xs font-medium">Manage Subscription</p>
-            <p className="text-text-muted text-[10px]">View status, expiry & payment history</p>
+            <p className="text-text-primary text-xs font-medium">{t('subscription.manage')}</p>
+            <p className="text-text-muted text-[10px]">{t('subscription.manageDesc')}</p>
           </div>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-text-muted shrink-0">
             <polyline points="9 18 15 12 9 6" />
@@ -208,10 +232,10 @@ export default function Settings() {
         </button>
 
         <p className="text-text-muted text-xs">
-          Tap a plan to subscribe instantly via Telegram Stars.
+          {t('subscription.tapToPlan')}
         </p>
 
-        {success && <SuccessMessage />}
+        {success && <SuccessMessage t={t} />}
 
         {error && (
           <div className="bg-accent-red/10 border border-accent-red/30 rounded-xl px-3 py-2">
@@ -233,17 +257,17 @@ export default function Settings() {
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-text-primary font-semibold text-sm">{tier.name}</span>
+                  <span className="text-text-primary font-semibold text-sm">{t(tier.nameKey)}</span>
                   {tier.popular && (
                     <span className="text-[8px] bg-accent-blue/20 text-accent-blue px-1.5 py-0.5 rounded-full font-semibold uppercase">
-                      Best Value
+                      {t('subscription.bestValue')}
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {tier.savings && (
+                  {tier.savingsKey && (
                     <span className="text-[9px] text-accent-green font-semibold bg-accent-green/10 px-1.5 py-0.5 rounded-full">
-                      {tier.savings}
+                      {t(tier.savingsKey)}
                     </span>
                   )}
                   <svg className="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -252,10 +276,10 @@ export default function Settings() {
                 </div>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-text-primary text-lg font-bold">{tier.stars} Stars</span>
+                <span className="text-text-primary text-lg font-bold">{tier.stars} {t('subscription.stars')}</span>
                 <span className="text-text-muted text-xs">~{tier.usd}</span>
               </div>
-              <div className="text-text-muted text-[10px] mt-0.5">{tier.duration} &middot; {tier.perMonth}</div>
+              <div className="text-text-muted text-[10px] mt-0.5">{t(tier.durationKey)} &middot; {tier.perMonth}{t('subscription.perMonth')}</div>
             </button>
           ))}
         </div>
@@ -263,22 +287,22 @@ export default function Settings() {
         {/* Features List */}
         <div className="bg-bg-card rounded-xl border border-white/5 p-3">
           <div className="text-[10px] text-text-muted font-semibold uppercase tracking-wider mb-2">
-            What you get
+            {t('subscription.whatYouGet')}
           </div>
           <ul className="space-y-1.5">
-            {PREMIUM_FEATURES.map((feat) => (
-              <li key={feat} className="flex items-start gap-2 text-xs text-text-secondary">
+            {PREMIUM_FEATURE_KEYS.map((featKey) => (
+              <li key={featKey} className="flex items-start gap-2 text-xs text-text-secondary">
                 <svg className="w-3 h-3 text-accent-green mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                {feat}
+                {t(featKey)}
               </li>
             ))}
           </ul>
         </div>
 
         <p className="text-text-muted text-[10px] text-center">
-          Payment via Telegram Stars. Secure & instant.
+          {t('subscription.paymentVia')}
         </p>
       </div>
 
@@ -288,6 +312,7 @@ export default function Settings() {
         onConfirm={handleConfirm}
         onCancel={handleCancel}
         loading={loading}
+        t={t}
       />
     </div>
   )

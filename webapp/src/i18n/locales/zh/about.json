@@ -1,0 +1,49 @@
+{
+  "title": "关于 BTC Seer",
+  "version": "版本",
+  "description": "AI 驱动的比特币分析与交易平台",
+  "architecture": {
+    "title": "架构",
+    "aiEnsemble": "AI 集成模型",
+    "models": {
+      "tft": "时序融合变换器",
+      "xgboost": "XGBoost 梯度提升",
+      "lstm": "长短期记忆网络",
+      "timesfm": "TimesFM 基础模型"
+    },
+    "features": "{{count}} 个特征，涵盖 {{categories}} 个数据类别",
+    "dataCategories": "数据类别"
+  },
+  "features": {
+    "title": "功能",
+    "predictions": "AI 价格预测",
+    "predictionsDesc": "基于4个机器学习模型集成的多时间周期预测",
+    "signals": "交易信号",
+    "signalsDesc": "可操作的买卖信号，含入场价、目标价和止损",
+    "technical": "技术分析",
+    "technicalDesc": "45+ 指标，附带通俗易懂的解释",
+    "onChain": "链上分析",
+    "onChainDesc": "巨鲸追踪、交易所资金流向及网络指标",
+    "news": "新闻情绪",
+    "newsDesc": "实时新闻聚合与 AI 情绪分析",
+    "paperTrading": "模拟交易",
+    "paperTradingDesc": "使用 $10,000 虚拟资金和真实数据练习交易",
+    "advisor": "交易顾问",
+    "advisorDesc": "AI 驱动的交易建议与风险管理",
+    "elliott": "艾略特波浪",
+    "elliottDesc": "波浪形态分析与斐波那契目标",
+    "powerLaw": "幂律模型",
+    "powerLawDesc": "基于采用增长的比特币公允价值模型",
+    "liquidations": "爆仓地图",
+    "liquidationsDesc": "衍生品市场风险可视化"
+  },
+  "disclaimer": {
+    "title": "免责声明",
+    "text": "BTC Seer 是一款教育工具。本应用中的任何内容均不构成投资建议。AI 预测可能不准确。在做出任何投资决策前，请务必自行研究（DYOR）。过往表现不代表未来收益。"
+  },
+  "credits": {
+    "title": "致谢",
+    "builtWith": "使用 React、Python 和对比特币的热爱构建",
+    "poweredBy": "由多个 AI 模型和实时市场数据驱动"
+  }
+}

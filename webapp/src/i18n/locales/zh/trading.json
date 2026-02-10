@@ -1,0 +1,102 @@
+{
+  "paperTrading": {
+    "title": "模拟交易",
+    "subtitle": "零风险练习",
+    "tutorial": "? 教程",
+    "tabs": {
+      "newTrade": "新交易",
+      "active": "进行中 ({{count}})",
+      "history": "历史 ({{count}})"
+    },
+    "disclaimer": "模拟交易使用虚拟资金，不涉及真实资金风险。在此零风险地练习你的策略。"
+  },
+  "orderForm": {
+    "positionMode": "持仓模式",
+    "marginMode": "保证金模式",
+    "oneWay": "单向持仓",
+    "hedge": "对冲",
+    "cross": "全仓",
+    "isolated": "逐仓",
+    "market": "市价",
+    "limit": "限价",
+    "entryPrice": "入场价格",
+    "entryMarket": "入场价格（市价）",
+    "entryLimit": "入场价格（限价）",
+    "leverage": "杠杆",
+    "sizeUsdt": "数量 (USDT)",
+    "notional": "名义价值：${{amount}}",
+    "margin": "保证金：${{amount}}",
+    "stopLoss": "止损",
+    "risk": "风险：${{amount}}",
+    "tp1": "止盈1 — 平仓40%",
+    "tp2": "止盈2 — 平仓40%",
+    "tp3": "止盈3 — 平仓20%",
+    "rr": "风险回报比 {{ratio}}",
+    "orderPreview": "订单预览",
+    "openLong": "开多",
+    "openShort": "开空",
+    "opening": "开仓中..."
+  },
+  "position": {
+    "noActive": "暂无持仓",
+    "startPractice": "开一笔交易开始练习吧。",
+    "noHistory": "暂无交易记录",
+    "historyHint": "已平仓的交易将显示在这里。",
+    "closeConfirm": "确认以 {{price}} 平仓？"
+  },
+  "portfolio": {
+    "balance": "余额",
+    "totalPnl": "总盈亏",
+    "winRate": "胜率",
+    "totalTrades": "总交易数",
+    "active": "进行中",
+    "goal": "$10,000 目标",
+    "start": "$10"
+  },
+  "advisor": {
+    "title": "AI 交易顾问",
+    "tabs": {
+      "advisor": "AI 顾问",
+      "paperTrading": "模拟交易",
+      "history": "历史"
+    },
+    "portfolio": "投资组合",
+    "setUpPortfolio": "设置投资组合",
+    "balance": "余额",
+    "riskLevel": "风险等级",
+    "getSuggestion": "获取交易建议",
+    "activeTrades": "活跃交易",
+    "closedTrades": "已平仓交易",
+    "noActiveTrades": "暂无活跃交易",
+    "noClosedTrades": "暂无已平仓交易",
+    "confidence": "置信度",
+    "reasoning": "分析理由",
+    "executeTrade": "执行交易",
+    "conservative": "保守型",
+    "moderate": "稳健型",
+    "aggressive": "激进型"
+  },
+  "signals": {
+    "title": "交易信号",
+    "tabs": {
+      "technical": "技术分析",
+      "signals": "信号"
+    },
+    "liveSignal": "实时信号",
+    "signalHistory": "信号历史",
+    "noSignals": "暂无可用信号",
+    "entry": "入场价",
+    "target": "目标价",
+    "stopLoss": "止损",
+    "action": "操作",
+    "confidence": "置信度",
+    "risk": "风险",
+    "timeframe": "时间周期",
+    "result": "结果",
+    "win": "盈利",
+    "loss": "亏损",
+    "pending": "待定"
+  },
+  "loginRequired": "请通过 Telegram 登录以保存模拟交易",
+  "createFailed": "创建交易失败：{{error}}"
+}

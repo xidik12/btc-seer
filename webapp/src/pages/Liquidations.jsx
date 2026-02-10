@@ -1,17 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatPrice, formatNumber } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
 import SubTabBar from '../components/SubTabBar'
-
-const MARKET_TABS = [
-  { path: '/liquidations', label: 'Liquidations' },
-  { path: '/powerlaw', label: 'Power Law' },
-  { path: '/elliott-wave', label: 'Elliott Wave' },
-  { path: '/events', label: 'Events' },
-  { path: '/tools', label: 'Tools' },
-  { path: '/learn', label: 'Learn' },
-]
 import {
   ResponsiveContainer,
   BarChart,
@@ -45,7 +37,7 @@ function liqIntensityColor(volume, maxVolume, type) {
 
 // ── Risk Meter ──
 
-function RiskMeter({ longPct, shortPct, fundingRate }) {
+function RiskMeter({ longPct, shortPct, fundingRate, t }) {
   // Determine overall market risk direction
   const isLongHeavy = longPct > shortPct
   const imbalance = Math.abs(longPct - shortPct)
@@ -72,7 +64,7 @@ function RiskMeter({ longPct, shortPct, fundingRate }) {
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-text-secondary text-xs font-semibold">MARKET RISK METER</h3>
+        <h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.riskMeter').toUpperCase()}</h3>
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
           riskColor === 'text-accent-red' ? 'bg-accent-red/10 border-accent-red/30' :
           riskColor === 'text-accent-green' ? 'bg-accent-green/10 border-accent-green/30' :
@@ -108,7 +100,7 @@ function RiskMeter({ longPct, shortPct, fundingRate }) {
 
 // ── Summary Card ──
 
-function SummaryCard({ data }) {
+function SummaryCard({ data, t }) {
   if (!data) return null
   const { current_price, summary } = data
 
@@ -116,13 +108,13 @@ function SummaryCard({ data }) {
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <div className="text-text-muted text-[10px] font-medium">BTC PRICE</div>
+          <div className="text-text-muted text-[10px] font-medium">{t('common:price.btcPrice').toUpperCase()}</div>
           <div className="text-text-primary text-xl font-bold tabular-nums">
             {formatPrice(current_price)}
           </div>
         </div>
         <div className="text-right">
-          <div className="text-text-muted text-[10px] font-medium">TOTAL OPEN INTEREST</div>
+          <div className="text-text-muted text-[10px] font-medium">{t('market:liquidations.openInterest').toUpperCase()}</div>
           <div className="text-text-primary text-xl font-bold tabular-nums">
             ${formatNumber(summary.total_oi_usd)}
           </div>
@@ -156,11 +148,11 @@ function SummaryCard({ data }) {
 
 // ── Heatmap with intensity colors ──
 
-function LiquidationHeatmap({ data }) {
+function LiquidationHeatmap({ data, t }) {
   if (!data?.bins?.length) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5 h-[420px] flex items-center justify-center">
-        <span className="text-text-muted text-sm">No liquidation data</span>
+        <span className="text-text-muted text-sm">{t('common:app.noData')}</span>
       </div>
     )
   }
@@ -185,11 +177,11 @@ function LiquidationHeatmap({ data }) {
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-text-secondary text-xs font-semibold">LIQUIDATION HEATMAP</h3>
+        <h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.heatmap').toUpperCase()}</h3>
         {isZoomed ? (
-          <button onClick={resetZoom} className="text-[10px] text-accent-blue">Reset zoom</button>
+          <button onClick={resetZoom} className="text-[10px] text-accent-blue">{t('common:btn.resetZoom')}</button>
         ) : (
-          <span className="text-text-muted text-[9px]">Pinch to zoom</span>
+          <span className="text-text-muted text-[9px]">{t('common:chart.pinchZoom')}</span>
         )}
       </div>
       <div className="h-[420px]" {...bindGestures}>
@@ -218,7 +210,7 @@ function LiquidationHeatmap({ data }) {
                 padding: '8px 12px',
               }}
               formatter={(v, name) => {
-                const label = name === 'longLiq' ? 'Long Liquidations' : 'Short Liquidations'
+                const label = name === 'longLiq' ? t('market:liquidations.longLiquidations') : t('market:liquidations.shortLiquidations')
                 return [`$${formatNumber(Math.abs(v))}`, label]
               }}
               labelFormatter={(label) => `Price Level: ${label}`}

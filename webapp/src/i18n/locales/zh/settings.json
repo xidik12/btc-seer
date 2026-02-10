@@ -1,0 +1,73 @@
+{
+  "title": "设置",
+  "language": {
+    "title": "语言",
+    "en": "EN",
+    "ru": "RU",
+    "zh": "ZH"
+  },
+  "alerts": {
+    "title": "价格提醒",
+    "enable": "开启通知",
+    "interval": "提醒间隔",
+    "intervalOptions": {
+      "1h": "1小时",
+      "4h": "4小时",
+      "24h": "24小时"
+    },
+    "save": "保存",
+    "saved": "设置已保存！",
+    "saveFailed": "保存设置失败",
+    "loading": "正在加载提醒设置..."
+  },
+  "subscription": {
+    "title": "高级版方案",
+    "manage": "管理订阅",
+    "manageDesc": "查看状态、到期时间和支付记录",
+    "tapToPlan": "点击方案即可通过 Telegram Stars 即时订阅。",
+    "subscribe": "订阅",
+    "subscribeTo": "订阅高级版",
+    "processing": "处理中...",
+    "paymentSuccess": "支付成功！",
+    "premiumActive": "您的高级版权限已激活。",
+    "paymentFailed": "支付失败，请重试。",
+    "couldNotStart": "无法发起支付，请稍后重试。",
+    "paymentVia": "通过 Telegram Stars 支付，安全即时。",
+    "whatYouGet": "您将获得",
+    "bestValue": "最超值",
+    "monthly": "月度",
+    "quarterly": "季度",
+    "yearly": "年度",
+    "days30": "30天",
+    "days90": "90天",
+    "days365": "365天",
+    "stars": "Stars",
+    "perMonth": "/月",
+    "save17": "省17%",
+    "save25": "省25%",
+    "features": {
+      "predictions": "AI 驱动的价格预测（1小时、4小时、24小时）",
+      "signals": "完整交易信号（含入场价、目标价、止损）",
+      "advisor": "交易顾问（自动仓位管理）",
+      "sentiment": "实时新闻情绪分析",
+      "alerts": "自定义价格提醒",
+      "analytics": "链上与宏观分析",
+      "elliott": "艾略特波浪分析",
+      "powerlaw": "幂律偏差跟踪"
+    }
+  },
+  "subscriptionPage": {
+    "title": "订阅",
+    "tier": "等级",
+    "status": "状态",
+    "daysRemaining": "剩余天数",
+    "memberSince": "注册时间",
+    "paymentHistory": "支付记录",
+    "free": "免费版",
+    "trial": "试用版",
+    "premium": "高级版",
+    "active": "生效中",
+    "expired": "已过期",
+    "noPayments": "暂无支付记录"
+  }
+}

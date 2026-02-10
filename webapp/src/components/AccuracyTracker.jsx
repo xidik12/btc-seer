@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   LineChart,
   Line,
@@ -48,6 +49,7 @@ function ProgressBar({ label, value, total }) {
 }
 
 export default function AccuracyTracker() {
+  const { t } = useTranslation('dashboard')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -93,7 +95,7 @@ export default function AccuracyTracker() {
   return (
     <div className="bg-bg-card rounded-2xl p-4 slide-up">
       <h3 className="text-text-primary font-semibold text-sm mb-3">
-        Prediction Accuracy
+        {t('accuracy.title')}
       </h3>
 
       {loading ? (
@@ -113,12 +115,12 @@ export default function AccuracyTracker() {
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-8 gap-2">
-          <p className="text-accent-red text-sm">Failed to load accuracy</p>
+          <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('accuracy.title') })}</p>
           <button
             onClick={fetchAccuracy}
             className="text-accent-blue text-xs hover:underline"
           >
-            Retry
+            {t('common:app.retry')}
           </button>
         </div>
       ) : (
@@ -129,7 +131,7 @@ export default function AccuracyTracker() {
               {overall.toFixed(1)}%
             </p>
             <p className="text-text-muted text-xs mt-1">
-              Based on {totalPredictions.toLocaleString()} predictions
+              {t('accuracy.basedOn', 'Based on {{count}} predictions', { count: totalPredictions.toLocaleString() })}
             </p>
           </div>
 
@@ -153,7 +155,7 @@ export default function AccuracyTracker() {
           {dailyTrend.length > 1 && (
             <div>
               <p className="text-text-secondary text-xs mb-2">
-                Daily Trend (30d)
+                {t('accuracy.trend30d')}
               </p>
               <div className="h-[120px] -mx-2">
                 <ResponsiveContainer width="100%" height="100%">

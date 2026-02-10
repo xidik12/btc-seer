@@ -1,15 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import { formatPricePrecise, formatPercent } from '../utils/format.js'
 
 const MACRO_ITEMS = [
-  { key: 'dxy', label: 'DXY', icon: '$' },
-  { key: 'gold', label: 'Gold', icon: 'Au' },
-  { key: 'sp500', label: 'S&P 500', icon: 'SP' },
-  { key: 'treasury_10y', label: '10Y Treasury', icon: '10Y' },
-  { key: 'nasdaq', label: 'Nasdaq 100', icon: 'NDQ' },
-  { key: 'vix', label: 'VIX', icon: 'VX' },
-  { key: 'eurusd', label: 'EUR/USD', icon: 'EU' },
+  { key: 'dxy', labelKey: 'macro.dxy', icon: '$' },
+  { key: 'gold', labelKey: 'macro.gold', icon: 'Au' },
+  { key: 'sp500', labelKey: 'macro.sp500', icon: 'SP' },
+  { key: 'treasury_10y', labelKey: 'macro.treasury10y', icon: '10Y' },
+  { key: 'nasdaq', labelKey: 'macro.nasdaq', icon: 'NDQ' },
+  { key: 'vix', labelKey: 'macro.vix', icon: 'VX' },
+  { key: 'eurusd', labelKey: 'macro.eurusd', icon: 'EU' },
 ]
 
 const KEY_ALIASES = {
@@ -94,6 +95,7 @@ function MacroCard({ label, icon, price, change }) {
 }
 
 export default function MacroDashboard() {
+  const { t } = useTranslation('dashboard')
   const [macroData, setMacroData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -120,11 +122,11 @@ export default function MacroDashboard() {
     <div className="bg-bg-card rounded-2xl p-4 slide-up">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-text-primary font-semibold text-sm">
-          Macro Overview
+          {t('macro.title')}
         </h3>
         {!loading && !error && (
           <span className="text-text-muted text-[10px]">
-            Updates every 5m
+            {t('macro.updatesEvery5m', 'Updates every 5m')}
           </span>
         )}
       </div>
@@ -144,24 +146,24 @@ export default function MacroDashboard() {
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-8 gap-2">
-          <p className="text-accent-red text-sm">Failed to load macro data</p>
+          <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('macro.title') })}</p>
           <button
             onClick={fetchMacro}
             className="text-accent-blue text-xs hover:underline"
           >
-            Retry
+            {t('common:app.retry')}
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {MACRO_ITEMS.map(({ key, label, icon }) => {
+          {MACRO_ITEMS.map(({ key, labelKey, icon }) => {
             const raw = findValue(macroData, key)
             const price = extractPrice(raw)
             const change = extractChange(raw)
             return (
               <MacroCard
                 key={key}
-                label={label}
+                label={t(labelKey)}
                 icon={icon}
                 price={price}
                 change={change}

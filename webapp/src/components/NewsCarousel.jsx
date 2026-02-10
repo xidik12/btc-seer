@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import { formatTimeAgo } from '../utils/format.js'
 
@@ -31,12 +32,12 @@ function getSourceColor(source) {
   return SOURCE_COLORS.default
 }
 
-function getSentimentLabel(score) {
+function getSentimentLabel(score, t) {
   if (score == null) return null
-  if (score > 0.3) return { text: 'Bullish', cls: 'bg-accent-green/15 text-accent-green' }
-  if (score < -0.3) return { text: 'Bearish', cls: 'bg-accent-red/15 text-accent-red' }
-  if (score > 0.1) return { text: 'Positive', cls: 'bg-accent-green/10 text-accent-green/80' }
-  if (score < -0.1) return { text: 'Negative', cls: 'bg-accent-red/10 text-accent-red/80' }
+  if (score > 0.3) return { text: t('common:direction.bullish'), cls: 'bg-accent-green/15 text-accent-green' }
+  if (score < -0.3) return { text: t('common:direction.bearish'), cls: 'bg-accent-red/15 text-accent-red' }
+  if (score > 0.1) return { text: t('news.positive', 'Positive'), cls: 'bg-accent-green/10 text-accent-green/80' }
+  if (score < -0.1) return { text: t('news.negative', 'Negative'), cls: 'bg-accent-red/10 text-accent-red/80' }
   return null
 }
 
@@ -45,12 +46,12 @@ function isNew(dateStr) {
   return (Date.now() - new Date(dateStr).getTime()) < 300_000 // 5 minutes
 }
 
-function NewsItem({ item, isLast }) {
+function NewsItem({ item, isLast, t }) {
   const handleClick = () => {
     if (item.url) window.open(item.url, '_blank', 'noopener,noreferrer')
   }
 
-  const sentiment = getSentimentLabel(item.sentiment_score)
+  const sentiment = getSentimentLabel(item.sentiment_score, t)
   const fresh = isNew(item.published_at || item.publishedAt || item.time)
   const srcColor = getSourceColor(item.source)
 
@@ -74,7 +75,7 @@ function NewsItem({ item, isLast }) {
         <div className="flex items-center gap-1.5 mb-0.5">
           {fresh && (
             <span className="text-[9px] font-bold text-accent-blue bg-accent-blue/15 px-1 py-px rounded animate-pulse">
-              NEW
+              {t('news.new')}
             </span>
           )}
           {sentiment && (
@@ -114,6 +115,7 @@ function NewsItem({ item, isLast }) {
 }
 
 export default function NewsCarousel() {
+  const { t } = useTranslation('dashboard')
   const [news, setNews] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -156,7 +158,7 @@ export default function NewsCarousel() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-text-primary font-semibold text-sm">Live News Feed</h3>
+          <h3 className="text-text-primary font-semibold text-sm">{t('news.title')}</h3>
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-green opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-green" />
@@ -165,11 +167,11 @@ export default function NewsCarousel() {
         <div className="flex items-center gap-2">
           {sources.size > 0 && (
             <span className="text-text-muted text-[10px]">
-              {sources.size} sources
+              {sources.size} {t('news.sources')}
             </span>
           )}
           <span className="text-text-muted text-[10px]">
-            {news.length} articles
+            {news.length} {t('news.articles', 'articles')}
           </span>
         </div>
       </div>
@@ -190,13 +192,13 @@ export default function NewsCarousel() {
         </div>
       ) : error ? (
         <div className="px-4 pb-4 flex flex-col items-center justify-center py-6 gap-2">
-          <p className="text-accent-red text-sm">Failed to load news</p>
-          <button onClick={fetchNews} className="text-accent-blue text-xs hover:underline">Retry</button>
+          <p className="text-accent-red text-sm">{t('common:widget.failedToLoad', { name: t('news.title') })}</p>
+          <button onClick={fetchNews} className="text-accent-blue text-xs hover:underline">{t('common:app.retry')}</button>
         </div>
       ) : displayedNews.length === 0 ? (
         <div className="px-4 pb-4 py-6 text-center">
-          <p className="text-text-secondary text-sm">No recent news</p>
-          <p className="text-text-muted text-xs mt-1">News will appear here once collected</p>
+          <p className="text-text-secondary text-sm">{t('news.noNews')}</p>
+          <p className="text-text-muted text-xs mt-1">{t('news.willAppear', 'News will appear here once collected')}</p>
         </div>
       ) : (
         <div className="max-h-[400px] overflow-y-auto scrollbar-thin">
@@ -205,6 +207,7 @@ export default function NewsCarousel() {
               key={item.id || `${item.source}-${index}`}
               item={item}
               isLast={index === displayedNews.length - 1}
+              t={t}
             />
           ))}
         </div>

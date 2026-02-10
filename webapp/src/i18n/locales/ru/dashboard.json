@@ -1,0 +1,119 @@
+{
+  "title": "BTC Seer",
+  "prediction": {
+    "aiTitle": "Прогноз ИИ",
+    "quantTitle": "Квант-прогноз",
+    "compositeScore": "Композитная оценка",
+    "signalBreakdown": "Разбор сигналов",
+    "activeSignals": "Активные сигналы",
+    "agreement": "Совпадение",
+    "noSignals": "Нет данных по сигналам",
+    "timeframe": "Таймфрейм",
+    "predicted": "Прогноз",
+    "change": "Изменение"
+  },
+  "priceWidget": {
+    "title": "BTC / USD",
+    "high24h": "Макс. за 24ч",
+    "low24h": "Мин. за 24ч",
+    "vol24h": "Объём за 24ч",
+    "timeframes": {
+      "1m": "1м",
+      "5m": "5м",
+      "15m": "15м",
+      "1h": "1ч",
+      "4h": "4ч",
+      "1d": "1Д",
+      "1w": "1Н",
+      "all": "Все"
+    }
+  },
+  "fearGreed": {
+    "title": "Индекс страха и жадности",
+    "extremeFear": "Крайний страх",
+    "fear": "Страх",
+    "neutral": "Нейтрально",
+    "greed": "Жадность",
+    "extremeGreed": "Крайняя жадность",
+    "last7Days": "Последние 7 дней",
+    "marketSentiment": "Настроение рынка"
+  },
+  "signalPanel": {
+    "title": "Торговый сигнал",
+    "action": "Действие",
+    "entry": "Вход",
+    "target": "Цель",
+    "stopLoss": "Стоп-лосс",
+    "confidence": "Уверенность",
+    "riskLevel": "Уровень риска",
+    "disclaimer": "Сигнал сгенерирован ИИ. Не является финансовой рекомендацией. Всегда проводите собственное исследование перед торговлей."
+  },
+  "news": {
+    "title": "Последние новости",
+    "sources": "источников",
+    "new": "НОВОЕ",
+    "noNews": "Нет доступных новостей"
+  },
+  "influencer": {
+    "title": "Социальные сигналы",
+    "monitoring": "Мониторинг {{count}} персон",
+    "weightedSentiment": "Взвешенный сентимент",
+    "noData": "Нет данных по инфлюенсерам"
+  },
+  "onChain": {
+    "title": "Ончейн-метрики",
+    "exchangeReserves": "Резервы бирж",
+    "largeTransactions": "Крупные транзакции",
+    "activeAddresses": "Активные адреса",
+    "hashRate": "Хешрейт",
+    "inflows": "Входящие потоки",
+    "outflows": "Исходящие потоки",
+    "24hUnique": "Уникальных отправителей за 24ч",
+    "networkSecurity": "Безопасность сети"
+  },
+  "supply": {
+    "title": "Эмиссия Bitcoin",
+    "mined": "Добыто",
+    "remaining": "Осталось",
+    "totalSupply": "Общая эмиссия",
+    "dailyMining": "Дневная добыча",
+    "blockReward": "Награда за блок",
+    "nextHalving": "Следующий халвинг",
+    "milestones": "Вехи эмиссии",
+    "percentMined": "{{pct}}% добыто"
+  },
+  "dominance": {
+    "title": "Доминация BTC",
+    "change24h": "Изменение за 24ч",
+    "interpretation": "Интерпретация",
+    "riskOff": "Risk-Off: Деньги перетекают в BTC",
+    "riskOn": "Risk-On: Деньги перетекают в альткоины"
+  },
+  "macro": {
+    "title": "Макро-дашборд",
+    "dxy": "DXY (Доллар)",
+    "gold": "Золото",
+    "sp500": "S&P 500",
+    "treasury10y": "10-летние облигации",
+    "nasdaq": "Nasdaq",
+    "vix": "VIX",
+    "eurusd": "EUR/USD"
+  },
+  "halving": {
+    "title": "Обратный отсчёт до халвинга",
+    "nextHalving": "Следующий халвинг",
+    "block": "Блок {{number}}",
+    "days": "дней",
+    "hours": "часов",
+    "minutes": "минут",
+    "seconds": "секунд",
+    "cycleProgress": "Прогресс цикла",
+    "rewardDrop": "Награда снижается с {{from}} до {{to}} BTC"
+  },
+  "accuracy": {
+    "title": "Точность прогнозов",
+    "overall": "Общая",
+    "trend30d": "Тренд за 30 дней",
+    "byTimeframe": "По таймфреймам"
+  }
+}

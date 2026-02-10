@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { useTelegram } from '../hooks/useTelegram'
 import { useTutorial } from '../hooks/useTutorial'
@@ -7,9 +8,9 @@ import SubTabBar from '../components/SubTabBar'
 import TutorialOverlay from '../components/tutorial/TutorialOverlay'
 
 const ADVISOR_TABS = [
-  { path: '/advisor', label: 'AI Advisor' },
-  { path: '/mock-trading', label: 'Paper Trading' },
-  { path: '/history', label: 'History' },
+  { path: '/advisor', labelKey: 'advisor.tabs.advisor' },
+  { path: '/mock-trading', labelKey: 'advisor.tabs.paperTrading' },
+  { path: '/history', labelKey: 'advisor.tabs.history' },
 ]
 
 const LEVERAGE_PRESETS = [1, 2, 5, 10, 20, 50, 75, 125]
@@ -58,7 +59,7 @@ function TPProgress({ currentPrice, entry, targets, stopLoss }) {
 }
 
 // ─── Order Form ────────────────────────────────────────────
-function OrderForm({ currentPrice, onSubmit, submitting }) {
+function OrderForm({ currentPrice, onSubmit, submitting, t }) {
   const [direction, setDirection] = useState('LONG')
   const [orderType, setOrderType] = useState('market')
   const [positionMode, setPositionMode] = useState('one-way')
@@ -71,24 +72,28 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
   const [tp2, setTp2] = useState('')
   const [tp3, setTp3] = useState('')
 
-  // Auto-fill entry price and defaults
+  const initialFillDone = useRef(false)
+
+  // Auto-fill entry price and defaults — only on first load, not on every price tick
   useEffect(() => {
-    if (currentPrice) {
-      if (orderType === 'market' || !entry) {
-        setEntry(currentPrice.toFixed(0))
-      }
-      if (!sl) {
-        const slPct = direction === 'LONG' ? 0.98 : 1.02
-        setSl((currentPrice * slPct).toFixed(0))
-      }
-      if (!tp1) {
-        const mult = direction === 'LONG' ? [1.02, 1.04, 1.06] : [0.98, 0.96, 0.94]
-        setTp1((currentPrice * mult[0]).toFixed(0))
-        setTp2((currentPrice * mult[1]).toFixed(0))
-        setTp3((currentPrice * mult[2]).toFixed(0))
-      }
+    if (currentPrice && !initialFillDone.current) {
+      initialFillDone.current = true
+      setEntry(currentPrice.toFixed(0))
+      const slPct = direction === 'LONG' ? 0.98 : 1.02
+      setSl((currentPrice * slPct).toFixed(0))
+      const mult = direction === 'LONG' ? [1.02, 1.04, 1.06] : [0.98, 0.96, 0.94]
+      setTp1((currentPrice * mult[0]).toFixed(0))
+      setTp2((currentPrice * mult[1]).toFixed(0))
+      setTp3((currentPrice * mult[2]).toFixed(0))
     }
   }, [currentPrice])
+
+  // Update entry when switching to market order type
+  useEffect(() => {
+    if (orderType === 'market' && currentPrice) {
+      setEntry(currentPrice.toFixed(0))
+    }
+  }, [orderType])
 
   const updateDirection = (dir) => {
     setDirection(dir)
@@ -142,7 +147,7 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
       {/* Mode Selectors */}
       <div className="flex gap-2" data-tutorial="position-mode">
         <div className="flex-1">
-          <label className="text-[9px] text-text-muted block mb-1">Position Mode</label>
+          <label className="text-[9px] text-text-muted block mb-1">{t('orderForm.positionMode')}</label>
           <div className="flex bg-bg-hover rounded-lg p-0.5">
             {['one-way', 'hedge'].map(m => (
               <button
@@ -153,13 +158,13 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
                   positionMode === m ? 'bg-accent-blue text-white' : 'text-text-muted'
                 }`}
               >
-                {m === 'one-way' ? 'One-Way' : 'Hedge'}
+                {m === 'one-way' ? t('orderForm.oneWay') : t('orderForm.hedge')}
               </button>
             ))}
           </div>
         </div>
         <div className="flex-1" data-tutorial="margin-mode">
-          <label className="text-[9px] text-text-muted block mb-1">Margin Mode</label>
+          <label className="text-[9px] text-text-muted block mb-1">{t('orderForm.marginMode')}</label>
           <div className="flex bg-bg-hover rounded-lg p-0.5">
             {['cross', 'isolated'].map(m => (
               <button
@@ -170,7 +175,7 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
                   marginMode === m ? 'bg-accent-blue text-white' : 'text-text-muted'
                 }`}
               >
-                {m === 'cross' ? 'Cross' : 'Isolated'}
+                {m === 'cross' ? t('orderForm.cross') : t('orderForm.isolated')}
               </button>
             ))}
           </div>
@@ -180,19 +185,19 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
       {/* Order Type Tabs */}
       <div data-tutorial="order-type">
         <div className="flex bg-bg-hover rounded-lg p-0.5">
-          {['market', 'limit'].map(t => (
+          {['market', 'limit'].map(ot => (
             <button
-              key={t}
+              key={ot}
               type="button"
               onClick={() => {
-                setOrderType(t)
-                if (t === 'market' && currentPrice) setEntry(currentPrice.toFixed(0))
+                setOrderType(ot)
+                if (ot === 'market' && currentPrice) setEntry(currentPrice.toFixed(0))
               }}
               className={`flex-1 py-1.5 text-[10px] font-semibold rounded-md transition-all ${
-                orderType === t ? 'bg-accent-blue text-white' : 'text-text-muted'
+                orderType === ot ? 'bg-accent-blue text-white' : 'text-text-muted'
               }`}
             >
-              {t === 'market' ? 'Market' : 'Limit'}
+              {ot === 'market' ? t('orderForm.market') : t('orderForm.limit')}
             </button>
           ))}
         </div>
@@ -223,7 +228,7 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
       {/* Entry Price */}
       <div data-tutorial="entry-price">
         <label className="text-[9px] text-text-muted block mb-1">
-          Entry Price {orderType === 'market' ? '(Market)' : '(Limit)'}
+          {orderType === 'market' ? t('orderForm.entryMarket') : t('orderForm.entryLimit')}
         </label>
         <input
           type="number"
@@ -240,8 +245,8 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
       {/* Leverage */}
       <div data-tutorial="leverage">
         <label className="text-[9px] text-text-muted block mb-1">
-          Leverage <span className="text-accent-green font-bold">{leverage}x</span>
-          <span className="float-right">Margin: ${(sizeNum).toFixed(2)}</span>
+          {t('orderForm.leverage')} <span className="text-accent-green font-bold">{leverage}x</span>
+          <span className="float-right">{t('orderForm.margin', { amount: sizeNum.toFixed(2) })}</span>
         </label>
         <div className="flex flex-wrap gap-1 mb-2">
           {LEVERAGE_PRESETS.map(lev => (
@@ -270,8 +275,8 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
       {/* Position Size */}
       <div data-tutorial="size">
         <label className="text-[9px] text-text-muted block mb-1">
-          Size (USDT)
-          <span className="float-right text-accent-green">Notional: ${notional.toLocaleString()}</span>
+          {t('orderForm.sizeUsdt')}
+          <span className="float-right text-accent-green">{t('orderForm.notional', { amount: notional.toLocaleString() })}</span>
         </label>
         <input
           type="number"
@@ -297,8 +302,8 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
       {/* Stop Loss */}
       <div data-tutorial="stop-loss">
         <label className="text-[9px] text-text-muted block mb-1">
-          Stop Loss
-          <span className="float-right text-accent-red">-{slDistPct}% | Risk: ${riskUsdt.toFixed(2)}</span>
+          {t('orderForm.stopLoss')}
+          <span className="float-right text-accent-red">-{slDistPct}% | {t('orderForm.risk', { amount: riskUsdt.toFixed(2) })}</span>
         </label>
         <input
           type="number"
@@ -313,8 +318,8 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
       <div className="space-y-2">
         <div data-tutorial="tp1">
           <label className="text-[9px] text-text-muted block mb-1">
-            TP1 — Close 40%
-            <span className="float-right text-accent-green">R:R {tp1RR}</span>
+            {t('orderForm.tp1')}
+            <span className="float-right text-accent-green">{t('orderForm.rr', { ratio: tp1RR })}</span>
           </label>
           <input
             type="number"
@@ -325,8 +330,8 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
         </div>
         <div data-tutorial="tp2">
           <label className="text-[9px] text-text-muted block mb-1">
-            TP2 — Close 40%
-            <span className="float-right text-accent-green">R:R {tp2RR}</span>
+            {t('orderForm.tp2')}
+            <span className="float-right text-accent-green">{t('orderForm.rr', { ratio: tp2RR })}</span>
           </label>
           <input
             type="number"
@@ -337,8 +342,8 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
         </div>
         <div data-tutorial="tp3">
           <label className="text-[9px] text-text-muted block mb-1">
-            TP3 — Close 20%
-            <span className="float-right text-accent-green">R:R {tp3RR}</span>
+            {t('orderForm.tp3')}
+            <span className="float-right text-accent-green">{t('orderForm.rr', { ratio: tp3RR })}</span>
           </label>
           <input
             type="number"
@@ -351,44 +356,44 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
 
       {/* Order Preview */}
       <div data-tutorial="preview" className="bg-bg-hover/60 border border-white/5 rounded-xl p-3">
-        <div className="text-[10px] text-text-muted font-semibold mb-2">ORDER PREVIEW</div>
+        <div className="text-[10px] text-text-muted font-semibold mb-2">{t('orderForm.orderPreview')}</div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
           <div className="flex justify-between">
-            <span className="text-text-muted">Direction</span>
+            <span className="text-text-muted">{t('trade.direction', { ns: 'common' })}</span>
             <span className={direction === 'LONG' ? 'text-accent-green font-bold' : 'text-accent-red font-bold'}>
               {direction}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted">Leverage</span>
+            <span className="text-text-muted">{t('trade.leverage', { ns: 'common' })}</span>
             <span className="text-text-primary font-semibold">{leverage}x</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted">Entry</span>
+            <span className="text-text-muted">{t('trade.entry', { ns: 'common' })}</span>
             <span className="text-text-primary font-mono tabular-nums">{formatPrice(entryNum)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted">Notional</span>
+            <span className="text-text-muted">{t('trade.notional', { ns: 'common' })}</span>
             <span className="text-text-primary font-mono tabular-nums">${notional.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted">Margin</span>
+            <span className="text-text-muted">{t('trade.margin', { ns: 'common' })}</span>
             <span className="text-text-primary font-mono tabular-nums">${sizeNum.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted">Liq. Price</span>
+            <span className="text-text-muted">{t('trade.liqPrice', { ns: 'common' })}</span>
             <span className="text-accent-red font-mono tabular-nums">{formatPrice(liqPrice)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted">Max Loss</span>
+            <span className="text-text-muted">{t('trade.maxLoss', { ns: 'common' })}</span>
             <span className="text-accent-red font-bold">-${riskUsdt.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-text-muted">Max Gain</span>
+            <span className="text-text-muted">{t('trade.maxGain', { ns: 'common' })}</span>
             <span className="text-accent-green font-bold">+${maxGain.toFixed(2)}</span>
           </div>
           <div className="col-span-2 flex justify-between border-t border-white/5 pt-1.5 mt-1">
-            <span className="text-text-muted">R:R Ratio</span>
+            <span className="text-text-muted">{t('trade.rrRatio', { ns: 'common' })}</span>
             <span className={`font-bold ${parseFloat(rrRatio) >= 2 ? 'text-accent-green' : 'text-accent-yellow'}`}>
               {rrRatio}
             </span>
@@ -407,14 +412,14 @@ function OrderForm({ currentPrice, onSubmit, submitting }) {
             : 'bg-accent-red text-white shadow-lg shadow-accent-red/20 hover:bg-accent-red/90'
         } disabled:opacity-40 disabled:shadow-none`}
       >
-        {submitting ? 'Opening...' : `Open ${direction}`}
+        {submitting ? t('orderForm.opening') : t('trade.openPosition', { direction, ns: 'common' })}
       </button>
     </form>
   )
 }
 
 // ─── Active Position Card ──────────────────────────────────
-function PositionCard({ trade, currentPrice, onClose }) {
+function PositionCard({ trade, currentPrice, onClose, t }) {
   const isLong = trade.direction === 'LONG'
   const price = trade.current_price || currentPrice || 0
   const pnlPct = trade.unrealized_pnl_pct || (trade.entry_price ? ((price - trade.entry_price) / trade.entry_price * 100 * (isLong ? 1 : -1) * (trade.leverage || 1)) : 0)
@@ -432,9 +437,9 @@ function PositionCard({ trade, currentPrice, onClose }) {
           }`}>
             {trade.direction}
           </span>
-          <span className="text-text-primary text-sm font-semibold">BTC/USDT</span>
+          <span className="text-text-primary text-sm font-semibold">{t('trade.btcUsdt', { ns: 'common' })}</span>
           <span className="text-text-muted text-[9px]">{trade.leverage}x</span>
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent-yellow/15 text-accent-yellow">PAPER</span>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent-yellow/15 text-accent-yellow">{t('app.paper', { ns: 'common' })}</span>
         </div>
         <div className={`text-sm font-bold tabular-nums ${pnlPct >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
           {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%
@@ -444,19 +449,19 @@ function PositionCard({ trade, currentPrice, onClose }) {
       {/* Price Grid */}
       <div className="grid grid-cols-4 gap-2 text-xs">
         <div>
-          <div className="text-text-muted text-[9px]">Entry</div>
+          <div className="text-text-muted text-[9px]">{t('trade.entry', { ns: 'common' })}</div>
           <div className="font-mono tabular-nums">{formatPrice(trade.entry_price)}</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">Current</div>
+          <div className="text-text-muted text-[9px]">{t('trade.current', { ns: 'common' })}</div>
           <div className="font-mono tabular-nums">{formatPrice(price)}</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">Liq. Price</div>
+          <div className="text-text-muted text-[9px]">{t('trade.liqPrice', { ns: 'common' })}</div>
           <div className="font-mono tabular-nums text-accent-red">{formatPrice(liqPrice)}</div>
         </div>
         <div className="text-right">
-          <div className="text-text-muted text-[9px]">PnL</div>
+          <div className="text-text-muted text-[9px]">{t('trade.pnl', { ns: 'common' })}</div>
           <div className={`font-bold tabular-nums ${pnlPct >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
             {pnlUsdt >= 0 ? '+' : ''}${Math.abs(pnlUsdt).toFixed(2)}
           </div>
@@ -465,8 +470,8 @@ function PositionCard({ trade, currentPrice, onClose }) {
 
       {/* Margin & Size */}
       <div className="flex items-center justify-between mt-2 text-[9px] text-text-muted">
-        <span>Margin: ${trade.position_size_usdt}</span>
-        <span>Notional: ${((trade.position_size_usdt || 0) * (trade.leverage || 1)).toLocaleString()}</span>
+        <span>{t('trade.margin', { ns: 'common' })}: ${trade.position_size_usdt}</span>
+        <span>{t('trade.notional', { ns: 'common' })}: ${((trade.position_size_usdt || 0) * (trade.leverage || 1)).toLocaleString()}</span>
         <span>{formatTimeAgo(trade.timestamp)}</span>
       </div>
 
@@ -486,7 +491,7 @@ function PositionCard({ trade, currentPrice, onClose }) {
           onClick={() => onClose(trade.id, price)}
           className="text-[10px] px-4 py-1.5 rounded-lg bg-accent-red/15 text-accent-red font-semibold hover:bg-accent-red/25 transition-colors"
         >
-          Close Position
+          {t('trade.closePosition', { ns: 'common' })}
         </button>
       </div>
     </div>
@@ -494,7 +499,7 @@ function PositionCard({ trade, currentPrice, onClose }) {
 }
 
 // ─── History Row ───────────────────────────────────────────
-function HistoryRow({ trade }) {
+function HistoryRow({ trade, t }) {
   const won = trade.was_winner
   const isLong = trade.direction === 'LONG'
 
@@ -520,7 +525,7 @@ function HistoryRow({ trade }) {
             {trade.direction}
           </span>
           <span className="text-text-muted text-[9px]">{trade.leverage}x</span>
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent-yellow/15 text-accent-yellow">PAPER</span>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent-yellow/15 text-accent-yellow">{t('app.paper', { ns: 'common' })}</span>
         </div>
         <div className="text-right">
           <span className={`text-xs font-bold tabular-nums ${trade.pnl_usdt >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
@@ -545,14 +550,14 @@ function HistoryRow({ trade }) {
 }
 
 // ─── Portfolio Summary ─────────────────────────────────────
-function PortfolioSummary({ trades, history }) {
+function PortfolioSummary({ trades, history, t }) {
   const totalPnl = useMemo(() => {
-    return (history || []).reduce((sum, t) => sum + (t.pnl_usdt || 0), 0)
+    return (history || []).reduce((sum, tr) => sum + (tr.pnl_usdt || 0), 0)
   }, [history])
 
   const winRate = useMemo(() => {
     if (!history?.length) return 0
-    const wins = history.filter(t => t.was_winner).length
+    const wins = history.filter(tr => tr.was_winner).length
     return (wins / history.length * 100)
   }, [history])
 
@@ -563,11 +568,11 @@ function PortfolioSummary({ trades, history }) {
     <div className="bg-bg-card rounded-xl border border-white/5 p-3">
       <div className="flex items-center justify-between mb-2">
         <div>
-          <div className="text-text-muted text-[9px]">BALANCE</div>
+          <div className="text-text-muted text-[9px]">{t('portfolio.balance')}</div>
           <div className="text-text-primary text-lg font-bold tabular-nums">${balance.toFixed(2)}</div>
         </div>
         <div className="text-right">
-          <div className="text-text-muted text-[9px]">TOTAL P&L</div>
+          <div className="text-text-muted text-[9px]">{t('portfolio.totalPnl')}</div>
           <div className={`text-lg font-bold tabular-nums ${totalPnl >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
             {totalPnl >= 0 ? '+' : ''}${totalPnl.toFixed(2)}
           </div>
@@ -575,23 +580,23 @@ function PortfolioSummary({ trades, history }) {
       </div>
       <div className="grid grid-cols-3 gap-2 text-center mb-3">
         <div>
-          <div className="text-text-muted text-[9px]">Win Rate</div>
+          <div className="text-text-muted text-[9px]">{t('portfolio.winRate')}</div>
           <div className="text-text-primary text-sm font-bold">{winRate.toFixed(0)}%</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">Total Trades</div>
+          <div className="text-text-muted text-[9px]">{t('portfolio.totalTrades')}</div>
           <div className="text-text-primary text-sm font-bold">{(history || []).length}</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">Active</div>
+          <div className="text-text-muted text-[9px]">{t('portfolio.active')}</div>
           <div className="text-text-primary text-sm font-bold">{(trades || []).length}</div>
         </div>
       </div>
       {/* Progress bar: $10 → $10,000 journey */}
       <div>
         <div className="flex justify-between text-[9px] text-text-muted mb-1">
-          <span>$10</span>
-          <span>$10,000 Goal</span>
+          <span>{t('portfolio.start')}</span>
+          <span>{t('portfolio.goal')}</span>
         </div>
         <div className="h-1.5 bg-bg-hover rounded-full overflow-hidden">
           <div
@@ -611,6 +616,7 @@ export default function MockTrading() {
   const { user } = useTelegram()
   const telegramId = user?.id || 0
   const tutorial = useTutorial()
+  const { t } = useTranslation('trading')
 
   const [trades, setTrades] = useState([])
   const [history, setHistory] = useState([])
@@ -619,6 +625,11 @@ export default function MockTrading() {
   const [tab, setTab] = useState('trade')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+
+  const advisorTabs = useMemo(() => ADVISOR_TABS.map(at => ({
+    ...at,
+    label: t(at.labelKey),
+  })), [t])
 
   const fetchData = useCallback(async () => {
     try {
@@ -654,7 +665,7 @@ export default function MockTrading() {
 
   const handleSubmit = async (tradeData) => {
     if (!telegramId) {
-      alert('Login via Telegram to save paper trades')
+      alert(t('loginRequired'))
       return
     }
     setSubmitting(true)
@@ -664,14 +675,14 @@ export default function MockTrading() {
       setTab('active')
     } catch (err) {
       console.error('Create mock trade error:', err)
-      alert('Failed to create trade: ' + (err.message || 'Unknown error'))
+      alert(t('createFailed', { error: err.message || 'Unknown error' }))
     } finally {
       setSubmitting(false)
     }
   }
 
   const handleClose = async (tradeId, price) => {
-    if (!window.confirm(`Close position at ${formatPrice(price)}?`)) return
+    if (!window.confirm(t('position.closeConfirm', { price: formatPrice(price) }))) return
     try {
       await api.closeTrade(tradeId, price, 'manual_close')
       fetchData()
@@ -688,8 +699,8 @@ export default function MockTrading() {
       {/* Header */}
       <div className="flex items-center justify-between" data-tutorial="header">
         <div>
-          <h1 className="text-lg font-bold text-text-primary">Paper Trading</h1>
-          <div className="text-text-muted text-[10px]">Practice risk-free</div>
+          <h1 className="text-lg font-bold text-text-primary">{t('paperTrading.title')}</h1>
+          <div className="text-text-muted text-[10px]">{t('paperTrading.subtitle')}</div>
         </div>
         <div className="flex items-center gap-2">
           {tutorial.completed && (
@@ -697,19 +708,19 @@ export default function MockTrading() {
               onClick={tutorial.restart}
               className="text-[9px] px-2 py-1 rounded-md bg-bg-hover text-text-muted hover:text-text-secondary transition-colors"
             >
-              ? Tutorial
+              {t('paperTrading.tutorial')}
             </button>
           )}
         </div>
       </div>
 
-      <SubTabBar tabs={ADVISOR_TABS} />
+      <SubTabBar tabs={advisorTabs} />
 
       {/* Price Banner */}
       {currentPrice > 0 && (
         <div className="bg-bg-card rounded-xl border border-white/5 p-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-text-muted text-xs">BTC/USDT</span>
+            <span className="text-text-muted text-xs">{t('trade.btcUsdt', { ns: 'common' })}</span>
             {priceChange !== 0 && (
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
                 priceChange >= 0 ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
@@ -729,26 +740,26 @@ export default function MockTrading() {
       {/* Inner Tabs */}
       <div className="flex gap-1 bg-bg-secondary/50 rounded-lg p-0.5">
         {[
-          { key: 'trade', label: 'New Trade' },
-          { key: 'active', label: `Active (${trades.length})` },
-          { key: 'history', label: `History (${history.length})` },
-        ].map(t => (
+          { key: 'trade', label: t('paperTrading.tabs.newTrade') },
+          { key: 'active', label: t('paperTrading.tabs.active', { count: trades.length }) },
+          { key: 'history', label: t('paperTrading.tabs.history', { count: history.length }) },
+        ].map(tb => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            data-tutorial={t.key === 'history' ? 'history-tab' : undefined}
+            key={tb.key}
+            onClick={() => setTab(tb.key)}
+            data-tutorial={tb.key === 'history' ? 'history-tab' : undefined}
             className={`flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-              tab === t.key ? 'bg-accent-blue text-white shadow-sm' : 'text-text-muted hover:text-text-secondary'
+              tab === tb.key ? 'bg-accent-blue text-white shadow-sm' : 'text-text-muted hover:text-text-secondary'
             }`}
           >
-            {t.label}
+            {tb.label}
           </button>
         ))}
       </div>
 
       {/* ─── New Trade Tab ─── */}
       {tab === 'trade' && (
-        <OrderForm currentPrice={currentPrice} onSubmit={handleSubmit} submitting={submitting} />
+        <OrderForm currentPrice={currentPrice} onSubmit={handleSubmit} submitting={submitting} t={t} />
       )}
 
       {/* ─── Active Positions Tab ─── */}
@@ -760,15 +771,14 @@ export default function MockTrading() {
             </div>
           ) : trades.length > 0 ? (
             <div className="space-y-2">
-              {trades.map((t, i) => (
-                <PositionCard key={t.id || i} trade={t} currentPrice={currentPrice} onClose={handleClose} />
+              {trades.map((tr, i) => (
+                <PositionCard key={tr.id || i} trade={tr} currentPrice={currentPrice} onClose={handleClose} t={t} />
               ))}
             </div>
           ) : (
             <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
-              <div className="text-2xl mb-2">📊</div>
-              <p className="text-text-muted text-sm">No active positions</p>
-              <p className="text-text-muted text-xs mt-1">Open a trade to start practicing.</p>
+              <p className="text-text-muted text-sm">{t('position.noActive')}</p>
+              <p className="text-text-muted text-xs mt-1">{t('position.startPractice')}</p>
             </div>
           )}
         </div>
@@ -778,27 +788,26 @@ export default function MockTrading() {
       {tab === 'history' && (
         history.length > 0 ? (
           <div className="space-y-2">
-            {history.map((t, i) => (
-              <HistoryRow key={t.id || i} trade={t} />
+            {history.map((tr, i) => (
+              <HistoryRow key={tr.id || i} trade={tr} t={t} />
             ))}
           </div>
         ) : (
           <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
-            <div className="text-2xl mb-2">📈</div>
-            <p className="text-text-muted text-sm">No trade history</p>
-            <p className="text-text-muted text-xs mt-1">Completed trades will appear here.</p>
+            <p className="text-text-muted text-sm">{t('position.noHistory')}</p>
+            <p className="text-text-muted text-xs mt-1">{t('position.historyHint')}</p>
           </div>
         )
       )}
 
       {/* Portfolio Summary */}
       <div data-tutorial="portfolio">
-        <PortfolioSummary trades={trades} history={history} />
+        <PortfolioSummary trades={trades} history={history} t={t} />
       </div>
 
       {/* Disclaimer */}
       <p className="text-text-muted text-[10px] text-center pb-4 leading-relaxed">
-        Paper trading uses virtual money. No real funds at risk. Practice your strategies risk-free.
+        {t('paperTrading.disclaimer')}
       </p>
     </div>
   )

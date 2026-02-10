@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useTelegram } from '../hooks/useTelegram'
 import PriceWidget from '../components/PriceWidget'
 import PriceChart from '../components/PriceChart'
@@ -29,12 +30,12 @@ class SafeWrap extends Component {
     if (this.state.hasError) {
       return (
         <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/20">
-          <p className="text-accent-red text-xs">{this.props.name} failed to load</p>
+          <p className="text-accent-red text-xs">{this.props.t('widget.failedToLoad', { name: this.props.name })}</p>
           <button
             onClick={() => this.setState({ hasError: false })}
             className="text-accent-blue text-[10px] mt-1 underline"
           >
-            Retry
+            {this.props.t('app.retry')}
           </button>
         </div>
       )
@@ -149,40 +150,40 @@ const quickIcons = {
 
 const CATEGORIES = [
   {
-    title: 'Trading',
+    titleKey: 'category.trading',
     links: [
-      { path: '/signals', label: 'Signals', icon: 'signals' },
-      { path: '/advisor', label: 'Advisor', icon: 'advisor' },
-      { path: '/mock-trading', label: 'Paper Trade', icon: 'advisor' },
+      { path: '/signals', labelKey: 'link.signals', icon: 'signals' },
+      { path: '/advisor', labelKey: 'link.advisor', icon: 'advisor' },
+      { path: '/mock-trading', labelKey: 'link.paperTrade', icon: 'advisor' },
     ],
   },
   {
-    title: 'Analysis',
+    titleKey: 'category.analysis',
     links: [
-      { path: '/technical', label: 'Technical', icon: 'technical' },
-      { path: '/powerlaw', label: 'Power Law', icon: 'powerlaw' },
-      { path: '/elliott-wave', label: 'Elliott Wave', icon: 'elliott' },
-      { path: '/liquidations', label: 'Liquidations', icon: 'liquidations' },
+      { path: '/technical', labelKey: 'link.technical', icon: 'technical' },
+      { path: '/powerlaw', labelKey: 'link.powerLaw', icon: 'powerlaw' },
+      { path: '/elliott-wave', labelKey: 'link.elliottWave', icon: 'elliott' },
+      { path: '/liquidations', labelKey: 'link.liquidations', icon: 'liquidations' },
     ],
   },
   {
-    title: 'Market',
+    titleKey: 'category.market',
     links: [
-      { path: '/coins', label: 'Coins', icon: 'coins' },
-      { path: '/news', label: 'News', icon: 'news' },
-      { path: '/events', label: 'Events', icon: 'events' },
-      { path: '/history', label: 'History', icon: 'history' },
+      { path: '/coins', labelKey: 'link.coins', icon: 'coins' },
+      { path: '/news', labelKey: 'link.news', icon: 'news' },
+      { path: '/events', labelKey: 'link.events', icon: 'events' },
+      { path: '/history', labelKey: 'link.history', icon: 'history' },
     ],
   },
   {
-    title: 'More',
+    titleKey: 'category.more',
     links: [
-      { path: '/learn', label: 'Learn', icon: 'learn' },
-      { path: '/resources', label: 'Resources', icon: 'resources' },
-      { path: '/tools', label: 'Tools', icon: 'tools' },
-      { path: '/subscription', label: 'Premium', icon: 'premium', highlight: true },
-      { path: '/settings', label: 'Settings', icon: 'settings' },
-      { path: '/about', label: 'About', icon: 'about' },
+      { path: '/learn', labelKey: 'link.learn', icon: 'learn' },
+      { path: '/resources', labelKey: 'link.resources', icon: 'resources' },
+      { path: '/tools', labelKey: 'link.tools', icon: 'tools' },
+      { path: '/subscription', labelKey: 'link.premium', icon: 'premium', highlight: true },
+      { path: '/settings', labelKey: 'link.settings', icon: 'settings' },
+      { path: '/about', labelKey: 'link.about', icon: 'about' },
     ],
   },
 ]
@@ -192,17 +193,18 @@ const ADMIN_TELEGRAM_ID = 598965469
 function QuickAccessGrid() {
   const navigate = useNavigate()
   const { user } = useTelegram()
+  const { t } = useTranslation('common')
   const isAdmin = user?.id === ADMIN_TELEGRAM_ID
 
   return (
     <div className="space-y-3">
       {CATEGORIES.map((cat) => {
-        const links = cat.title === 'More' && isAdmin
-          ? [...cat.links, { path: '/admin', label: 'Admin', icon: 'settings' }]
+        const links = cat.titleKey === 'category.more' && isAdmin
+          ? [...cat.links, { path: '/admin', labelKey: 'link.admin', icon: 'settings' }]
           : cat.links
         return (
-          <div key={cat.title}>
-            <h3 className="text-accent-yellow text-[10px] font-semibold uppercase tracking-wider mb-1.5 px-1">{cat.title}</h3>
+          <div key={cat.titleKey}>
+            <h3 className="text-accent-yellow text-[10px] font-semibold uppercase tracking-wider mb-1.5 px-1">{t(cat.titleKey)}</h3>
             <div className="grid grid-cols-4 gap-2">
               {links.map((link) => (
                 <button
@@ -211,7 +213,7 @@ function QuickAccessGrid() {
                   className="bg-bg-card rounded-xl border border-accent-yellow/10 p-3 flex flex-col items-center gap-1.5 hover:border-accent-yellow/25 active:scale-95 transition-all"
                 >
                   <span className="w-5 h-5 text-accent-yellow">{quickIcons[link.icon]}</span>
-                  <span className="text-[10px] text-accent-yellow/80 font-medium leading-tight text-center">{link.label}</span>
+                  <span className="text-[10px] text-accent-yellow/80 font-medium leading-tight text-center">{t(link.labelKey)}</span>
                 </button>
               ))}
             </div>
@@ -223,70 +225,71 @@ function QuickAccessGrid() {
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation(['common', 'dashboard'])
+
   return (
     <div className="px-4 pt-4 space-y-4 dashboard-stagger">
       <header className="flex items-center justify-between mb-2">
         <h1 className="text-lg font-bold flex items-center gap-2">
-          <span className="text-xl">₿</span> <span className="text-shimmer-gold">BTC Seer</span>
+          <span className="text-xl">{'\u20BF'}</span> <span className="text-shimmer-gold">{t('common:app.title')}</span>
         </h1>
-        <span className="text-text-muted text-xs pulse-glow">LIVE</span>
+        <span className="text-text-muted text-xs pulse-glow">{t('common:app.live')}</span>
       </header>
 
       <QuickAccessGrid />
 
-      <SafeWrap name="PriceWidget">
+      <SafeWrap name="PriceWidget" t={t}>
         <PriceWidget />
       </SafeWrap>
 
-      <SafeWrap name="PriceChart">
+      <SafeWrap name="PriceChart" t={t}>
         <PriceChart />
       </SafeWrap>
 
       {/* Dual Predictions */}
       <div className="space-y-3">
-        <SafeWrap name="AI Prediction">
+        <SafeWrap name="AI Prediction" t={t}>
           <PredictionCard />
         </SafeWrap>
-        <SafeWrap name="Quant Prediction">
+        <SafeWrap name="Quant Prediction" t={t}>
           <QuantPredictionCard />
         </SafeWrap>
       </div>
 
-      <SafeWrap name="SignalPanel">
+      <SafeWrap name="SignalPanel" t={t}>
         <SignalPanel />
       </SafeWrap>
 
-      <SafeWrap name="FearGreedWidget">
+      <SafeWrap name="FearGreedWidget" t={t}>
         <FearGreedWidget />
       </SafeWrap>
 
-      <SafeWrap name="NewsCarousel">
+      <SafeWrap name="NewsCarousel" t={t}>
         <NewsCarousel />
       </SafeWrap>
 
-      <SafeWrap name="InfluencerFeed">
+      <SafeWrap name="InfluencerFeed" t={t}>
         <InfluencerFeed />
       </SafeWrap>
 
-      <SafeWrap name="OnChainWidget">
+      <SafeWrap name="OnChainWidget" t={t}>
         <OnChainWidget />
       </SafeWrap>
 
-      <SafeWrap name="SupplyWidget">
+      <SafeWrap name="SupplyWidget" t={t}>
         <SupplyWidget />
       </SafeWrap>
 
-      <SafeWrap name="DominanceWidget">
+      <SafeWrap name="DominanceWidget" t={t}>
         <DominanceWidget />
       </SafeWrap>
 
-      <SafeWrap name="MacroDashboard">
+      <SafeWrap name="MacroDashboard" t={t}>
         <MacroDashboard />
       </SafeWrap>
 
       <p className="text-text-muted text-[10px] text-center pb-4 leading-relaxed">
-        This is not financial advice. Predictions are ML-generated and may be incorrect.
-        Always do your own research. Past accuracy does not guarantee future results.
+        {t('common:app.disclaimer')}
       </p>
     </div>
   )
