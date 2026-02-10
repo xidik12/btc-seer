@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 
 const STORAGE_KEY = 'btcseer_tutorial_v1'
-const TOTAL_STEPS = 20
+const TOTAL_STEPS = 21
 
 export function useTutorial() {
   const [step, setStep] = useState(0)
