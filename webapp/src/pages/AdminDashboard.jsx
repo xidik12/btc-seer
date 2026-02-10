@@ -326,12 +326,19 @@ export default function AdminDashboard() {
   }, [initData])
 
   if (error) {
+    const isExpired = error.includes('expired') || error.includes('Session')
     return (
       <div className="px-4 pt-4 space-y-4">
         <h1 className="text-lg font-bold">Admin Dashboard</h1>
         <div className="bg-bg-card rounded-2xl p-6 border border-accent-red/20 text-center">
-          <p className="text-accent-red text-sm mb-2">Access Denied</p>
-          <p className="text-text-muted text-xs">{error}</p>
+          <p className="text-accent-red text-sm mb-2">{isExpired ? 'Session Expired' : 'Access Denied'}</p>
+          <p className="text-text-muted text-xs mb-3">{error}</p>
+          <button
+            onClick={() => { setError(null); setLoading(true); window.location.reload() }}
+            className="text-accent-blue text-xs hover:underline"
+          >
+            {isExpired ? 'Reload App' : 'Retry'}
+          </button>
         </div>
       </div>
     )

@@ -67,14 +67,17 @@ def _verify_telegram_init_data(init_data: str) -> dict:
     ).hexdigest()
 
     if not hmac.compare_digest(calculated_hash, hash_value):
+        logger.warning("Admin auth: HMAC signature mismatch")
         raise HTTPException(401, "Invalid initData signature")
 
-    # Check auth_date freshness (allow up to 1 hour)
+    # Check auth_date freshness (allow up to 24 hours for Mini App sessions)
     auth_date = parsed.get("auth_date", [None])[0]
     if auth_date:
         auth_time = datetime.utcfromtimestamp(int(auth_date))
-        if (datetime.utcnow() - auth_time).total_seconds() > 3600:
-            raise HTTPException(401, "initData expired")
+        age_seconds = (datetime.utcnow() - auth_time).total_seconds()
+        if age_seconds > 86400:
+            logger.warning(f"Admin auth: initData expired (age={age_seconds:.0f}s)")
+            raise HTTPException(401, "Session expired — please reopen the app from Telegram")
 
     # Parse user data
     user_raw = parsed.get("user", [None])[0]
@@ -82,6 +85,7 @@ def _verify_telegram_init_data(init_data: str) -> dict:
         raise HTTPException(401, "No user in initData")
 
     user_data = json.loads(unquote(user_raw))
+    logger.info(f"Admin auth: verified user id={user_data.get('id')}")
     return user_data
 
 
@@ -90,15 +94,18 @@ def _require_admin(request: Request) -> dict:
     init_data = request.headers.get("X-Telegram-Init-Data", "")
 
     if not init_data:
+        logger.warning("Admin auth: no initData header")
         raise HTTPException(401, "Admin access requires Telegram authentication")
 
     user = _verify_telegram_init_data(init_data)
     telegram_id = user.get("id", 0)
 
     if not settings.admin_telegram_id:
-        raise HTTPException(403, "Admin not configured")
+        logger.warning("Admin auth: ADMIN_TELEGRAM_ID not set in env")
+        raise HTTPException(403, "Admin not configured on server")
     if telegram_id != settings.admin_telegram_id:
-        raise HTTPException(403, "Not authorized as admin")
+        logger.warning(f"Admin auth: user {telegram_id} is not admin (expected {settings.admin_telegram_id})")
+        raise HTTPException(403, f"Not authorized (your ID: {telegram_id})")
 
     return user
 
