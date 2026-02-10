@@ -6,7 +6,6 @@ import PriceChart from '../components/PriceChart'
 import PredictionCard from '../components/PredictionCard'
 import QuantPredictionCard from '../components/QuantPredictionCard'
 import SignalPanel from '../components/SignalPanel'
-import SentimentGauge from '../components/SentimentGauge'
 import NewsCarousel from '../components/NewsCarousel'
 import InfluencerFeed from '../components/InfluencerFeed'
 import MacroDashboard from '../components/MacroDashboard'
@@ -251,8 +250,8 @@ export default function Dashboard() {
         <SignalPanel />
       </SafeWrap>
 
-      <SafeWrap name="SentimentGauge">
-        <SentimentGauge />
+      <SafeWrap name="FearGreedWidget">
+        <FearGreedWidget />
       </SafeWrap>
 
       <SafeWrap name="NewsCarousel">
@@ -265,10 +264,6 @@ export default function Dashboard() {
 
       <SafeWrap name="OnChainWidget">
         <OnChainWidget />
-      </SafeWrap>
-
-      <SafeWrap name="FearGreedWidget">
-        <FearGreedWidget />
       </SafeWrap>
 
       <SafeWrap name="SupplyWidget">

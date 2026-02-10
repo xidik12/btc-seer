@@ -1,32 +1,103 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../utils/api.js'
 
-const COLORS = {
-  'Extreme Fear': '#ff4d6a',
-  'Fear': '#ff8c42',
-  'Neutral': '#ffc107',
-  'Greed': '#66bb6a',
-  'Extreme Greed': '#00c853',
+function getColor(value) {
+  if (value <= 20) return '#ff4d6a'
+  if (value <= 40) return '#ff8c42'
+  if (value <= 60) return '#ffb800'
+  if (value <= 80) return '#7dd87d'
+  return '#00d68f'
 }
 
-function getColor(value) {
-  if (value <= 20) return COLORS['Extreme Fear']
-  if (value <= 40) return COLORS['Fear']
-  if (value <= 60) return COLORS['Neutral']
-  if (value <= 80) return COLORS['Greed']
-  return COLORS['Extreme Greed']
+function getLabel(value) {
+  if (value <= 20) return 'Extreme Fear'
+  if (value <= 40) return 'Fear'
+  if (value <= 60) return 'Neutral'
+  if (value <= 80) return 'Greed'
+  return 'Extreme Greed'
+}
+
+function getTextClass(value) {
+  if (value <= 20) return 'text-accent-red'
+  if (value <= 40) return 'text-accent-orange'
+  if (value <= 60) return 'text-accent-yellow'
+  if (value <= 80) return 'text-accent-green'
+  return 'text-accent-green'
+}
+
+function GaugeArc({ value, size = 160 }) {
+  const ratio = Math.max(0, Math.min(1, value / 100))
+  const strokeWidth = 10
+  const radius = (size - strokeWidth) / 2
+  const cx = size / 2
+  const cy = size / 2
+
+  const startAngle = Math.PI
+  const endAngle = 0
+
+  const bgStartX = cx + radius * Math.cos(startAngle)
+  const bgStartY = cy - radius * Math.sin(startAngle)
+  const bgEndX = cx + radius * Math.cos(endAngle)
+  const bgEndY = cy - radius * Math.sin(endAngle)
+  const bgPath = `M ${bgStartX} ${bgStartY} A ${radius} ${radius} 0 0 1 ${bgEndX} ${bgEndY}`
+
+  const fillAngle = Math.PI - ratio * Math.PI
+  const fillEndX = cx + radius * Math.cos(fillAngle)
+  const fillEndY = cy - radius * Math.sin(fillAngle)
+  const largeArc = ratio > 0.5 ? 1 : 0
+  const fgPath = `M ${bgStartX} ${bgStartY} A ${radius} ${radius} 0 ${largeArc} 1 ${fillEndX} ${fillEndY}`
+
+  const needleLength = radius - 8
+  const needleX = cx + needleLength * Math.cos(fillAngle)
+  const needleY = cy - needleLength * Math.sin(fillAngle)
+
+  const color = getColor(value)
+
+  return (
+    <svg
+      width={size}
+      height={size / 2 + 16}
+      viewBox={`0 0 ${size} ${size / 2 + 16}`}
+      className="mx-auto"
+    >
+      <defs>
+        <linearGradient id="fg-gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#ff4d6a" />
+          <stop offset="25%" stopColor="#ff8c42" />
+          <stop offset="50%" stopColor="#ffb800" />
+          <stop offset="75%" stopColor="#7dd87d" />
+          <stop offset="100%" stopColor="#00d68f" />
+        </linearGradient>
+      </defs>
+
+      <path d={bgPath} fill="none" stroke="#1a1a24" strokeWidth={strokeWidth} strokeLinecap="round" />
+      <path d={bgPath} fill="none" stroke="url(#fg-gauge-gradient)" strokeWidth={strokeWidth} strokeLinecap="round" opacity={0.15} />
+
+      {ratio > 0.005 && (
+        <path d={fgPath} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" className="transition-all duration-700" />
+      )}
+
+      <line x1={cx} y1={cy} x2={needleX} y2={needleY} stroke="#ffffff" strokeWidth={2} strokeLinecap="round" className="transition-all duration-700" />
+      <circle cx={cx} cy={cy} r={3.5} fill="#ffffff" />
+
+      <text x={strokeWidth / 2 + 2} y={cy + 14} fill="#5a5a70" fontSize="9" textAnchor="start">0</text>
+      <text x={size - strokeWidth / 2 - 2} y={cy + 14} fill="#5a5a70" fontSize="9" textAnchor="end">100</text>
+    </svg>
+  )
 }
 
 export default function FearGreedWidget() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   const fetchData = useCallback(async () => {
     try {
       const res = await api.getFearGreed(7)
       setData(res)
+      setError(null)
     } catch (err) {
-      console.error('Fear & Greed fetch error:', err)
+      setError(err.message)
     } finally {
       setLoading(false)
     }
@@ -40,9 +111,20 @@ export default function FearGreedWidget() {
 
   if (loading) {
     return (
-      <div className="bg-bg-card rounded-2xl p-4 slide-up">
-        <h3 className="text-text-primary font-semibold text-sm mb-3">Fear & Greed Index</h3>
-        <div className="animate-pulse"><div className="h-20 bg-bg-secondary rounded-xl" /></div>
+      <div className="bg-bg-card rounded-2xl p-4 border border-white/5 animate-pulse">
+        <div className="h-5 w-36 bg-bg-hover rounded mb-4" />
+        <div className="h-20 w-36 bg-bg-hover rounded mx-auto mb-3" />
+        <div className="h-6 w-24 bg-bg-hover rounded mx-auto" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/20">
+        <h3 className="text-text-primary text-sm font-semibold mb-2">Fear & Greed Index</h3>
+        <p className="text-accent-red text-sm">Failed to load data</p>
+        <button onClick={fetchData} className="text-accent-blue text-xs mt-1 underline">Retry</button>
       </div>
     )
   }
@@ -50,77 +132,49 @@ export default function FearGreedWidget() {
   const current = data?.current
   if (!current) return null
 
-  const value = current.value
-  const label = current.label || 'Unknown'
+  const value = Math.max(0, Math.min(100, Math.round(current.value)))
+  const label = current.label || getLabel(value)
   const color = getColor(value)
+  const textClass = getTextClass(value)
   const history = (data?.history || []).slice(0, 7).reverse()
 
-  // Gauge angle: 0 = -90deg (left), 100 = 90deg (right)
-  const angle = -90 + (value / 100) * 180
-
   return (
-    <div className="bg-bg-card rounded-2xl p-4 slide-up">
-      <h3 className="text-text-primary font-semibold text-sm mb-3">Fear & Greed Index</h3>
+    <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
+      <h3 className="text-text-primary text-sm font-semibold mb-1">Fear & Greed Index</h3>
 
-      <div className="flex items-center gap-4">
-        {/* Gauge */}
-        <div className="relative w-24 h-14 flex-shrink-0">
-          <svg viewBox="0 0 100 55" className="w-full h-full">
-            {/* Background arc */}
-            <path d="M 5 50 A 45 45 0 0 1 95 50" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" strokeLinecap="round" />
-            {/* Colored arc */}
-            <path d="M 5 50 A 45 45 0 0 1 95 50" fill="none" stroke="url(#fgGradient)" strokeWidth="8" strokeLinecap="round" />
-            <defs>
-              <linearGradient id="fgGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#ff4d6a" />
-                <stop offset="25%" stopColor="#ff8c42" />
-                <stop offset="50%" stopColor="#ffc107" />
-                <stop offset="75%" stopColor="#66bb6a" />
-                <stop offset="100%" stopColor="#00c853" />
-              </linearGradient>
-            </defs>
-            {/* Needle */}
-            <line
-              x1="50" y1="50"
-              x2={50 + 35 * Math.cos((angle * Math.PI) / 180)}
-              y2={50 + 35 * Math.sin((angle * Math.PI) / 180)}
-              stroke="white" strokeWidth="2" strokeLinecap="round"
-            />
-            <circle cx="50" cy="50" r="3" fill="white" />
-          </svg>
-        </div>
+      <GaugeArc value={value} />
 
-        <div className="flex-1">
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold tabular-nums" style={{ color }}>{value}</span>
-            <span className="text-xs font-semibold" style={{ color }}>{label}</span>
-          </div>
-          <p className="text-text-muted text-[10px] mt-1">
-            {value <= 25 ? 'Extreme fear can signal buying opportunities.'
-              : value <= 45 ? 'Fear in the market. Potential accumulation zone.'
-              : value <= 55 ? 'Market is balanced between fear and greed.'
-              : value <= 75 ? 'Greed rising. Be cautious with new entries.'
-              : 'Extreme greed often precedes corrections.'}
-          </p>
-        </div>
+      <div className="text-center -mt-1">
+        <p className={`text-3xl font-bold tabular-nums ${textClass}`}>{value}</p>
+        <p className={`text-sm font-medium mt-0.5 ${textClass}`}>{label}</p>
       </div>
 
-      {/* 7-day sparkline */}
+      <p className="text-text-muted text-[10px] mt-2 text-center">
+        {value <= 25 ? 'Extreme fear can signal buying opportunities.'
+          : value <= 45 ? 'Fear in the market. Potential accumulation zone.'
+          : value <= 55 ? 'Market is balanced between fear and greed.'
+          : value <= 75 ? 'Greed rising. Be cautious with new entries.'
+          : 'Extreme greed often precedes corrections.'}
+      </p>
+
       {history.length > 1 && (
-        <div className="flex items-end gap-1 mt-3 h-8">
-          {history.map((h, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-              <div
-                className="w-full rounded-sm transition-all"
-                style={{
-                  height: `${Math.max((h.value / 100) * 28, 3)}px`,
-                  backgroundColor: getColor(h.value),
-                  opacity: i === history.length - 1 ? 1 : 0.5,
-                }}
-              />
-              <span className="text-[7px] text-text-muted tabular-nums">{h.value}</span>
-            </div>
-          ))}
+        <div className="mt-3">
+          <p className="text-text-muted text-[9px] font-medium mb-1.5">7-Day History</p>
+          <div className="flex items-end gap-1 h-8">
+            {history.map((h, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                <div
+                  className="w-full rounded-sm transition-all"
+                  style={{
+                    height: `${Math.max((h.value / 100) * 28, 3)}px`,
+                    backgroundColor: getColor(h.value),
+                    opacity: i === history.length - 1 ? 1 : 0.5,
+                  }}
+                />
+                <span className="text-[7px] text-text-muted tabular-nums">{h.value}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
