@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
@@ -11,6 +12,22 @@ from app.collectors.onchain import OnChainCollector
 from app.collectors.macro import MacroCollector
 
 logger = logging.getLogger(__name__)
+
+# ── Simple TTL cache for expensive endpoints ──
+_cache: dict[str, tuple[dict, float]] = {}
+
+
+def _get_cached(key: str) -> dict | None:
+    if key in _cache:
+        data, expires = _cache[key]
+        if time.monotonic() < expires:
+            return data
+        del _cache[key]
+    return None
+
+
+def _set_cache(key: str, data: dict, ttl: int) -> None:
+    _cache[key] = (data, time.monotonic() + ttl)
 
 router = APIRouter(prefix="/api/market", tags=["market"])
 
@@ -80,6 +97,10 @@ async def get_price_stats(
 
     Timeframes: 1m, 5m, 15m, 1h, 4h, 1d (day), 1w (week), 1mo (month), 1y (year), all (lifetime)
     """
+    cached = _get_cached(f"stats:{timeframe}")
+    if cached is not None:
+        return cached
+
     # Map timeframe to timedelta
     timeframe_map = {
         "1m": timedelta(minutes=1),
@@ -156,7 +177,7 @@ async def get_price_stats(
                     for k in klines[::step]
                 ]
 
-                return {
+                result = {
                     "timeframe": timeframe,
                     "current_price": current_price,
                     "open": open_price,
@@ -172,6 +193,8 @@ async def get_price_stats(
                     "period_end": candles[-1]["timestamp"],
                     "source": "binance_api",
                 }
+                _set_cache(f"stats:{timeframe}", result, 30)
+                return result
         except Exception as e:
             logger.warning(f"Binance fallback failed: {e}")
 
@@ -204,7 +227,7 @@ async def get_price_stats(
         for p in prices[::step]
     ]
 
-    return {
+    result = {
         "timeframe": timeframe,
         "current_price": current_price,
         "open": open_price,
@@ -219,6 +242,8 @@ async def get_price_stats(
         "period_start": first_price.timestamp.isoformat(),
         "period_end": current.timestamp.isoformat(),
     }
+    _set_cache(f"stats:{timeframe}", result, 30)
+    return result
 
 
 @router.get("/indicators")
@@ -226,6 +251,10 @@ async def get_indicators(
     session: AsyncSession = Depends(get_session),
 ):
     """Get current technical indicators calculated from recent price data."""
+    cached = _get_cached("indicators")
+    if cached is not None:
+        return cached
+
     import pandas as pd
     from app.features.technical import TechnicalFeatures
 
@@ -263,7 +292,7 @@ async def get_indicators(
     except Exception:
         pass
 
-    return {
+    result = {
         "timestamp": prices[-1].timestamp.isoformat(),
         "current_price": current_price,
         "candle_count": len(prices),
@@ -353,6 +382,8 @@ async def get_indicators(
             "long_term": int(latest.get("trend_long", 0)),
         },
     }
+    _set_cache("indicators", result, 60)
+    return result
 
 
 @router.get("/candles")
@@ -389,6 +420,10 @@ async def get_candles(
 @router.get("/macro")
 async def get_macro_data(session: AsyncSession = Depends(get_session)):
     """Get latest macro market data with price changes."""
+    cached = _get_cached("macro")
+    if cached is not None:
+        return cached
+
     macro = None
     try:
         result = await session.execute(
@@ -451,7 +486,7 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
             item["change_24h"] = round((current_val - daily_val) / daily_val * 100, 4)
         return item
 
-    return {
+    result = {
         "dxy": build_macro_item(
             macro.dxy,
             prev_macro.dxy if prev_macro else None,
@@ -491,11 +526,17 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
         "fear_greed_label": macro.fear_greed_label,
         "timestamp": macro.timestamp.isoformat(),
     }
+    _set_cache("macro", result, 300)
+    return result
 
 
 @router.get("/onchain")
 async def get_onchain_data(session: AsyncSession = Depends(get_session)):
     """Get latest on-chain metrics."""
+    cached = _get_cached("onchain")
+    if cached is not None:
+        return cached
+
     onchain = None
     try:
         result = await session.execute(
@@ -540,7 +581,7 @@ async def get_onchain_data(session: AsyncSession = Depends(get_session)):
                 (onchain.exchange_reserve - prev.exchange_reserve) / prev.exchange_reserve * 100, 2
             )
 
-    return {
+    result = {
         "hash_rate": onchain.hash_rate,
         "difficulty": onchain.difficulty,
         "mempool_size": onchain.mempool_size,
@@ -552,6 +593,8 @@ async def get_onchain_data(session: AsyncSession = Depends(get_session)):
         "large_tx_count": onchain.large_tx_count,
         "timestamp": onchain.timestamp.isoformat(),
     }
+    _set_cache("onchain", result, 300)
+    return result
 
 
 @router.get("/funding")
@@ -560,6 +603,10 @@ async def get_funding_data(
     session: AsyncSession = Depends(get_session),
 ):
     """Get historical funding rate and open interest data."""
+    cached = _get_cached(f"funding:{hours}")
+    if cached is not None:
+        return cached
+
     since = datetime.utcnow() - timedelta(hours=hours)
 
     result = await session.execute(
@@ -574,7 +621,7 @@ async def get_funding_data(
 
     latest = records[-1]
 
-    return {
+    result = {
         "current": {
             "funding_rate": latest.funding_rate,
             "mark_price": latest.mark_price,
@@ -592,6 +639,8 @@ async def get_funding_data(
         ],
         "count": len(records),
     }
+    _set_cache(f"funding:{hours}", result, 120)
+    return result
 
 
 @router.get("/dominance")
@@ -600,6 +649,10 @@ async def get_dominance_data(
     session: AsyncSession = Depends(get_session),
 ):
     """Get historical BTC dominance data."""
+    cached = _get_cached(f"dominance:{days}")
+    if cached is not None:
+        return cached
+
     since = datetime.utcnow() - timedelta(days=days)
 
     records = []
@@ -636,7 +689,7 @@ async def get_dominance_data(
 
     latest = records[-1]
 
-    return {
+    result = {
         "current": {
             "btc_dominance": latest.btc_dominance,
             "eth_dominance": latest.eth_dominance,
@@ -656,6 +709,8 @@ async def get_dominance_data(
         ],
         "count": len(records),
     }
+    _set_cache(f"dominance:{days}", result, 300)
+    return result
 
 
 @router.get("/fear-greed")
@@ -663,6 +718,10 @@ async def get_fear_greed(
     days: int = Query(30, ge=1, le=365),
 ):
     """Get Fear & Greed Index from alternative.me (free API)."""
+    cached = _get_cached(f"fear_greed:{days}")
+    if cached is not None:
+        return cached
+
     import aiohttp
 
     url = f"https://api.alternative.me/fng/?limit={days}&format=json"
@@ -687,7 +746,7 @@ async def get_fear_greed(
             for d in data_list
         ]
 
-        return {
+        result = {
             "current": {
                 "value": int(current["value"]),
                 "label": current["value_classification"],
@@ -695,6 +754,8 @@ async def get_fear_greed(
             },
             "history": history,
         }
+        _set_cache(f"fear_greed:{days}", result, 300)
+        return result
     except Exception as e:
         logger.warning(f"Fear & Greed fetch failed: {e}")
         return {"current": None, "history": [], "error": str(e)}
@@ -734,6 +795,10 @@ async def get_indicator_history(
 @router.get("/supply")
 async def get_btc_supply():
     """Get Bitcoin supply data: total mined, remaining, halving info, milestones."""
+    cached = _get_cached("supply")
+    if cached is not None:
+        return cached
+
     import aiohttp
 
     MAX_SUPPLY = 21_000_000
@@ -769,7 +834,7 @@ async def get_btc_supply():
     percent_mined = round(total_mined / MAX_SUPPLY * 100, 2)
     btc_mined_per_day = BLOCKS_PER_DAY * BLOCK_REWARD
 
-    return {
+    result = {
         "total_mined": round(total_mined, 2),
         "max_supply": MAX_SUPPLY,
         "remaining": round(remaining, 2),
@@ -788,3 +853,5 @@ async def get_btc_supply():
             {"year": 2140, "reward": 0, "total_mined_approx": 21_000_000},
         ],
     }
+    _set_cache("supply", result, 600)
+    return result

@@ -158,20 +158,27 @@ async def lifespan(app: FastAPI):
             id="send_alerts",
         )
 
-        # Clear stale webhooks before polling (avoids 409 Conflict)
+        # Clear stale webhooks + pending updates before polling
         try:
-            await bot.delete_webhook(drop_pending_updates=False)
+            await bot.delete_webhook(drop_pending_updates=True)
             logger.info("Cleared webhook, starting polling")
         except Exception as e:
             logger.warning(f"delete_webhook failed: {e}")
 
-        # Start polling in background with error handling
+        # Brief delay to let previous Railway instance shut down
+        await asyncio.sleep(3)
+
+        # Start polling in background with conflict detection
         async def _run_bot_polling():
             try:
                 logger.info("Bot polling starting...")
                 await dp.start_polling(bot)
             except Exception as e:
-                logger.error(f"Bot polling crashed: {e}", exc_info=True)
+                err_str = str(e).lower()
+                if "conflict" in err_str or "409" in err_str:
+                    logger.warning("Bot polling stopped: another instance is already running (409 Conflict)")
+                else:
+                    logger.error(f"Bot polling crashed: {e}", exc_info=True)
 
         bot_task = asyncio.create_task(_run_bot_polling())
         logger.info("Telegram bot started")

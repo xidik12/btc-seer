@@ -1,5 +1,42 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
+// ── Client-side TTL cache + in-flight dedup ──
+const _cache = new Map()
+const _inflight = new Map()
+
+function cachedFetch(endpoint, ttl, options = {}) {
+  const key = endpoint
+  // Only cache GET requests (no body, no method or method=GET)
+  if (options.method && options.method !== 'GET') {
+    return fetchAPI(endpoint, options)
+  }
+
+  // Check cache
+  const entry = _cache.get(key)
+  if (entry && Date.now() < entry.expiry) {
+    return Promise.resolve(entry.data)
+  }
+
+  // Deduplicate in-flight requests
+  if (_inflight.has(key)) {
+    return _inflight.get(key)
+  }
+
+  const promise = fetchAPI(endpoint, options)
+    .then((data) => {
+      _cache.set(key, { data, expiry: Date.now() + ttl })
+      _inflight.delete(key)
+      return data
+    })
+    .catch((err) => {
+      _inflight.delete(key)
+      throw err
+    })
+
+  _inflight.set(key, promise)
+  return promise
+}
+
 async function fetchAPI(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`
   const { headers: extraHeaders, ...rest } = options
@@ -20,61 +57,68 @@ async function fetchAPI(endpoint, options = {}) {
   return res.json()
 }
 
+// TTL constants (ms)
+const T15 = 15_000   // 15s — fast-changing (price)
+const T30 = 30_000   // 30s — predictions, signals, indicators
+const T60 = 60_000   // 60s — news, events, liquidations
+const T120 = 120_000 // 2min — macro, onchain, supply, dominance, power law
+const T300 = 300_000 // 5min — fear & greed, supply
+
 export const api = {
   // Predictions
-  getCurrentPredictions: () => fetchAPI('/predictions/current'),
-  getQuantPrediction: () => fetchAPI('/predictions/quant'),
-  getQuantHistory: (days = 7) => fetchAPI(`/predictions/quant/history?days=${days}`),
+  getCurrentPredictions: () => cachedFetch('/predictions/current', T30),
+  getQuantPrediction: () => cachedFetch('/predictions/quant', T30),
+  getQuantHistory: (days = 7) => cachedFetch(`/predictions/quant/history?days=${days}`, T60),
   getPredictionHistory: (timeframe = '1h', days = 7) =>
-    fetchAPI(`/predictions/history?timeframe=${timeframe}&days=${days}`),
+    cachedFetch(`/predictions/history?timeframe=${timeframe}&days=${days}`, T60),
 
   // Signals
-  getCurrentSignals: () => fetchAPI('/signals/current'),
+  getCurrentSignals: () => cachedFetch('/signals/current', T30),
   getSignalHistory: (timeframe = '1h', days = 7) =>
-    fetchAPI(`/signals/history?timeframe=${timeframe}&days=${days}`),
+    cachedFetch(`/signals/history?timeframe=${timeframe}&days=${days}`, T60),
 
   // News
-  getLatestNews: (limit = 20) => fetchAPI(`/news/latest?limit=${limit}`),
-  getNewsSentiment: (hours = 24) => fetchAPI(`/news/sentiment?hours=${hours}`),
+  getLatestNews: (limit = 20) => cachedFetch(`/news/latest?limit=${limit}`, T60),
+  getNewsSentiment: (hours = 24) => cachedFetch(`/news/sentiment?hours=${hours}`, T60),
 
   // Market
-  getCurrentPrice: () => fetchAPI('/market/price'),
-  getPriceStats: (timeframe = '1d') => fetchAPI(`/market/stats?timeframe=${timeframe}`),
-  getCandles: (hours = 168) => fetchAPI(`/market/candles?hours=${hours}`),
-  getIndicators: () => fetchAPI('/market/indicators'),
-  getMacroData: () => fetchAPI('/market/macro'),
-  getOnchainData: () => fetchAPI('/market/onchain'),
-  getFundingHistory: (hours = 168) => fetchAPI(`/market/funding?hours=${hours}`),
-  getDominanceData: (days = 30) => fetchAPI(`/market/dominance?days=${days}`),
-  getBtcSupply: () => fetchAPI('/market/supply'),
+  getCurrentPrice: () => cachedFetch('/market/price', T15),
+  getPriceStats: (timeframe = '1d') => cachedFetch(`/market/stats?timeframe=${timeframe}`, T15),
+  getCandles: (hours = 168) => cachedFetch(`/market/candles?hours=${hours}`, T30),
+  getIndicators: () => cachedFetch('/market/indicators', T30),
+  getMacroData: () => cachedFetch('/market/macro', T120),
+  getOnchainData: () => cachedFetch('/market/onchain', T120),
+  getFundingHistory: (hours = 168) => cachedFetch(`/market/funding?hours=${hours}`, T60),
+  getDominanceData: (days = 30) => cachedFetch(`/market/dominance?days=${days}`, T120),
+  getBtcSupply: () => cachedFetch('/market/supply', T300),
 
   // Influencers
   getInfluencerTweets: (limit = 20, category = null) => {
     let url = `/influencers/latest?limit=${limit}`
     if (category) url += `&category=${category}`
-    return fetchAPI(url)
+    return cachedFetch(url, T60)
   },
-  getInfluencerSentiment: (hours = 24) => fetchAPI(`/influencers/sentiment?hours=${hours}`),
-  getTopInfluencers: (hours = 24) => fetchAPI(`/influencers/top-influencers?hours=${hours}`),
+  getInfluencerSentiment: (hours = 24) => cachedFetch(`/influencers/sentiment?hours=${hours}`, T60),
+  getTopInfluencers: (hours = 24) => cachedFetch(`/influencers/top-influencers?hours=${hours}`, T60),
 
   // History
-  getAccuracy: (days = 30) => fetchAPI(`/history/accuracy?days=${days}`),
+  getAccuracy: (days = 30) => cachedFetch(`/history/accuracy?days=${days}`, T120),
 
   // Power Law
-  getPowerLawCurrent: () => fetchAPI('/powerlaw/current'),
-  getPowerLawHistorical: (days = 365) => fetchAPI(`/powerlaw/historical?days=${days}`),
+  getPowerLawCurrent: () => cachedFetch('/powerlaw/current', T120),
+  getPowerLawHistorical: (days = 365) => cachedFetch(`/powerlaw/historical?days=${days}`, T120),
 
   // Liquidations
-  getLiquidationMap: () => fetchAPI('/liquidations/map'),
-  getLiquidationLevels: () => fetchAPI('/liquidations/levels'),
-  getLiquidationStats: () => fetchAPI('/liquidations/stats'),
+  getLiquidationMap: () => cachedFetch('/liquidations/map', T60),
+  getLiquidationLevels: () => cachedFetch('/liquidations/levels', T60),
+  getLiquidationStats: () => cachedFetch('/liquidations/stats', T60),
 
   // Events
-  getRecentEvents: (hours = 24) => fetchAPI(`/events/recent?hours=${hours}`),
-  getEventCategoryStats: () => fetchAPI('/events/category-stats'),
-  getEventMemory: () => fetchAPI('/events/memory'),
+  getRecentEvents: (hours = 24) => cachedFetch(`/events/recent?hours=${hours}`, T60),
+  getEventCategoryStats: () => cachedFetch('/events/category-stats', T60),
+  getEventMemory: () => cachedFetch('/events/memory', T120),
 
-  // Advisor
+  // Advisor (user-specific, no cache)
   getPortfolio: (telegramId) => fetchAPI(`/advisor/portfolio/${telegramId}`),
   getActiveTrades: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}`),
   getTradeHistory: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}/history`),
@@ -85,7 +129,7 @@ export const api = {
       body: JSON.stringify({ exit_price: exitPrice, reason }),
     }),
 
-  // Mock/Paper Trading
+  // Mock/Paper Trading (user-specific, no cache)
   getMockTrades: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}?mock=true`),
   getMockHistory: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}/history?mock=true`),
   createMockTrade: (telegramId, trade) =>
@@ -94,7 +138,7 @@ export const api = {
       body: JSON.stringify(trade),
     }),
 
-  // Admin
+  // Admin (no cache — needs fresh data)
   getAdminStats: (initData) => fetchAPI('/admin/stats', { headers: { 'X-Telegram-Init-Data': initData } }),
   getAdminUsers: (initData, page = 1, search = '') =>
     fetchAPI(`/admin/users?page=${page}&search=${encodeURIComponent(search)}`, { headers: { 'X-Telegram-Init-Data': initData } }),
@@ -120,7 +164,7 @@ export const api = {
   getAdminSystem: (initData) => fetchAPI('/admin/system', { headers: { 'X-Telegram-Init-Data': initData } }),
   getAdminBotStatus: (initData) => fetchAPI('/admin/bot-status', { headers: { 'X-Telegram-Init-Data': initData } }),
 
-  // Auth
+  // Auth (no cache)
   registerUser: (initData) => fetchAPI('/auth/register', {
     method: 'POST',
     headers: { 'X-Telegram-Init-Data': initData },
@@ -129,33 +173,33 @@ export const api = {
     headers: { 'X-Telegram-Init-Data': initData },
   }),
 
-  // Subscription
+  // Subscription (no cache)
   createInvoice: (tier) => fetchAPI(`/subscription/create-invoice?tier=${tier}`),
   getSubscriptionStatus: (initData) => fetchAPI('/subscription/status', {
     headers: { 'X-Telegram-Init-Data': initData },
   }),
 
   // Fear & Greed
-  getFearGreed: (days = 30) => fetchAPI(`/market/fear-greed?days=${days}`),
+  getFearGreed: (days = 30) => cachedFetch(`/market/fear-greed?days=${days}`, T300),
 
   // Indicator History
-  getIndicatorHistory: () => fetchAPI('/market/indicator-history'),
+  getIndicatorHistory: () => cachedFetch('/market/indicator-history', T60),
 
-  // Public API
+  // Public API (no cache)
   getApiUsage: (apiKey) => fetchAPI('/v1/usage', { headers: { 'X-API-Key': apiKey } }),
 
   // Elliott Wave
-  getElliottWaveCurrent: (timeframe = '4h') => fetchAPI(`/elliott-wave/current?timeframe=${timeframe}`),
-  getElliottWaveHistorical: (days = 90, timeframe = '4h') => fetchAPI(`/elliott-wave/historical?days=${days}&timeframe=${timeframe}`),
+  getElliottWaveCurrent: (timeframe = '4h') => cachedFetch(`/elliott-wave/current?timeframe=${timeframe}`, T120),
+  getElliottWaveHistorical: (days = 90, timeframe = '4h') => cachedFetch(`/elliott-wave/historical?days=${days}&timeframe=${timeframe}`, T120),
 
   // Coins
-  getTrackedCoins: () => fetchAPI('/coins/tracked'),
-  getCoinDetail: (coinId) => fetchAPI(`/coins/${coinId}/detail`),
-  getCoinChart: (coinId, days = 7) => fetchAPI(`/coins/${coinId}/chart?days=${days}`),
+  getTrackedCoins: () => cachedFetch('/coins/tracked', T60),
+  getCoinDetail: (coinId) => cachedFetch(`/coins/${coinId}/detail`, T30),
+  getCoinChart: (coinId, days = 7) => cachedFetch(`/coins/${coinId}/chart?days=${days}`, T60),
   searchCoins: (query) => fetchAPI(`/coins/search?q=${encodeURIComponent(query)}`),
   searchCoinByAddress: (address) => fetchAPI('/coins/search-address', {
     method: 'POST',
     body: JSON.stringify({ address }),
   }),
-  getCoinReport: (address) => fetchAPI(`/coins/report/${address}`),
+  getCoinReport: (address) => cachedFetch(`/coins/report/${address}`, T120),
 }
