@@ -293,20 +293,22 @@ class TechnicalFeatures:
             # DPO (Detrended Price Oscillator)
             df["dpo_20"] = ta_lib.trend.DPOIndicator(close, window=20).dpo()
 
-            # Supertrend (manual: ATR-based)
+            # Supertrend (manual: ATR-based, vectorized with numpy)
             atr_st = TechnicalFeatures._atr(df, 7)
             hl_avg = (high + low) / 2
-            upper_band = hl_avg + 3.0 * atr_st
-            lower_band = hl_avg - 3.0 * atr_st
-            st_dir = pd.Series(0, index=df.index, dtype=int)
-            for i in range(1, len(df)):
-                if close.iloc[i] > upper_band.iloc[i - 1]:
-                    st_dir.iloc[i] = -1  # uptrend (bullish)
-                elif close.iloc[i] < lower_band.iloc[i - 1]:
-                    st_dir.iloc[i] = 1   # downtrend (bearish)
+            ub = (hl_avg + 3.0 * atr_st).values
+            lb = (hl_avg - 3.0 * atr_st).values
+            c = close.values
+            n = len(c)
+            st_arr = np.zeros(n, dtype=int)
+            for i in range(1, n):
+                if c[i] > ub[i - 1]:
+                    st_arr[i] = -1
+                elif c[i] < lb[i - 1]:
+                    st_arr[i] = 1
                 else:
-                    st_dir.iloc[i] = st_dir.iloc[i - 1]
-            df["supertrend_dir"] = st_dir
+                    st_arr[i] = st_arr[i - 1]
+            df["supertrend_dir"] = st_arr
 
             # Vortex
             vortex_ind = ta_lib.trend.VortexIndicator(high, low, close, window=14)
@@ -359,14 +361,16 @@ class TechnicalFeatures:
             # NVI (Negative Volume Index)
             df["nvi"] = ta_lib.volume.NegativeVolumeIndexIndicator(close, volume).negative_volume_index()
 
-            # PVI (Positive Volume Index) — manual
-            pvi = pd.Series(1000.0, index=df.index)
-            for i in range(1, len(df)):
-                if volume.iloc[i] > volume.iloc[i - 1]:
-                    pvi.iloc[i] = pvi.iloc[i - 1] * (1 + (close.iloc[i] - close.iloc[i - 1]) / close.iloc[i - 1])
-                else:
-                    pvi.iloc[i] = pvi.iloc[i - 1]
-            df["pvi"] = pvi
+            # PVI (Positive Volume Index) — vectorized with numpy
+            c_arr = close.values
+            v_arr = volume.values
+            pvi_arr = np.empty(len(c_arr))
+            pvi_arr[0] = 1000.0
+            ret = np.diff(c_arr) / c_arr[:-1]
+            vol_up = v_arr[1:] > v_arr[:-1]
+            for i in range(len(ret)):
+                pvi_arr[i + 1] = pvi_arr[i] * (1 + ret[i]) if vol_up[i] else pvi_arr[i]
+            df["pvi"] = pvi_arr
 
             # ── Statistics (8) ──
             # Entropy (Shannon entropy of returns)

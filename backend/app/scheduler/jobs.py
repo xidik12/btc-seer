@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timedelta
 
@@ -612,30 +613,25 @@ async def generate_prediction():
         except Exception as e:
             logger.debug(f"Influencer data query error: {e}")
 
-        # ── Collect new data sources ──
-        derivatives_ext_data = None
-        try:
-            derivatives_ext_data = await derivatives_extended_collector.collect()
-        except Exception as e:
-            logger.debug(f"Derivatives extended collection error: {e}")
+        # ── Collect new data sources (concurrently with 10s timeout) ──
+        async def _safe_collect(collector, name):
+            try:
+                return await asyncio.wait_for(collector.collect(), timeout=10)
+            except asyncio.TimeoutError:
+                logger.debug(f"{name} collection timed out (10s)")
+                return None
+            except Exception as e:
+                logger.debug(f"{name} collection error: {e}")
+                return None
 
-        etf_data = None
-        try:
-            etf_data = await etf_collector.collect()
-        except Exception as e:
-            logger.debug(f"ETF data collection error: {e}")
-
-        exchange_flow_data = None
-        try:
-            exchange_flow_data = await exchange_flow_collector.collect()
-        except Exception as e:
-            logger.debug(f"Exchange flow collection error: {e}")
-
-        stablecoin_data_raw = None
-        try:
-            stablecoin_data_raw = await stablecoin_collector.collect()
-        except Exception as e:
-            logger.debug(f"Stablecoin data collection error: {e}")
+        derivatives_ext_data, etf_data, exchange_flow_data, stablecoin_data_raw = (
+            await asyncio.gather(
+                _safe_collect(derivatives_extended_collector, "Derivatives extended"),
+                _safe_collect(etf_collector, "ETF"),
+                _safe_collect(exchange_flow_collector, "Exchange flow"),
+                _safe_collect(stablecoin_collector, "Stablecoin"),
+            )
+        )
 
         # Build features (including social media, event memory, funding, dominance)
         news_data = [{"title": n.title, "source": n.source} for n in news]
