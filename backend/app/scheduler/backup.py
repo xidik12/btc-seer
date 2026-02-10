@@ -124,7 +124,8 @@ async def _create_sqlite_snapshot(backup_dir: Path):
                 offset = 0
                 batch_size = 1000
                 placeholders = ", ".join(["?"] * len(col_names))
-                insert_sql = f'INSERT INTO "{table_name}" ({", ".join(f\'"{c}"\' for c in col_names)}) VALUES ({placeholders})'
+                col_list = ", ".join(f'"{c}"' for c in col_names)
+                insert_sql = f'INSERT INTO "{table_name}" ({col_list}) VALUES ({placeholders})'
 
                 while True:
                     rows = await conn.fetch(

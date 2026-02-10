@@ -12,7 +12,7 @@ WORKDIR /app
 
 # Install system deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc curl libgomp1 \
+    gcc curl libgomp1 postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -30,7 +30,7 @@ COPY backend/app/models/weights/ app/models/weights/
 COPY --from=frontend-build /webapp/dist /webapp/dist
 
 # Create data directories (Railway volume mounts at /data)
-RUN mkdir -p ml/data /data /data/weights
+RUN mkdir -p ml/data /data /data/weights /data/backups
 
 # Railway provides PORT env var
 ENV PORT=8000
