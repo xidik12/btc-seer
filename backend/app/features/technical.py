@@ -4,11 +4,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-try:
-    import pandas_ta as pta
-    PANDAS_TA_AVAILABLE = True
-except ImportError:
-    PANDAS_TA_AVAILABLE = False
+import ta as ta_lib
 
 try:
     from arch import arch_model
@@ -207,247 +203,222 @@ class TechnicalFeatures:
 
         return df
 
+    EXTENDED_COLS = [
+        "ao", "cci_20", "cmo_14", "fisher_9", "fisher_signal",
+        "kst", "kst_signal", "ppo", "ppo_signal", "ppo_hist",
+        "stoch_k", "stoch_d", "tsi", "uo",
+        "aroon_osc", "chop_14", "dpo_20", "supertrend_dir",
+        "vortex_diff", "mass_index", "plus_di", "minus_di",
+        "donchian_upper", "donchian_lower", "donchian_mid", "donchian_width",
+        "kc_upper", "kc_lower", "kc_position", "natr", "ui",
+        "ad", "cmf", "efi_13", "mfi", "nvi", "pvi",
+        "entropy_10", "kurtosis_20", "skew_20", "variance_20",
+        "zscore_14", "stdev_20", "linreg_slope", "linreg_r2",
+    ]
+
     @staticmethod
     def calculate_pandas_ta_indicators(df: pd.DataFrame) -> pd.DataFrame:
-        """Compute ~45 additional indicators using pandas-ta."""
-        if not PANDAS_TA_AVAILABLE:
-            logger.warning("pandas-ta not installed — skipping extended indicators")
-            # Fill with zeros so feature array shape is consistent
-            pta_cols = [
-                "ao", "cci_20", "cmo_14", "fisher_9", "fisher_signal",
-                "kst", "kst_signal", "ppo", "ppo_signal", "ppo_hist",
-                "stoch_k", "stoch_d", "tsi", "uo",
-                "aroon_osc", "chop_14", "dpo_20", "supertrend_dir",
-                "vortex_diff", "mass_index", "plus_di", "minus_di",
-                "donchian_upper", "donchian_lower", "donchian_mid", "donchian_width",
-                "kc_upper", "kc_lower", "kc_position", "natr", "ui",
-                "ad", "cmf", "efi_13", "mfi", "nvi", "pvi",
-                "entropy_10", "kurtosis_20", "skew_20", "variance_20",
-                "zscore_14", "stdev_20", "linreg_slope", "linreg_r2",
-            ]
-            for col in pta_cols:
-                if col not in df.columns:
-                    df[col] = 0.0
-            return df
-
+        """Compute ~45 extended indicators using ta library + pandas/numpy."""
         try:
             high, low, close, volume = df["high"], df["low"], df["close"], df["volume"]
 
             # ── Momentum (14) ──
-            ao = pta.ao(high, low)
-            if ao is not None:
-                df["ao"] = ao
-            else:
-                df["ao"] = 0.0
+            # Awesome Oscillator: SMA(5) of midpoint - SMA(34) of midpoint
+            midpoint = (high + low) / 2
+            df["ao"] = midpoint.rolling(5).mean() - midpoint.rolling(34).mean()
 
-            cci = pta.cci(high, low, close, length=20)
-            df["cci_20"] = cci if cci is not None else 0.0
+            # CCI
+            df["cci_20"] = ta_lib.trend.cci(high, low, close, window=20)
 
-            cmo = pta.cmo(close, length=14)
-            df["cmo_14"] = cmo if cmo is not None else 0.0
+            # CMO (Chande Momentum Oscillator)
+            delta = close.diff()
+            gain = delta.where(delta > 0, 0.0).rolling(14).sum()
+            loss = (-delta.where(delta < 0, 0.0)).rolling(14).sum()
+            df["cmo_14"] = 100 * (gain - loss) / (gain + loss)
 
-            fisher = pta.fisher(high, low, length=9)
-            if fisher is not None and len(fisher.columns) >= 2:
-                df["fisher_9"] = fisher.iloc[:, 0]
-                df["fisher_signal"] = fisher.iloc[:, 1]
-            else:
-                df["fisher_9"] = 0.0
-                df["fisher_signal"] = 0.0
+            # Fisher Transform
+            hl2 = (high + low) / 2
+            max_h = hl2.rolling(9).max()
+            min_l = hl2.rolling(9).min()
+            raw = 2 * ((hl2 - min_l) / (max_h - min_l).replace(0, np.nan) - 0.5)
+            raw = raw.clip(-0.999, 0.999).fillna(0)
+            fisher_val = 0.5 * np.log((1 + raw) / (1 - raw))
+            df["fisher_9"] = fisher_val
+            df["fisher_signal"] = fisher_val.shift(1)
 
-            kst_result = pta.kst(close)
-            if kst_result is not None and len(kst_result.columns) >= 2:
-                df["kst"] = kst_result.iloc[:, 0]
-                df["kst_signal"] = kst_result.iloc[:, 1]
-            else:
-                df["kst"] = 0.0
-                df["kst_signal"] = 0.0
+            # KST (Know Sure Thing)
+            roc10 = close.pct_change(10) * 100
+            roc15 = close.pct_change(15) * 100
+            roc20 = close.pct_change(20) * 100
+            roc30 = close.pct_change(30) * 100
+            kst_val = (roc10.rolling(10).mean() * 1
+                       + roc15.rolling(10).mean() * 2
+                       + roc20.rolling(10).mean() * 3
+                       + roc30.rolling(15).mean() * 4)
+            df["kst"] = kst_val
+            df["kst_signal"] = kst_val.rolling(9).mean()
 
-            ppo_result = pta.ppo(close)
-            if ppo_result is not None and len(ppo_result.columns) >= 3:
-                df["ppo"] = ppo_result.iloc[:, 0]
-                df["ppo_signal"] = ppo_result.iloc[:, 1]
-                df["ppo_hist"] = ppo_result.iloc[:, 2]
-            else:
-                df["ppo"] = 0.0
-                df["ppo_signal"] = 0.0
-                df["ppo_hist"] = 0.0
+            # PPO (Percentage Price Oscillator)
+            ema12 = close.ewm(span=12, adjust=False).mean()
+            ema26 = close.ewm(span=26, adjust=False).mean()
+            ppo_val = (ema12 - ema26) / ema26 * 100
+            ppo_sig = ppo_val.ewm(span=9, adjust=False).mean()
+            df["ppo"] = ppo_val
+            df["ppo_signal"] = ppo_sig
+            df["ppo_hist"] = ppo_val - ppo_sig
 
-            stoch = pta.stoch(high, low, close)
-            if stoch is not None and len(stoch.columns) >= 2:
-                df["stoch_k"] = stoch.iloc[:, 0]
-                df["stoch_d"] = stoch.iloc[:, 1]
-            else:
-                df["stoch_k"] = 0.0
-                df["stoch_d"] = 0.0
+            # Stochastic Oscillator (via ta lib)
+            stoch_ind = ta_lib.momentum.StochasticOscillator(high, low, close, window=14, smooth_window=3)
+            df["stoch_k"] = stoch_ind.stoch()
+            df["stoch_d"] = stoch_ind.stoch_signal()
 
-            tsi_val = pta.tsi(close)
-            if tsi_val is not None and len(tsi_val.columns) >= 1:
-                df["tsi"] = tsi_val.iloc[:, 0]
-            else:
-                df["tsi"] = 0.0
+            # TSI (True Strength Index)
+            df["tsi"] = ta_lib.momentum.TSIIndicator(close, window_slow=25, window_fast=13).tsi()
 
-            uo_val = pta.uo(high, low, close)
-            df["uo"] = uo_val if uo_val is not None else 0.0
+            # Ultimate Oscillator
+            df["uo"] = ta_lib.momentum.UltimateOscillator(high, low, close).ultimate_oscillator()
 
             # ── Trend (8) ──
-            aroon = pta.aroon(high, low, length=25)
-            if aroon is not None and len(aroon.columns) >= 3:
-                df["aroon_osc"] = aroon.iloc[:, 2]  # oscillator column
-            else:
-                df["aroon_osc"] = 0.0
+            # Aroon Oscillator
+            aroon_ind = ta_lib.trend.AroonIndicator(high, low, window=25)
+            df["aroon_osc"] = aroon_ind.aroon_indicator()
 
-            chop = pta.chop(high, low, close, length=14)
-            df["chop_14"] = chop if chop is not None else 0.0
+            # Choppiness Index
+            atr14 = TechnicalFeatures._atr(df, 14)
+            atr_sum = atr14.rolling(14).sum()
+            hh = high.rolling(14).max()
+            ll = low.rolling(14).min()
+            df["chop_14"] = 100 * np.log10(atr_sum / (hh - ll).replace(0, np.nan)) / np.log10(14)
 
-            dpo = pta.dpo(close, length=20)
-            df["dpo_20"] = dpo if dpo is not None else 0.0
+            # DPO (Detrended Price Oscillator)
+            df["dpo_20"] = ta_lib.trend.DPOIndicator(close, window=20).dpo()
 
-            st = pta.supertrend(high, low, close, length=7, multiplier=3.0)
-            if st is not None:
-                # Direction column: -1 = uptrend, 1 = downtrend
-                dir_col = [c for c in st.columns if "SUPERTd" in c]
-                if dir_col:
-                    df["supertrend_dir"] = st[dir_col[0]]
+            # Supertrend (manual: ATR-based)
+            atr_st = TechnicalFeatures._atr(df, 7)
+            hl_avg = (high + low) / 2
+            upper_band = hl_avg + 3.0 * atr_st
+            lower_band = hl_avg - 3.0 * atr_st
+            st_dir = pd.Series(0, index=df.index, dtype=int)
+            for i in range(1, len(df)):
+                if close.iloc[i] > upper_band.iloc[i - 1]:
+                    st_dir.iloc[i] = -1  # uptrend (bullish)
+                elif close.iloc[i] < lower_band.iloc[i - 1]:
+                    st_dir.iloc[i] = 1   # downtrend (bearish)
                 else:
-                    df["supertrend_dir"] = 0.0
-            else:
-                df["supertrend_dir"] = 0.0
+                    st_dir.iloc[i] = st_dir.iloc[i - 1]
+            df["supertrend_dir"] = st_dir
 
-            vortex = pta.vortex(high, low, close, length=14)
-            if vortex is not None and len(vortex.columns) >= 2:
-                df["vortex_diff"] = vortex.iloc[:, 0] - vortex.iloc[:, 1]
-            else:
-                df["vortex_diff"] = 0.0
+            # Vortex
+            vortex_ind = ta_lib.trend.VortexIndicator(high, low, close, window=14)
+            df["vortex_diff"] = vortex_ind.vortex_indicator_pos() - vortex_ind.vortex_indicator_neg()
 
-            mi = pta.massi(high, low)
-            df["mass_index"] = mi if mi is not None else 0.0
+            # Mass Index
+            df["mass_index"] = ta_lib.trend.MassIndex(high, low).mass_index()
 
-            # Plus/Minus DI from ADX calculation
-            adx_result = pta.adx(high, low, close, length=14)
-            if adx_result is not None and len(adx_result.columns) >= 3:
-                df["plus_di"] = adx_result.iloc[:, 1]
-                df["minus_di"] = adx_result.iloc[:, 2]
-            else:
-                df["plus_di"] = 0.0
-                df["minus_di"] = 0.0
+            # Plus/Minus DI
+            adx_ind = ta_lib.trend.ADXIndicator(high, low, close, window=14)
+            df["plus_di"] = adx_ind.adx_pos()
+            df["minus_di"] = adx_ind.adx_neg()
 
             # ── Volatility (9) ──
-            dc = pta.donchian(high, low, lower_length=20, upper_length=20)
-            if dc is not None and len(dc.columns) >= 3:
-                df["donchian_lower"] = dc.iloc[:, 0]
-                df["donchian_mid"] = dc.iloc[:, 1]
-                df["donchian_upper"] = dc.iloc[:, 2]
-                dc_range = df["donchian_upper"] - df["donchian_lower"]
-                df["donchian_width"] = dc_range / df["donchian_mid"]
-            else:
-                df["donchian_upper"] = 0.0
-                df["donchian_lower"] = 0.0
-                df["donchian_mid"] = 0.0
-                df["donchian_width"] = 0.0
+            # Donchian Channel
+            dc_ind = ta_lib.volatility.DonchianChannel(high, low, close, window=20)
+            df["donchian_upper"] = dc_ind.donchian_channel_hband()
+            df["donchian_lower"] = dc_ind.donchian_channel_lband()
+            df["donchian_mid"] = dc_ind.donchian_channel_mband()
+            dc_range = df["donchian_upper"] - df["donchian_lower"]
+            df["donchian_width"] = dc_range / df["donchian_mid"].replace(0, np.nan)
 
-            kc = pta.kc(high, low, close, length=20, scalar=1.5)
-            if kc is not None and len(kc.columns) >= 3:
-                df["kc_lower"] = kc.iloc[:, 0]
-                df["kc_upper"] = kc.iloc[:, 2]
-                kc_range = df["kc_upper"] - df["kc_lower"]
-                df["kc_position"] = (close - df["kc_lower"]) / kc_range.replace(0, np.nan)
-                df["kc_position"] = df["kc_position"].fillna(0.5)
-            else:
-                df["kc_upper"] = 0.0
-                df["kc_lower"] = 0.0
-                df["kc_position"] = 0.0
+            # Keltner Channel
+            kc_ind = ta_lib.volatility.KeltnerChannel(high, low, close, window=20, window_atr=20)
+            df["kc_upper"] = kc_ind.keltner_channel_hband()
+            df["kc_lower"] = kc_ind.keltner_channel_lband()
+            kc_range = df["kc_upper"] - df["kc_lower"]
+            df["kc_position"] = ((close - df["kc_lower"]) / kc_range.replace(0, np.nan)).fillna(0.5)
 
-            natr = pta.natr(high, low, close, length=14)
-            df["natr"] = natr if natr is not None else 0.0
+            # NATR (Normalized ATR)
+            atr_14 = TechnicalFeatures._atr(df, 14)
+            df["natr"] = (atr_14 / close) * 100
 
-            ui_val = pta.ui(close, length=14)
-            df["ui"] = ui_val if ui_val is not None else 0.0
+            # Ulcer Index
+            df["ui"] = ta_lib.volatility.UlcerIndex(close, window=14).ulcer_index()
 
             # ── Volume (6) ──
-            ad_val = pta.ad(high, low, close, volume)
-            df["ad"] = ad_val if ad_val is not None else 0.0
+            # Accumulation/Distribution
+            df["ad"] = ta_lib.volume.AccDistIndexIndicator(high, low, close, volume).acc_dist_index()
 
-            cmf_val = pta.cmf(high, low, close, volume, length=20)
-            df["cmf"] = cmf_val if cmf_val is not None else 0.0
+            # Chaikin Money Flow
+            df["cmf"] = ta_lib.volume.ChaikinMoneyFlowIndicator(high, low, close, volume, window=20).chaikin_money_flow()
 
-            efi = pta.efi(close, volume, length=13)
-            df["efi_13"] = efi if efi is not None else 0.0
+            # Elder's Force Index
+            df["efi_13"] = ta_lib.volume.ForceIndexIndicator(close, volume, window=13).force_index()
 
-            mfi_val = pta.mfi(high, low, close, volume, length=14)
-            df["mfi"] = mfi_val if mfi_val is not None else 0.0
+            # MFI (Money Flow Index)
+            df["mfi"] = ta_lib.volume.MFIIndicator(high, low, close, volume, window=14).money_flow_index()
 
-            nvi_val = pta.nvi(close, volume)
-            if nvi_val is not None:
-                df["nvi"] = nvi_val.iloc[:, 0] if hasattr(nvi_val, 'columns') else nvi_val
-            else:
-                df["nvi"] = 0.0
+            # NVI (Negative Volume Index)
+            df["nvi"] = ta_lib.volume.NegativeVolumeIndexIndicator(close, volume).negative_volume_index()
 
-            pvi_val = pta.pvi(close, volume)
-            if pvi_val is not None:
-                df["pvi"] = pvi_val.iloc[:, 0] if hasattr(pvi_val, 'columns') else pvi_val
-            else:
-                df["pvi"] = 0.0
+            # PVI (Positive Volume Index) — manual
+            pvi = pd.Series(1000.0, index=df.index)
+            for i in range(1, len(df)):
+                if volume.iloc[i] > volume.iloc[i - 1]:
+                    pvi.iloc[i] = pvi.iloc[i - 1] * (1 + (close.iloc[i] - close.iloc[i - 1]) / close.iloc[i - 1])
+                else:
+                    pvi.iloc[i] = pvi.iloc[i - 1]
+            df["pvi"] = pvi
 
             # ── Statistics (8) ──
-            ent = pta.entropy(close, length=10)
-            df["entropy_10"] = ent if ent is not None else 0.0
+            # Entropy (Shannon entropy of returns)
+            ret_abs = close.pct_change().abs().rolling(10)
+            df["entropy_10"] = ret_abs.apply(
+                lambda x: -np.sum(x / x.sum() * np.log(x / x.sum() + 1e-10)) if x.sum() > 0 else 0,
+                raw=True,
+            )
 
-            kurt = pta.kurtosis(close, length=20)
-            df["kurtosis_20"] = kurt if kurt is not None else 0.0
+            df["kurtosis_20"] = close.pct_change().rolling(20).kurt()
+            df["skew_20"] = close.pct_change().rolling(20).skew()
+            df["variance_20"] = close.pct_change().rolling(20).var()
 
-            skw = pta.skew(close, length=20)
-            df["skew_20"] = skw if skw is not None else 0.0
+            # Z-Score
+            mean_14 = close.rolling(14).mean()
+            std_14 = close.rolling(14).std()
+            df["zscore_14"] = (close - mean_14) / std_14.replace(0, np.nan)
 
-            var_val = pta.variance(close, length=20)
-            df["variance_20"] = var_val if var_val is not None else 0.0
+            df["stdev_20"] = close.rolling(20).std()
 
-            zs = pta.zscore(close, length=14)
-            df["zscore_14"] = zs if zs is not None else 0.0
+            # Linear regression slope and R²
+            def _linreg_slope(x):
+                n = len(x)
+                if n < 2:
+                    return 0
+                xi = np.arange(n)
+                return np.polyfit(xi, x, 1)[0]
 
-            sd = pta.stdev(close, length=20)
-            df["stdev_20"] = sd if sd is not None else 0.0
+            def _linreg_r2(x):
+                n = len(x)
+                if n < 2:
+                    return 0
+                xi = np.arange(n)
+                p = np.polyfit(xi, x, 1)
+                yhat = np.polyval(p, xi)
+                ss_res = np.sum((x - yhat) ** 2)
+                ss_tot = np.sum((x - np.mean(x)) ** 2)
+                return 1 - ss_res / ss_tot if ss_tot > 0 else 0
 
-            lr_slope = pta.linreg(close, length=20, slope=True)
-            df["linreg_slope"] = lr_slope if lr_slope is not None else 0.0
+            df["linreg_slope"] = close.rolling(20).apply(_linreg_slope, raw=True)
+            df["linreg_r2"] = close.rolling(20).apply(_linreg_r2, raw=True)
 
-            lr_r = pta.linreg(close, length=20, r=True)
-            df["linreg_r2"] = lr_r if lr_r is not None else 0.0
-
-            # Fill any remaining NaN from warmup periods
-            pta_cols = [
-                "ao", "cci_20", "cmo_14", "fisher_9", "fisher_signal",
-                "kst", "kst_signal", "ppo", "ppo_signal", "ppo_hist",
-                "stoch_k", "stoch_d", "tsi", "uo",
-                "aroon_osc", "chop_14", "dpo_20", "supertrend_dir",
-                "vortex_diff", "mass_index", "plus_di", "minus_di",
-                "donchian_upper", "donchian_lower", "donchian_mid", "donchian_width",
-                "kc_upper", "kc_lower", "kc_position", "natr", "ui",
-                "ad", "cmf", "efi_13", "mfi", "nvi", "pvi",
-                "entropy_10", "kurtosis_20", "skew_20", "variance_20",
-                "zscore_14", "stdev_20", "linreg_slope", "linreg_r2",
-            ]
-            for col in pta_cols:
+            # Fill NaN from warmup periods
+            for col in TechnicalFeatures.EXTENDED_COLS:
                 if col in df.columns:
-                    df[col] = df[col].fillna(0.0)
+                    df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
                 else:
                     df[col] = 0.0
 
         except Exception as e:
-            logger.error(f"Error computing pandas-ta indicators: {e}")
-            # Ensure all columns exist even on error
-            pta_cols = [
-                "ao", "cci_20", "cmo_14", "fisher_9", "fisher_signal",
-                "kst", "kst_signal", "ppo", "ppo_signal", "ppo_hist",
-                "stoch_k", "stoch_d", "tsi", "uo",
-                "aroon_osc", "chop_14", "dpo_20", "supertrend_dir",
-                "vortex_diff", "mass_index", "plus_di", "minus_di",
-                "donchian_upper", "donchian_lower", "donchian_mid", "donchian_width",
-                "kc_upper", "kc_lower", "kc_position", "natr", "ui",
-                "ad", "cmf", "efi_13", "mfi", "nvi", "pvi",
-                "entropy_10", "kurtosis_20", "skew_20", "variance_20",
-                "zscore_14", "stdev_20", "linreg_slope", "linreg_r2",
-            ]
-            for col in pta_cols:
+            logger.error(f"Error computing extended indicators: {e}")
+            for col in TechnicalFeatures.EXTENDED_COLS:
                 if col not in df.columns:
                     df[col] = 0.0
 
@@ -563,46 +534,32 @@ class TechnicalFeatures:
             returns = close.pct_change()
 
             # ── Adaptive Moving Averages ──
-            if PANDAS_TA_AVAILABLE:
-                kama = pta.kama(close, length=10)
-                df["kama_10"] = kama if kama is not None else 0.0
+            # KAMA (Kaufman Adaptive MA)
+            df["kama_10"] = ta_lib.momentum.KAMAIndicator(close, window=10).kama()
 
-                t3 = pta.t3(close, length=10)
-                df["t3_10"] = t3 if t3 is not None else 0.0
+            # T3 (approximated via triple EMA smoothing)
+            ema1 = close.ewm(span=10, adjust=False).mean()
+            ema2 = ema1.ewm(span=10, adjust=False).mean()
+            ema3 = ema2.ewm(span=10, adjust=False).mean()
+            df["t3_10"] = 3 * ema1 - 3 * ema2 + ema3  # simplified T3
 
-                dema = pta.dema(close, length=21)
-                df["dema_21"] = dema if dema is not None else 0.0
-            else:
-                df["kama_10"] = close.ewm(span=10, adjust=False).mean()
-                df["t3_10"] = close.ewm(span=10, adjust=False).mean()
-                df["dema_21"] = close.ewm(span=21, adjust=False).mean()
+            # DEMA (Double EMA)
+            ema_21 = close.ewm(span=21, adjust=False).mean()
+            df["dema_21"] = 2 * ema_21 - ema_21.ewm(span=21, adjust=False).mean()
 
             # ── Additional Momentum ──
-            if PANDAS_TA_AVAILABLE:
-                trix = pta.trix(close, length=14)
-                if trix is not None:
-                    df["trix_14"] = trix.iloc[:, 0] if hasattr(trix, 'columns') else trix
-                else:
-                    df["trix_14"] = 0.0
+            # TRIX (triple EMA rate of change)
+            ema_t1 = close.ewm(span=14, adjust=False).mean()
+            ema_t2 = ema_t1.ewm(span=14, adjust=False).mean()
+            ema_t3 = ema_t2.ewm(span=14, adjust=False).mean()
+            df["trix_14"] = ema_t3.pct_change() * 100
 
-                psar = pta.psar(high, low, close)
-                if psar is not None:
-                    # Direction: 1 = bullish (price above SAR), -1 = bearish
-                    long_col = [c for c in psar.columns if "PSARl" in c]
-                    short_col = [c for c in psar.columns if "PSARs" in c]
-                    if long_col and short_col:
-                        df["psar"] = psar[long_col[0]].fillna(psar[short_col[0]])
-                        df["psar_dir"] = psar[long_col[0]].notna().astype(int) * 2 - 1
-                    else:
-                        df["psar"] = 0.0
-                        df["psar_dir"] = 0.0
-                else:
-                    df["psar"] = 0.0
-                    df["psar_dir"] = 0.0
-            else:
-                df["trix_14"] = 0.0
-                df["psar"] = 0.0
-                df["psar_dir"] = 0.0
+            # Parabolic SAR (via ta lib)
+            psar_ind = ta_lib.trend.PSARIndicator(high, low, close)
+            psar_up = psar_ind.psar_up()
+            psar_down = psar_ind.psar_down()
+            df["psar"] = psar_up.fillna(psar_down)
+            df["psar_dir"] = psar_up.notna().astype(int) * 2 - 1  # 1=bullish, -1=bearish
 
             # Balance of Power
             range_ = high - low
