@@ -410,6 +410,10 @@ export default function Advisor() {
       if (!p || p.error) {
         setNeedsSetup(true)
         setPortfolio(null)
+      } else if (p.total_trades === 0 && p.total_pnl === 0) {
+        // Portfolio exists with defaults but was never used — show setup
+        setNeedsSetup(true)
+        setPortfolio(p)
       } else {
         setNeedsSetup(false)
         setPortfolio(p)

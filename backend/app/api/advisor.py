@@ -78,11 +78,9 @@ async def _get_current_price():
 @router.get("/portfolio/{telegram_id}")
 async def get_portfolio(telegram_id: int):
     """Get portfolio state for a user."""
-    from app.advisor.portfolio import get_or_create_portfolio, get_stats
+    from app.advisor.portfolio import get_stats
 
-    portfolio = await get_or_create_portfolio(telegram_id)
-    stats = await get_stats(telegram_id)
-    return stats
+    return await get_stats(telegram_id)
 
 
 @router.post("/portfolio/{telegram_id}/balance")

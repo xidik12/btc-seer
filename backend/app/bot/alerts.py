@@ -97,8 +97,10 @@ class AlertSender:
         users = [u for u in users if is_premium(u)]
 
         if not users:
-            logger.debug(f"No users due for alerts (intervals: {due_intervals})")
+            logger.info(f"No users due for alerts (intervals: {due_intervals})")
             return
+
+        logger.info(f"Sending alerts to {len(users)} users (intervals: {due_intervals})")
 
         current_price = current_price_row.close if current_price_row else None
         predictions = list(predictions_by_tf.values())

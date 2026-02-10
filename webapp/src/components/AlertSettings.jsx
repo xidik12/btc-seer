@@ -41,10 +41,23 @@ export default function AlertSettings() {
       .finally(() => setLoading(false))
   }, [tg])
 
-  const handleToggle = useCallback(() => {
-    setSubscribed((prev) => !prev)
-    setDirty(true)
-  }, [])
+  const handleToggle = useCallback(async () => {
+    const newValue = !subscribed
+    setSubscribed(newValue)
+    // Auto-save the toggle immediately
+    if (tg?.initData) {
+      try {
+        await api.updateAlertPreferences(tg.initData, newValue, selectedInterval)
+        showToast(newValue ? t('alerts.alertsEnabled', 'Alerts enabled') : t('alerts.alertsDisabled', 'Alerts disabled'), newValue ? 'success' : 'info')
+      } catch {
+        // Revert on failure
+        setSubscribed(!newValue)
+        showToast(t('alerts.saveFailed'), 'error')
+      }
+    } else {
+      setDirty(true)
+    }
+  }, [subscribed, tg, selectedInterval, t])
 
   const handleIntervalChange = useCallback((value) => {
     setSelectedInterval(value)

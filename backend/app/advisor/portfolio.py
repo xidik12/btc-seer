@@ -196,6 +196,16 @@ async def get_stats(telegram_id: int) -> dict:
         )
         results = result.scalars().all()
 
+        # Count active trades
+        active_result = await session.execute(
+            select(TradeAdvice).where(
+                TradeAdvice.telegram_id == telegram_id,
+                TradeAdvice.status.in_(["opened", "partial_tp"]),
+                TradeAdvice.is_mock == False,
+            )
+        )
+        active_trades_count = len(active_result.scalars().all())
+
     win_rate = 0.0
     avg_win = 0.0
     avg_loss = 0.0
@@ -245,6 +255,7 @@ async def get_stats(telegram_id: int) -> dict:
         "consecutive_losses": portfolio.consecutive_losses,
         "progress_to_10k": round(progress_pct, 2),
         "target": target,
+        "active_trades": active_trades_count,
         "is_active": portfolio.is_active,
         "cooldown_until": portfolio.cooldown_until.isoformat() if portfolio.cooldown_until else None,
     }
