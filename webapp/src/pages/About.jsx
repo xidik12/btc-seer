@@ -167,21 +167,6 @@ export default function About() {
         </div>
       </div>
 
-      {/* API Access */}
-      <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-2">API ACCESS</h3>
-        <div className="text-text-muted text-[11px] space-y-2">
-          <p>
-            BTC Seer offers a free API for developers and traders. Get your API key through the
-            Telegram bot using the <span className="text-accent-blue font-mono">/apikey</span> command.
-          </p>
-          <p>
-            All tiers are <span className="text-text-secondary font-semibold">free during beta</span>. Access predictions,
-            signals, market data, and more programmatically.
-          </p>
-        </div>
-      </div>
-
       {/* Creator / Community */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
         <h3 className="text-text-secondary text-xs font-semibold mb-2">BUILT BY</h3>

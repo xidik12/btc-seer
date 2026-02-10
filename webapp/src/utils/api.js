@@ -109,6 +109,9 @@ export const api = {
     fetchAPI(`/admin/predictions?limit=${limit}`, { headers: { 'X-Telegram-Init-Data': initData } }),
   getAdminSystem: (initData) => fetchAPI('/admin/system', { headers: { 'X-Telegram-Init-Data': initData } }),
 
+  // Subscription
+  createInvoice: (tier) => fetchAPI(`/subscription/create-invoice?tier=${tier}`),
+
   // Fear & Greed
   getFearGreed: (days = 30) => fetchAPI(`/market/fear-greed?days=${days}`),
 
