@@ -602,6 +602,23 @@ class CoinReport(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
 
+class ModelFeedback(Base):
+    """Aggregated feedback from mock trade outcomes vs AI predictions."""
+    __tablename__ = "model_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    period: Mapped[str] = mapped_column(String(20), default="daily")  # daily, weekly
+    total_trades: Mapped[int] = mapped_column(Integer, default=0)
+    winning_trades: Mapped[int] = mapped_column(Integer, default=0)
+    direction_accuracy: Mapped[float] = mapped_column(Float, default=0.0)
+    avg_confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    avg_predicted_rr: Mapped[float] = mapped_column(Float, default=0.0)
+    avg_achieved_rr: Mapped[float] = mapped_column(Float, default=0.0)
+    avg_pnl_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    feedback_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+
 class ApiKey(Base):
     """API keys for monetization."""
     __tablename__ = "api_keys"

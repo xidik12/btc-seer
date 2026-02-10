@@ -11,6 +11,151 @@ const ADVISOR_TABS = [
   { path: '/history', label: 'History' },
 ]
 
+function PortfolioSetupCard({ telegramId, onSetup }) {
+  const [balance, setBalance] = useState(10)
+  const [maxLeverage, setMaxLeverage] = useState(20)
+  const [maxOpenTrades, setMaxOpenTrades] = useState(3)
+  const [riskPct, setRiskPct] = useState(10)
+  const [saving, setSaving] = useState(false)
+
+  const handleSetup = async () => {
+    setSaving(true)
+    try {
+      await api.setupPortfolio(telegramId, {
+        balance,
+        max_leverage: maxLeverage,
+        max_open_trades: maxOpenTrades,
+        max_risk_per_trade_pct: riskPct,
+      })
+      onSetup()
+    } catch (err) {
+      console.error('Portfolio setup error:', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-4 border border-accent-blue/20 slide-up">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-8 h-8 rounded-full bg-accent-blue/10 flex items-center justify-center">
+          <svg className="w-4 h-4 text-accent-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+        </div>
+        <div>
+          <div className="text-text-primary text-sm font-bold">Setup Your Portfolio</div>
+          <div className="text-text-muted text-[10px]">Configure risk settings to start receiving AI trade suggestions</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <label className="text-text-muted text-[10px] block mb-1">Starting Balance ($)</label>
+          <input
+            type="number"
+            value={balance}
+            onChange={e => setBalance(Number(e.target.value))}
+            min={1}
+            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50"
+          />
+        </div>
+        <div>
+          <label className="text-text-muted text-[10px] block mb-1">Max Leverage</label>
+          <input
+            type="number"
+            value={maxLeverage}
+            onChange={e => setMaxLeverage(Number(e.target.value))}
+            min={1}
+            max={125}
+            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50"
+          />
+        </div>
+        <div>
+          <label className="text-text-muted text-[10px] block mb-1">Max Open Trades</label>
+          <input
+            type="number"
+            value={maxOpenTrades}
+            onChange={e => setMaxOpenTrades(Number(e.target.value))}
+            min={1}
+            max={20}
+            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50"
+          />
+        </div>
+        <div>
+          <label className="text-text-muted text-[10px] block mb-1">Risk per Trade (%)</label>
+          <input
+            type="number"
+            value={riskPct}
+            onChange={e => setRiskPct(Number(e.target.value))}
+            min={1}
+            max={100}
+            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50"
+          />
+        </div>
+      </div>
+
+      <button
+        onClick={handleSetup}
+        disabled={saving}
+        className="w-full py-2.5 rounded-xl bg-accent-blue text-white text-xs font-bold hover:bg-accent-blue/90 transition-colors disabled:opacity-50"
+      >
+        {saving ? 'Setting up...' : 'Start AI Advisor'}
+      </button>
+    </div>
+  )
+}
+
+function AIAccuracyCard({ feedback }) {
+  if (!feedback || feedback.total_trades === 0) return null
+
+  const winRate = feedback.total_trades > 0
+    ? (feedback.winning_trades / feedback.total_trades * 100).toFixed(0)
+    : 0
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
+      <div className="text-text-muted text-[10px] font-medium mb-2">AI ACCURACY (Last {feedback.days}d)</div>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="text-center">
+          <div className="text-text-muted text-[9px]">Direction</div>
+          <div className={`text-sm font-bold ${feedback.direction_accuracy >= 55 ? 'text-accent-green' : 'text-accent-red'}`}>
+            {feedback.direction_accuracy.toFixed(0)}%
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="text-text-muted text-[9px]">Win Rate</div>
+          <div className={`text-sm font-bold ${Number(winRate) >= 50 ? 'text-accent-green' : 'text-accent-red'}`}>
+            {winRate}%
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="text-text-muted text-[9px]">Avg R:R</div>
+          <div className={`text-sm font-bold ${feedback.avg_achieved_rr >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+            {feedback.avg_achieved_rr.toFixed(1)}
+          </div>
+        </div>
+      </div>
+      {feedback.confidence_calibration && Object.keys(feedback.confidence_calibration).length > 0 && (
+        <div className="mt-3 pt-2 border-t border-white/5">
+          <div className="text-text-muted text-[9px] mb-1">Confidence Calibration</div>
+          <div className="flex gap-1">
+            {Object.entries(feedback.confidence_calibration).map(([bucket, data]) => (
+              <div key={bucket} className="flex-1 text-center">
+                <div className="text-text-muted text-[8px]">{bucket}%</div>
+                <div className={`text-[10px] font-bold ${data.win_rate >= 50 ? 'text-accent-green' : 'text-accent-red'}`}>
+                  {data.win_rate}%
+                </div>
+                <div className="text-text-muted text-[8px]">n={data.total}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function PortfolioCard({ portfolio }) {
   if (!portfolio) return null
 
@@ -235,6 +380,8 @@ export default function Advisor() {
   const [activeTrades, setActiveTrades] = useState([])
   const [historyTrades, setHistoryTrades] = useState([])
   const [currentPrice, setCurrentPrice] = useState(0)
+  const [feedback, setFeedback] = useState(null)
+  const [needsSetup, setNeedsSetup] = useState(false)
   const [tab, setTab] = useState('active')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -246,15 +393,26 @@ export default function Advisor() {
     }
     try {
       setError(null)
-      const [p, trades, hist] = await Promise.all([
+      const [p, trades, hist, fb] = await Promise.all([
         api.getPortfolio(telegramId),
         api.getActiveTrades(telegramId),
         api.getTradeHistory(telegramId),
+        api.getFeedback(30).catch(() => null),
       ])
-      setPortfolio(p)
+
+      // Check if portfolio needs setup (no portfolio or error response)
+      if (!p || p.error) {
+        setNeedsSetup(true)
+        setPortfolio(null)
+      } else {
+        setNeedsSetup(false)
+        setPortfolio(p)
+      }
+
       setActiveTrades(trades?.trades || trades || [])
       setHistoryTrades(hist?.results || hist?.trades || hist || [])
       if (trades?.current_price) setCurrentPrice(trades.current_price)
+      if (fb) setFeedback(fb)
     } catch (err) {
       setError(err.message || 'Failed to load advisor data')
     } finally {
@@ -346,7 +504,13 @@ export default function Advisor() {
 
       <SubTabBar tabs={ADVISOR_TABS} />
 
-      <PortfolioCard portfolio={portfolio} />
+      {needsSetup ? (
+        <PortfolioSetupCard telegramId={telegramId} onSetup={fetchData} />
+      ) : (
+        <PortfolioCard portfolio={portfolio} />
+      )}
+
+      <AIAccuracyCard feedback={feedback} />
 
       <div className="flex gap-1 bg-bg-secondary/50 rounded-lg p-0.5">
         {['active', 'history'].map(t => (

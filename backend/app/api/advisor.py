@@ -14,6 +14,13 @@ class BalanceUpdate(BaseModel):
     balance: float
 
 
+class PortfolioSetup(BaseModel):
+    balance: float = 10.0
+    max_leverage: int = 20
+    max_open_trades: int = 2
+    max_risk_per_trade_pct: float = 10.0
+
+
 class TradeClose(BaseModel):
     exit_price: float
     reason: str = "manual_close"
@@ -88,6 +95,55 @@ async def set_balance(telegram_id: int, body: BalanceUpdate):
 
     portfolio = await update_balance(telegram_id, body.balance)
     return {"balance": portfolio.balance_usdt}
+
+
+@router.post("/portfolio/{telegram_id}/setup")
+async def setup_portfolio(telegram_id: int, body: PortfolioSetup):
+    """Create or update portfolio with custom settings."""
+    if body.balance < 0:
+        raise HTTPException(400, "Balance must be non-negative")
+    if body.max_leverage < 1 or body.max_leverage > 125:
+        raise HTTPException(400, "Max leverage must be 1-125")
+    if body.max_open_trades < 1 or body.max_open_trades > 20:
+        raise HTTPException(400, "Max open trades must be 1-20")
+    if body.max_risk_per_trade_pct < 1 or body.max_risk_per_trade_pct > 100:
+        raise HTTPException(400, "Risk per trade must be 1-100%")
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(PortfolioState).where(PortfolioState.telegram_id == telegram_id)
+        )
+        portfolio = result.scalar_one_or_none()
+
+        if not portfolio:
+            portfolio = PortfolioState(
+                telegram_id=telegram_id,
+                balance_usdt=body.balance,
+                initial_balance=body.balance,
+                max_leverage=body.max_leverage,
+                max_open_trades=body.max_open_trades,
+                max_risk_per_trade_pct=body.max_risk_per_trade_pct,
+            )
+            session.add(portfolio)
+        else:
+            portfolio.balance_usdt = body.balance
+            portfolio.initial_balance = body.balance
+            portfolio.max_leverage = body.max_leverage
+            portfolio.max_open_trades = body.max_open_trades
+            portfolio.max_risk_per_trade_pct = body.max_risk_per_trade_pct
+            portfolio.total_pnl = 0.0
+            portfolio.total_pnl_pct = 0.0
+
+        await session.commit()
+        await session.refresh(portfolio)
+
+    return {
+        "balance": portfolio.balance_usdt,
+        "max_leverage": portfolio.max_leverage,
+        "max_open_trades": portfolio.max_open_trades,
+        "max_risk_per_trade_pct": portfolio.max_risk_per_trade_pct,
+        "status": "created",
+    }
 
 
 @router.get("/trades/{telegram_id}")
@@ -314,3 +370,10 @@ async def get_stats_endpoint(telegram_id: int):
     """Get comprehensive trading stats."""
     from app.advisor.portfolio import get_stats
     return await get_stats(telegram_id)
+
+
+@router.get("/feedback")
+async def get_feedback(days: int = Query(30, ge=1, le=365)):
+    """Get aggregated AI feedback stats from mock trade outcomes."""
+    from app.advisor.feedback import get_feedback_stats
+    return await get_feedback_stats(days=days)

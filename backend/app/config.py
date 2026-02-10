@@ -48,9 +48,9 @@ class Settings(BaseSettings):
     # Advisor settings
     advisor_enabled: bool = True
     advisor_default_balance: float = 10.0
-    advisor_min_confidence: int = 70
-    advisor_min_models_agreeing: int = 3
-    advisor_min_risk_reward: float = 2.0
+    advisor_min_confidence: int = 55
+    advisor_min_models_agreeing: int = 2
+    advisor_min_risk_reward: float = 1.5
     advisor_max_leverage: int = 20
     advisor_kelly_fraction: float = 0.25
     advisor_cooldown_hours: int = 4

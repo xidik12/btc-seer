@@ -37,7 +37,7 @@ def check_entry(
     # --- Filter 1: Not in cooldown, daily loss limit not reached ---
     if portfolio.cooldown_until and datetime.utcnow() < portfolio.cooldown_until:
         reasons_skipped.append("cooldown active")
-        logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+        logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
         return None
 
     today = datetime.utcnow().strftime("%Y-%m-%d")
@@ -45,21 +45,21 @@ def check_entry(
         daily_loss_pct = (portfolio.daily_loss_today / portfolio.balance_usdt) * 100
         if daily_loss_pct >= portfolio.daily_max_loss_pct:
             reasons_skipped.append(f"daily loss limit ({daily_loss_pct:.1f}%)")
-            logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+            logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
             return None
 
     # --- Filter 2: Max open trades not exceeded ---
     active_open = [t for t in open_trades if t.status in ("opened", "partial_tp")]
     if len(active_open) >= portfolio.max_open_trades:
         reasons_skipped.append(f"max open trades ({len(active_open)}/{portfolio.max_open_trades})")
-        logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+        logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
         return None
 
     # --- Filter 3: Ensemble confidence >= min ---
     confidence = prediction.get("confidence", 0)
     if confidence < settings.advisor_min_confidence:
         reasons_skipped.append(f"low confidence ({confidence:.0f}% < {settings.advisor_min_confidence}%)")
-        logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+        logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
         return None
 
     # --- Filter 4: At least N models agree ---
@@ -67,7 +67,7 @@ def check_entry(
     direction = prediction.get("direction", "neutral")
     if direction == "neutral":
         reasons_skipped.append("neutral direction")
-        logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+        logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
         return None
 
     models_agreeing = []
@@ -94,14 +94,14 @@ def check_entry(
 
     if len(models_agreeing) < settings.advisor_min_models_agreeing:
         reasons_skipped.append(f"insufficient model agreement ({len(models_agreeing)}/{settings.advisor_min_models_agreeing})")
-        logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+        logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
         return None
 
     # --- Filter 5: Risk/reward >= min ---
     rr = signal.get("risk_reward_ratio", 0)
     if rr < settings.advisor_min_risk_reward:
         reasons_skipped.append(f"low R:R ({rr:.1f} < {settings.advisor_min_risk_reward})")
-        logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+        logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
         return None
 
     # --- Filter 6: RSI sanity check ---
@@ -110,11 +110,11 @@ def check_entry(
         if rsi is not None:
             if direction == "bullish" and rsi > 80:
                 reasons_skipped.append(f"RSI overbought ({rsi:.0f})")
-                logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+                logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
                 return None
             if direction == "bearish" and rsi < 20:
                 reasons_skipped.append(f"RSI oversold ({rsi:.0f})")
-                logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+                logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
                 return None
 
     # --- Filter 7: High-severity negative event opposes direction ---
@@ -125,19 +125,19 @@ def check_entry(
             if severity >= 7:
                 if direction == "bullish" and sent < -0.3:
                     reasons_skipped.append("high-severity bearish event active")
-                    logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+                    logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
                     return None
                 if direction == "bearish" and sent > 0.3:
                     reasons_skipped.append("high-severity bullish event active")
-                    logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+                    logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
                     return None
 
-    # --- Filter 8: Quant agreement ratio >= 0.6 ---
-    if quant:
+    # --- Filter 8: Quant agreement ratio >= 0.6 (skip if quant unavailable) ---
+    if quant and quant.get("agreement_ratio") is not None:
         agreement_ratio = quant.get("agreement_ratio", 0)
         if agreement_ratio < 0.6:
             reasons_skipped.append(f"low quant agreement ({agreement_ratio:.2f})")
-            logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+            logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
             return None
 
     # --- Filter 9: No duplicate open trade in same direction ---
@@ -145,7 +145,7 @@ def check_entry(
     for t in active_open:
         if t.direction == trade_direction:
             reasons_skipped.append(f"duplicate {trade_direction} already open")
-            logger.debug(f"Entry skip: {', '.join(reasons_skipped)}")
+            logger.info(f"Entry skip: {', '.join(reasons_skipped)}")
             return None
 
     # All filters passed!

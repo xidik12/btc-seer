@@ -1513,7 +1513,7 @@ async def run_advisor_check():
             ]
 
         if not pred_row or not signal_row or not price_row:
-            logger.debug("Advisor: missing prediction/signal/price data")
+            logger.info("Advisor: missing prediction/signal/price data")
             return
 
         current_price = float(price_row.close)
@@ -1553,25 +1553,40 @@ async def run_advisor_check():
 
         indicators = ind_row.indicators if ind_row else None
 
-        # Get all advisor users (all portfolios)
+        # Auto-create portfolios for all registered users who don't have one yet
+        async with async_session() as session:
+            result = await session.execute(select(BotUser.telegram_id))
+            all_user_ids = {r[0] for r in result.all()}
+
+            result = await session.execute(select(PortfolioState.telegram_id))
+            existing_portfolio_ids = {r[0] for r in result.all()}
+
+        missing_ids = all_user_ids - existing_portfolio_ids
+        if missing_ids:
+            for uid in missing_ids:
+                await get_or_create_portfolio(uid)
+            logger.info(f"Advisor: auto-created portfolios for {len(missing_ids)} users")
+
+        # Get all advisor users (all active portfolios)
         async with async_session() as session:
             result = await session.execute(select(PortfolioState).where(PortfolioState.is_active == True))
             portfolios = result.scalars().all()
 
         if not portfolios:
-            logger.debug("Advisor: no active portfolios")
+            logger.info("Advisor: no active portfolios")
             return
 
         # For each user with a portfolio, check for entry
         new_plans = 0
         for portfolio in portfolios:
             try:
-                # Get user's open trades
+                # Get user's open trades (exclude mock/paper trades)
                 async with async_session() as session:
                     result = await session.execute(
                         select(TradeAdvice).where(
                             TradeAdvice.telegram_id == portfolio.telegram_id,
                             TradeAdvice.status.in_(["opened", "partial_tp", "pending"]),
+                            TradeAdvice.is_mock == False,
                         )
                     )
                     open_trades = result.scalars().all()

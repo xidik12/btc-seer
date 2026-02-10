@@ -129,6 +129,13 @@ export const api = {
       body: JSON.stringify({ exit_price: exitPrice, reason }),
     }),
 
+  setupPortfolio: (telegramId, settings) =>
+    fetchAPI(`/advisor/portfolio/${telegramId}/setup`, {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    }),
+  getFeedback: (days = 30) => cachedFetch(`/advisor/feedback?days=${days}`, T120),
+
   // Mock/Paper Trading (user-specific, no cache)
   getMockTrades: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}?mock=true`),
   getMockHistory: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}/history?mock=true`),
