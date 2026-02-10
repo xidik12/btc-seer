@@ -208,12 +208,10 @@ function QuickAccessGrid() {
                 <button
                   key={link.path}
                   onClick={() => navigate(link.path)}
-                  className={`bg-bg-card rounded-xl border p-3 flex flex-col items-center gap-1.5 active:scale-95 transition-all ${
-                    link.highlight ? 'border-accent-yellow/25 hover:border-accent-yellow/40' : 'border-white/5 hover:border-white/15'
-                  }`}
+                  className="bg-bg-card rounded-xl border border-accent-yellow/10 p-3 flex flex-col items-center gap-1.5 hover:border-accent-yellow/25 active:scale-95 transition-all"
                 >
-                  <span className={`w-5 h-5 ${link.highlight ? 'text-accent-yellow' : 'text-text-secondary'}`}>{quickIcons[link.icon]}</span>
-                  <span className={`text-[10px] font-medium leading-tight text-center ${link.highlight ? 'text-accent-yellow' : 'text-text-secondary'}`}>{link.label}</span>
+                  <span className="w-5 h-5 text-accent-yellow">{quickIcons[link.icon]}</span>
+                  <span className="text-[10px] text-accent-yellow/80 font-medium leading-tight text-center">{link.label}</span>
                 </button>
               ))}
             </div>
