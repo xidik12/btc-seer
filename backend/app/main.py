@@ -44,6 +44,7 @@ from app.collectors.coins import collect_coin_prices, seed_tracked_coins
 from app.models.phrase_analyzer import analyze_news_phrases
 from app.models.continuous_learner import run_continuous_learning
 from app.models.ab_tester import evaluate_candidates
+from app.scheduler.backup import run_database_backup
 
 logging.basicConfig(
     level=logging.INFO,
@@ -134,6 +135,9 @@ async def lifespan(app: FastAPI):
 
     # Subscription expiry check (daily)
     scheduler.add_job(check_subscription_expiry, "interval", hours=24, id="check_subs")
+
+    # Database backup
+    scheduler.add_job(run_database_backup, "interval", hours=settings.backup_interval_hours, id="database_backup")
 
     scheduler.start()
     logger.info("Scheduler started")

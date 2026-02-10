@@ -224,10 +224,10 @@ function QuickAccessGrid() {
 
 export default function Dashboard() {
   return (
-    <div className="px-4 pt-4 space-y-4">
+    <div className="px-4 pt-4 space-y-4 dashboard-stagger">
       <header className="flex items-center justify-between mb-2">
         <h1 className="text-lg font-bold flex items-center gap-2">
-          <span className="text-xl">₿</span> BTC Seer
+          <span className="text-xl">₿</span> <span className="text-shimmer-gold">BTC Seer</span>
         </h1>
         <span className="text-text-muted text-xs pulse-glow">LIVE</span>
       </header>

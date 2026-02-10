@@ -14,6 +14,8 @@ body {
   color: #ffffff;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 ::-webkit-scrollbar {
@@ -29,24 +31,220 @@ body {
   border-radius: 2px;
 }
 
+/* ============================================================
+   #1 — Glass-morphism Cards
+   ============================================================ */
+[class*="bg-bg-card"] {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ============================================================
+   #2 — Floating Card Shadows
+   ============================================================ */
+[class*="bg-bg-card"][class*="rounded-2xl"] {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4),
+              0 1px 8px rgba(0, 0, 0, 0.3),
+              0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================================
+   #3 — Premium Skeleton Shimmer
+   ============================================================ */
+@keyframes shimmer-sweep {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-pulse {
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+.animate-pulse [class*="bg-bg-hover"] {
+  background: linear-gradient(
+    105deg,
+    rgba(34, 34, 46, 0.6) 0%,
+    rgba(34, 34, 46, 0.6) 40%,
+    rgba(58, 58, 74, 0.5) 50%,
+    rgba(34, 34, 46, 0.6) 60%,
+    rgba(34, 34, 46, 0.6) 100%
+  ) !important;
+  background-size: 200% 100% !important;
+  animation: shimmer-sweep 1.8s ease-in-out infinite !important;
+}
+
+/* ============================================================
+   #4 — Glass Bottom Navbar
+   ============================================================ */
+nav.fixed.bottom-0,
+nav[class*="fixed"][class*="bottom-0"] {
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  background: rgba(15, 15, 20, 0.75) !important;
+  border-top: 1px solid rgba(122, 101, 53, 0.15);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3),
+              0 -1px 0 rgba(122, 101, 53, 0.08);
+}
+
+/* ============================================================
+   #5 — Typography Refinement
+   ============================================================ */
+b, strong, [class*="font-bold"], [class*="font-semibold"] {
+  letter-spacing: -0.02em;
+}
+
+[class*="text-\\[10px\\]"], [class*="text-\\[8px\\]"] {
+  letter-spacing: 0.03em;
+}
+
+[class*="uppercase"] {
+  letter-spacing: 0.08em;
+}
+
+/* ============================================================
+   #6 — Staggered Entry Animations (focus-in effect)
+   ============================================================ */
+@keyframes slide-up {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+    filter: blur(2px);
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.slide-up {
+  animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dashboard-stagger > * { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.dashboard-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.dashboard-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.dashboard-stagger > *:nth-child(3) { animation-delay: 120ms; }
+.dashboard-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.dashboard-stagger > *:nth-child(5) { animation-delay: 240ms; }
+.dashboard-stagger > *:nth-child(6) { animation-delay: 300ms; }
+.dashboard-stagger > *:nth-child(7) { animation-delay: 360ms; }
+.dashboard-stagger > *:nth-child(8) { animation-delay: 420ms; }
+.dashboard-stagger > *:nth-child(9) { animation-delay: 480ms; }
+.dashboard-stagger > *:nth-child(10) { animation-delay: 540ms; }
+.dashboard-stagger > *:nth-child(11) { animation-delay: 600ms; }
+.dashboard-stagger > *:nth-child(12) { animation-delay: 660ms; }
+
+/* ============================================================
+   #7 — Gold Shimmer Header
+   ============================================================ */
+@keyframes gold-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.text-shimmer-gold {
+  background: linear-gradient(
+    90deg,
+    #c8a84e 0%,
+    #f5d98e 25%,
+    #ffe6a0 50%,
+    #f5d98e 75%,
+    #c8a84e 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gold-shimmer 4s linear infinite;
+}
+
+/* ============================================================
+   #8 — Micro-interactions
+   ============================================================ */
+button {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+[class*="bg-bg-card"][class*="rounded-2xl"] {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+[class*="bg-bg-card"][class*="rounded-2xl"]:active {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
+              0 2px 12px rgba(0, 0, 0, 0.35),
+              0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================================
+   #9 — Gradient Borders on Key Cards
+   ============================================================ */
+.gradient-border {
+  position: relative;
+  border: none !important;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(200, 168, 78, 0.4) 0%,
+    rgba(200, 168, 78, 0.08) 30%,
+    rgba(200, 168, 78, 0.3) 50%,
+    rgba(200, 168, 78, 0.08) 70%,
+    rgba(200, 168, 78, 0.4) 100%
+  );
+  background-size: 300% 300%;
+  animation: gradient-border-shimmer 6s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes gradient-border-shimmer {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* ============================================================
+   #10 — Gold Glow on Price
+   ============================================================ */
+.gold-glow {
+  text-shadow: 0 0 12px rgba(200, 168, 78, 0.35),
+               0 0 4px rgba(200, 168, 78, 0.2);
+}
+
 @keyframes pulse-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  0%, 100% {
+    opacity: 1;
+    text-shadow: 0 0 6px rgba(200, 168, 78, 0.3);
+  }
+  50% {
+    opacity: 0.7;
+    text-shadow: 0 0 10px rgba(200, 168, 78, 0.5);
+  }
 }
 
 .pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-@keyframes slide-up {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.slide-up {
-  animation: slide-up 0.3s ease-out;
-}
-
+/* ============================================================
+   Existing Animations (preserved)
+   ============================================================ */
 @keyframes page-enter {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -61,7 +259,7 @@ body {
   transition: transform 0.2s ease-out, opacity 0.2s ease-out;
 }
 
-/* Skeleton shimmer */
+/* Skeleton shimmer (legacy class) */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }

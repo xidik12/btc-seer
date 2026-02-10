@@ -16,7 +16,15 @@ class Settings(BaseSettings):
     reddit_user_agent: str = "btc-oracle/1.0"
 
     # Database — /data/ path is a Railway persistent volume
+    # Set DATABASE_URL to a postgresql:// URL to use PostgreSQL (e.g. Railway PG plugin)
     database_url: str = "sqlite+aiosqlite:////data/btc_oracle.db"
+
+    # Backup settings
+    backup_enabled: bool = True
+    backup_interval_hours: int = 6
+    backup_dir: str = "/data/backups"
+    backup_retention_days: int = 7
+    backup_sqlite_snapshot: bool = True  # Create portable SQLite snapshot from PG
 
     # Server
     host: str = "0.0.0.0"
@@ -61,6 +69,23 @@ class Settings(BaseSettings):
     api_basic_rate_limit: int = 300
     api_pro_rate_limit: int = 1000
     api_enterprise_rate_limit: int = 5000
+
+    @property
+    def is_postgres(self) -> bool:
+        """True when DATABASE_URL points to PostgreSQL."""
+        url = self.database_url.lower()
+        return any(x in url for x in ("postgresql", "asyncpg", "postgres://"))
+
+    @property
+    def async_database_url(self) -> str:
+        """Return an asyncpg-compatible URL for SQLAlchemy."""
+        url = self.database_url
+        # Railway gives postgres:// but SQLAlchemy needs postgresql+asyncpg://
+        if url.startswith("postgres://"):
+            url = "postgresql+asyncpg://" + url[len("postgres://"):]
+        elif url.startswith("postgresql://"):
+            url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+        return url
 
     @property
     def model_path(self) -> Path:

@@ -10,7 +10,7 @@ export default {
         bg: {
           primary: '#0f0f14',
           secondary: '#1a1a24',
-          card: '#22222e',
+          card: 'rgba(34, 34, 46, 0.65)',
           hover: '#2a2a38',
         },
         accent: {
@@ -26,6 +26,9 @@ export default {
           secondary: '#c0c0d0',
           muted: '#9090a8',
         },
+      },
+      boxShadow: {
+        card: '0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.2)',
       },
     },
   },

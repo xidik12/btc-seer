@@ -130,7 +130,7 @@ export default function SignalPanel() {
       : 'bg-accent-red'
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
+    <div className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
       <h3 className="text-text-primary text-sm font-semibold mb-3">
         Trading Signal
       </h3>

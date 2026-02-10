@@ -142,7 +142,7 @@ export default function QuantPredictionCard() {
   const preds = data.predictions || {}
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
+    <div className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">

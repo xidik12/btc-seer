@@ -114,7 +114,7 @@ export default function PriceWidget() {
 
       {/* Price & Change */}
       <div className="mb-4">
-        <p className="text-text-primary text-3xl font-bold leading-tight mb-2">
+        <p className="text-text-primary text-3xl font-bold leading-tight mb-2 gold-glow">
           {formatPrice(currentPrice)}
         </p>
         <div className="flex items-center gap-3 flex-wrap">

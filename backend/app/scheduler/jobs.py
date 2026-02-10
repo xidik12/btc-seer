@@ -13,6 +13,7 @@ from app.database import (
     FundingRate, BtcDominance, IndicatorSnapshot, AlertLog, ModelVersion,
     PortfolioState, TradeAdvice, TradeResult, BotUser,
     PredictionContext, ModelPerformanceLog,
+    timestamp_diff_order,
 )
 from app.collectors import (
     MarketCollector, NewsCollector, FearGreedCollector,
@@ -933,11 +934,7 @@ async def evaluate_predictions():
                     select(Price)
                     .where(Price.timestamp >= eval_time - window)
                     .where(Price.timestamp <= eval_time + window)
-                    .order_by(
-                        func.abs(
-                            func.julianday(Price.timestamp) - func.julianday(eval_time)
-                        )
-                    )
+                    .order_by(timestamp_diff_order(Price.timestamp, eval_time))
                     .limit(1)
                 )
                 actual_price_record = price_result.scalar_one_or_none()
@@ -1135,11 +1132,7 @@ async def _get_price_at(session, target_time: datetime) -> float | None:
         select(Price)
         .where(Price.timestamp >= target_time - timedelta(minutes=30))
         .where(Price.timestamp <= target_time + timedelta(minutes=30))
-        .order_by(
-            func.abs(
-                func.julianday(Price.timestamp) - func.julianday(target_time)
-            )
-        )
+        .order_by(timestamp_diff_order(Price.timestamp, target_time))
         .limit(1)
     )
     price = result.scalar_one_or_none()

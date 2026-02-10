@@ -1,15 +1,44 @@
 import logging
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Text, Float, Integer, String, JSON, DateTime, Boolean, Index, func, text, inspect
+from sqlalchemy import Text, Float, Integer, String, JSON, DateTime, Boolean, Index, func, text, inspect, case
+from sqlalchemy.sql import extract
 from datetime import datetime
 
 _db_logger = logging.getLogger(__name__)
 
 from app.config import settings
 
-engine = create_async_engine(settings.database_url, echo=False)
+
+def _create_engine():
+    """Create async engine with dialect-appropriate settings."""
+    url = settings.async_database_url
+    if settings.is_postgres:
+        _db_logger.info("Using PostgreSQL backend")
+        return create_async_engine(
+            url,
+            echo=False,
+            pool_size=10,
+            max_overflow=20,
+            pool_pre_ping=True,
+            pool_recycle=1800,
+        )
+    _db_logger.info("Using SQLite backend")
+    return create_async_engine(url, echo=False)
+
+
+engine = _create_engine()
 async_session = async_sessionmaker(engine, expire_on_commit=False)
+
+
+def timestamp_diff_order(column, target_time):
+    """Return an ORDER BY expression for 'closest to target_time'.
+
+    Uses EXTRACT(EPOCH ...) on PostgreSQL, julianday() on SQLite.
+    """
+    if settings.is_postgres:
+        return func.abs(extract("epoch", column) - extract("epoch", target_time))
+    return func.abs(func.julianday(column) - func.julianday(target_time))
 
 
 class Base(DeclarativeBase):
@@ -605,7 +634,7 @@ class ApiUsageLog(Base):
 
 
 def _add_missing_columns(connection):
-    """Add any columns defined in models but missing from existing SQLite tables."""
+    """Add any columns defined in models but missing from existing tables (works on both SQLite and PostgreSQL)."""
     inspector = inspect(connection)
     for table in Base.metadata.sorted_tables:
         if not inspector.has_table(table.name):

@@ -8,19 +8,19 @@ export default function About() {
   return (
     <div className="px-4 pt-4 space-y-3 pb-4">
       {/* Hero */}
-      <div className="bg-bg-card rounded-2xl p-5 border border-white/5 text-center slide-up">
+      <div className="bg-bg-card rounded-2xl p-5 gradient-border text-center slide-up">
         <img src="/btc-seer.jpeg" alt="BTC Seer" className="w-full rounded-xl mb-4" />
-        <h1 className="text-xl font-bold mb-1">BTC Seer</h1>
+        <h1 className="text-xl font-bold mb-1 text-shimmer-gold">BTC Seer</h1>
         <p className="text-text-secondary text-sm">AI-Powered Bitcoin Intelligence</p>
         <div className="flex items-center justify-center gap-2 mt-2">
-          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-accent-blue/15 text-accent-blue border border-accent-blue/30">v1.0 BETA</span>
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-accent-blue/15 text-accent-blue border border-accent-blue/30">v2.0</span>
           <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-accent-green/15 text-accent-green border border-accent-green/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-green animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-green pulse-glow" />
             LIVE
           </span>
         </div>
         <p className="text-text-muted text-[11px] mt-2">
-          Real-time predictions, trading signals, and market analysis — all driven by machine learning.
+          Real-time predictions, trading signals, and deep market analysis — powered by a 4-model AI ensemble analyzing 192 features across 13 data categories.
         </p>
       </div>
 
@@ -29,13 +29,36 @@ export default function About() {
         <h3 className="text-text-secondary text-xs font-semibold mb-2">WHAT IS BTC SEER?</h3>
         <div className="text-text-muted text-[11px] space-y-2">
           <p>
-            BTC Seer is an ML-powered Bitcoin prediction platform that analyzes <span className="text-text-secondary font-semibold">69+ features</span> from
-            news sentiment, market data, on-chain metrics, social signals, and macroeconomic indicators.
+            BTC Seer is a production-grade Bitcoin prediction platform that analyzes <span className="text-text-secondary font-semibold">192 engineered features</span> across
+            13 categories — technical indicators, news sentiment, on-chain metrics, derivatives data, macro markets, ETF flows, exchange flows, stablecoin supply, social signals, and more.
           </p>
           <p>
-            It generates predictions across <span className="text-text-secondary font-semibold">5 timeframes</span> — 1H, 4H, 24H, 1W, and 1MO — using
-            multiple AI models working together: LSTM, Temporal Fusion Transformer, XGBoost, Sentiment Analysis, and Quant Theory.
+            It generates predictions across <span className="text-text-secondary font-semibold">5 timeframes</span> (1H, 4H, 24H, 1W, 1MO) using a
+            <span className="text-text-secondary font-semibold"> 4-model ensemble</span>: Temporal Fusion Transformer (40%), XGBoost (25%), LSTM (20%), and Google TimesFM (15%) — with adaptive weighting that shifts based on model performance.
           </p>
+          <p>
+            The system runs <span className="text-text-secondary font-semibold">24 background jobs</span> continuously — collecting data every minute, generating predictions, evaluating accuracy, retraining models, and learning from market events.
+          </p>
+        </div>
+      </div>
+
+      {/* By the Numbers */}
+      <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">BY THE NUMBERS</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { value: '192', label: 'Features' },
+            { value: '4', label: 'AI Models' },
+            { value: '13', label: 'Data Sources' },
+            { value: '5', label: 'Timeframes' },
+            { value: '24', label: 'Background Jobs' },
+            { value: '6h', label: 'Retrain Cycle' },
+          ].map((stat) => (
+            <div key={stat.label} className="text-center p-2 rounded-xl bg-white/[0.02]">
+              <div className="text-accent-blue text-lg font-bold">{stat.value}</div>
+              <div className="text-text-muted text-[9px] uppercase tracking-wider">{stat.label}</div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -46,23 +69,133 @@ export default function About() {
         <div className="space-y-2 text-[11px] text-text-muted">
           <div className="flex items-start gap-2">
             <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 text-accent-blue text-[10px] font-bold flex items-center justify-center">1</span>
-            <p><span className="text-text-secondary font-semibold">Start on Dashboard</span> — check the current price, prediction cards, and overall market direction at a glance.</p>
+            <p><span className="text-text-secondary font-semibold">Start on Dashboard</span> — check the live BTC price, dual prediction cards (AI + Quant), trading signals, and market overview at a glance.</p>
           </div>
           <div className="flex items-start gap-2">
             <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 text-accent-blue text-[10px] font-bold flex items-center justify-center">2</span>
-            <p><span className="text-text-secondary font-semibold">Read Signals</span> — view AI-generated entry, exit, and stop-loss levels with confidence scores.</p>
+            <p><span className="text-text-secondary font-semibold">Read Signals</span> — view AI-generated entry, target, and stop-loss levels with confidence scores and risk ratings.</p>
           </div>
           <div className="flex items-start gap-2">
             <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 text-accent-blue text-[10px] font-bold flex items-center justify-center">3</span>
-            <p><span className="text-text-secondary font-semibold">Check Sentiment</span> — browse news sentiment, Fear & Greed index, and influencer mood to gauge market emotion.</p>
+            <p><span className="text-text-secondary font-semibold">Check Sentiment</span> — browse news sentiment, Fear & Greed index, influencer mood, and social volume to gauge market emotion.</p>
           </div>
           <div className="flex items-start gap-2">
             <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 text-accent-blue text-[10px] font-bold flex items-center justify-center">4</span>
-            <p><span className="text-text-secondary font-semibold">Dive Deeper</span> — explore technical analysis, Power Law, Elliott Wave, and the liquidation map for advanced context.</p>
+            <p><span className="text-text-secondary font-semibold">Dive Deeper</span> — explore technical analysis (45+ indicators), Power Law, Elliott Wave, liquidation maps, on-chain metrics, and ETF flows.</p>
           </div>
           <div className="flex items-start gap-2">
             <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-blue/20 text-accent-blue text-[10px] font-bold flex items-center justify-center">5</span>
             <p><span className="text-text-secondary font-semibold">Practice First</span> — use Paper Trading to test strategies with virtual money before risking real capital.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Ensemble Architecture */}
+      <div className="bg-bg-card rounded-2xl p-4 gradient-border">
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">AI ENSEMBLE ARCHITECTURE</h3>
+        <div className="space-y-2">
+          {[
+            { name: 'Temporal Fusion Transformer', weight: '40%', desc: 'Multi-horizon attention model — captures long-range dependencies and variable-importance weighting', color: 'text-accent-green' },
+            { name: 'XGBoost', weight: '25%', desc: 'Gradient-boosted trees — excels at feature-based classification with 192 engineered inputs', color: 'text-accent-blue' },
+            { name: 'LSTM', weight: '20%', desc: 'Recurrent neural network — detects sequential patterns in 168-hour (1 week) lookback windows', color: 'text-accent-purple' },
+            { name: 'Google TimesFM', weight: '15%', desc: 'Zero-shot foundation model — provides a baseline from pre-trained time-series knowledge', color: 'text-accent-yellow' },
+          ].map((model) => (
+            <div key={model.name} className="p-2.5 rounded-xl bg-white/[0.02]">
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-text-primary text-xs font-semibold">{model.name}</span>
+                <span className={`text-[10px] font-bold ${model.color}`}>{model.weight}</span>
+              </div>
+              <p className="text-text-muted text-[10px]">{model.desc}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-text-muted text-[10px] mt-2">
+          Weights are adaptive — the system shifts allocation based on each model's recent accuracy. A sentiment modifier (up to ±50%) amplifies or dampens the ensemble signal based on real-time market mood.
+        </p>
+      </div>
+
+      {/* 192 Features — 13 Categories */}
+      <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">192 FEATURES ACROSS 13 CATEGORIES</h3>
+        <div className="space-y-1.5">
+          {[
+            ['Technical (111)', 'EMAs, RSI, MACD, Bollinger, Ichimoku, Donchian, Keltner, GARCH volatility, Hurst exponent, wavelets, candlestick patterns, and 45 Pandas-TA indicators'],
+            ['Sentiment (13)', 'News sentiment 1h/4h/24h, Reddit & social sentiment, bullish/bearish %, Fear & Greed index'],
+            ['Derivatives Extended (12)', 'Long/short ratio, taker buy/sell, liquidations, DVOL, leverage ratio, top trader positions'],
+            ['Exchange Flows (9)', 'Exchange reserves, NVT signal, MVRV Z-score, SOPR, Puell multiple, coin days destroyed'],
+            ['Macro (8)', 'DXY, gold, S&P 500, NASDAQ, VIX, EUR/USD, 10Y Treasury'],
+            ['On-Chain (7)', 'Hash rate, mempool size/fees, tx volume, active addresses, difficulty, large tx count'],
+            ['Event Memory (7)', 'Expected impact 1h/4h/24h, confidence, severity, sentiment predictiveness, active event count'],
+            ['ETF Flows (6)', 'Net flow, total holdings, IBIT (BlackRock), FBTC (Fidelity), GBTC (Grayscale), ETF volume'],
+            ['Stablecoin (5)', 'USDT/USDC market caps, total stablecoin supply, 7d supply change, DeFi TVL'],
+            ['Dominance (4)', 'BTC dominance, ETH dominance, total market cap, market cap change'],
+            ['Supply/Mining (4)', '% mined, daily issuance, blocks until halving, halving cycle position'],
+            ['Derivatives (3)', 'Funding rate, open interest, mark/index spread'],
+            ['Phrase Analysis (3)', 'Top bullish/bearish phrase scores, net sentiment signal from news language patterns'],
+          ].map(([cat, desc]) => (
+            <div key={cat} className="flex gap-2 py-1.5 border-b border-white/[0.03] last:border-0">
+              <span className="text-accent-blue text-[10px] font-bold w-28 flex-shrink-0 leading-tight">{cat}</span>
+              <span className="text-text-muted text-[10px] leading-tight">{desc}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Data Pipeline */}
+      <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">REAL-TIME DATA PIPELINE</h3>
+        <div className="space-y-1.5">
+          {[
+            ['Every 1 min', 'BTC price from Binance (OHLCV candles)'],
+            ['Every 2 min', 'News from 25+ RSS feeds, CryptoPanic, Reddit, Binance announcements'],
+            ['Every 2 min', 'Alt-coin prices (ETH, SOL, XRP and more)'],
+            ['Every 5 min', 'Event classification — news categorized into regulatory, technical, market, macro, supply, exchange events'],
+            ['Every 10 min', 'Influencer tweets — weighted by market impact (Elon, Saylor, CZ, Cathie Wood, etc.)'],
+            ['Every 30 min', 'Funding rates, open interest, and derivatives data from Binance perpetuals'],
+            ['Every 1 hr', 'Macro indicators (DXY, gold, S&P 500, VIX, treasuries), on-chain metrics, BTC dominance, technical snapshot, phrase analysis'],
+            ['Configurable', 'AI predictions (ensemble + quant theory), prediction evaluation, Telegram alerts'],
+            ['Every 6 hrs', 'Auto-retraining, continuous learning, A/B testing of candidate models'],
+            ['Every 24 hrs', 'Data cleanup (90d price/news, 180d macro/on-chain), subscription checks'],
+          ].map(([freq, desc]) => (
+            <div key={desc} className="flex gap-2 py-1 border-b border-white/[0.03] last:border-0">
+              <span className="text-accent-green text-[10px] font-bold w-20 flex-shrink-0">{freq}</span>
+              <span className="text-text-muted text-[10px]">{desc}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* How the AI Works */}
+      <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">HOW THE AI WORKS</h3>
+        <div className="space-y-2 text-[11px] text-text-muted">
+          <div className="flex items-start gap-2">
+            <span className="text-accent-blue font-bold text-xs mt-0.5">1</span>
+            <p><span className="text-text-secondary font-semibold">Ensemble Voting:</span> 4 models independently analyze 192 features and vote on each prediction. TFT leads at 40%, but weights adapt based on recent performance — reducing individual model bias.</p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent-blue font-bold text-xs mt-0.5">2</span>
+            <p><span className="text-text-secondary font-semibold">Continuous Learning:</span> Models auto-retrain every 6 hours using the latest market data. If accuracy drops below 55% or 50+ new predictions are evaluated, retraining triggers immediately.</p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent-blue font-bold text-xs mt-0.5">3</span>
+            <p><span className="text-text-secondary font-semibold">Event Memory:</span> The system stores up to 500 historical events, tracking their actual impact at 1h, 4h, 24h, and 7d. When similar events occur, it pattern-matches to predict expected impact.</p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent-blue font-bold text-xs mt-0.5">4</span>
+            <p><span className="text-text-secondary font-semibold">Phrase Analyzer:</span> Learns which specific news words and phrases historically move the market. Over time, this builds a language-to-price correlation map that improves sentiment accuracy.</p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent-blue font-bold text-xs mt-0.5">5</span>
+            <p><span className="text-text-secondary font-semibold">A/B Testing:</span> New model candidates compete against production models before promotion. Only models that outperform the current ensemble get deployed — ensuring quality never regresses.</p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent-blue font-bold text-xs mt-0.5">6</span>
+            <p><span className="text-text-secondary font-semibold">Hot Swapping:</span> When retraining produces better weights, the ensemble hot-swaps them without stopping the prediction pipeline. Zero downtime, continuous improvement.</p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-accent-blue font-bold text-xs mt-0.5">7</span>
+            <p><span className="text-text-secondary font-semibold">Accuracy Tracking:</span> Every prediction is evaluated against actual price movements and scored. Full transparency — you can see exactly how well the models perform over time.</p>
           </div>
         </div>
       </div>
@@ -72,15 +205,18 @@ export default function About() {
         <h3 className="text-text-secondary text-xs font-semibold mb-3">HOW IT HELPS YOU</h3>
         <div className="space-y-2">
           {[
-            { icon: I(<><path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" /></>), title: 'Prediction Cards', desc: 'Confidence scores to gauge market direction across multiple timeframes' },
-            { icon: I(<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>), title: 'Trading Signals', desc: 'Entry, target, and stop-loss levels with AI-calculated confidence' },
-            { icon: I(<><path d="M3 3v18h18" /><path d="M3 17C7 15 11 9 21 5" /></>), title: 'Power Law Analysis', desc: 'Long-term fair value model to understand where BTC stands historically' },
-            { icon: I(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />), title: 'Elliott Wave Analysis', desc: 'Wave-based market structure to identify trend phases and potential reversals' },
-            { icon: I(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />), title: 'Liquidation Map', desc: 'See where leveraged positions cluster and where liquidation cascades may trigger' },
-            { icon: I(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>), title: 'News Sentiment', desc: 'Real-time tracking of what the market is feeling through news analysis' },
-            { icon: I(<><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" /></>), title: 'AI Advisor', desc: 'Get personalized market commentary and trading suggestions powered by AI' },
-            { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>), title: 'Paper Trading', desc: 'Practice trading with virtual money — test strategies without risking real capital' },
-            { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>), title: 'Accuracy Tracking', desc: 'Every prediction is evaluated and scored — full transparency on model performance' },
+            { icon: I(<><path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" /></>), title: 'Dual Prediction Cards', desc: 'AI model + Quant Theory predictions side-by-side with confidence scores across 5 timeframes' },
+            { icon: I(<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>), title: 'Trading Signals', desc: 'Entry, target, and stop-loss levels with confidence scores and risk ratings (1-10)' },
+            { icon: I(<><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" /></>), title: 'AI Advisor', desc: 'Personalized trade plans with position sizing, risk management, take-profit levels, and reversal detection' },
+            { icon: I(<><path d="M3 3v18h18" /><path d="M7 16l4-6 4 4 5-8" /></>), title: 'Technical Analysis', desc: '45+ indicators — RSI, MACD, Bollinger, Ichimoku, Donchian, Keltner, GARCH, wavelets, and more' },
+            { icon: I(<><path d="M3 3v18h18" /><path d="M3 17C7 15 11 9 21 5" /></>), title: 'Power Law Analysis', desc: 'Long-term fair value model based on BTC adoption growth — see where price stands historically' },
+            { icon: I(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />), title: 'Elliott Wave', desc: 'Wave-based market structure analysis to identify trend phases, corrections, and potential reversals' },
+            { icon: I(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />), title: 'Liquidation Map', desc: 'See where leveraged positions cluster and where cascading liquidations may trigger price moves' },
+            { icon: I(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></>), title: 'News & Sentiment', desc: 'Real-time news from 25+ sources with AI sentiment scoring, Fear & Greed index, and social volume tracking' },
+            { icon: I(<><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5 1-2.5 2s1 2 2.5 2 2.5 1 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5" /><path d="M12 6.5v1M12 16.5v1" /></>), title: 'Coins & Market Data', desc: 'Track BTC, ETH, SOL, XRP, and more — search any coin, generate AI analysis reports' },
+            { icon: I(<><path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" /><path d="M12 18a4 4 0 01-4-4c0-2.5 2-4.5 4-7" /></>), title: 'On-Chain & Supply', desc: 'Hash rate, mempool, active addresses, exchange flows, MVRV Z-score, halving countdown, and mining metrics' },
+            { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>), title: 'Paper Trading', desc: 'Practice with virtual money — test strategies, track P&L, and learn without risking real capital' },
+            { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>), title: 'Accuracy & Transparency', desc: 'Every prediction scored against actual results — see model performance, hit rates, and confidence calibration' },
           ].map((item) => (
             <div key={item.title} className="flex items-start gap-3 p-2 rounded-xl bg-white/[0.02]">
               <span className="mt-0.5 shrink-0">{item.icon}</span>
@@ -98,52 +234,29 @@ export default function About() {
         <h3 className="text-text-secondary text-xs font-semibold mb-3">WHAT'S INSIDE</h3>
         <div className="space-y-1.5">
           {[
-            ['Dashboard', 'Live BTC price, prediction cards, and market overview'],
-            ['Predictions', 'Detailed AI predictions across all 5 timeframes'],
-            ['Signals', 'Actionable entry/exit/SL levels with confidence scores'],
-            ['Advisor', 'AI-powered market commentary and trade suggestions'],
-            ['Sentiment', 'News analysis, Fear & Greed, and influencer mood tracking'],
-            ['Technical', 'Charts with indicators — RSI, MACD, Bollinger Bands, and more'],
-            ['Power Law', 'Long-term fair value model based on BTC adoption growth'],
-            ['Elliott Wave', 'Wave-based analysis of market structure and trend phases'],
-            ['Liquidation Map', 'Leveraged position clusters and liquidation risk zones'],
-            ['Paper Trading', 'Practice with virtual money — track your P&L without risk'],
-            ['Accuracy', 'How well our predictions performed — transparent scoring'],
-            ['Learn', 'Trading education — basics, strategies, psychology, and patterns'],
-            ['Events', 'Upcoming macro events, halvings, and market-moving dates'],
+            ['Dashboard', 'Live BTC price, dual prediction cards, trading signals, Fear & Greed, news, on-chain, dominance, supply, and macro overview'],
+            ['Signals', 'Actionable entry/target/stop-loss levels with confidence, risk rating, and signal strength'],
+            ['Advisor', 'AI-powered trade plans with position sizing, risk management, and reversal detection'],
+            ['Technical', 'Charts with 45+ indicators — RSI, MACD, Bollinger, Ichimoku, GARCH, wavelets, and more'],
+            ['Power Law', 'Long-term fair value model based on BTC logarithmic adoption growth'],
+            ['Elliott Wave', 'Wave-based analysis of market structure, trend phases, and reversal points'],
+            ['Liquidations', 'Leveraged position clusters and liquidation cascade risk zones'],
+            ['Coins', 'Track BTC, ETH, SOL, XRP — search any coin, generate AI analysis reports'],
+            ['News', 'Real-time news from 25+ sources with AI sentiment scoring and phrase analysis'],
+            ['Events', 'Market-moving events with AI impact predictions based on historical pattern matching'],
+            ['History', 'Past predictions and their outcomes — full accuracy audit trail'],
+            ['Paper Trading', 'Practice with virtual money — track P&L without risk'],
+            ['Learn', 'Trading education — basics, strategies, technical analysis, psychology, and patterns'],
+            ['Tools', 'Calculators and utilities for position sizing, risk management, and trade planning'],
+            ['Resources', 'Curated links, guides, and reference material for Bitcoin traders'],
+            ['Settings', 'Customize alerts, notifications, and display preferences'],
+            ['Premium', 'Unlock advanced features, faster updates, and priority access'],
           ].map(([page, desc]) => (
             <div key={page} className="flex gap-2 py-1 border-b border-white/[0.03] last:border-0">
               <span className="text-accent-blue text-[11px] font-bold w-24 flex-shrink-0">{page}</span>
               <span className="text-text-muted text-[10px]">{desc}</span>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* How the AI Works */}
-      <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">HOW THE AI WORKS</h3>
-        <div className="space-y-2 text-[11px] text-text-muted">
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">1</span>
-            <p><span className="text-text-secondary font-semibold">Continuous Learning:</span> Models retrain every 6 hours with the latest market data, adapting to changing conditions.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">2</span>
-            <p><span className="text-text-secondary font-semibold">Phrase Analyzer:</span> Learns which news words and phrases historically move the market, improving sentiment accuracy over time.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">3</span>
-            <p><span className="text-text-secondary font-semibold">A/B Testing:</span> New model candidates compete against production models before promotion — only the best get deployed.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">4</span>
-            <p><span className="text-text-secondary font-semibold">Ensemble Voting:</span> Multiple models vote on each prediction, reducing individual model bias and improving reliability.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-accent-blue font-bold text-xs mt-0.5">5</span>
-            <p><span className="text-text-secondary font-semibold">Accuracy Tracking:</span> Every prediction is evaluated against actual price movements and scored for continuous improvement.</p>
-          </div>
         </div>
       </div>
 
@@ -162,8 +275,12 @@ export default function About() {
             { icon: I(<><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" /></>, true), label: 'AI Advisor' },
             { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>, true), label: 'Paper Trading' },
             { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>, true), label: 'Accuracy Tracking' },
+            { icon: I(<><path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" /></>, true), label: 'On-Chain Data' },
+            { icon: I(<><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5 1-2.5 2s1 2 2.5 2 2.5 1 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5" /><path d="M12 6.5v1M12 16.5v1" /></>, true), label: 'Coins & Tokens' },
+            { icon: I(<><path d="M3 3v18h18" /><path d="M7 16l4-6 4 4 5-8" /></>, true), label: '45+ Indicators' },
+            { icon: I(<><path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /></>, true), label: 'ETF Flows' },
             { icon: I(<><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></>, true), label: 'Learn & Educate' },
-            { icon: I(<><circle cx="15.5" cy="8.5" r="3.5" /><path d="M12 12L4 20" /><path d="M8 16l3 3" /></>, true), label: 'API Access' },
+            { icon: I(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>, true), label: 'Event Memory' },
           ].map((f) => (
             <div key={f.label} className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02]">
               <span className="shrink-0">{f.icon}</span>
@@ -181,7 +298,7 @@ export default function About() {
             Created by <span className="text-text-secondary font-semibold">Salakhitdinov Khidayotullo</span> — full-stack developer, AI researcher, and crypto enthusiast.
           </p>
           <p>
-            BTC Seer is a solo project built with a passion for making AI-powered market intelligence accessible to everyone.
+            BTC Seer is a solo project built with a passion for making production-grade, AI-powered market intelligence accessible to everyone. The entire system — from data collection to model training to the app you're using — is designed, built, and maintained by one person.
           </p>
           <a
             href="https://t.me/btc_seer_bot"
@@ -201,7 +318,8 @@ export default function About() {
           BTC Seer is not financial advice. All predictions, signals, and analysis are for
           educational and informational purposes only. Cryptocurrency trading carries significant
           risk. Always do your own research (DYOR) and never invest more than you can afford to lose.
-          Past performance does not guarantee future results.
+          Past performance does not guarantee future results. AI models can and will be wrong —
+          use this tool as one input among many, not as your sole decision-maker.
         </p>
       </div>
     </div>
