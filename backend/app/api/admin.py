@@ -469,3 +469,90 @@ async def admin_bot_status(request: Request):
         "token_set": bool(settings.telegram_bot_token),
         "database_url": settings.database_url[:30] + "...",
     }
+
+
+@router.post("/migrate-sqlite")
+async def admin_migrate_sqlite(request: Request):
+    """One-time migration: copy all data from SQLite file on volume to current PostgreSQL DB."""
+    _require_admin(request)
+
+    import sqlite3
+    from pathlib import Path
+
+    sqlite_path = Path("/data/btc_oracle.db")
+    if not sqlite_path.exists():
+        raise HTTPException(status_code=404, detail="SQLite file not found at /data/btc_oracle.db")
+
+    if not settings.is_postgres:
+        raise HTTPException(status_code=400, detail="Current DB is not PostgreSQL — migration not needed")
+
+    results = {}
+    conn_sqlite = sqlite3.connect(str(sqlite_path))
+    conn_sqlite.row_factory = sqlite3.Row
+    try:
+        cursor = conn_sqlite.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+        tables = [row[0] for row in cursor.fetchall()]
+
+        for table_name in tables:
+            try:
+                cursor.execute(f'SELECT COUNT(*) FROM "{table_name}"')
+                total = cursor.fetchone()[0]
+                if total == 0:
+                    results[table_name] = "empty"
+                    continue
+
+                cursor.execute(f'SELECT * FROM "{table_name}" LIMIT 1')
+                columns = [desc[0] for desc in cursor.description]
+
+                batch_size = 500
+                migrated = 0
+                offset = 0
+                while offset < total:
+                    cursor.execute(f'SELECT * FROM "{table_name}" LIMIT {batch_size} OFFSET {offset}')
+                    rows = cursor.fetchall()
+                    if not rows:
+                        break
+
+                    col_list = ", ".join(f'"{c}"' for c in columns)
+                    placeholders = ", ".join(f":{c}" for c in columns)
+                    insert_sql = f'INSERT INTO "{table_name}" ({col_list}) VALUES ({placeholders}) ON CONFLICT DO NOTHING'
+
+                    async with async_session() as session:
+                        await session.execute(
+                            __import__("sqlalchemy").text(insert_sql),
+                            [dict(zip(columns, row)) for row in rows],
+                        )
+                        await session.commit()
+
+                    migrated += len(rows)
+                    offset += batch_size
+
+                # Reset sequence if table has 'id' column
+                if "id" in columns:
+                    async with async_session() as session:
+                        try:
+                            seq_result = await session.execute(
+                                __import__("sqlalchemy").text(
+                                    f"SELECT pg_get_serial_sequence('{table_name}', 'id')"
+                                )
+                            )
+                            seq = seq_result.scalar()
+                            if seq:
+                                await session.execute(
+                                    __import__("sqlalchemy").text(
+                                        f"SELECT setval('{seq}', COALESCE((SELECT MAX(id) FROM \"{table_name}\"), 0) + 1, false)"
+                                    )
+                                )
+                                await session.commit()
+                        except Exception:
+                            pass
+
+                results[table_name] = f"{migrated}/{total} rows migrated"
+            except Exception as e:
+                results[table_name] = f"ERROR: {e}"
+
+    finally:
+        conn_sqlite.close()
+
+    return {"status": "ok", "tables": results}
