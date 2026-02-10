@@ -7,10 +7,10 @@ import { formatCoinPrice, formatPercent, formatMarketCap, formatSupply, formatDa
 import { useChartZoom } from '../hooks/useChartZoom'
 
 const CHART_PERIODS = [
-  { label: '1D', days: 1 },
-  { label: '7D', days: 7 },
-  { label: '30D', days: 30 },
-  { label: '90D', days: 90 },
+  { labelKey: 'detail.timeframes.1d', days: 1 },
+  { labelKey: 'detail.timeframes.7d', days: 7 },
+  { labelKey: 'detail.timeframes.30d', days: 30 },
+  { labelKey: 'detail.timeframes.90d', days: 90 },
 ]
 
 export default function CoinDetail() {
@@ -161,7 +161,7 @@ function ChartSection({ chart, chartLoading, chartColor, period, setPeriod, t })
                 : 'bg-white/5 text-text-muted hover:text-text-secondary'
             }`}
           >
-            {p.label}
+            {t(p.labelKey)}
           </button>
         ))}
         {isZoomed && (

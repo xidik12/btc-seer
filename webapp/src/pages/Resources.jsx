@@ -411,21 +411,15 @@ export default function Resources() {
         <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('resources:keyMetrics.title').toUpperCase()}</h3>
         <div className="space-y-2">
           {[
-            { name: 'Fear & Greed Index', source: 'CoinMarketCap / Alternative.me', why: 'Market sentiment at a glance. Extreme fear = potential buy, extreme greed = potential sell.' },
-            { name: 'MVRV Z-Score', source: 'Glassnode / Bitcoin Magazine Pro', why: 'Identifies market tops (>7) and bottoms (<0.1) based on on-chain valuation.' },
-            { name: 'Funding Rates', source: 'CoinGlass / Coinalyze', why: 'Shows derivatives market positioning. Extreme funding = potential reversal signal.' },
-            { name: 'Exchange Netflows', source: 'CryptoQuant / Glassnode', why: 'BTC flowing into exchanges = potential selling. Flowing out = accumulation.' },
-            { name: 'Open Interest', source: 'CoinGlass / Coinalyze', why: 'Rising OI + rising price = strong trend. Rising OI + falling price = bearish pressure.' },
-            { name: 'RSI + MACD Combo', source: 'TradingView / BTC Seer', why: 'Most reliable indicator combination. RSI for overbought/oversold, MACD for trend confirmation.' },
-            { name: 'BTC Dominance', source: 'CoinMarketCap / BTC Seer', why: 'Rising dominance = money flowing to BTC safety. Falling = alt season potential.' },
-            { name: 'DXY (Dollar Index)', source: 'TradingView / BTC Seer', why: 'BTC often inversely correlates with dollar strength. Weak dollar = bullish BTC.' },
-          ].map((m, i) => (
-            <div key={i} className="bg-white/[0.02] rounded-lg p-2.5">
+            'fearGreed', 'mvrv', 'fundingRates', 'exchangeNetflows',
+            'openInterest', 'rsiMacd', 'btcDominance', 'dxy',
+          ].map((key) => (
+            <div key={key} className="bg-white/[0.02] rounded-lg p-2.5">
               <div className="flex items-center justify-between mb-0.5">
-                <span className="text-text-primary text-[11px] font-semibold">{m.name}</span>
-                <span className="text-text-muted text-[8px]">{m.source}</span>
+                <span className="text-text-primary text-[11px] font-semibold">{t(`resources:keyMetrics.${key}.name`)}</span>
+                <span className="text-text-muted text-[8px]">{t(`resources:keyMetrics.${key}.source`)}</span>
               </div>
-              <p className="text-text-muted text-[10px]">{m.why}</p>
+              <p className="text-text-muted text-[10px]">{t(`resources:keyMetrics.${key}.why`)}</p>
             </div>
           ))}
         </div>

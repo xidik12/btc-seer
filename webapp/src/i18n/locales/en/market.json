@@ -42,7 +42,14 @@
       "fastDescNeutral": "Looks at the last 7 hours only. Quick reactions — nothing extreme right now.",
       "slowDescOverbought": "Looks at the last 30 hours. Slower to react but more reliable — even the slow RSI says overbought, strong sell signal.",
       "slowDescOversold": "Looks at the last 30 hours. Slower to react but more reliable — even the slow RSI says oversold, strong buy signal.",
-      "slowDescNeutral": "Looks at the last 30 hours. Slower to react but more reliable — no extreme reading."
+      "slowDescNeutral": "Looks at the last 30 hours. Slower to react but more reliable — no extreme reading.",
+      "explainHeavilyOverbought": "At {{value}}, Bitcoin is heavily overbought. Too many people bought recently — price often drops after this. Think of it like a rubber band stretched too far.",
+      "explainOverbought": "At {{value}}, Bitcoin is overbought. Buyers are running out of steam. A price pullback is likely soon.",
+      "explainMildlyBullish": "At {{value}}, buyers have slight control. Momentum is mildly positive — the price is leaning upward but nothing extreme.",
+      "explainBalanced": "At {{value}}, the market is balanced. Neither buyers nor sellers are in control — price could go either way.",
+      "explainMildlyBearish": "At {{value}}, sellers have slight control. Momentum is mildly negative — the price is drifting down slowly.",
+      "explainOversold": "At {{value}}, Bitcoin is oversold. Too many people sold recently — this is often a good buying opportunity.",
+      "explainExtremelyOversold": "At {{value}}, Bitcoin is extremely oversold. Panic selling has pushed it very low — historically the price bounces back from here."
     },
     "macd": {
       "title": "MACD (Moving Average Convergence Divergence)",
@@ -52,7 +59,11 @@
       "signalDesc": "A smoothed version of MACD. When MACD crosses above this line = buy. Below = sell.",
       "histogram": "Histogram",
       "lineDescPositive": "Positive — the fast average is above the slow average, meaning recent price action is stronger than the longer trend. Bullish.",
-      "lineDescNegative": "Negative — the fast average is below the slow average, meaning recent price action is weaker than the longer trend. Bearish."
+      "lineDescNegative": "Negative — the fast average is below the slow average, meaning recent price action is weaker than the longer trend. Bearish.",
+      "histExplainStrongUp": "Very strong upward push. Buyers are in full control and the price is rising with strong momentum.",
+      "histExplainUp": "Positive momentum — buyers are winning. The price trend is moving upward. The bigger this number, the stronger the push.",
+      "histExplainDown": "Negative momentum — sellers are winning. The price trend is moving downward. This suggests continued falling prices.",
+      "histExplainStrongDown": "Very strong downward push. Sellers are in full control and price is dropping fast."
     },
     "movingAverages": {
       "title": "Moving Averages",
@@ -84,7 +95,12 @@
       "lowerDesc": "The lower limit of normal price range. If price touches this, it may be a bargain.",
       "widthWide": "Bands are WIDE — high volatility. Price is making big moves. Expect continued swings.",
       "widthNarrow": "Bands are NARROW (squeeze) — low volatility. A big price explosion is likely coming soon, but direction is unknown.",
-      "widthNormal": "Bands are normal width. Moderate volatility — nothing extreme."
+      "widthNormal": "Bands are normal width. Moderate volatility — nothing extreme.",
+      "posNearTop": "Price is near the top of its normal range ({{pct}}%). Like a ball bouncing between walls — it tends to come back down.",
+      "posNearBottom": "Price is near the bottom of its normal range ({{pct}}%). Like a ball that bounced off the floor — it tends to go back up.",
+      "posMiddle": "Price is in the middle of its normal range ({{pct}}%). No extreme position — could go either way.",
+      "bandsWide": "Bands are wide = high volatility (big price swings expected).",
+      "bandsNarrow": "Bands are narrow = low volatility (a big move is building up, direction unknown)."
     },
     "volume": {
       "title": "Volume Analysis",
@@ -95,7 +111,12 @@
       "vwapAbove": "Price is ABOVE VWAP — means the average buyer today is in profit. Bullish. Traders see this as a sign of strength.",
       "vwapBelow": "Price is BELOW VWAP — means the average buyer today is at a loss. Bearish. Traders see this as weakness.",
       "vwapDefault": "The average price weighted by volume — shows where the \"true\" average trading price is.",
-      "obvDesc": "Running total of volume: adds volume on up days, subtracts on down days. If OBV is rising, smart money is accumulating (buying). If falling, they're distributing (selling)."
+      "obvDesc": "Running total of volume: adds volume on up days, subtracts on down days. If OBV is rising, smart money is accumulating (buying). If falling, they're distributing (selling).",
+      "ratioVeryHigh": "Trading volume is {{ratio}}x the average — VERY high activity. Whatever direction the price is moving, lots of people agree. This move has strong conviction.",
+      "ratioHigh": "Trading volume is {{ratio}}x the average — above normal. More people are trading than usual, which gives the current price move more credibility.",
+      "ratioNormal": "Trading volume is {{ratio}}x the average — normal. Nothing unusual happening in terms of trading activity.",
+      "ratioLow": "Trading volume is {{ratio}}x the average — below normal. Fewer people are trading. Price moves right now are less trustworthy.",
+      "ratioVeryLow": "Trading volume is very low at {{ratio}}x average. Almost nobody is trading. Any price move right now is unreliable and can easily reverse."
     },
     "supportResistance": {
       "title": "Support & Resistance",
@@ -121,7 +142,15 @@
       "volatility24h": "24h Volatility",
       "noTrend": "No trend",
       "moderateTrend": "Moderate trend",
-      "strongTrend": "Strong trend"
+      "strongTrend": "Strong trend",
+      "adxVeryStrong": "ADX is {{value}} — very strong trend. Whatever direction BTC is going, it's moving there with conviction. Don't fight this trend.",
+      "adxClear": "ADX is {{value}} — a clear trend exists. The price is consistently moving in one direction. This is a good time for trend-following strategies.",
+      "adxBorderline": "ADX is {{value}} — borderline. A trend might be forming but it's not confirmed yet. Wait for it to go above 25 for more certainty.",
+      "adxNoTrend": "ADX is {{value}} — no clear trend. The market is choppy and directionless. Price is bouncing randomly. Not a great time to trade trends.",
+      "atrDesc": "Bitcoin's average price swing is ${{value}} per hour. This tells you how much the price typically moves — useful for setting stop-losses. Bigger = more volatile.",
+      "volatilityHigh": "HIGH volatility — price is swinging wildly. Bigger potential profits but also bigger risks. Be extra careful with positions.",
+      "volatilityModerate": "MODERATE volatility — normal market conditions. Reasonable price swings.",
+      "volatilityLow": "LOW volatility — very calm market. Small price movements. A breakout might be approaching."
     },
     "btcDominance": {
       "title": "BTC Dominance",
@@ -131,7 +160,13 @@
       "normal": "Normal",
       "btcSeason": "BTC season",
       "ethDominance": "ETH Dominance",
-      "totalMarket24h": "Total Market 24h Change"
+      "totalMarket24h": "Total Market 24h Change",
+      "ethDominanceDesc": "Ethereum's share of the crypto market. When ETH dominance rises, it often signals growing interest in DeFi and altcoins.",
+      "totalMarketGrew": "The entire crypto market grew in the last 24 hours — money is coming into crypto overall.",
+      "totalMarketShrank": "The entire crypto market shrank — money is leaving crypto. Even strong coins can fall in this environment.",
+      "gaugeHigh": "At {{value}}%, Bitcoin dominates the crypto market. Money is flowing into BTC — this usually means people are playing it safe. Bullish for Bitcoin specifically.",
+      "gaugeNormal": "At {{value}}%, Bitcoin has a moderate market share. Neither extreme — normal conditions.",
+      "gaugeLow": "At {{value}}%, Bitcoin's share is low. Money is flowing into altcoins — this is called \"altcoin season\". Can mean traders are more risk-hungry."
     },
     "stochRsi": {
       "title": "Stochastic RSI",
@@ -143,14 +178,20 @@
       "sellZone": "Sell zone",
       "kFastDesc": "The fast-reacting line. When it enters extreme zones (above 80 or below 20), pay attention.",
       "dSlowDescAbove": "The fast line (%K) is ABOVE the slow line (%D) — this is a buy signal. Momentum is shifting upward.",
-      "dSlowDescBelow": "The fast line (%K) is BELOW the slow line (%D) — this is a sell signal. Momentum is shifting downward."
+      "dSlowDescBelow": "The fast line (%K) is BELOW the slow line (%D) — this is a sell signal. Momentum is shifting downward.",
+      "gaugeOverbought": "At {{value}}, Bitcoin is extremely overbought in the short term. This indicator reacts fast — a quick pullback is very likely. Short-term traders would sell here.",
+      "gaugeOversold": "At {{value}}, Bitcoin is extremely oversold in the short term. This often marks a local bottom. Short-term traders would look to buy here.",
+      "gaugeNeutral": "At {{value}}, no extreme reading. The short-term momentum is neutral — wait for it to reach the zones above 80 or below 20 for clearer signals."
     },
     "williamsR": {
       "title": "Williams %R",
       "explain": "Williams %R tells you where the closing price is relative to the highest high over the last 14 periods. It ranges from -100 (lowest point) to 0 (highest point). Below -80 = oversold (price is near its recent low — might bounce). Above -20 = overbought (near its recent high — might drop).",
       "nearLows": "Near lows (buy zone)",
       "midRange": "Mid-range",
-      "nearHighs": "Near highs (sell zone)"
+      "nearHighs": "Near highs (sell zone)",
+      "gaugeOversold": "At {{value}}, the price is near its recent LOWEST point. Historically, this is where bounces happen. Think of it as a sale — Bitcoin is trading at the bottom of its recent range.",
+      "gaugeOverbought": "At {{value}}, the price is near its recent HIGHEST point. It may struggle to go higher and could pull back. Think of it as Bitcoin being \"expensive\" relative to recent prices.",
+      "gaugeNeutral": "At {{value}}, the price is in the middle of its recent range. Neither cheap nor expensive right now."
     },
     "ichimoku": {
       "title": "Ichimoku Cloud",
@@ -207,7 +248,20 @@
       "mayer": "Mayer Multiple",
       "piCycle": "Pi Cycle Ratio",
       "goldenDeath": "Golden/Death Cross",
-      "zScore": "Mean Reversion Z-Score"
+      "zScore": "Mean Reversion Z-Score",
+      "mayerExtreme": "At {{value}}, Bitcoin is MORE THAN 2.4x its 200-period average. Historically, this means it's dangerously overheated — major corrections have followed. Extreme caution.",
+      "mayerHigh": "At {{value}}, Bitcoin is well above its long-term average. It's doing great but getting expensive. Not the best time to buy new positions.",
+      "mayerAbove": "At {{value}}, Bitcoin is above its long-term average — healthy and positive. This is a normal bull market reading.",
+      "mayerBelow": "At {{value}}, Bitcoin is slightly below its long-term average. It's relatively cheap compared to history — could be a buying opportunity.",
+      "mayerDeep": "At {{value}}, Bitcoin is significantly below its long-term average. Historically, buying at this level has been very profitable long-term.",
+      "piCycleDanger": "At {{value}}, this is approaching 1.0 — DANGER ZONE. The Pi Cycle indicator has historically predicted every major Bitcoin top within 3 days when this hits 1.0.",
+      "piCycleWarming": "At {{value}}, getting warmer but not critical yet. The Pi Cycle top signal triggers when this reaches 1.0. Still some room to grow.",
+      "piCycleSafe": "At {{value}}, well below the danger zone. Bitcoin still has significant room before hitting a Pi Cycle top signal. The cycle has more room to run.",
+      "goldenCross": "The 50-period average is ABOVE the 200-period average ({{value}}). This is called a \"Golden Cross\" — one of the most famous bullish signals in all of trading. It means the short-term trend is outperforming the long-term trend. Historically, big rallies follow.",
+      "deathCross": "The 50-period average is BELOW the 200-period average ({{value}}). This is called a \"Death Cross\" — one of the most famous bearish signals. The short-term trend is underperforming. Historically, this precedes further declines.",
+      "zScoreHigh": "At {{value}} standard deviations above average — price has stretched TOO FAR above normal. Like a rubber band, it tends to snap back. Expect a pullback toward the average.",
+      "zScoreLow": "At {{value}} standard deviations below average — price has dropped TOO FAR below normal. Like a rubber band, it tends to snap back UP. Good buying opportunity.",
+      "zScoreNormal": "At {{value}} standard deviations from average — within normal range. No extreme stretching in either direction."
     },
     "rateOfChange": {
       "title": "Rate of Change",
@@ -215,7 +269,17 @@
       "last1h": "Last 1 Hour",
       "last6h": "Last 6 Hours",
       "last12h": "Last 12 Hours",
-      "last24h": "Last 24 Hours"
+      "last24h": "Last 24 Hours",
+      "upSignificant": "Bitcoin went UP {{pct}}% over {{period}}. That's a significant move — strong buying pressure.",
+      "upModerate": "Bitcoin went UP {{pct}}% over {{period}}. A moderate gain.",
+      "upSmall": "Bitcoin went UP {{pct}}% over {{period}}. A small gain.",
+      "downSignificant": "Bitcoin went DOWN {{pct}}% over {{period}}. That's a significant drop — strong selling pressure.",
+      "downModerate": "Bitcoin went DOWN {{pct}}% over {{period}}. A moderate decline.",
+      "downSmall": "Bitcoin went DOWN {{pct}}% over {{period}}. A small decline.",
+      "period1h": "the past hour",
+      "period6h": "the past 6 hours",
+      "period12h": "the past 12 hours",
+      "period24h": "the past 24 hours"
     },
     "indicatorHistory": {
       "title": "Indicator History",
@@ -249,7 +313,14 @@
     "toResistance": "To Resistance",
     "description": "The Bitcoin Power Law model describes BTC's long-term price trajectory using a power law relationship: Price = 10^(-17.016 + 5.845 * log10(days))",
     "howItWorks": "How it works: BTC's price follows a straight line on a log-log chart, with R² > 0.95 over its entire history. The model provides a \"fair value\" corridor — price tends to oscillate between support (0.42x) and resistance (1.5x) of the fair value line.",
-    "limitations": "Limitations: Past performance doesn't guarantee future results. The model assumes continued adoption growth and doesn't account for black swan events or regulatory changes."
+    "limitations": "Limitations: Past performance doesn't guarantee future results. The model assumes continued adoption growth and doesn't account for black swan events or regulatory changes.",
+    "valuation": {
+      "Extremely Undervalued": "Extremely Undervalued",
+      "Undervalued": "Undervalued",
+      "Below Fair Value": "Below Fair Value",
+      "Above Fair Value": "Above Fair Value",
+      "Overvalued": "Overvalued"
+    }
   },
   "elliott": {
     "title": "Elliott Wave Analysis",
@@ -271,6 +342,11 @@
     "pattern": "Pattern",
     "direction": "Direction",
     "waveCount": "Wave Count",
+    "directionBullish": "Bullish",
+    "directionBearish": "Bearish",
+    "directionNeutral": "Neutral",
+    "swing": "Swing",
+    "price": "Price",
     "theoryDescription": "Elliott Wave Theory identifies recurring fractal wave patterns in market prices. Markets move in 5-wave impulses (with the trend) and 3-wave corrections (against the trend).",
     "threeRules": "Three inviolable rules: (1) Wave 2 never retraces more than 100% of Wave 1. (2) Wave 3 is never the shortest impulse wave. (3) Wave 4 never enters Wave 1 price territory.",
     "fibRatios": "Fibonacci ratios guide wave projections: Wave 3 often extends to 1.618x of Wave 1, Wave 4 retraces to 0.382x of Wave 3, and Wave 5 often equals Wave 1 in length.",

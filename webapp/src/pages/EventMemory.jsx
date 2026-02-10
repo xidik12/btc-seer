@@ -168,7 +168,7 @@ export default function EventMemory() {
       setCategoryStats(cats?.categories || cats || [])
       setMemory(mem)
     } catch (err) {
-      setError(err.message || 'Failed to load events')
+      setError(err.message || t('common:widget.failedToLoad', { name: t('market:events.title') }))
     } finally {
       setLoading(false)
     }

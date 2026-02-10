@@ -23,6 +23,28 @@
       "90d": "90日"
     }
   },
+  "detail": {
+    "price": "价格",
+    "change24h": "24小时涨跌",
+    "change24hLabel": "(24小时)",
+    "change7d": "7天",
+    "change30d": "30天",
+    "marketCap": "市值",
+    "volume24h": "24小时成交量",
+    "circulatingSupply": "流通量",
+    "totalSupply": "总供应量",
+    "allTimeHigh": "历史最高价",
+    "allTimeLow": "历史最低价",
+    "contracts": "合约地址",
+    "rankNumber": "排名 #{{rank}}",
+    "fdv": "完全稀释估值",
+    "timeframes": {
+      "1d": "1日",
+      "7d": "7日",
+      "30d": "30日",
+      "90d": "90日"
+    }
+  },
   "report": {
     "title": "代币报告",
     "overview": "市场概览",
@@ -31,6 +53,25 @@
     "description": "描述",
     "contract": "合约地址",
     "shareReport": "分享报告",
-    "generating": "正在生成报告..."
-  }
+    "generating": "正在生成报告...",
+    "copied": "已复制到剪贴板！",
+    "rank": "排名",
+    "ath": "历史最高",
+    "atl": "历史最低",
+    "circulating": "流通量",
+    "totalSupply": "总供应量",
+    "fdv": "完全稀释估值",
+    "tier": "等级",
+    "riskLevel": "风险等级",
+    "volMcapRatio": "成交量/市值比",
+    "about": "关于",
+    "unknownToken": "未知代币",
+    "reportGenerated": "报告生成于 {{time}}"
+  },
+  "searchByNameOrAddress": "按名称、符号或合约地址搜索",
+  "searchingAddress": "在 {{chain}} 上按地址搜索...",
+  "detectedAddress": "检测到 {{chain}} 地址",
+  "searching": "搜索中...",
+  "noCoinsFound": "未找到\"{{query}}\"相关币种",
+  "generatedBy": "由 BTC Seer 生成"
 }

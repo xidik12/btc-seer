@@ -210,7 +210,7 @@ export default function PowerLaw() {
       setHistorical(hist)
     } catch (err) {
       console.error('Power Law fetch error:', err)
-      setError(err.message || 'Failed to load power law data')
+      setError(err.message || t('common:widget.failedToLoad', { name: t('market:powerLaw.title') }))
     } finally {
       setLoading(false)
     }
@@ -275,7 +275,7 @@ export default function PowerLaw() {
 
           <div className="flex items-center justify-between">
             <span className={`text-xs font-bold px-2 py-1 rounded border ${valStyle.bg} ${valStyle.border} ${valStyle.text}`}>
-              {current.valuation}
+              {t(`market:powerLaw.valuation.${current.valuation}`, current.valuation)}
             </span>
             <span className={`text-sm font-bold tabular-nums ${current.deviation_pct > 0 ? 'text-accent-red' : 'text-accent-green'}`}>
               {current.deviation_pct > 0 ? '+' : ''}{current.deviation_pct?.toFixed(1)}%

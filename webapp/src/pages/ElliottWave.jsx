@@ -55,9 +55,9 @@ function DirectionBadge({ direction, pattern, confidence, t }) {
   return (
     <div className="flex items-center gap-2">
       <span className={`text-xs font-bold px-2 py-1 rounded border bg-${color}/10 border-${color}/30 text-${color} uppercase`}>
-        {direction}
+        {direction === 'bullish' ? t('market:elliott.directionBullish') : direction === 'bearish' ? t('market:elliott.directionBearish') : t('market:elliott.directionNeutral')}
       </span>
-      <span className="text-text-muted text-[10px] capitalize">{pattern}</span>
+      <span className="text-text-muted text-[10px] capitalize">{pattern === 'impulse' ? t('market:elliott.impulse') : pattern === 'corrective' ? t('market:elliott.corrective') : pattern}</span>
       <div className="flex items-center gap-1 ml-auto">
         <span className="text-text-muted text-[9px]">{t('common:confidence')}</span>
         <div className="w-16 h-1.5 bg-bg-hover rounded-full overflow-hidden">
@@ -187,7 +187,7 @@ function WaveChart({ historicalData, timeframe, t }) {
                 fontSize: 11,
               }}
               formatter={(v, name) => {
-                if (name === 'swingPrice') return [v ? `$${v.toLocaleString()}` : '--', 'Swing']
+                if (name === 'swingPrice') return [v ? `$${v.toLocaleString()}` : '--', t('market:elliott.swing')]
                 if (name === 'candleRange') return null
                 if (Array.isArray(v)) return null
                 return [v ? `$${v.toLocaleString()}` : '--', name]
@@ -222,7 +222,7 @@ function WaveChart({ historicalData, timeframe, t }) {
               stroke="rgba(255,193,7,0.4)"
               strokeWidth={1}
               dot={false}
-              name="Price"
+              name={t('market:elliott.price')}
               connectNulls
               isAnimationActive={false}
             />
@@ -332,7 +332,7 @@ function DivergenceAlerts({ divergences, t }) {
             >
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-bold ${isBullish ? 'text-accent-green' : 'text-accent-red'}`}>
-                  {d.type.toUpperCase()}
+                  {isBullish ? t('common:direction.bullish').toUpperCase() : t('common:direction.bearish').toUpperCase()}
                 </span>
                 <span className="text-text-secondary text-[11px]">{d.indicator}</span>
               </div>
@@ -357,10 +357,12 @@ function StatsGrid({ data, t }) {
   if (!data) return null
 
   const wc = data.wave_count || {}
+  const patternMap = { impulse: t('market:elliott.impulse'), corrective: t('market:elliott.corrective') }
+  const dirMap = { bullish: t('market:elliott.directionBullish'), bearish: t('market:elliott.directionBearish'), neutral: t('market:elliott.directionNeutral') }
   const stats = [
-    { labelKey: 'pattern', value: wc.pattern || '--' },
+    { labelKey: 'pattern', value: patternMap[wc.pattern] || wc.pattern || '--' },
     { labelKey: 'currentWave', value: wc.current_wave || '--' },
-    { labelKey: 'direction', value: wc.direction || '--' },
+    { labelKey: 'direction', value: dirMap[wc.direction] || wc.direction || '--' },
     { labelKey: 'confidence', value: data.confidence != null ? `${(data.confidence * 100).toFixed(0)}%` : '--' },
     { labelKey: 'divergences', value: data.divergences?.length || '0' },
     { labelKey: 'waveCount', value: wc.waves?.length || '0' },
@@ -417,7 +419,7 @@ export default function ElliottWave() {
       setHistorical(hist)
     } catch (err) {
       console.error('Elliott Wave fetch error:', err)
-      setError(err.message || 'Failed to load Elliott Wave data')
+      setError(err.message || t('common:widget.failedToLoad', { name: t('market:elliott.title') }))
     } finally {
       setLoading(false)
     }

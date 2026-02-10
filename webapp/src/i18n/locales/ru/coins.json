@@ -23,6 +23,28 @@
       "90d": "90Д"
     }
   },
+  "detail": {
+    "price": "Цена",
+    "change24h": "Изменение за 24ч",
+    "change24hLabel": "(24ч)",
+    "change7d": "7д",
+    "change30d": "30д",
+    "marketCap": "Рыночная капитализация",
+    "volume24h": "Объём за 24ч",
+    "circulatingSupply": "Обращающееся предложение",
+    "totalSupply": "Общее предложение",
+    "allTimeHigh": "Исторический максимум",
+    "allTimeLow": "Исторический минимум",
+    "contracts": "Адреса контрактов",
+    "rankNumber": "Ранг #{{rank}}",
+    "fdv": "Полная оценка",
+    "timeframes": {
+      "1d": "1Д",
+      "7d": "7Д",
+      "30d": "30Д",
+      "90d": "90Д"
+    }
+  },
   "report": {
     "title": "Отчёт по токену",
     "overview": "Обзор рынка",
@@ -31,6 +53,25 @@
     "description": "Описание",
     "contract": "Адрес контракта",
     "shareReport": "Поделиться отчётом",
-    "generating": "Генерация отчёта..."
-  }
+    "generating": "Генерация отчёта...",
+    "copied": "Скопировано!",
+    "rank": "Ранг",
+    "ath": "Ист. макс.",
+    "atl": "Ист. мин.",
+    "circulating": "В обращении",
+    "totalSupply": "Общее предложение",
+    "fdv": "Полная оценка",
+    "tier": "Уровень",
+    "riskLevel": "Уровень риска",
+    "volMcapRatio": "Объём/Кап. соотн.",
+    "about": "О проекте",
+    "unknownToken": "Неизвестный токен",
+    "reportGenerated": "Отчёт создан {{time}}"
+  },
+  "searchByNameOrAddress": "Поиск по названию, символу или адресу контракта",
+  "searchingAddress": "Поиск по адресу в {{chain}}...",
+  "detectedAddress": "Обнаружен адрес {{chain}}",
+  "searching": "Поиск...",
+  "noCoinsFound": "Монет не найдено для \"{{query}}\"",
+  "generatedBy": "Создано BTC Seer"
 }

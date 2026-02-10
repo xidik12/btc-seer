@@ -186,7 +186,7 @@ export default function Signals() {
         })
         setAllSignals(tfMap)
       } catch (err) {
-        setError(err.message || 'Failed to load signals')
+        setError(err.message || t('common:widget.failedToLoad', { name: t('common:link.signals') }))
       }
       setLoading(false)
     }
