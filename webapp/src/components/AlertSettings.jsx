@@ -1,33 +1,83 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { api } from '../utils/api'
+import { useTelegram } from '../hooks/useTelegram'
 
 const INTERVALS = [
-  { value: '1h', label: '1 Hour', description: 'Frequent updates' },
-  { value: '4h', label: '4 Hours', description: 'Balanced frequency' },
-  { value: '24h', label: '24 Hours', description: 'Daily digest' },
+  { value: '1h', label: '1 Hour', description: 'Every hour' },
+  { value: '4h', label: '4 Hours', description: 'Every 4 hours' },
+  { value: '24h', label: '24 Hours', description: 'Once daily' },
 ]
 
 export default function AlertSettings() {
+  const { tg } = useTelegram()
   const [selectedInterval, setSelectedInterval] = useState('4h')
   const [subscribed, setSubscribed] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
+  const [dirty, setDirty] = useState(false)
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3000)
   }
 
-  const handleSave = async () => {
-    setSaving(true)
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 600))
-    setSaving(false)
-
-    if (subscribed) {
-      showToast(`Alerts set to ${selectedInterval} interval`)
-    } else {
-      showToast('Alerts unsubscribed', 'info')
+  // Load saved preferences from backend
+  useEffect(() => {
+    if (!tg?.initData) {
+      setLoading(false)
+      return
     }
+    api.getAlertPreferences(tg.initData)
+      .then((data) => {
+        setSubscribed(data.subscribed)
+        setSelectedInterval(data.alert_interval)
+      })
+      .catch(() => {
+        // Defaults are fine — user may not be registered yet
+      })
+      .finally(() => setLoading(false))
+  }, [tg])
+
+  const handleToggle = useCallback(() => {
+    setSubscribed((prev) => !prev)
+    setDirty(true)
+  }, [])
+
+  const handleIntervalChange = useCallback((value) => {
+    setSelectedInterval(value)
+    setDirty(true)
+  }, [])
+
+  const handleSave = useCallback(async () => {
+    if (!tg?.initData) {
+      showToast('Open in Telegram to save', 'error')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.updateAlertPreferences(tg.initData, subscribed, selectedInterval)
+      setDirty(false)
+      if (subscribed) {
+        showToast(`Alerts set to ${selectedInterval} interval`)
+      } else {
+        showToast('Alerts disabled', 'info')
+      }
+    } catch {
+      showToast('Failed to save. Try again.', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }, [tg, subscribed, selectedInterval])
+
+  if (loading) {
+    return (
+      <div className="bg-bg-card rounded-2xl p-4 animate-pulse">
+        <div className="h-5 w-32 bg-bg-hover rounded mb-4" />
+        <div className="h-12 bg-bg-hover rounded mb-3" />
+        <div className="h-10 bg-bg-hover rounded" />
+      </div>
+    )
   }
 
   return (
@@ -36,7 +86,7 @@ export default function AlertSettings() {
         Alert Settings
       </h3>
       <p className="text-text-muted text-xs mb-4">
-        Configure prediction alert notifications
+        Get prediction alerts via Telegram
       </p>
 
       {/* Subscribe toggle */}
@@ -50,7 +100,7 @@ export default function AlertSettings() {
           </p>
         </div>
         <button
-          onClick={() => setSubscribed(!subscribed)}
+          onClick={handleToggle}
           className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
             subscribed ? 'bg-accent-green' : 'bg-bg-hover'
           }`}
@@ -74,33 +124,24 @@ export default function AlertSettings() {
           return (
             <button
               key={interval.value}
-              onClick={() => setSelectedInterval(interval.value)}
+              onClick={() => handleIntervalChange(interval.value)}
               className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
                 isSelected
                   ? 'bg-accent-blue/10 border-accent-blue/40'
                   : 'bg-bg-secondary border-transparent hover:border-text-muted/20'
               }`}
             >
-              {/* Radio circle */}
               <div
                 className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                  isSelected
-                    ? 'border-accent-blue'
-                    : 'border-text-muted'
+                  isSelected ? 'border-accent-blue' : 'border-text-muted'
                 }`}
               >
                 {isSelected && (
                   <div className="w-2 h-2 rounded-full bg-accent-blue" />
                 )}
               </div>
-
-              {/* Label */}
               <div className="text-left">
-                <p
-                  className={`text-sm font-medium ${
-                    isSelected ? 'text-text-primary' : 'text-text-secondary'
-                  }`}
-                >
+                <p className={`text-sm font-medium ${isSelected ? 'text-text-primary' : 'text-text-secondary'}`}>
                   {interval.label}
                 </p>
                 <p className="text-text-muted text-xs">
@@ -115,30 +156,18 @@ export default function AlertSettings() {
       {/* Save button */}
       <button
         onClick={handleSave}
-        disabled={saving}
+        disabled={saving || !dirty}
         className={`w-full py-2.5 rounded-xl font-medium text-sm transition-all ${
-          saving
-            ? 'bg-accent-blue/50 text-white/50 cursor-not-allowed'
+          saving || !dirty
+            ? 'bg-accent-blue/30 text-white/40 cursor-not-allowed'
             : 'bg-accent-blue text-white active:scale-[0.98]'
         }`}
       >
         {saving ? (
           <span className="flex items-center justify-center gap-2">
             <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="none"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              />
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
             Saving...
           </span>
@@ -151,9 +180,11 @@ export default function AlertSettings() {
       {toast && (
         <div
           className={`absolute bottom-[-52px] left-0 right-0 mx-4 px-4 py-2.5 rounded-xl text-sm font-medium text-center shadow-lg slide-up ${
-            toast.type === 'success'
-              ? 'bg-accent-green/15 text-accent-green border border-accent-green/30'
-              : 'bg-accent-blue/15 text-accent-blue border border-accent-blue/30'
+            toast.type === 'error'
+              ? 'bg-accent-red/15 text-accent-red border border-accent-red/30'
+              : toast.type === 'info'
+                ? 'bg-accent-blue/15 text-accent-blue border border-accent-blue/30'
+                : 'bg-accent-green/15 text-accent-green border border-accent-green/30'
           }`}
         >
           {toast.message}

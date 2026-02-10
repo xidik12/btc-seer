@@ -33,7 +33,7 @@ async def cmd_start(message: Message):
             user = BotUser(
                 telegram_id=message.from_user.id,
                 username=message.from_user.username,
-                subscribed=True,
+                subscribed=False,
             )
             session.add(user)
             await session.flush()

@@ -11,6 +11,9 @@ from sqlalchemy import desc
 
 logger = logging.getLogger(__name__)
 
+# Track which intervals have been sent this cycle
+_last_sent: dict[str, datetime] = {}
+
 
 class AlertSender:
     """Sends prediction alerts to subscribed Telegram users."""
@@ -34,16 +37,32 @@ class AlertSender:
         except Exception as e:
             logger.debug(f"Failed to log alert: {e}")
 
-    async def send_hourly_alerts(self):
-        """Send prediction alerts to all subscribed users."""
+    async def send_alerts(self):
+        """Send prediction alerts to subscribed users based on their chosen interval.
+
+        Called every hour. Determines which intervals are due and sends accordingly:
+        - 1h: every call
+        - 4h: every 4th call (hours 0, 4, 8, 12, 16, 20 UTC)
+        - 24h: once daily (hour 0 UTC)
+        """
+        now = datetime.utcnow()
+        current_hour = now.hour
+
+        # Determine which intervals are due this hour
+        due_intervals = ["1h"]
+        if current_hour % 4 == 0:
+            due_intervals.append("4h")
+        if current_hour == 0:
+            due_intervals.append("24h")
+
         async with async_session() as session:
-            # Get FRESH current price (not from stale prediction)
+            # Get current price
             price_result = await session.execute(
                 select(Price).order_by(desc(Price.timestamp)).limit(1)
             )
             current_price_row = price_result.scalar_one_or_none()
 
-            # Get latest prediction for EACH timeframe (not just any 3)
+            # Get latest prediction for each timeframe
             predictions_by_tf = {}
             for tf in ["1h", "4h", "24h"]:
                 result = await session.execute(
@@ -66,21 +85,24 @@ class AlertSender:
                 logger.warning("No predictions available for alerts")
                 return
 
-            # Get subscribed users
+            # Get subscribed users whose interval is due
             result = await session.execute(
                 select(BotUser)
                 .where(BotUser.subscribed == True)
-                .where(BotUser.alert_interval == "1h")
+                .where(BotUser.alert_interval.in_(due_intervals))
             )
             users = result.scalars().all()
 
-        # Use fresh price for the alert
+        # Only send to premium users
+        users = [u for u in users if is_premium(u)]
+
+        if not users:
+            logger.debug(f"No users due for alerts (intervals: {due_intervals})")
+            return
+
         current_price = current_price_row.close if current_price_row else None
         predictions = list(predictions_by_tf.values())
         message = self._format_alert(predictions, signal, current_price)
-
-        # Only send to users with active subscription or trial
-        users = [u for u in users if is_premium(u)]
 
         sent = 0
         failed = 0
@@ -92,13 +114,17 @@ class AlertSender:
                     parse_mode="HTML",
                 )
                 sent += 1
-                await self._log_alert(user.telegram_id, "hourly", "sent")
+                await self._log_alert(user.telegram_id, f"alert_{user.alert_interval}", "sent")
             except Exception as e:
                 logger.error(f"Failed to send alert to {user.telegram_id}: {e}")
                 failed += 1
-                await self._log_alert(user.telegram_id, "hourly", "failed", str(e))
+                await self._log_alert(user.telegram_id, f"alert_{user.alert_interval}", "failed", str(e))
 
-        logger.info(f"Hourly alerts sent: {sent} success, {failed} failed")
+        logger.info(f"Alerts sent (due: {due_intervals}): {sent} success, {failed} failed")
+
+    # Keep old name as alias for backward compat with scheduler
+    async def send_hourly_alerts(self):
+        await self.send_alerts()
 
     async def send_breaking_alert(self, title: str, sentiment: float, analysis: str):
         """Send breaking news alert to all subscribed users."""
@@ -118,7 +144,6 @@ class AlertSender:
             )
             users = result.scalars().all()
 
-        # Only send to users with active subscription or trial
         users = [u for u in users if is_premium(u)]
 
         for user in users:
@@ -130,24 +155,21 @@ class AlertSender:
                 await self._log_alert(user.telegram_id, "breaking", "failed", str(e))
 
     def _format_alert(self, predictions: list, signal, current_price: float = None) -> str:
-        """Format hourly prediction alert message."""
+        """Format prediction alert message."""
         direction_emoji = {"bullish": "🟢 ▲", "bearish": "🔴 ▼", "neutral": "🟡 ◄►"}
 
-        lines = ["🔮 <b>BTC Seer — Hourly Update</b>\n"]
+        lines = ["🔮 <b>BTC Seer — Update</b>\n"]
 
-        # Price — use fresh price passed in, fallback to prediction price
         price = current_price or (predictions[0].current_price if predictions else None)
         if price:
             lines.append(f"💰 BTC: <code>${price:,.0f}</code>\n")
 
-        # Predictions
         for p in predictions:
             emoji = direction_emoji.get(p.direction, "⚪")
             lines.append(
                 f"<b>{p.timeframe.upper()}</b>: {emoji} {p.direction.title()} ({p.confidence:.0f}%)"
             )
 
-        # Signal
         if signal:
             action_emoji = {
                 "strong_buy": "🟢🟢", "buy": "🟢", "hold": "🟡",

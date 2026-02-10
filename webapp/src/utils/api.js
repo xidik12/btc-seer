@@ -173,6 +173,16 @@ export const api = {
     headers: { 'X-Telegram-Init-Data': initData },
   }),
 
+  // Alert Preferences (no cache — user-specific)
+  getAlertPreferences: (initData) => fetchAPI('/auth/alerts/preferences', {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  updateAlertPreferences: (initData, subscribed, alertInterval) => fetchAPI('/auth/alerts/preferences', {
+    method: 'POST',
+    headers: { 'X-Telegram-Init-Data': initData },
+    body: JSON.stringify({ subscribed, alert_interval: alertInterval }),
+  }),
+
   // Subscription (no cache)
   createInvoice: (tier) => fetchAPI(`/subscription/create-invoice?tier=${tier}`),
   getSubscriptionStatus: (initData) => fetchAPI('/subscription/status', {

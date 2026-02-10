@@ -324,8 +324,8 @@ class BotUser(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     telegram_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
     username: Mapped[str] = mapped_column(String(100), nullable=True)
-    subscribed: Mapped[bool] = mapped_column(Boolean, default=True)
-    alert_interval: Mapped[str] = mapped_column(String(10), default="1h")  # 1h, 4h, 24h
+    subscribed: Mapped[bool] = mapped_column(Boolean, default=False)
+    alert_interval: Mapped[str] = mapped_column(String(10), default="4h")  # 1h, 4h, 24h
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
     # Subscription fields
