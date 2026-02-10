@@ -202,7 +202,7 @@ function QuickAccessGrid() {
           : cat.links
         return (
           <div key={cat.title}>
-            <h3 className="text-text-muted text-[10px] font-semibold uppercase tracking-wider mb-1.5 px-1">{cat.title}</h3>
+            <h3 className="text-accent-yellow text-[10px] font-semibold uppercase tracking-wider mb-1.5 px-1">{cat.title}</h3>
             <div className="grid grid-cols-4 gap-2">
               {links.map((link) => (
                 <button
