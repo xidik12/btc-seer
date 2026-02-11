@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     reddit_client_secret: str = ""
     reddit_user_agent: str = "btc-oracle/1.0"
 
+    # External data APIs
+    fred_api_key: str = ""  # FRED API for M2 money supply (free from https://fred.stlouisfed.org/docs/api/api_key.html)
+
     # Database — /data/ path is a Railway persistent volume
     # Set DATABASE_URL to a postgresql:// URL to use PostgreSQL (e.g. Railway PG plugin)
     database_url: str = "sqlite+aiosqlite:////data/btc_oracle.db"

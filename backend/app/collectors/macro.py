@@ -104,6 +104,37 @@ class MacroCollector(BaseCollector):
 
         return result
 
+    async def fetch_m2_supply(self) -> float | None:
+        """Fetch M2 money supply from FRED API or use fallback estimate.
+
+        FRED series: M2SL (seasonally adjusted, billions)
+        Falls back to hardcoded estimate with 7.2% annual growth.
+        """
+        # Try FRED API if key is available
+        if settings.fred_api_key:
+            try:
+                url = (
+                    f"https://api.stlouisfed.org/fred/series/observations"
+                    f"?series_id=M2SL&api_key={settings.fred_api_key}"
+                    f"&sort_order=desc&limit=1&file_type=json"
+                )
+                data = await self.fetch_json(url)
+                if data and "observations" in data and data["observations"]:
+                    value_str = data["observations"][0].get("value", "")
+                    if value_str and value_str != ".":
+                        # FRED returns billions, convert to trillions
+                        return float(value_str) / 1000.0
+            except Exception as e:
+                logger.warning(f"FRED M2 fetch error: {e}")
+
+        # Fallback: estimate M2 using base + 7.2% annual growth
+        # Jan 2024 M2 was ~$20.8T, growing ~7.2%/year
+        base_date = datetime(2024, 1, 1)
+        base_m2 = 20.8  # trillions
+        years_elapsed = (datetime.utcnow() - base_date).days / 365.25
+        estimated_m2 = base_m2 * (1.072 ** years_elapsed)
+        return round(estimated_m2, 2)
+
     async def _fetch_yahoo_v8(self, symbol: str) -> dict | None:
         """Fetch a quote via Yahoo Finance v8 chart API (v7 is deprecated)."""
         try:

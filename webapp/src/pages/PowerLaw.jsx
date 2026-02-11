@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatPrice } from '../utils/format'
@@ -15,6 +15,16 @@ import {
   CartesianGrid,
 } from 'recharts'
 
+// Lazy load sub-components
+const PLDashboard = lazy(() => import('../components/powerlaw/PLDashboard'))
+const PLCurve = lazy(() => import('../components/powerlaw/PLCurve'))
+const PLGold = lazy(() => import('../components/powerlaw/PLGold'))
+const PLM2 = lazy(() => import('../components/powerlaw/PLM2'))
+const PLSPX = lazy(() => import('../components/powerlaw/PLSPX'))
+const PLAssets = lazy(() => import('../components/powerlaw/PLAssets'))
+const PLCalculator = lazy(() => import('../components/powerlaw/PLCalculator'))
+const PLMilestones = lazy(() => import('../components/powerlaw/PLMilestones'))
+
 const POLL_INTERVAL = 60_000
 
 const VALUATION_COLORS = {
@@ -23,6 +33,38 @@ const VALUATION_COLORS = {
   'Below Fair Value': { text: 'text-accent-green', bg: 'bg-accent-green/8', border: 'border-accent-green/15' },
   'Above Fair Value': { text: 'text-accent-yellow', bg: 'bg-accent-yellow/8', border: 'border-accent-yellow/15' },
   'Overvalued': { text: 'text-accent-red', bg: 'bg-accent-red/10', border: 'border-accent-red/20' },
+}
+
+const PL_TABS = ['main', 'curve', 'gold', 'm2', 'spx', 'assets', 'calculator', 'milestones']
+
+function TabBar({ activeTab, setActiveTab, t }) {
+  return (
+    <div className="flex overflow-x-auto gap-1 pb-1 -mx-1 px-1 scrollbar-hide">
+      {PL_TABS.map((tab) => (
+        <button
+          key={tab}
+          onClick={() => setActiveTab(tab)}
+          className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            activeTab === tab
+              ? 'bg-accent-blue text-white'
+              : 'bg-bg-card text-text-muted hover:text-text-secondary border border-white/5'
+          }`}
+        >
+          {t(`market:powerLaw.tabs.${tab}`)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function LoadingPlaceholder() {
+  return (
+    <div className="animate-pulse space-y-3">
+      <div className="h-24 bg-bg-card rounded-2xl" />
+      <div className="h-64 bg-bg-card rounded-2xl" />
+      <div className="h-16 bg-bg-card rounded-2xl" />
+    </div>
+  )
 }
 
 function CorridorGauge({ position, bands, currentPrice, t }) {
@@ -86,9 +128,8 @@ function PowerLawChart({ historicalData, t }) {
     )
   }
 
-  // Filter to points that have data
   const chartData = historicalData.points
-    .filter((_, i) => i % 7 === 0) // Weekly samples for performance
+    .filter((_, i) => i % 7 === 0)
     .map((p) => ({
       date: p.date,
       fairValue: p.fair_value,
@@ -183,78 +224,11 @@ function PowerLawChart({ historicalData, t }) {
   )
 }
 
-export default function PowerLaw() {
-  const { t } = useTranslation(['market', 'common'])
-  const [current, setCurrent] = useState(null)
-  const [historical, setHistorical] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  const MARKET_TABS = [
-    { path: '/liquidations', label: t('common:link.liquidations') },
-    { path: '/powerlaw', label: t('common:link.powerLaw') },
-    { path: '/elliott-wave', label: t('common:link.elliottWave') },
-    { path: '/events', label: t('common:link.events') },
-    { path: '/tools', label: t('common:link.tools') },
-    { path: '/learn', label: t('common:link.learn') },
-  ]
-
-  const fetchData = useCallback(async () => {
-    try {
-      setError(null)
-      const [curr, hist] = await Promise.all([
-        api.getPowerLawCurrent(),
-        api.getPowerLawHistorical(365),
-      ])
-      setCurrent(curr)
-      setHistorical(hist)
-    } catch (err) {
-      console.error('Power Law fetch error:', err)
-      setError(err.message || t('common:widget.failedToLoad', { name: t('market:powerLaw.title') }))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, POLL_INTERVAL)
-    return () => clearInterval(interval)
-  }, [fetchData])
-
-  if (loading) {
-    return (
-      <div className="px-4 pt-4 space-y-4">
-        <h1 className="text-lg font-bold">{t('market:powerLaw.title')}</h1>
-        <div className="animate-pulse space-y-3">
-          <div className="h-24 bg-bg-card rounded-2xl" />
-          <div className="h-64 bg-bg-card rounded-2xl" />
-          <div className="h-16 bg-bg-card rounded-2xl" />
-        </div>
-      </div>
-    )
-  }
-
-  if (error && !current) {
-    return (
-      <div className="px-4 pt-4 space-y-4">
-        <h1 className="text-lg font-bold">{t('market:powerLaw.title')}</h1>
-        <div className="bg-bg-card rounded-2xl p-6 border border-accent-red/20 text-center">
-          <p className="text-accent-red text-sm mb-2">{t('common:widget.failedToLoad', { name: t('market:powerLaw.title') })}</p>
-          <p className="text-text-muted text-xs mb-3">{error}</p>
-          <button onClick={fetchData} className="text-accent-blue text-xs hover:underline">{t('common:app.retry')}</button>
-        </div>
-      </div>
-    )
-  }
-
+function MainTab({ current, historical, t }) {
   const valStyle = VALUATION_COLORS[current?.valuation] || VALUATION_COLORS['Above Fair Value']
 
   return (
-    <div className="px-4 pt-4 space-y-3 pb-20">
-      <SubTabBar tabs={MARKET_TABS} />
-      <h1 className="text-lg font-bold">{t('market:powerLaw.title')}</h1>
-
+    <>
       {/* Valuation Card */}
       {current && (
         <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
@@ -309,6 +283,131 @@ export default function PowerLaw() {
           <p>{t('market:powerLaw.limitations')}</p>
         </div>
       </div>
+    </>
+  )
+}
+
+export default function PowerLaw() {
+  const { t } = useTranslation(['market', 'common'])
+  const [activeTab, setActiveTab] = useState('main')
+  const [current, setCurrent] = useState(null)
+  const [historical, setHistorical] = useState(null)
+  const [tabData, setTabData] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const MARKET_TABS = [
+    { path: '/liquidations', label: t('common:link.liquidations') },
+    { path: '/powerlaw', label: t('common:link.powerLaw') },
+    { path: '/elliott-wave', label: t('common:link.elliottWave') },
+    { path: '/events', label: t('common:link.events') },
+    { path: '/tools', label: t('common:link.tools') },
+    { path: '/learn', label: t('common:link.learn') },
+  ]
+
+  // Fetch main tab data
+  const fetchMainData = useCallback(async () => {
+    try {
+      setError(null)
+      const [curr, hist] = await Promise.all([
+        api.getPowerLawCurrent(),
+        api.getPowerLawHistorical(365),
+      ])
+      setCurrent(curr)
+      setHistorical(hist)
+    } catch (err) {
+      console.error('Power Law fetch error:', err)
+      setError(err.message || t('common:widget.failedToLoad', { name: t('market:powerLaw.title') }))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Fetch tab-specific data when tab changes
+  useEffect(() => {
+    if (activeTab === 'main') return
+    if (tabData[activeTab]) return // Already loaded
+
+    const fetchMap = {
+      curve: api.getPowerLawCurve,
+      gold: api.getPowerLawGold,
+      m2: api.getPowerLawM2,
+      spx: api.getPowerLawSPX,
+      assets: api.getPowerLawAssets,
+      milestones: api.getPowerLawMilestones,
+    }
+
+    const fetcher = fetchMap[activeTab]
+    if (!fetcher) return
+
+    fetcher()
+      .then((data) => setTabData((prev) => ({ ...prev, [activeTab]: data })))
+      .catch((err) => console.error(`${activeTab} fetch error:`, err))
+  }, [activeTab, tabData])
+
+  useEffect(() => {
+    fetchMainData()
+    const interval = setInterval(fetchMainData, POLL_INTERVAL)
+    return () => clearInterval(interval)
+  }, [fetchMainData])
+
+  if (loading) {
+    return (
+      <div className="px-4 pt-4 space-y-4">
+        <h1 className="text-lg font-bold">{t('market:powerLaw.title')}</h1>
+        <LoadingPlaceholder />
+      </div>
+    )
+  }
+
+  if (error && !current) {
+    return (
+      <div className="px-4 pt-4 space-y-4">
+        <h1 className="text-lg font-bold">{t('market:powerLaw.title')}</h1>
+        <div className="bg-bg-card rounded-2xl p-6 border border-accent-red/20 text-center">
+          <p className="text-accent-red text-sm mb-2">{t('common:widget.failedToLoad', { name: t('market:powerLaw.title') })}</p>
+          <p className="text-text-muted text-xs mb-3">{error}</p>
+          <button onClick={fetchMainData} className="text-accent-blue text-xs hover:underline">{t('common:app.retry')}</button>
+        </div>
+      </div>
+    )
+  }
+
+  const renderTab = () => {
+    switch (activeTab) {
+      case 'main':
+        return <MainTab current={current} historical={historical} t={t} />
+      case 'curve':
+        return <PLCurve data={tabData.curve} />
+      case 'gold':
+        return <PLGold data={tabData.gold} />
+      case 'm2':
+        return <PLM2 data={tabData.m2} />
+      case 'spx':
+        return <PLSPX data={tabData.spx} />
+      case 'assets':
+        return <PLAssets data={tabData.assets} />
+      case 'calculator':
+        return <PLCalculator />
+      case 'milestones':
+        return <PLMilestones data={tabData.milestones} />
+      default:
+        return <MainTab current={current} historical={historical} t={t} />
+    }
+  }
+
+  return (
+    <div className="px-4 pt-4 space-y-3 pb-20">
+      <SubTabBar tabs={MARKET_TABS} />
+      <h1 className="text-lg font-bold">{t('market:powerLaw.title')}</h1>
+
+      {/* Internal Power Law Tab Bar */}
+      <TabBar activeTab={activeTab} setActiveTab={setActiveTab} t={t} />
+
+      {/* Tab Content */}
+      <Suspense fallback={<LoadingPlaceholder />}>
+        {renderTab()}
+      </Suspense>
     </div>
   )
 }

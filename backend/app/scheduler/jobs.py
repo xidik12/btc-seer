@@ -63,6 +63,82 @@ def get_ensemble() -> EnsemblePredictor:
     return _ensemble
 
 
+async def deep_backfill_historical_prices():
+    """Deep backfill: fetch full BTC price history from 2009 to present.
+
+    Runs once on startup when oldest Price row > 2014.
+    Uses HistoricalBTCCollector to fetch from early JSON + CoinGecko + Binance.
+    """
+    try:
+        from app.collectors.historical_btc import HistoricalBTCCollector
+
+        # Check if we need deep backfill
+        async with async_session() as session:
+            result = await session.execute(
+                select(Price).order_by(Price.timestamp).limit(1)
+            )
+            oldest = result.scalar_one_or_none()
+
+        if oldest and oldest.timestamp.year <= 2014:
+            logger.info("Deep backfill: Already have pre-2014 data, skipping")
+            return
+
+        logger.info("Deep backfill: Starting comprehensive historical price fetch...")
+        collector = HistoricalBTCCollector()
+
+        try:
+            all_prices = await collector.fetch_all_historical()
+        finally:
+            await collector.close()
+
+        if not all_prices:
+            logger.warning("Deep backfill: No historical prices fetched")
+            return
+
+        # Insert into Price table, skipping existing dates
+        async with async_session() as session:
+            result = await session.execute(select(Price.timestamp))
+            existing_dates = set()
+            for row in result.all():
+                existing_dates.add(row[0].strftime("%Y-%m-%d"))
+
+            inserted = 0
+            for p in all_prices:
+                day_key = p["timestamp"].strftime("%Y-%m-%d")
+                if day_key in existing_dates:
+                    continue
+
+                price = Price(
+                    timestamp=p["timestamp"],
+                    open=p["open"],
+                    high=p["high"],
+                    low=p["low"],
+                    close=p["close"],
+                    volume=p["volume"],
+                    source="historical_backfill",
+                )
+                session.add(price)
+                existing_dates.add(day_key)
+                inserted += 1
+
+            await session.commit()
+
+        logger.info(f"Deep backfill: Inserted {inserted} historical price records")
+
+        # Trigger ML retrain with extended features after backfill
+        if inserted > 100:
+            try:
+                from app.models.trainer import ModelTrainer
+                trainer = ModelTrainer()
+                result = await trainer.train_all()
+                logger.info(f"Deep backfill: Post-backfill retrain result: {result.get('status')}")
+            except Exception as e:
+                logger.warning(f"Deep backfill: Post-backfill retrain failed (non-critical): {e}")
+
+    except Exception as e:
+        logger.error(f"Deep backfill error: {e}", exc_info=True)
+
+
 async def backfill_historical_prices():
     """Backfill historical BTC price data from Binance on startup.
 
@@ -288,6 +364,13 @@ async def collect_macro_data():
             logger.warning("Macro collection returned all None values, skipping DB save")
             return
 
+        # Fetch M2 money supply
+        m2_supply = None
+        try:
+            m2_supply = await macro_collector.fetch_m2_supply()
+        except Exception as e:
+            logger.debug(f"M2 supply fetch error: {e}")
+
         async with async_session() as session:
             macro = MacroData(
                 timestamp=datetime.utcnow(),
@@ -300,6 +383,7 @@ async def collect_macro_data():
                 eurusd=eurusd,
                 fear_greed_index=fear_greed_index,
                 fear_greed_label=fear_greed_label,
+                m2_supply=m2_supply,
             )
             session.add(macro)
             await session.commit()
@@ -1397,11 +1481,22 @@ async def cleanup_old_data():
         cutoff_180d = datetime.utcnow() - timedelta(days=180)
 
         async with async_session() as session:
-            # 90-day retention
-            for model in [Price, News, Feature, InfluencerTweet, AlertLog]:
+            # 90-day retention (but preserve daily historical prices forever)
+            for model in [News, Feature, InfluencerTweet, AlertLog]:
                 await session.execute(
                     model.__table__.delete().where(model.timestamp < cutoff_90d)
                 )
+
+            # Price: only clean hourly data >90 days, keep daily backfill forever
+            from sqlalchemy import and_
+            await session.execute(
+                Price.__table__.delete().where(
+                    and_(
+                        Price.timestamp < cutoff_90d,
+                        Price.source != "historical_backfill",
+                    )
+                )
+            )
 
             # 180-day retention for less frequent data
             for model in [MacroData, OnChainData, FundingRate, BtcDominance, IndicatorSnapshot]:

@@ -137,6 +137,7 @@ class MacroData(Base):
     eurusd: Mapped[float] = mapped_column(Float, nullable=True)
     fear_greed_index: Mapped[int] = mapped_column(Integer, nullable=True)
     fear_greed_label: Mapped[str] = mapped_column(String(30), nullable=True)
+    m2_supply: Mapped[float] = mapped_column(Float, nullable=True)  # M2 money supply (trillions USD)
 
 
 class OnChainData(Base):

@@ -107,6 +107,18 @@ export const api = {
   // Power Law
   getPowerLawCurrent: () => cachedFetch('/powerlaw/current', T120),
   getPowerLawHistorical: (days = 365) => cachedFetch(`/powerlaw/historical?days=${days}`, T120),
+  getPowerLawDashboard: () => cachedFetch('/powerlaw/dashboard', T120),
+  getPowerLawCurve: () => cachedFetch('/powerlaw/curve', T300),
+  getPowerLawGold: () => cachedFetch('/powerlaw/gold', T120),
+  getPowerLawM2: () => cachedFetch('/powerlaw/m2', T120),
+  getPowerLawSPX: () => cachedFetch('/powerlaw/spx', T120),
+  getPowerLawAssets: () => cachedFetch('/powerlaw/assets', T300),
+  getPowerLawMilestones: () => cachedFetch('/powerlaw/milestones', T300),
+  getPowerLawCalculator: (params = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    return cachedFetch(`/powerlaw/calculator?${qs}`, T120)
+  },
+  getUpcomingEvents: () => cachedFetch('/powerlaw/upcoming', T300),
 
   // Liquidations
   getLiquidationMap: () => cachedFetch('/liquidations/map', T60),

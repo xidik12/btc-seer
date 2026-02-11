@@ -184,6 +184,21 @@ class FeatureBuilder:
         "defi_tvl_usd",                # Total DeFi TVL
     ]
 
+    POWER_LAW_FEATURES = [
+        "power_law_deviation",          # (price - fair_value) / fair_value
+        "power_law_corridor_position",  # 0-1 within support/resistance corridor
+        "halving_cycle_position_norm",  # 0-1 within current halving cycle
+        "days_since_halving_norm",      # normalized days since last halving
+        "sma_200d_ratio",              # price / 200-day SMA
+        "high_52w_distance",           # distance from 52-week high (0-1)
+        "low_52w_distance",            # distance from 52-week low (0-1)
+        "log_price_zscore_365d",       # z-score of log(price) over 365 days
+        "yearly_return_pct",           # trailing 365-day return %
+        "btc_gold_ratio",             # BTC / gold price
+        "btc_spx_ratio",             # BTC / S&P 500
+        "m2_ratio",                   # BTC / M2 money supply (trillions)
+    ]
+
     ALL_FEATURES = (
         TECHNICAL_FEATURES + SENTIMENT_FEATURES + MACRO_FEATURES
         + ONCHAIN_FEATURES + EVENT_MEMORY_FEATURES
@@ -191,6 +206,7 @@ class FeatureBuilder:
         + PHRASE_FEATURES + SUPPLY_FEATURES
         + DERIVATIVES_EXTENDED_FEATURES + ETF_FEATURES
         + EXCHANGE_FLOW_FEATURES + STABLECOIN_FEATURES
+        + POWER_LAW_FEATURES
     )
 
     def __init__(self):
@@ -322,6 +338,58 @@ class FeatureBuilder:
                     features[feat] = float(np.log10(fval)) if fval > 0 else 0.0
                 else:
                     features[feat] = float(val) if val is not None else 0.0
+
+        # ── Power Law & long-term features ──
+        current_price = features.get("current_price", 0)
+        if current_price > 0:
+            import math
+            from datetime import timedelta
+
+            BTC_GENESIS = datetime(2009, 1, 3)
+            PL_INTERCEPT = -17.016
+            PL_SLOPE = 5.845
+
+            now = datetime.utcnow()
+            days_since_genesis = (now - BTC_GENESIS).days
+            if days_since_genesis > 0:
+                fair_value = 10 ** (PL_INTERCEPT + PL_SLOPE * math.log10(days_since_genesis))
+                features["power_law_deviation"] = (current_price - fair_value) / fair_value if fair_value > 0 else 0
+
+                # Corridor position (support=0.42x, resistance=1.5x)
+                support = fair_value * 0.42
+                resistance = fair_value * 1.5
+                corridor_range = resistance - support
+                features["power_law_corridor_position"] = max(0, min(1, (current_price - support) / corridor_range)) if corridor_range > 0 else 0.5
+
+            # Halving cycle features
+            HALVINGS = [datetime(2012, 11, 28), datetime(2016, 7, 9), datetime(2020, 5, 11), datetime(2024, 4, 20)]
+            HALVING_INTERVAL = 210_000 * 10 / 60 / 24  # ~1460 days
+            last_halving = max((h for h in HALVINGS if h <= now), default=HALVINGS[0])
+            next_halving = min((h for h in HALVINGS if h > now), default=last_halving + timedelta(days=HALVING_INTERVAL))
+            cycle_length = (next_halving - last_halving).days or 1
+            days_since = (now - last_halving).days
+            features["halving_cycle_position_norm"] = min(1.0, days_since / cycle_length)
+            features["days_since_halving_norm"] = days_since / HALVING_INTERVAL
+
+            # Ratio features from macro data
+            if macro_data:
+                gold = macro_data.get("gold", 0) or 0
+                sp500 = macro_data.get("sp500", 0) or 0
+                features["btc_gold_ratio"] = current_price / gold if gold > 0 else 0
+                features["btc_spx_ratio"] = current_price / sp500 if sp500 > 0 else 0
+                m2 = macro_data.get("m2_supply", 0) or 0
+                features["m2_ratio"] = current_price / m2 if m2 > 0 else 0
+
+            # Price history-based features (set defaults, overridden by extended dataset)
+            features.setdefault("sma_200d_ratio", 0)
+            features.setdefault("high_52w_distance", 0)
+            features.setdefault("low_52w_distance", 0)
+            features.setdefault("log_price_zscore_365d", 0)
+            features.setdefault("yearly_return_pct", 0)
+
+        # Set defaults for any missing power law features
+        for feat in self.POWER_LAW_FEATURES:
+            features.setdefault(feat, 0.0)
 
         # Normalize features
         features = self._normalize(features)

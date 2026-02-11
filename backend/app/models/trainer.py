@@ -156,6 +156,103 @@ class ModelTrainer:
             "price_history": price_history,
         }
 
+    async def prepare_extended_features(self, dataset: dict) -> dict:
+        """Enrich dataset with long-term features computed from daily price history.
+
+        Computes: sma_200d_ratio, high_52w_distance, low_52w_distance,
+        log_price_zscore_365d, yearly_return_pct — features that require
+        months/years of daily data rather than just hourly snapshots.
+        """
+        async with async_session() as session:
+            result = await session.execute(
+                select(Price).order_by(Price.timestamp)
+            )
+            all_prices = result.scalars().all()
+
+        if len(all_prices) < 200:
+            logger.info(f"Only {len(all_prices)} prices, skipping extended features")
+            return dataset
+
+        # Build daily price series
+        daily = {}
+        for p in all_prices:
+            day = p.timestamp.strftime("%Y-%m-%d")
+            daily[day] = p.close
+        days_sorted = sorted(daily.keys())
+        closes = [daily[d] for d in days_sorted]
+
+        if len(closes) < 200:
+            return dataset
+
+        # Precompute daily metrics
+        import math
+        closes_arr = np.array(closes, dtype=np.float64)
+        log_closes = np.log(closes_arr[closes_arr > 0])
+
+        # 200-day SMA at the latest point
+        sma_200d = np.mean(closes_arr[-200:]) if len(closes_arr) >= 200 else closes_arr.mean()
+        current = closes_arr[-1]
+        sma_200d_ratio = current / sma_200d if sma_200d > 0 else 1.0
+
+        # 52-week (365-day) high/low
+        window = min(365, len(closes_arr))
+        high_52w = np.max(closes_arr[-window:])
+        low_52w = np.min(closes_arr[-window:])
+        high_52w_distance = (high_52w - current) / high_52w if high_52w > 0 else 0
+        low_52w_distance = (current - low_52w) / current if current > 0 else 0
+
+        # Log price z-score over 365 days
+        if len(log_closes) >= 365:
+            recent_log = np.log(closes_arr[-365:][closes_arr[-365:] > 0])
+            mean_log = recent_log.mean()
+            std_log = recent_log.std()
+            log_price_zscore = (math.log(current) - mean_log) / std_log if std_log > 0 else 0
+        else:
+            log_price_zscore = 0
+
+        # Yearly return
+        if len(closes_arr) >= 365:
+            yearly_return = (current - closes_arr[-365]) / closes_arr[-365] * 100
+        else:
+            yearly_return = 0
+
+        # Apply to all feature vectors in dataset
+        from app.features.builder import FeatureBuilder
+        builder = FeatureBuilder()
+        feature_names = builder.ALL_FEATURES
+
+        extended_indices = {}
+        for name in ["sma_200d_ratio", "high_52w_distance", "low_52w_distance",
+                      "log_price_zscore_365d", "yearly_return_pct"]:
+            if name in feature_names:
+                extended_indices[name] = feature_names.index(name)
+
+        extended_values = {
+            "sma_200d_ratio": sma_200d_ratio,
+            "high_52w_distance": high_52w_distance,
+            "low_52w_distance": low_52w_distance,
+            "log_price_zscore_365d": log_price_zscore,
+            "yearly_return_pct": yearly_return / 100,  # normalize
+        }
+
+        # Update X_feat and X_seq with computed values
+        X_feat = dataset["X_feat"]
+        X_seq = dataset["X_seq"]
+        for name, idx in extended_indices.items():
+            if idx < X_feat.shape[1]:
+                X_feat[:, idx] = extended_values.get(name, 0)
+            if idx < X_seq.shape[2]:
+                X_seq[:, :, idx] = extended_values.get(name, 0)
+
+        dataset["X_feat"] = X_feat
+        dataset["X_seq"] = X_seq
+
+        logger.info(
+            f"Extended features applied: sma_200d_ratio={sma_200d_ratio:.3f}, "
+            f"52w_high_dist={high_52w_distance:.3f}, yearly_return={yearly_return:.1f}%"
+        )
+        return dataset
+
     def _find_price(self, ts: datetime, price_map: dict, tolerance_minutes: int = 10) -> float | None:
         """Find closest price to a timestamp within tolerance."""
         ts_rounded = ts.replace(second=0, microsecond=0)
@@ -559,6 +656,12 @@ class ModelTrainer:
                 "improved": False,
                 "message": "Not enough data for training",
             }
+
+        # 1b. Enrich with long-term features from daily price history
+        try:
+            dataset = await self.prepare_extended_features(dataset)
+        except Exception as e:
+            logger.warning(f"Extended feature enrichment failed (continuing): {e}")
 
         X_seq = dataset["X_seq"]
         X_feat = dataset["X_feat"]
