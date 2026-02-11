@@ -45,6 +45,9 @@ async def cmd_start(message: Message):
             else:
                 await session.commit()
         else:
+            # Grant trial to existing users who missed it during beta
+            if settings.subscription_enabled:
+                await grant_trial(user, session)
             await session.commit()
 
     # Check if user is banned

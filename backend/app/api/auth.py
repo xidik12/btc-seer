@@ -74,6 +74,9 @@ async def register_user(request: Request):
             # Update username if changed
             if username and user.username != username:
                 user.username = username
+            # Grant trial to existing users who missed it during beta
+            if settings.subscription_enabled:
+                await grant_trial(user, session)
             await session.commit()
 
     return _user_response(user, is_new)

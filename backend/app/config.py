@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     advisor_cooldown_hours: int = 4
 
     # Telegram Stars Subscription (disabled by default — all free during beta)
-    subscription_enabled: bool = False       # Master switch — False = everything free
+    subscription_enabled: bool = True        # Master switch — False = everything free
     trial_days: int = 7                      # Free trial duration
     premium_price_stars: int = 500           # ~$9.99 in Telegram Stars
     premium_price_stars_monthly: int = 500      # 30 days
