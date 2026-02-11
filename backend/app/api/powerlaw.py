@@ -1,7 +1,8 @@
 """BTC Power Law API endpoints.
 
-Formula: Price = 10^(-17.016 + 5.845 * log10(days_since_genesis))
+Formula: Price = 10^(intercept + slope * log10(days_since_genesis))
 Genesis: January 3, 2009
+All parameters computed from historical data via OLS regression.
 
 Corridor bands:
   Support    = fair_value * 0.42
@@ -12,11 +13,12 @@ Corridor bands:
 import json
 import math
 import logging
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, Price, MacroData
@@ -27,8 +29,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/powerlaw", tags=["powerlaw"])
 
 BTC_GENESIS = datetime(2009, 1, 3)
-PL_INTERCEPT = -17.016
-PL_SLOPE = 5.845
 
 # Corridor multipliers
 CORRIDOR = {
@@ -38,16 +38,114 @@ CORRIDOR = {
     "top_resistance": 1.5,
 }
 
+# ── Cached engine (fitted from data, refreshed every 6 hours) ──
+_engine_cache = {"engine": None, "fitted_at": 0}
+_ratio_cache = {"gold": None, "m2": None, "spx": None, "fitted_at": 0}
+CACHE_TTL = 6 * 3600  # 6 hours
+
+
+async def _get_engine(session: AsyncSession) -> PowerLawEngine:
+    """Get or create cached PowerLawEngine fitted from DB + early price data."""
+    now = time.time()
+    if _engine_cache["engine"] and (now - _engine_cache["fitted_at"]) < CACHE_TTL:
+        return _engine_cache["engine"]
+
+    try:
+        # Get daily prices from DB (one per day, deduplicated)
+        result = await session.execute(
+            select(Price).order_by(Price.timestamp)
+        )
+        db_prices = result.scalars().all()
+        engine = PowerLawEngine.from_db_prices(db_prices)
+        logger.info(f"PowerLawEngine fitted: slope={engine.slope}, intercept={engine.intercept}, R²={engine.r_squared}")
+    except Exception as e:
+        logger.warning(f"Failed to fit from DB ({e}), using early prices only")
+        engine = PowerLawEngine.from_early_prices()
+
+    _engine_cache["engine"] = engine
+    _engine_cache["fitted_at"] = now
+    return engine
+
+
+async def _get_ratio_models(session: AsyncSession) -> dict:
+    """Fit Gold, M2, SPX ratio models from historical data."""
+    now_ts = time.time()
+    if _ratio_cache["gold"] and (now_ts - _ratio_cache["fitted_at"]) < CACHE_TTL:
+        return _ratio_cache
+
+    # Get ALL prices + macro data for ratio computation
+    price_result = await session.execute(select(Price).order_by(Price.timestamp))
+    prices = price_result.scalars().all()
+
+    macro_result = await session.execute(select(MacroData).order_by(MacroData.timestamp))
+    macros = macro_result.scalars().all()
+
+    # Build macro lookup by date
+    macro_by_date = {}
+    for m in macros:
+        day_key = m.timestamp.strftime("%Y-%m-%d")
+        macro_by_date[day_key] = m
+
+    # Build ratio time series
+    gold_ratios, m2_ratios, spx_ratios = [], [], []
+    for p in prices:
+        if not p.close or p.close <= 0:
+            continue
+        day_key = p.timestamp.strftime("%Y-%m-%d")
+        m = macro_by_date.get(day_key)
+        if m:
+            if m.gold and m.gold > 0:
+                gold_ratios.append((p.timestamp, p.close / m.gold))
+            if m.sp500 and m.sp500 > 0:
+                spx_ratios.append((p.timestamp, p.close / m.sp500))
+            if hasattr(m, 'm2_supply') and m.m2_supply and m.m2_supply > 0:
+                m2_ratios.append((p.timestamp, p.close / m.m2_supply))
+
+    # Fit each ratio model (with fallback to early prices for BTC/Gold)
+    # Supplement with early data if not enough points
+    early_prices = PowerLawEngine._load_early_prices()
+
+    for d, btc_price in early_prices:
+        # Historical gold price approximation for early years
+        # Gold was ~$1,200-1,800/oz during 2011-2013
+        day_key = d.strftime("%Y-%m-%d")
+        if day_key not in macro_by_date and d.year >= 2011 and btc_price > 0:
+            # Approximate gold prices by year
+            gold_approx = {2011: 1571, 2012: 1669, 2013: 1411}.get(d.year)
+            if gold_approx:
+                gold_ratios.append((d, btc_price / gold_approx))
+
+    try:
+        _ratio_cache["gold"] = RatioModel.fit(gold_ratios) if len(gold_ratios) >= 20 else None
+    except Exception as e:
+        logger.warning(f"Gold ratio fit failed: {e}")
+        _ratio_cache["gold"] = None
+
+    try:
+        _ratio_cache["spx"] = RatioModel.fit(spx_ratios) if len(spx_ratios) >= 20 else None
+    except Exception as e:
+        logger.warning(f"SPX ratio fit failed: {e}")
+        _ratio_cache["spx"] = None
+
+    try:
+        _ratio_cache["m2"] = RatioModel.fit(m2_ratios) if len(m2_ratios) >= 20 else None
+    except Exception as e:
+        logger.warning(f"M2 ratio fit failed: {e}")
+        _ratio_cache["m2"] = None
+
+    _ratio_cache["fitted_at"] = now_ts
+    logger.info(f"Ratio models fitted — gold:{_ratio_cache['gold'] is not None}, spx:{_ratio_cache['spx'] is not None}, m2:{_ratio_cache['m2'] is not None}")
+    return _ratio_cache
+
 
 def power_law_fair_value(target_date: datetime = None) -> float:
-    """Calculate BTC Power Law fair value for a given date."""
-    if target_date is None:
-        target_date = datetime.utcnow()
-    days = (target_date - BTC_GENESIS).days
-    if days <= 0:
-        return 0
-    log_price = PL_INTERCEPT + PL_SLOPE * math.log10(days)
-    return 10 ** log_price
+    """Calculate BTC Power Law fair value using cached engine.
+    Fallback to early-prices-only engine if cache is empty.
+    """
+    engine = _engine_cache.get("engine")
+    if engine is None:
+        engine = PowerLawEngine.from_early_prices()
+    return engine.fair_value(target_date)
 
 
 def get_valuation_label(deviation_pct: float) -> str:
@@ -64,9 +162,155 @@ def get_valuation_label(deviation_pct: float) -> str:
         return "Overvalued"
 
 
+def _build_dashboard_calculations(engine, current_price: float, stats: dict) -> dict:
+    """Build calculation explanations for each dashboard stat."""
+    days = stats["days_since_genesis"]
+    fv = stats["model_price"]
+    return {
+        "model_price": {
+            "formula": "10^(intercept + slope * log10(days_since_genesis))",
+            "inputs": {
+                "intercept": engine.intercept,
+                "slope": engine.slope,
+                "days_since_genesis": days,
+                "log10_days": round(math.log10(days), 4) if days > 0 else 0,
+            },
+            "steps": [
+                f"log10({days}) = {math.log10(days):.4f}" if days > 0 else "N/A",
+                f"{engine.intercept} + {engine.slope} * {math.log10(days):.4f} = {engine.intercept + engine.slope * math.log10(days):.4f}" if days > 0 else "N/A",
+                f"10^{engine.intercept + engine.slope * math.log10(days):.4f} = ${fv:,.2f}" if days > 0 else "N/A",
+            ],
+            "explanation": "The Power Law model fits a straight line in log-log space to Bitcoin's entire price history. The model price is calculated by taking 10 raised to the power of (intercept + slope * log10 of days since Bitcoin genesis on Jan 3, 2009).",
+        },
+        "multiplier": {
+            "formula": "current_price / model_price",
+            "inputs": {"current_price": current_price, "model_price": fv},
+            "steps": [f"${current_price:,.2f} / ${fv:,.2f} = {stats['multiplier']:.4f}x"],
+            "explanation": "The multiplier shows how far the actual price is from the model's fair value. Below 1.0x means undervalued relative to the power law trend. Above 1.0x means overvalued.",
+        },
+        "deviation_pct": {
+            "formula": "((current_price - model_price) / model_price) * 100",
+            "inputs": {"current_price": current_price, "model_price": fv},
+            "steps": [
+                f"({current_price:,.2f} - {fv:,.2f}) / {fv:,.2f} * 100",
+                f"= {stats['deviation_pct']:.2f}%",
+            ],
+            "explanation": "Percentage deviation from the power law fair value. Negative means BTC is trading below the model's expected price. Historically, BTC oscillates between -60% and +150% of the model.",
+        },
+        "slope": {
+            "formula": "OLS regression slope in log10-log10 space",
+            "inputs": {"n_data_points": "All daily prices since 2010"},
+            "steps": [
+                "1. Convert all (date, price) pairs to (log10(days), log10(price))",
+                "2. Run Ordinary Least Squares (OLS) linear regression",
+                f"3. Fitted slope B = {engine.slope}",
+            ],
+            "explanation": "The slope (B) of the power law regression represents Bitcoin's growth rate in log-log space. A slope of ~5.5 means that for every 10x increase in time, price increases by 10^5.5 = ~316,000x. Computed via OLS regression on all historical daily prices.",
+        },
+        "r_squared": {
+            "formula": "R2 = 1 - (SS_residual / SS_total)",
+            "inputs": {"SS_res": "Sum of squared residuals", "SS_tot": "Total sum of squares"},
+            "steps": [
+                "1. For each data point: residual = actual_log_price - predicted_log_price",
+                "2. SS_res = sum(residuals^2)",
+                "3. SS_tot = sum((log_price - mean_log_price)^2)",
+                f"4. R2 = 1 - SS_res/SS_tot = {engine.r_squared}",
+            ],
+            "explanation": "R-squared measures how well the power law model fits the data. A value of 0.95+ means the model explains over 95% of Bitcoin's price variance in log-log space. Computed from OLS regression residuals.",
+        },
+        "log_volatility": {
+            "formula": "sigma = sqrt(SS_residual / (n - 2))",
+            "inputs": {"description": "Standard deviation of residuals in log10 space"},
+            "steps": [
+                "1. Compute residuals: actual_log_price - predicted_log_price for each point",
+                "2. Sum of squared residuals (SS_res)",
+                f"3. sigma = sqrt(SS_res / (n-2)) = {engine.log_volatility}",
+            ],
+            "explanation": "Log volatility measures the typical scatter of actual prices around the model line in log space. Lower values mean prices track the model more closely. A value of 0.20 means prices typically deviate by +/-10^0.20 = +/-58% from the model.",
+        },
+        "cagr": {
+            "formula": "((model_price_now / genesis_value)^(1/years) - 1) * 100",
+            "inputs": {"years_since_genesis": round(days / 365.25, 1) if days > 0 else 0},
+            "steps": [
+                f"Model price today: ${fv:,.2f}",
+                f"Years since genesis: {days / 365.25:.1f}" if days > 0 else "N/A",
+                f"CAGR = {stats['cagr']}%",
+            ],
+            "explanation": "Compound Annual Growth Rate of the power law model from genesis to today. This represents the model's implied average yearly return. Note: actual CAGR varies depending on entry date.",
+        },
+    }
+
+
+def _build_ratio_calculations(asset: str, model, actual_ratio: float, model_ratio: float, asset_price: float, btc_price: float) -> dict:
+    """Build calculation explanations for ratio model stats."""
+    asset_labels = {
+        "gold": {"name": "Gold", "unit": "oz", "ratio_label": "BTC/Gold (oz)"},
+        "m2": {"name": "M2 Money Supply", "unit": "$T", "ratio_label": "BTC/M2 Index"},
+        "spx": {"name": "S&P 500", "unit": "x", "ratio_label": "BTC/SPX Ratio"},
+    }
+    info = asset_labels.get(asset, {"name": asset, "unit": "", "ratio_label": f"BTC/{asset}"})
+    now = datetime.utcnow()
+    days = (now - BTC_GENESIS).days
+
+    return {
+        "ratio": {
+            "formula": f"BTC_price / {info['name']}_price",
+            "inputs": {"btc_price": btc_price, f"{asset}_price": asset_price},
+            "steps": [f"${btc_price:,.2f} / ${asset_price:,.2f} = {actual_ratio:.4f}"],
+            "explanation": f"The actual {info['ratio_label']} calculated by dividing the current Bitcoin price by the current {info['name']} price. Shows how many units of {info['name']} one Bitcoin is worth.",
+        },
+        "model_ratio": {
+            "formula": f"10^(intercept + slope * log10(days_since_genesis))",
+            "inputs": {
+                "intercept": model.intercept,
+                "slope": model.slope,
+                "days_since_genesis": days,
+            },
+            "steps": [
+                f"log10({days}) = {math.log10(days):.4f}" if days > 0 else "N/A",
+                f"{model.intercept} + {model.slope} * {math.log10(days):.4f} = {model.intercept + model.slope * math.log10(days):.4f}" if days > 0 else "N/A",
+                f"10^{model.intercept + model.slope * math.log10(days):.4f} = {model_ratio:.4f}" if days > 0 else "N/A",
+            ],
+            "explanation": f"The power law model for {info['ratio_label']} fitted via OLS regression in log-log space on all historical ratio data points. Predicts the expected ratio based on Bitcoin's age.",
+        },
+        "multiplier": {
+            "formula": "actual_ratio / model_ratio",
+            "inputs": {"actual": actual_ratio, "model": model_ratio},
+            "steps": [f"{actual_ratio:.4f} / {model_ratio:.4f} = {actual_ratio / model_ratio:.4f}x" if model_ratio > 0 else "N/A"],
+            "explanation": f"How far the actual {info['ratio_label']} is from the model prediction. Below 1.0x means the ratio is below trend (BTC undervalued relative to {info['name']}). Above 1.0x means above trend.",
+        },
+        "r_squared": {
+            "formula": "R2 = 1 - (SS_residual / SS_total)",
+            "inputs": {"value": model.r_squared},
+            "steps": [f"R2 = {model.r_squared} ({model.r_squared * 100:.1f}% of variance explained)"],
+            "explanation": f"How well the power law fits the historical {info['ratio_label']} data. Computed from OLS regression in log-log space on all available ratio data points.",
+        },
+        "slope": {
+            "formula": "OLS regression slope B in log10-log10 space",
+            "inputs": {"value": model.slope},
+            "steps": [f"B = {model.slope}"],
+            "explanation": f"The growth rate of {info['ratio_label']} in log-log space. Higher slope means Bitcoin is gaining value against {info['name']} faster over time.",
+        },
+        "log_volatility": {
+            "formula": "sigma = sqrt(SS_residual / (n - 2))",
+            "inputs": {"value": model.log_volatility},
+            "steps": [f"sigma = {model.log_volatility}"],
+            "explanation": f"Standard deviation of the residuals in log space. Shows how much the actual ratio typically deviates from the model prediction.",
+        },
+        "cagr": {
+            "formula": "((ratio_now / ratio_start)^(1/years) - 1) * 100",
+            "inputs": {"value": model.cagr},
+            "steps": [f"CAGR = {model.cagr}%"],
+            "explanation": f"Compound Annual Growth Rate of the {info['ratio_label']} model. Shows how fast Bitcoin is outpacing {info['name']} per year on average.",
+        },
+    }
+
+
 @router.get("/current")
 async def get_power_law_current(session: AsyncSession = Depends(get_session)):
     """Current BTC price vs Power Law fair value."""
+    engine = await _get_engine(session)
+
     # Get latest price
     result = await session.execute(
         select(Price).order_by(desc(Price.timestamp)).limit(1)
@@ -76,7 +320,7 @@ async def get_power_law_current(session: AsyncSession = Depends(get_session)):
 
     now = datetime.utcnow()
     days_since_genesis = (now - BTC_GENESIS).days
-    fair_value = power_law_fair_value(now)
+    fair_value = engine.fair_value(now)
 
     # Corridor bands
     bands = {name: round(fair_value * mult, 2) for name, mult in CORRIDOR.items()}
@@ -107,8 +351,9 @@ async def get_power_law_current(session: AsyncSession = Depends(get_session)):
             ((bands["top_resistance"] - current_price) / current_price * 100) if current_price else 0, 2
         ),
         "parameters": {
-            "intercept": PL_INTERCEPT,
-            "slope": PL_SLOPE,
+            "intercept": engine.intercept,
+            "slope": engine.slope,
+            "r_squared": engine.r_squared,
             "genesis": BTC_GENESIS.isoformat(),
         },
         "timestamp": now.isoformat(),
@@ -121,13 +366,14 @@ async def get_power_law_historical(
     session: AsyncSession = Depends(get_session),
 ):
     """Historical Power Law curve + actual BTC price for charting."""
+    engine = await _get_engine(session)
     now = datetime.utcnow()
 
     # Generate power law curve points (daily)
     curve_points = []
     for d in range(max(1, (now - BTC_GENESIS).days - days), (now - BTC_GENESIS).days + 1):
         date = BTC_GENESIS + timedelta(days=d)
-        fv = power_law_fair_value(date)
+        fv = engine.fair_value(date)
         curve_points.append({
             "date": date.strftime("%Y-%m-%d"),
             "days_since_genesis": d,
@@ -160,8 +406,9 @@ async def get_power_law_historical(
         "days": days,
         "points": curve_points,
         "parameters": {
-            "intercept": PL_INTERCEPT,
-            "slope": PL_SLOPE,
+            "intercept": engine.intercept,
+            "slope": engine.slope,
+            "r_squared": engine.r_squared,
             "genesis": BTC_GENESIS.isoformat(),
             "corridor_multipliers": CORRIDOR,
         },
@@ -173,7 +420,6 @@ async def get_power_law_historical(
 # ════════════════════════════════════════════════════════════════
 
 DATA_DIR = Path(__file__).parent.parent / "data"
-_engine = PowerLawEngine()
 
 
 async def _get_current_price(session: AsyncSession) -> float | None:
@@ -216,9 +462,11 @@ async def get_power_law_dashboard(session: AsyncSession = Depends(get_session)):
     if not current_price:
         return {"error": "No price data available"}
 
+    engine = await _get_engine(session)
     change_24h = await _get_24h_change(session)
-    stats = _engine.get_stats(current_price)
+    stats = engine.get_stats(current_price)
     stats["change_24h"] = change_24h
+    stats["calculations"] = _build_dashboard_calculations(engine, current_price, stats)
 
     return stats
 
@@ -228,6 +476,7 @@ async def get_power_law_curve(
     session: AsyncSession = Depends(get_session),
 ):
     """Full power law curve from 2011 to 2045 with model line, bands, and actual price."""
+    engine = await _get_engine(session)
     now = datetime.utcnow()
 
     # Generate curve from 2011 to 2045
@@ -241,7 +490,7 @@ async def get_power_law_curve(
     # Weekly points for efficiency
     for d in range(start_day, end_day + 1, 7):
         date = BTC_GENESIS + timedelta(days=d)
-        fv = _engine.fair_value(date)
+        fv = engine.fair_value(date)
         curve_points.append({
             "date": date.strftime("%Y-%m-%d"),
             "days": d,
@@ -266,7 +515,7 @@ async def get_power_law_curve(
         point["actual"] = daily_prices.get(point["date"])
 
     # Today marker
-    today_fv = _engine.fair_value(now)
+    today_fv = engine.fair_value(now)
     current_price = await _get_current_price(session)
 
     return {
@@ -282,7 +531,7 @@ async def get_power_law_curve(
 
 @router.get("/gold")
 async def get_power_law_gold(session: AsyncSession = Depends(get_session)):
-    """BTC/Gold ratio analysis with power law model."""
+    """BTC/Gold ratio analysis with power law model fitted from data."""
     current_price = await _get_current_price(session)
     macro = await _get_latest_macro(session)
 
@@ -292,93 +541,96 @@ async def get_power_law_gold(session: AsyncSession = Depends(get_session)):
     gold_price = macro.gold
     btc_in_oz = current_price / gold_price
 
-    # Simple ratio model (using default power law scaled for gold)
-    ratio_model = RatioModel()
-    # Use approximate ratio regression params
-    ratio_model.intercept = -14.5
-    ratio_model.slope = 4.8
-    ratio_model.r_squared = 0.92
+    ratios = await _get_ratio_models(session)
+    ratio_model = ratios.get("gold")
+    if not ratio_model:
+        return {"error": "Not enough data to fit BTC/Gold model"}
 
     model_oz = ratio_model.model_ratio()
     multiplier = btc_in_oz / model_oz if model_oz > 0 else 0
 
     projections = {}
-    for key, d in {"dec_2026": datetime(2026, 12, 31), "dec_2030": datetime(2030, 12, 31), "dec_2035": datetime(2035, 12, 31)}.items():
-        projections[key] = round(ratio_model.model_ratio(d), 2)
+    for key, d in {"dec_2026": datetime(2026, 12, 31), "dec_2030": datetime(2030, 12, 31), "dec_2035": datetime(2035, 12, 31), "dec_2045": datetime(2045, 12, 31)}.items():
+        projections[key] = round(ratio_model.model_ratio(d), 1)
 
     milestones = {}
     for target in [100, 1000]:
         milestones[f"{target}_oz"] = ratio_model.find_milestone_date(target)
 
-    return {
+    response = {
         "btc_price": current_price,
         "gold_price": gold_price,
         "btc_in_gold_oz": round(btc_in_oz, 2),
         "model_oz": round(model_oz, 2),
         "multiplier": round(multiplier, 4),
+        "slope": ratio_model.slope,
         "r_squared": ratio_model.r_squared,
+        "log_volatility": ratio_model.log_volatility,
+        "cagr": ratio_model.cagr,
         "projections": projections,
         "milestones": milestones,
         "timestamp": datetime.utcnow().isoformat(),
     }
+    response["calculations"] = _build_ratio_calculations("gold", ratio_model, btc_in_oz, model_oz, gold_price, current_price)
+    return response
 
 
 @router.get("/m2")
 async def get_power_law_m2(session: AsyncSession = Depends(get_session)):
-    """BTC/M2 money supply ratio analysis."""
+    """BTC/M2 money supply ratio analysis fitted from data."""
     current_price = await _get_current_price(session)
     macro = await _get_latest_macro(session)
 
     if not current_price:
         return {"error": "Missing price data"}
 
-    # Get M2 supply (from DB or fallback estimate)
+    # Get M2 supply from DB
     m2_supply = None
-    if macro and macro.m2_supply:
+    if macro and hasattr(macro, 'm2_supply') and macro.m2_supply:
         m2_supply = macro.m2_supply
-    else:
-        # Fallback estimate
-        base_date = datetime(2024, 1, 1)
-        base_m2 = 20.8
-        years = (datetime.utcnow() - base_date).days / 365.25
-        m2_supply = base_m2 * (1.072 ** years)
 
-    # BTC/M2 index (BTC price / M2 in trillions * 10000 for readability)
+    if not m2_supply:
+        return {"error": "Missing M2 supply data"}
+
     btc_m2_index = current_price / m2_supply if m2_supply > 0 else 0
 
-    # Simple model for BTC/M2
-    ratio_model = RatioModel()
-    ratio_model.intercept = -13.8
-    ratio_model.slope = 4.5
-    ratio_model.r_squared = 0.90
+    ratios = await _get_ratio_models(session)
+    ratio_model = ratios.get("m2")
+    if not ratio_model:
+        return {"error": "Not enough data to fit BTC/M2 model"}
 
     model_index = ratio_model.model_ratio()
     multiplier = btc_m2_index / model_index if model_index > 0 else 0
 
     projections = {}
-    for key, d in {"dec_2026": datetime(2026, 12, 31), "dec_2030": datetime(2030, 12, 31), "dec_2035": datetime(2035, 12, 31)}.items():
-        projections[key] = round(ratio_model.model_ratio(d), 2)
+    for key, d in {"dec_2026": datetime(2026, 12, 31), "dec_2030": datetime(2030, 12, 31), "dec_2035": datetime(2035, 12, 31), "dec_2045": datetime(2045, 12, 31)}.items():
+        projections[key] = round(ratio_model.model_ratio(d))
 
     milestones = {}
     for target in [10000, 40000, 100000, 400000]:
         milestones[f"${target:,}"] = ratio_model.find_milestone_date(target)
 
-    return {
+    response = {
         "btc_price": current_price,
         "m2_supply_trillions": round(m2_supply, 2),
         "btc_m2_index": round(btc_m2_index, 4),
         "model_index": round(model_index, 4),
         "multiplier": round(multiplier, 4),
+        "slope": ratio_model.slope,
         "r_squared": ratio_model.r_squared,
+        "log_volatility": ratio_model.log_volatility,
+        "cagr": ratio_model.cagr,
         "projections": projections,
         "milestones": milestones,
         "timestamp": datetime.utcnow().isoformat(),
     }
+    response["calculations"] = _build_ratio_calculations("m2", ratio_model, btc_m2_index, model_index, m2_supply, current_price)
+    return response
 
 
 @router.get("/spx")
 async def get_power_law_spx(session: AsyncSession = Depends(get_session)):
-    """BTC/S&P 500 ratio analysis."""
+    """BTC/S&P 500 ratio analysis fitted from data."""
     current_price = await _get_current_price(session)
     macro = await _get_latest_macro(session)
 
@@ -388,33 +640,38 @@ async def get_power_law_spx(session: AsyncSession = Depends(get_session)):
     spx_price = macro.sp500
     btc_spx_ratio = current_price / spx_price
 
-    ratio_model = RatioModel()
-    ratio_model.intercept = -14.0
-    ratio_model.slope = 4.6
-    ratio_model.r_squared = 0.91
+    ratios = await _get_ratio_models(session)
+    ratio_model = ratios.get("spx")
+    if not ratio_model:
+        return {"error": "Not enough data to fit BTC/SPX model"}
 
     model_ratio = ratio_model.model_ratio()
     multiplier = btc_spx_ratio / model_ratio if model_ratio > 0 else 0
 
     projections = {}
-    for key, d in {"dec_2026": datetime(2026, 12, 31), "dec_2030": datetime(2030, 12, 31), "dec_2035": datetime(2035, 12, 31)}.items():
-        projections[key] = round(ratio_model.model_ratio(d), 2)
+    for key, d in {"dec_2026": datetime(2026, 12, 31), "dec_2030": datetime(2030, 12, 31), "dec_2035": datetime(2035, 12, 31), "dec_2045": datetime(2045, 12, 31)}.items():
+        projections[key] = round(ratio_model.model_ratio(d), 1)
 
     milestones = {}
     for target in [20, 50, 100, 200]:
         milestones[f"{target}x"] = ratio_model.find_milestone_date(target)
 
-    return {
+    response = {
         "btc_price": current_price,
         "spx_price": spx_price,
         "btc_spx_ratio": round(btc_spx_ratio, 4),
         "model_ratio": round(model_ratio, 4),
         "multiplier": round(multiplier, 4),
+        "slope": ratio_model.slope,
         "r_squared": ratio_model.r_squared,
+        "log_volatility": ratio_model.log_volatility,
+        "cagr": ratio_model.cagr,
         "projections": projections,
         "milestones": milestones,
         "timestamp": datetime.utcnow().isoformat(),
     }
+    response["calculations"] = _build_ratio_calculations("spx", ratio_model, btc_spx_ratio, model_ratio, spx_price, current_price)
+    return response
 
 
 @router.get("/assets")
@@ -507,11 +764,13 @@ async def get_power_law_calculator(
     # BTC collateral * LTV% = annual expenses
     btc_needed = annual_expenses / (current_price * (ltv / 100))
 
+    engine = await _get_engine(session)
+
     # Build timeline
     timeline = []
     for year in range(years + 1):
         future_date = datetime.utcnow() + timedelta(days=365 * year)
-        projected_price = _engine.fair_value(future_date)
+        projected_price = engine.fair_value(future_date)
         adjusted_expenses = annual_expenses * ((1 + inflation / 100) ** year)
         btc_value = btc_needed * projected_price
         borrowing_capacity = btc_value * (ltv / 100)

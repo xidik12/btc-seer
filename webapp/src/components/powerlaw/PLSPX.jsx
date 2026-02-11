@@ -1,7 +1,18 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import CalculationModal, { ClickableStat } from './CalculationModal'
 
 export default function PLSPX({ data }) {
   const { t } = useTranslation(['market', 'common'])
+  const [activeCalc, setActiveCalc] = useState(null)
+  const [activeLabel, setActiveLabel] = useState('')
+
+  const showCalc = (key, label) => {
+    if (data?.calculations?.[key]) {
+      setActiveCalc(data.calculations[key])
+      setActiveLabel(label)
+    }
+  }
 
   if (!data || data.error) {
     return (
@@ -12,19 +23,42 @@ export default function PLSPX({ data }) {
   }
 
   const multColor = data.multiplier >= 1 ? 'text-accent-yellow' : 'text-accent-green'
+  const calcs = data.calculations || {}
 
   return (
     <div className="space-y-3">
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
         <div className="flex items-center justify-between mb-3">
-          <div>
-            <div className="text-text-muted text-[10px]">{t('market:powerLaw.spx.btcSpxRatio')}</div>
+          <div
+            className={calcs.ratio ? 'cursor-pointer hover:opacity-80 active:scale-[0.98] transition-all' : ''}
+            onClick={() => showCalc('ratio', t('market:powerLaw.spx.btcSpxRatio'))}
+          >
+            <div className="text-text-muted text-[10px] flex items-center gap-1">
+              {t('market:powerLaw.spx.btcSpxRatio')}
+              {calcs.ratio && (
+                <svg className="w-2.5 h-2.5 text-accent-blue/40" viewBox="0 0 10 10" fill="none">
+                  <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1"/>
+                  <text x="5" y="7.5" textAnchor="middle" fill="currentColor" fontSize="7" fontFamily="monospace">?</text>
+                </svg>
+              )}
+            </div>
             <div className="text-accent-blue text-2xl font-bold tabular-nums">
               {data.btc_spx_ratio?.toFixed(2)}x
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-text-muted text-[10px]">{t('market:powerLaw.spx.modelRatio')}</div>
+          <div
+            className={`text-right ${calcs.model_ratio ? 'cursor-pointer hover:opacity-80 active:scale-[0.98] transition-all' : ''}`}
+            onClick={() => showCalc('model_ratio', t('market:powerLaw.spx.modelRatio'))}
+          >
+            <div className="text-text-muted text-[10px] flex items-center justify-end gap-1">
+              {t('market:powerLaw.spx.modelRatio')}
+              {calcs.model_ratio && (
+                <svg className="w-2.5 h-2.5 text-accent-blue/40" viewBox="0 0 10 10" fill="none">
+                  <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1"/>
+                  <text x="5" y="7.5" textAnchor="middle" fill="currentColor" fontSize="7" fontFamily="monospace">?</text>
+                </svg>
+              )}
+            </div>
             <div className="text-text-secondary text-2xl font-bold tabular-nums">
               {data.model_ratio?.toFixed(2)}x
             </div>
@@ -32,29 +66,44 @@ export default function PLSPX({ data }) {
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-text-muted">{t('market:powerLaw.spx.spxPrice')}: ${data.spx_price?.toLocaleString()}</span>
-          <span className={`font-bold ${multColor}`}>{data.multiplier?.toFixed(2)}x</span>
+          <span
+            className={`font-bold ${multColor} ${calcs.multiplier ? 'cursor-pointer hover:opacity-80' : ''}`}
+            onClick={() => showCalc('multiplier', t('market:powerLaw.dashboard.multiplier'))}
+          >
+            {data.multiplier?.toFixed(2)}x
+          </span>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-          <div className="text-text-muted text-[9px] mb-1">{t('market:powerLaw.dashboard.rSquared')}</div>
-          <div className="text-accent-green text-sm font-bold">{data.r_squared?.toFixed(3)}</div>
-        </div>
-        <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-          <div className="text-text-muted text-[9px] mb-1">{t('market:powerLaw.gold.btcPrice')}</div>
-          <div className="text-text-primary text-sm font-bold">${data.btc_price?.toLocaleString()}</div>
-        </div>
-        <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-          <div className="text-text-muted text-[9px] mb-1">{t('market:powerLaw.dashboard.multiplier')}</div>
-          <div className={`text-sm font-bold ${multColor}`}>{data.multiplier?.toFixed(4)}</div>
-        </div>
+        <ClickableStat
+          label={t('market:powerLaw.dashboard.rSquared')}
+          value={data.r_squared?.toFixed(3)}
+          color="text-accent-green"
+          calcKey="r_squared"
+          calculations={calcs}
+          onShowCalc={showCalc}
+        />
+        <ClickableStat
+          label={t('market:powerLaw.dashboard.slope')}
+          value={data.slope?.toFixed(3)}
+          calcKey="slope"
+          calculations={calcs}
+          onShowCalc={showCalc}
+        />
+        <ClickableStat
+          label={t('market:powerLaw.dashboard.logVol')}
+          value={data.log_volatility?.toFixed(2)}
+          calcKey="log_volatility"
+          calculations={calcs}
+          onShowCalc={showCalc}
+        />
       </div>
 
       {data.projections && (
         <div>
           <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('market:powerLaw.dashboard.projections')}</h3>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {Object.entries(data.projections).map(([key, val]) => (
               <div key={key} className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
                 <div className="text-text-muted text-[9px] mb-1">{key.replace('dec_', 'Dec ')}</div>
@@ -78,6 +127,14 @@ export default function PLSPX({ data }) {
             ))}
           </div>
         </div>
+      )}
+
+      {activeCalc && (
+        <CalculationModal
+          calc={activeCalc}
+          label={activeLabel}
+          onClose={() => setActiveCalc(null)}
+        />
       )}
     </div>
   )

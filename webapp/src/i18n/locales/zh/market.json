@@ -388,6 +388,13 @@
       "m2Supply": "M2供应量",
       "projections": "M2比率预测"
     },
+    "calculation": {
+      "howCalculated": "计算方式",
+      "formula": "公式",
+      "inputs": "输入数据",
+      "steps": "计算步骤",
+      "explanation": "含义解释"
+    },
     "spx": {
       "title": "BTC / 标普500",
       "btcSpxRatio": "BTC/SPX比率",

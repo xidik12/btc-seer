@@ -50,8 +50,36 @@ CYCLE_PEAKS = [
     {"halving": HALVING_DATES[2], "peak_date": datetime(2021, 11, 10), "peak_price": 69000, "days_to_peak": 549},
 ]
 
-# All-time high
-BTC_ATH = 109000  # Approximate ATH as of early 2025
+def _estimate_circulating_supply() -> float:
+    """Estimate current BTC circulating supply from halving schedule.
+
+    Uses block reward schedule + approximate blocks mined since each halving.
+    Average block time: 10 minutes → 144 blocks/day.
+    """
+    now = datetime.utcnow()
+    # Cumulative supply at each halving
+    halving_supply = [
+        # (halving_date, cumulative_supply_at_halving, block_reward_after)
+        (datetime(2009, 1, 3), 0, 50),              # Genesis
+        (datetime(2012, 11, 28), 10_500_000, 25),    # Halving 1
+        (datetime(2016, 7, 9), 15_750_000, 12.5),    # Halving 2
+        (datetime(2020, 5, 11), 18_375_000, 6.25),   # Halving 3
+        (datetime(2024, 4, 19), 19_687_500, 3.125),  # Halving 4
+    ]
+
+    # Find current era
+    current_era = halving_supply[0]
+    for era in halving_supply:
+        if now >= era[0]:
+            current_era = era
+
+    base_supply = current_era[1]
+    reward = current_era[2]
+    days_since = (now - current_era[0]).days
+    blocks_mined = days_since * 144  # ~144 blocks per day
+    additional = blocks_mined * reward
+
+    return base_supply + additional
 
 
 class QuantPredictor:
@@ -259,14 +287,17 @@ class QuantPredictor:
             }
 
     def _rainbow_chart_signal(self, current_price: float) -> dict:
-        """Rainbow Chart: log regression bands based on weeks since genesis."""
-        weeks_since_genesis = (datetime.utcnow() - BTC_GENESIS).days / 7
-        if weeks_since_genesis <= 0:
-            return {"direction": 0, "confidence": 0, "reasoning": "Invalid date"}
-
-        # Base curve: log10(price) = 2.6521 * ln(weeks) - 18.163
-        log_base = 2.6521 * math.log(weeks_since_genesis) - 18.163
-        base_price = 10 ** log_base
+        """Rainbow Chart: log regression bands using fitted Power Law model."""
+        try:
+            from app.models.power_law_engine import PowerLawEngine
+            engine = PowerLawEngine.from_early_prices()
+            base_price = engine.fair_value(datetime.utcnow())
+        except Exception:
+            # Fallback: compute from days since genesis
+            days = (datetime.utcnow() - BTC_GENESIS).days
+            if days <= 0:
+                return {"direction": 0, "confidence": 0, "reasoning": "Invalid date"}
+            base_price = current_price  # neutral fallback
 
         # Rainbow bands
         bands = {
@@ -533,8 +564,9 @@ class QuantPredictor:
         if not tx_volume or tx_volume == 0:
             return {"direction": 0, "confidence": 0.1, "reasoning": "No tx volume data for NVT"}
 
-        # Approximate market cap (circulating supply ~19.6M)
-        market_cap = current_price * 19_600_000
+        # Dynamic circulating supply from halving schedule
+        circulating = _estimate_circulating_supply()
+        market_cap = current_price * circulating
         nvt = market_cap / (tx_volume * current_price) if tx_volume > 0 else 100
 
         if nvt < 30:
@@ -647,10 +679,9 @@ class QuantPredictor:
             return {"direction": 0, "confidence": 0.20, "reasoning": f"Between ${nearest_support:,.0f}-${nearest_resistance:,.0f}"}
 
     def _ath_proximity_signal(self, current_price: float, closes: np.ndarray) -> dict:
-        """ATH/ATL proximity analysis."""
-        # Use actual data ATH if available
-        data_ath = float(np.max(closes)) if len(closes) > 0 else BTC_ATH
-        ath = max(data_ath, BTC_ATH)
+        """ATH/ATL proximity analysis using actual price data."""
+        # ATH purely from data — no hardcoded value
+        ath = float(np.max(closes)) if len(closes) > 0 else current_price
 
         ath_distance = (ath - current_price) / ath if ath > 0 else 0
 

@@ -388,6 +388,13 @@
       "m2Supply": "M2 Supply",
       "projections": "M2 Ratio Projections"
     },
+    "calculation": {
+      "howCalculated": "How this is calculated",
+      "formula": "Formula",
+      "inputs": "Inputs",
+      "steps": "Calculation Steps",
+      "explanation": "What this means"
+    },
     "spx": {
       "title": "BTC / S&P 500",
       "btcSpxRatio": "BTC/SPX Ratio",

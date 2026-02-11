@@ -388,6 +388,13 @@
       "m2Supply": "Объём M2",
       "projections": "Прогнозы BTC/M2"
     },
+    "calculation": {
+      "howCalculated": "Как это рассчитано",
+      "formula": "Формула",
+      "inputs": "Входные данные",
+      "steps": "Шаги расчёта",
+      "explanation": "Что это значит"
+    },
     "spx": {
       "title": "BTC / S&P 500",
       "btcSpxRatio": "Коэф. BTC/SPX",

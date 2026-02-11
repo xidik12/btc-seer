@@ -346,13 +346,18 @@ class FeatureBuilder:
             from datetime import timedelta
 
             BTC_GENESIS = datetime(2009, 1, 3)
-            PL_INTERCEPT = -17.016
-            PL_SLOPE = 5.845
+
+            # Fit power law from early prices data (no hardcoded params)
+            try:
+                from app.models.power_law_engine import PowerLawEngine
+                _pl_engine = PowerLawEngine.from_early_prices()
+            except Exception:
+                _pl_engine = None
 
             now = datetime.utcnow()
             days_since_genesis = (now - BTC_GENESIS).days
-            if days_since_genesis > 0:
-                fair_value = 10 ** (PL_INTERCEPT + PL_SLOPE * math.log10(days_since_genesis))
+            if days_since_genesis > 0 and _pl_engine:
+                fair_value = _pl_engine.fair_value(now)
                 features["power_law_deviation"] = (current_price - fair_value) / fair_value if fair_value > 0 else 0
 
                 # Corridor position (support=0.42x, resistance=1.5x)
