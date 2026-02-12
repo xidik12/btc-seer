@@ -22,14 +22,14 @@ export default function PLCurve({ data }) {
     )
   }
 
-  // Filter to every 2nd point for performance
+  // Filter to every 2nd point for performance, ensure positive values for log scale
   const chartData = data.points.filter((_, i) => i % 2 === 0).map(p => ({
     date: p.date,
-    model: p.model,
-    lower: p.lower,
-    upper: p.upper,
-    actual: p.actual,
-  }))
+    model: p.model > 0 ? p.model : null,
+    lower: p.lower > 0 ? p.lower : null,
+    upper: p.upper > 0 ? p.upper : null,
+    actual: p.actual > 0 ? p.actual : null,
+  })).filter(p => p.model != null)
 
   const todayDate = data.today?.date
 
@@ -77,7 +77,10 @@ export default function PLCurve({ data }) {
                 return `$${v}`
               }}
               scale="log"
-              domain={['auto', 'auto']}
+              domain={[
+                (dataMin) => Math.max(0.01, dataMin * 0.5),
+                (dataMax) => dataMax * 2,
+              ]}
               allowDataOverflow
             />
             <Tooltip
@@ -101,6 +104,8 @@ export default function PLCurve({ data }) {
               strokeDasharray="4 4"
               dot={false}
               name={t('market:powerLaw.curve.upperBand')}
+              connectNulls
+              isAnimationActive={false}
             />
             {/* Model line (blue/white) */}
             <Line
@@ -109,6 +114,8 @@ export default function PLCurve({ data }) {
               strokeWidth={2}
               dot={false}
               name={t('market:powerLaw.curve.modelLine')}
+              connectNulls
+              isAnimationActive={false}
             />
             {/* Lower band (green) */}
             <Line
@@ -118,6 +125,8 @@ export default function PLCurve({ data }) {
               strokeDasharray="4 4"
               dot={false}
               name={t('market:powerLaw.curve.lowerBand')}
+              connectNulls
+              isAnimationActive={false}
             />
             {/* Actual price (yellow) */}
             <Line
@@ -127,6 +136,7 @@ export default function PLCurve({ data }) {
               dot={false}
               name={t('market:powerLaw.curve.actualPrice')}
               connectNulls
+              isAnimationActive={false}
             />
           </ComposedChart>
         </ResponsiveContainer>

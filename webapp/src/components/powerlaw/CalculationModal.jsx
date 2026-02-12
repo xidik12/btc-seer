@@ -39,7 +39,7 @@ export default function CalculationModal({ calc, label, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center pb-16 sm:pb-0"
       onClick={onClose}
       onTouchMove={handleBackdropTouch}
     >
@@ -131,8 +131,8 @@ export default function CalculationModal({ calc, label, onClose }) {
           )}
         </div>
 
-        {/* Safe area padding for mobile */}
-        <div className="h-6" />
+        {/* Safe area padding for mobile bottom nav bar */}
+        <div className="h-20 sm:h-6" />
       </div>
     </div>
   )

@@ -305,16 +305,18 @@ export default function PowerLaw() {
     { path: '/learn', label: t('common:link.learn') },
   ]
 
-  // Fetch main tab data
+  // Fetch main tab data (dashboard + legacy current/historical)
   const fetchMainData = useCallback(async () => {
     try {
       setError(null)
-      const [curr, hist] = await Promise.all([
+      const [curr, hist, dashboard] = await Promise.all([
         api.getPowerLawCurrent(),
         api.getPowerLawHistorical(365),
+        api.getPowerLawDashboard(),
       ])
       setCurrent(curr)
       setHistorical(hist)
+      setTabData((prev) => ({ ...prev, dashboard }))
     } catch (err) {
       console.error('Power Law fetch error:', err)
       setError(err.message || t('common:widget.failedToLoad', { name: t('market:powerLaw.title') }))
@@ -376,7 +378,7 @@ export default function PowerLaw() {
   const renderTab = () => {
     switch (activeTab) {
       case 'main':
-        return <MainTab current={current} historical={historical} t={t} />
+        return <PLDashboard data={tabData.dashboard} />
       case 'curve':
         return <PLCurve data={tabData.curve} />
       case 'gold':
@@ -392,7 +394,7 @@ export default function PowerLaw() {
       case 'milestones':
         return <PLMilestones data={tabData.milestones} />
       default:
-        return <MainTab current={current} historical={historical} t={t} />
+        return <PLDashboard data={tabData.dashboard} />
     }
   }
 
