@@ -361,7 +361,11 @@
       "annualized": "Annualized",
       "estimatedDate": "Estimated date",
       "logScale": "Logarithmic Y-axis",
-      "dataRange": "{{from}} - {{to}}"
+      "dataRange": "{{from}} - {{to}}",
+      "trendline": "Trendline",
+      "earliest": "Earliest",
+      "at4xTrend": "At 4× trend",
+      "powerLawDate": "Power Law"
     },
     "curve": {
       "title": "Power Law Curve (2011-2045)",

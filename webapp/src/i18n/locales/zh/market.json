@@ -361,7 +361,11 @@
       "annualized": "年化",
       "estimatedDate": "预计日期",
       "logScale": "对数Y轴",
-      "dataRange": "{{from}} - {{to}}"
+      "dataRange": "{{from}} - {{to}}",
+      "trendline": "趋势线",
+      "earliest": "最早",
+      "at4xTrend": "4倍趋势",
+      "powerLawDate": "幂律模型"
     },
     "curve": {
       "title": "幂律曲线 (2011-2045)",

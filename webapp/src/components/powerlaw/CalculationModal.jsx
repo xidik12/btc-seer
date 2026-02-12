@@ -1,8 +1,28 @@
 import { useTranslation } from 'react-i18next'
-import { useEffect } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
 export default function CalculationModal({ calc, label, onClose }) {
   const { t } = useTranslation(['market'])
+  const contentRef = useRef(null)
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    const scrollY = window.scrollY
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.left = '0'
+    document.body.style.right = '0'
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.left = ''
+      document.body.style.right = ''
+      document.body.style.overflow = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [])
 
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose() }
@@ -10,20 +30,31 @@ export default function CalculationModal({ calc, label, onClose }) {
     return () => document.removeEventListener('keydown', handleEsc)
   }, [onClose])
 
+  // Prevent touch events on backdrop from scrolling through
+  const handleBackdropTouch = useCallback((e) => {
+    e.preventDefault()
+  }, [])
+
   if (!calc) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      onClick={onClose}
+      onTouchMove={handleBackdropTouch}
+    >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-md mx-auto bg-bg-secondary rounded-t-2xl sm:rounded-2xl border border-white/10 shadow-2xl max-h-[80vh] overflow-y-auto animate-slide-up"
+        ref={contentRef}
+        className="relative w-full max-w-md mx-auto bg-bg-secondary rounded-t-2xl sm:rounded-2xl border border-white/10 shadow-2xl max-h-[80vh] overflow-y-auto overscroll-contain animate-slide-up touch-pan-y"
         onClick={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-bg-secondary border-b border-white/5 px-4 py-3 flex items-center justify-between rounded-t-2xl">
+        <div className="sticky top-0 bg-bg-secondary border-b border-white/5 px-4 py-3 flex items-center justify-between rounded-t-2xl z-10">
           <div>
             <h3 className="text-text-primary text-sm font-bold">{label}</h3>
             <div className="text-accent-blue text-[10px] font-medium mt-0.5">
@@ -100,10 +131,8 @@ export default function CalculationModal({ calc, label, onClose }) {
           )}
         </div>
 
-        {/* Pull indicator for mobile */}
-        <div className="sm:hidden flex justify-center pb-3">
-          <div className="w-10 h-1 rounded-full bg-white/10" />
-        </div>
+        {/* Safe area padding for mobile */}
+        <div className="h-6" />
       </div>
     </div>
   )

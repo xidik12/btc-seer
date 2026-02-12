@@ -157,20 +157,35 @@ export default function PLDashboard({ data }) {
         </div>
       </div>
 
-      {/* Milestones */}
+      {/* Milestones — trendline + earliest (at 4x) like b1m.io */}
       {data.milestones && Object.keys(data.milestones).length > 0 && (
         <div>
           <h3 className="text-text-secondary text-xs font-semibold mb-2">
             {t('market:powerLaw.dashboard.milestones')}
           </h3>
           <div className="grid grid-cols-2 gap-2">
-            {Object.entries(data.milestones).map(([target, date]) => (
-              <div key={target} className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-                <div className="text-accent-yellow text-sm font-bold">{target}</div>
-                <div className="text-text-muted text-[10px] mt-1">{t('market:powerLaw.dashboard.expected')}</div>
-                <div className="text-text-secondary text-xs font-medium">{date}</div>
-              </div>
-            ))}
+            {Object.entries(data.milestones).map(([target, milestone]) => {
+              const trendline = typeof milestone === 'object' ? milestone.trendline : milestone
+              const earliest = typeof milestone === 'object' ? milestone.earliest : null
+              return (
+                <div key={target} className="contents">
+                  {/* Trendline date */}
+                  <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
+                    <div className="text-accent-yellow text-sm font-bold">{target} {t('market:powerLaw.dashboard.trendline')}</div>
+                    <div className="text-text-muted text-[10px] mt-1">{t('market:powerLaw.dashboard.powerLawDate')}</div>
+                    <div className="text-text-secondary text-xs font-medium">{trendline}</div>
+                  </div>
+                  {/* Earliest date (at 4x upper band) */}
+                  {earliest && (
+                    <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
+                      <div className="text-accent-green text-sm font-bold">{t('market:powerLaw.dashboard.earliest')} {target}</div>
+                      <div className="text-text-muted text-[10px] mt-1">{t('market:powerLaw.dashboard.at4xTrend')}</div>
+                      <div className="text-text-secondary text-xs font-medium">{earliest}</div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

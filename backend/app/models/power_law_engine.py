@@ -224,11 +224,14 @@ class PowerLawEngine:
         }.items():
             projections[key] = round(self.fair_value(d), 2)
 
-        # Milestones
+        # Milestones — trendline date + earliest possible (at 4x upper band)
         milestones = {}
         for target in [1_000_000, 10_000_000]:
             label = f"${target:,.0f}"
-            milestones[label] = self.find_milestone_date(target)
+            milestones[label] = {
+                "trendline": self.find_milestone_date(target),
+                "earliest": self.find_milestone_date(target / 4.0),
+            }
 
         return {
             "current_price": current_price,

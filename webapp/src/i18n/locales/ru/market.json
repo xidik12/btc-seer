@@ -361,7 +361,11 @@
       "annualized": "Годовой",
       "estimatedDate": "Ожидаемая дата",
       "logScale": "Логарифмическая ось Y",
-      "dataRange": "{{from}} - {{to}}"
+      "dataRange": "{{from}} - {{to}}",
+      "trendline": "Тренд",
+      "earliest": "Ранний",
+      "at4xTrend": "При 4× тренде",
+      "powerLawDate": "Power Law"
     },
     "curve": {
       "title": "Кривая Power Law (2011-2045)",
