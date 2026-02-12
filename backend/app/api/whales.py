@@ -240,7 +240,14 @@ async def seed_whale_data(
          "source": "bitcoinworld.co.in"},
     ]
 
-    from app.collectors.whale import calculate_severity
+    def _severity(btc: float) -> int:
+        if btc >= 10000: return 10
+        if btc >= 5000: return 9
+        if btc >= 2000: return 8
+        if btc >= 1000: return 7
+        if btc >= 500: return 6
+        if btc >= 200: return 5
+        return 4
 
     stored = 0
     for w in VERIFIED_WHALES:
@@ -263,7 +270,7 @@ async def seed_whale_data(
             direction=w["dir"],
             from_entity=w["from"],
             to_entity=w["to"],
-            severity=calculate_severity(w["btc"]),
+            severity=_severity(w["btc"]),
             btc_price_at_tx=w["price"],
             source=w["source"],
         )
