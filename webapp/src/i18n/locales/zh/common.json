@@ -100,7 +100,8 @@
     "marketCap": "市值"
   },
   "widget": {
-    "failedToLoad": "{{name}} 加载失败"
+    "failedToLoad": "{{name}} 加载失败",
+    "noData": "数据不足，数据收集后将自动显示。"
   },
   "chart": {
     "pinchToZoom": "双指缩放 · 拖动平移",

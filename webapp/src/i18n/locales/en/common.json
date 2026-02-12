@@ -100,7 +100,8 @@
     "marketCap": "Market Cap"
   },
   "widget": {
-    "failedToLoad": "{{name}} failed to load"
+    "failedToLoad": "{{name}} failed to load",
+    "noData": "Not enough data available yet. Data will appear after collection runs."
   },
   "chart": {
     "pinchToZoom": "Pinch to zoom · Drag to pan",
