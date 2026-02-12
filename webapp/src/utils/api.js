@@ -239,6 +239,15 @@ export const api = {
   }),
   getCoinReport: (address) => cachedFetch(`/coins/report/${address}`, T120),
 
+  // Whales
+  getRecentWhales: (hours = 24, limit = 50, direction) => {
+    let url = `/whales/recent?hours=${hours}&limit=${limit}`
+    if (direction) url += `&direction=${direction}`
+    return cachedFetch(url, T60)
+  },
+  getWhaleStats: () => cachedFetch('/whales/stats', T120),
+  getWhaleFlowHistory: (days = 7) => cachedFetch(`/whales/flow-history?days=${days}`, T300),
+
   // Referral
   getReferralInfo: (initData) => fetchAPI('/referral/info', { headers: { 'X-Telegram-Init-Data': initData } }),
   getReferralLeaderboard: () => cachedFetch('/referral/leaderboard', T120),

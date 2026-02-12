@@ -639,5 +639,28 @@
     "actualMove": "Actual Move",
     "conf": "conf",
     "calibrationDesc": "Higher confidence should = higher accuracy. Dots sized by sample count."
+  },
+  "whales": {
+    "title": "Whale Watcher",
+    "noData": "No whale data available",
+    "noWhales": "No whale transactions found for this filter",
+    "directionBreakdown": "Direction Breakdown (24h)",
+    "direction": {
+      "exchange_in": "Exchange Deposit",
+      "exchange_out": "Exchange Withdrawal",
+      "whale_to_whale": "Whale to Whale",
+      "unknown": "Unknown"
+    },
+    "filter": {
+      "all": "All",
+      "exchange_in": "Deposits",
+      "exchange_out": "Withdrawals"
+    },
+    "stats": {
+      "count24h": "24h Whale Txs",
+      "netFlow": "Net Flow (BTC)",
+      "avgSize": "Avg Size (BTC)",
+      "accuracy": "Predictive Accuracy"
+    }
   }
 }

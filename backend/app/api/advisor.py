@@ -8,6 +8,7 @@ from sqlalchemy import select, desc
 from app.database import (
     async_session, PortfolioState, TradeAdvice, TradeResult, Price,
     Prediction, Signal, QuantPrediction, IndicatorSnapshot, EventImpact,
+    WhaleTransaction,
 )
 
 router = APIRouter(prefix="/api/advisor", tags=["advisor"])
@@ -467,6 +468,29 @@ async def suggest_trade(telegram_id: int):
             for e in result.scalars().all()
         ]
 
+        # Recent whale transactions (severity >= 7)
+        since_24h = datetime.utcnow() - timedelta(hours=24)
+        whale_result = await session.execute(
+            select(WhaleTransaction)
+            .where(WhaleTransaction.timestamp >= since_24h)
+            .where(WhaleTransaction.severity >= 7)
+            .order_by(desc(WhaleTransaction.timestamp))
+            .limit(20)
+        )
+        whale_txs = whale_result.scalars().all()
+        whale_activity = None
+        if whale_txs:
+            in_count = sum(1 for w in whale_txs if w.direction == "exchange_in")
+            out_count = sum(1 for w in whale_txs if w.direction == "exchange_out")
+            total_btc = sum(w.amount_btc for w in whale_txs)
+            whale_activity = {
+                "count": len(whale_txs),
+                "total_btc": round(total_btc, 2),
+                "exchange_in": in_count,
+                "exchange_out": out_count,
+                "bias": "bearish" if in_count > out_count else "bullish" if out_count > in_count else "neutral",
+            }
+
     if not pred_row or not signal_row:
         raise HTTPException(503, "No prediction data yet. Wait for first analysis cycle.")
 
@@ -612,6 +636,7 @@ async def suggest_trade(telegram_id: int):
             "fear_greed": (indicators or {}).get("fear_greed_value"),
         },
         "events": events,
+        "whale_activity": whale_activity,
         "current_price": current_price,
     }
 

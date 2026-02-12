@@ -14,7 +14,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import settings
 from app.database import init_db
-from app.api import predictions, signals, news, market, history, influencers, events, quant, coins
+from app.api import predictions, signals, news, market, history, influencers, events, quant, coins, whales
 from app.api import advisor as advisor_api
 from app.api import admin as admin_api
 from app.api import powerlaw, public_api, liquidations, elliott_wave, subscription, auth as auth_api, referral as referral_api
@@ -39,6 +39,8 @@ from app.scheduler.jobs import (
     run_advisor_check,
     run_trade_management,
     check_subscription_expiry,
+    collect_whale_transactions,
+    evaluate_whale_impacts,
 )
 from app.advisor.feedback import run_training_feedback, run_adaptive_weight_learning
 from app.collectors.coins import collect_coin_prices, seed_tracked_coins
@@ -113,6 +115,7 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(collect_dominance_data, "interval", hours=1, id="collect_dominance")
         scheduler.add_job(save_indicator_snapshot, "interval", hours=1, id="save_indicators")
         scheduler.add_job(collect_coin_prices, "interval", minutes=2, id="collect_coins")
+        scheduler.add_job(collect_whale_transactions, "interval", minutes=10, id="collect_whales")
 
         # Prediction jobs
         scheduler.add_job(generate_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict")
@@ -123,6 +126,7 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(evaluate_quant_predictions, "interval", hours=1, id="evaluate_quant")
         scheduler.add_job(classify_news_events, "interval", minutes=5, id="classify_events")
         scheduler.add_job(evaluate_event_impacts, "interval", minutes=30, id="evaluate_events")
+        scheduler.add_job(evaluate_whale_impacts, "interval", minutes=30, id="evaluate_whales")
 
         # Cleanup
         scheduler.add_job(cleanup_old_data, "interval", hours=24, id="cleanup")
@@ -223,6 +227,7 @@ async def lifespan(app: FastAPI):
             await _safe_run(collect_funding_data(), "collect_funding_data")
             await _safe_run(collect_dominance_data(), "collect_dominance_data")
             await _safe_run(collect_coin_prices(), "collect_coin_prices")
+            await _safe_run(collect_whale_transactions(), "collect_whale_transactions")
 
             # Step 3: Wait briefly for data to settle, then generate first prediction
             await asyncio.sleep(30)
@@ -299,6 +304,7 @@ app.include_router(elliott_wave.router)
 app.include_router(subscription.router)
 app.include_router(auth_api.router)
 app.include_router(referral_api.router)
+app.include_router(whales.router)
 app.include_router(public_api.router)
 
 

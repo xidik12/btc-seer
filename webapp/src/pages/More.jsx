@@ -16,6 +16,18 @@ const menuItems = [
     descKey: 'nav.back',
   },
   {
+    path: '/whales',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <path d="M3 12c0-3.5 3-7 9-7s9 3.5 9 7-3 6-9 6-9-2.5-9-6z" />
+        <circle cx="8" cy="11" r="1" fill="currentColor" />
+        <path d="M21 12c1 1 2 2 2 3" />
+      </svg>
+    ),
+    labelKey: 'link.whales',
+    descKey: 'nav.forward',
+  },
+  {
     path: '/news',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">

@@ -29,6 +29,7 @@ const CoinReport = lazy(() => import('./pages/CoinReport'))
 const Tools = lazy(() => import('./pages/Tools'))
 const Resources = lazy(() => import('./pages/Resources'))
 const Learn = lazy(() => import('./pages/Learn'))
+const Whales = lazy(() => import('./pages/Whales'))
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -111,6 +112,7 @@ export default function App() {
           <Route path="/liquidations" element={<Liquidations />} />
           <Route path="/powerlaw" element={<PowerLaw />} />
           <Route path="/events" element={<EventMemory />} />
+          <Route path="/whales" element={<Whales />} />
           <Route path="/elliott-wave" element={<ElliottWave />} />
           <Route path="/tools" element={<Tools />} />
           <Route path="/resources" element={<Resources />} />
