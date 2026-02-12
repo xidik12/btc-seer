@@ -4,6 +4,7 @@ import { api } from '../utils/api'
 import { formatPrice } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
 import SubTabBar from '../components/SubTabBar'
+import DataSourceFooter from '../components/DataSourceFooter'
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -410,6 +411,8 @@ export default function PowerLaw() {
       <Suspense fallback={<LoadingPlaceholder />}>
         {renderTab()}
       </Suspense>
+
+      <DataSourceFooter sources={['binance', 'coingecko', 'alphavantage', 'yahoo', 'fred', 'ols']} />
     </div>
   )
 }

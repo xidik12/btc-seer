@@ -177,5 +177,27 @@
   },
   "confidence": "Уверенность",
   "risk": "Риск",
-  "riskLevel": "Уровень риска"
+  "riskLevel": "Уровень риска",
+  "dataSources": {
+    "title": "Источники данных",
+    "liveData": "Вся статистика рассчитывается на основе данных в реальном времени",
+    "binance": "Binance",
+    "coingecko": "CoinGecko",
+    "alphavantage": "Alpha Vantage",
+    "yahoo": "Yahoo Finance",
+    "fred": "FRED",
+    "blockchain": "Blockchain.com",
+    "mempool": "Mempool.space",
+    "blockchair": "Blockchair",
+    "feargreed": "Страх и жадность",
+    "coinglass": "Coinglass",
+    "defillama": "DeFi Llama",
+    "deribit": "Deribit",
+    "cryptopanic": "CryptoPanic",
+    "reddit": "Reddit",
+    "rss": "RSS-ленты",
+    "ols": "OLS-регрессия",
+    "ta": "Теханализ",
+    "ai": "ИИ-модели"
+  }
 }

@@ -4,6 +4,7 @@ import { api } from '../utils/api'
 import { formatPrice } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
 import SubTabBar from '../components/SubTabBar'
+import DataSourceFooter from '../components/DataSourceFooter'
 
 import {
   ResponsiveContainer,
@@ -507,6 +508,8 @@ export default function ElliottWave() {
           <p>{t('market:elliott.divergenceInfo')}</p>
         </div>
       </div>
+
+      <DataSourceFooter sources={['binance', 'coingecko', 'ta']} />
     </div>
   )
 }

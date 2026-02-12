@@ -240,6 +240,86 @@ def _build_dashboard_calculations(engine, current_price: float, stats: dict) -> 
         },
     }
 
+    # Projection calculations
+    from datetime import datetime as dt
+    projection_targets = {
+        "dec_2026": dt(2026, 12, 31),
+        "dec_2030": dt(2030, 12, 31),
+        "dec_2035": dt(2035, 12, 31),
+        "dec_2045": dt(2045, 12, 31),
+    }
+    for key, target_date in projection_targets.items():
+        target_days = (target_date - datetime(2009, 1, 3)).days
+        log_days = math.log10(target_days)
+        log_price = engine.intercept + engine.slope * log_days
+        projected = 10 ** log_price
+        result[f"proj_{key}"] = {
+            "formula": "10^(intercept + slope * log10(days_to_target))",
+            "inputs": {
+                "target_date": target_date.strftime("%Y-%m-%d"),
+                "days_since_genesis": target_days,
+                "intercept": engine.intercept,
+                "slope": engine.slope,
+            },
+            "steps": [
+                f"Days from genesis to {target_date.strftime('%b %Y')}: {target_days}",
+                f"log10({target_days}) = {log_days:.4f}",
+                f"{engine.intercept} + {engine.slope} * {log_days:.4f} = {log_price:.4f}",
+                f"10^{log_price:.4f} = ${projected:,.2f}",
+            ],
+            "explanation": f"Projected price for {target_date.strftime('%B %Y')} based on the power law trendline — not a prediction, but where the model's fair value line will be at that date.",
+        }
+
+    # Milestone calculations
+    for target in [1_000_000, 10_000_000]:
+        label = f"${target:,.0f}"
+        # Trendline date: solve for date where model = target
+        log_target = math.log10(target)
+        log_days_ms = (log_target - engine.intercept) / engine.slope
+        days_ms = 10 ** log_days_ms
+        ms_date = engine.find_milestone_date(target)
+        sanitized = str(target)
+        result[f"milestone_{sanitized}_trendline"] = {
+            "formula": "days = 10^((log10(target_price) - intercept) / slope)",
+            "inputs": {
+                "target_price": f"${target:,.0f}",
+                "intercept": engine.intercept,
+                "slope": engine.slope,
+            },
+            "steps": [
+                f"log10({target:,.0f}) = {log_target:.4f}",
+                f"({log_target:.4f} - {engine.intercept}) / {engine.slope} = {log_days_ms:.4f}",
+                f"10^{log_days_ms:.4f} = {days_ms:,.0f} days from genesis",
+                f"Genesis + {days_ms:,.0f} days = {ms_date}",
+            ],
+            "explanation": f"The date when the power law trendline (fair value) reaches {label}. This is when the model's central estimate equals the target price.",
+        }
+        # Earliest date: solve for date where model * 4 = target (upper band)
+        earliest_target = target / 4.0
+        log_target_e = math.log10(earliest_target)
+        log_days_e = (log_target_e - engine.intercept) / engine.slope
+        days_e = 10 ** log_days_e
+        earliest_date = engine.find_milestone_date(earliest_target)
+        result[f"milestone_{sanitized}_earliest"] = {
+            "formula": "days = 10^((log10(target_price / 4) - intercept) / slope)",
+            "inputs": {
+                "target_price": f"${target:,.0f}",
+                "at_4x_multiplier": f"${earliest_target:,.0f}",
+                "intercept": engine.intercept,
+                "slope": engine.slope,
+            },
+            "steps": [
+                f"{label} / 4 = ${earliest_target:,.0f} (model needs to reach this for price to hit {label} at 4x upper band)",
+                f"log10({earliest_target:,.0f}) = {log_target_e:.4f}",
+                f"({log_target_e:.4f} - {engine.intercept}) / {engine.slope} = {log_days_e:.4f}",
+                f"10^{log_days_e:.4f} = {days_e:,.0f} days from genesis",
+                f"Genesis + {days_e:,.0f} days = {earliest_date}",
+            ],
+            "explanation": f"The earliest possible date for {label} BTC, assuming price reaches 4x above the trendline (the historical upper band). This is when the model's fair value equals {label}/4 = ${earliest_target:,.0f}.",
+        }
+
+    return result
+
 
 def _build_ratio_calculations(asset: str, model, actual_ratio: float, model_ratio: float, asset_price: float, btc_price: float) -> dict:
     """Build calculation explanations for ratio model stats."""

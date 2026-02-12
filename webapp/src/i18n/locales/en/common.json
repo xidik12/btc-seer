@@ -178,5 +178,27 @@
   "failedToLoad": "Failed to load data",
   "confidence": "Confidence",
   "risk": "Risk",
-  "riskLevel": "Risk Level"
+  "riskLevel": "Risk Level",
+  "dataSources": {
+    "title": "Data Sources",
+    "liveData": "All statistics are calculated from real-time data",
+    "binance": "Binance",
+    "coingecko": "CoinGecko",
+    "alphavantage": "Alpha Vantage",
+    "yahoo": "Yahoo Finance",
+    "fred": "FRED",
+    "blockchain": "Blockchain.com",
+    "mempool": "Mempool.space",
+    "blockchair": "Blockchair",
+    "feargreed": "Fear & Greed",
+    "coinglass": "Coinglass",
+    "defillama": "DeFi Llama",
+    "deribit": "Deribit",
+    "cryptopanic": "CryptoPanic",
+    "reddit": "Reddit",
+    "rss": "RSS Feeds",
+    "ols": "OLS Regression",
+    "ta": "Technical Analysis",
+    "ai": "AI Models"
+  }
 }

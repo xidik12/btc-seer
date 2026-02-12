@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatPrice, formatTime, formatDate, formatTimeAgo, getActionColor, getActionBg } from '../utils/format'
 import SubTabBar from '../components/SubTabBar'
+import DataSourceFooter from '../components/DataSourceFooter'
 
 const TIMEFRAMES = ['1h', '4h', '24h']
 const ANALYSIS_TABS = [
@@ -284,6 +285,8 @@ export default function Signals() {
           ))}
         </div>
       )}
+
+      <DataSourceFooter sources={['binance', 'coingecko', 'ta', 'ai']} />
     </div>
   )
 }

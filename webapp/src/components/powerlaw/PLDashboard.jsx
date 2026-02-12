@@ -2,10 +2,23 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CalculationModal, { ClickableStat } from './CalculationModal'
 
-function ProjectionCard({ label, value }) {
+function ProjectionCard({ label, value, calcKey, calculations, onShowCalc }) {
+  const hasCalc = calculations && calcKey && calculations[calcKey]
+
   return (
-    <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-      <div className="text-text-muted text-[9px] font-medium mb-1">{label}</div>
+    <div
+      className={`bg-bg-card rounded-xl p-3 border border-white/5 text-center ${hasCalc ? 'cursor-pointer hover:border-accent-blue/30 hover:bg-white/[0.02] active:scale-[0.98] transition-all' : ''}`}
+      onClick={() => hasCalc && onShowCalc(calcKey, label)}
+    >
+      <div className="flex items-center justify-center gap-1">
+        <div className="text-text-muted text-[9px] font-medium mb-1">{label}</div>
+        {hasCalc && (
+          <svg className="w-2.5 h-2.5 text-accent-blue/40 mb-1 shrink-0" viewBox="0 0 10 10" fill="none">
+            <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1"/>
+            <text x="5" y="7.5" textAnchor="middle" fill="currentColor" fontSize="7" fontFamily="monospace">?</text>
+          </svg>
+        )}
+      </div>
       <div className="text-accent-blue text-sm font-bold tabular-nums">
         ${typeof value === 'number' ? value.toLocaleString() : value}
       </div>
@@ -152,6 +165,9 @@ export default function PLDashboard({ data }) {
               key={key}
               label={key.replace('dec_', 'Dec ')}
               value={val}
+              calcKey={`proj_${key}`}
+              calculations={calcs}
+              onShowCalc={showCalc}
             />
           ))}
         </div>
@@ -167,18 +183,45 @@ export default function PLDashboard({ data }) {
             {Object.entries(data.milestones).map(([target, milestone]) => {
               const trendline = typeof milestone === 'object' ? milestone.trendline : milestone
               const earliest = typeof milestone === 'object' ? milestone.earliest : null
+              const numTarget = target.replace(/[$,]/g, '')
+              const trendCalcKey = `milestone_${numTarget}_trendline`
+              const earliestCalcKey = `milestone_${numTarget}_earliest`
+              const hasTrendCalc = calcs[trendCalcKey]
+              const hasEarliestCalc = calcs[earliestCalcKey]
               return (
                 <div key={target} className="contents">
                   {/* Trendline date */}
-                  <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-                    <div className="text-accent-yellow text-sm font-bold">{target} {t('market:powerLaw.dashboard.trendline')}</div>
+                  <div
+                    className={`bg-bg-card rounded-xl p-3 border border-white/5 text-center ${hasTrendCalc ? 'cursor-pointer hover:border-accent-blue/30 hover:bg-white/[0.02] active:scale-[0.98] transition-all' : ''}`}
+                    onClick={() => hasTrendCalc && showCalc(trendCalcKey, `${target} ${t('market:powerLaw.dashboard.trendline')}`)}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      <div className="text-accent-yellow text-sm font-bold">{target} {t('market:powerLaw.dashboard.trendline')}</div>
+                      {hasTrendCalc && (
+                        <svg className="w-2.5 h-2.5 text-accent-blue/40 shrink-0" viewBox="0 0 10 10" fill="none">
+                          <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1"/>
+                          <text x="5" y="7.5" textAnchor="middle" fill="currentColor" fontSize="7" fontFamily="monospace">?</text>
+                        </svg>
+                      )}
+                    </div>
                     <div className="text-text-muted text-[10px] mt-1">{t('market:powerLaw.dashboard.powerLawDate')}</div>
                     <div className="text-text-secondary text-xs font-medium">{trendline}</div>
                   </div>
                   {/* Earliest date (at 4x upper band) */}
                   {earliest && (
-                    <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-                      <div className="text-accent-green text-sm font-bold">{t('market:powerLaw.dashboard.earliest')} {target}</div>
+                    <div
+                      className={`bg-bg-card rounded-xl p-3 border border-white/5 text-center ${hasEarliestCalc ? 'cursor-pointer hover:border-accent-blue/30 hover:bg-white/[0.02] active:scale-[0.98] transition-all' : ''}`}
+                      onClick={() => hasEarliestCalc && showCalc(earliestCalcKey, `${t('market:powerLaw.dashboard.earliest')} ${target}`)}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <div className="text-accent-green text-sm font-bold">{t('market:powerLaw.dashboard.earliest')} {target}</div>
+                        {hasEarliestCalc && (
+                          <svg className="w-2.5 h-2.5 text-accent-blue/40 shrink-0" viewBox="0 0 10 10" fill="none">
+                            <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1"/>
+                            <text x="5" y="7.5" textAnchor="middle" fill="currentColor" fontSize="7" fontFamily="monospace">?</text>
+                          </svg>
+                        )}
+                      </div>
                       <div className="text-text-muted text-[10px] mt-1">{t('market:powerLaw.dashboard.at4xTrend')}</div>
                       <div className="text-text-secondary text-xs font-medium">{earliest}</div>
                     </div>

@@ -4,6 +4,7 @@ import { api } from '../utils/api'
 import { formatPricePrecise, formatPrice, formatTimeAgo } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
 import SubTabBar from '../components/SubTabBar'
+import DataSourceFooter from '../components/DataSourceFooter'
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -881,6 +882,8 @@ export default function Technical() {
       </Section>
 
       <IndicatorHistory />
+
+      <DataSourceFooter sources={['binance', 'coingecko', 'ta']} />
 
       <p className="text-text-muted text-[10px] text-center pb-4 leading-relaxed">
         {t('technical.updatesEveryMinute')}

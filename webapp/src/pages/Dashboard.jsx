@@ -14,6 +14,7 @@ import OnChainWidget from '../components/OnChainWidget'
 import DominanceWidget from '../components/DominanceWidget'
 import FearGreedWidget from '../components/FearGreedWidget'
 import SupplyWidget from '../components/SupplyWidget'
+import DataSourceFooter from '../components/DataSourceFooter'
 
 class SafeWrap extends Component {
   constructor(props) {
@@ -287,6 +288,8 @@ export default function Dashboard() {
       <SafeWrap name="MacroDashboard" t={t}>
         <MacroDashboard />
       </SafeWrap>
+
+      <DataSourceFooter sources={['binance', 'coingecko', 'cryptopanic', 'rss', 'reddit', 'blockchain', 'mempool', 'feargreed', 'alphavantage', 'coinglass', 'defillama', 'deribit', 'ai']} />
 
       <p className="text-text-muted text-[10px] text-center pb-4 leading-relaxed">
         {t('common:app.disclaimer')}

@@ -4,6 +4,7 @@ import { api } from '../utils/api'
 import { formatPrice, formatNumber } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
 import SubTabBar from '../components/SubTabBar'
+import DataSourceFooter from '../components/DataSourceFooter'
 import {
   ResponsiveContainer,
   BarChart,
@@ -691,6 +692,8 @@ export default function Liquidations() {
           <p>{t('market:liquidations.howToUse.paragraph3')}</p>
         </div>
       </div>
+
+      <DataSourceFooter sources={['binance', 'coinglass']} />
     </div>
   )
 }
