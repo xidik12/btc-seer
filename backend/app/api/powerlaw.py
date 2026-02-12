@@ -166,7 +166,7 @@ def _build_dashboard_calculations(engine, current_price: float, stats: dict) -> 
     """Build calculation explanations for each dashboard stat."""
     days = stats["days_since_genesis"]
     fv = stats["model_price"]
-    return {
+    result = {
         "model_price": {
             "formula": "10^(intercept + slope * log10(days_since_genesis))",
             "inputs": {
@@ -241,12 +241,11 @@ def _build_dashboard_calculations(engine, current_price: float, stats: dict) -> 
     }
 
     # Projection calculations
-    from datetime import datetime as dt
     projection_targets = {
-        "dec_2026": dt(2026, 12, 31),
-        "dec_2030": dt(2030, 12, 31),
-        "dec_2035": dt(2035, 12, 31),
-        "dec_2045": dt(2045, 12, 31),
+        "dec_2026": datetime(2026, 12, 31),
+        "dec_2030": datetime(2030, 12, 31),
+        "dec_2035": datetime(2035, 12, 31),
+        "dec_2045": datetime(2045, 12, 31),
     }
     for key, target_date in projection_targets.items():
         target_days = (target_date - datetime(2009, 1, 3)).days

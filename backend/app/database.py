@@ -22,6 +22,7 @@ def _create_engine():
             max_overflow=20,
             pool_pre_ping=True,
             pool_recycle=1800,
+            connect_args={"timeout": 30},
         )
     _db_logger.info("Using SQLite backend")
     return create_async_engine(url, echo=False)
