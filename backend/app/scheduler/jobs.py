@@ -1673,10 +1673,10 @@ async def evaluate_whale_impacts():
 
 
 async def backfill_whale_transactions():
-    """Backfill whale transactions from Blockchair + BTCScan (multiple pages).
+    """Backfill whale transactions by scanning recent blocks via mempool.space.
 
-    Fetches up to 100 recent large BTC transactions.
-    Uses BTCScan to get addresses for entity labeling.
+    Scans the last 10 blocks (~100 min) for large BTC transactions (>100 BTC).
+    Each block is paginated (25 txs/page), scanning first 200 txs per block.
     Called once at startup or via admin endpoint.
     """
     import aiohttp
@@ -1685,7 +1685,7 @@ async def backfill_whale_transactions():
     from app.collectors.whale import calculate_severity
     from app.collectors.known_entities import identify_any
 
-    logger.info("Backfilling whale transactions...")
+    logger.info("Backfilling whale transactions via mempool.space block scan...")
 
     try:
         ssl_ctx = ssl.create_default_context(cafile=certifi.where())
@@ -1703,117 +1703,109 @@ async def backfill_whale_transactions():
         stored_total = 0
 
         async with aiohttp.ClientSession(timeout=timeout, connector=connector) as http:
-            for offset in range(0, 100, 10):
-                try:
-                    url = "https://api.blockchair.com/bitcoin/transactions"
-                    params = {
-                        "q": "output_total(10000000000..)",
-                        "s": "time(desc)",
-                        "limit": "10",
-                        "offset": str(offset),
-                    }
-                    async with http.get(url, params=params) as resp:
-                        if resp.status != 200:
-                            logger.warning(f"Blockchair returned {resp.status} at offset {offset}")
+            # Get recent blocks
+            async with http.get("https://mempool.space/api/blocks") as resp:
+                if resp.status != 200:
+                    logger.warning(f"mempool.space /blocks returned {resp.status}")
+                    return 0
+                blocks = await resp.json()
+
+            for block in blocks[:10]:  # last 10 blocks
+                block_hash = block.get("id", "")
+                block_ts = block.get("timestamp")
+                if not block_hash:
+                    continue
+
+                # Scan pages of txs in this block
+                for page_start in range(0, 200, 25):
+                    try:
+                        url = f"https://mempool.space/api/block/{block_hash}/txs/{page_start}"
+                        async with http.get(url) as resp:
+                            if resp.status != 200:
+                                break
+                            page_txs = await resp.json()
+
+                        if not page_txs:
                             break
-                        data = await resp.json()
 
-                    raw_txs = data.get("data") or []
-                    if not raw_txs:
-                        break
+                        async with async_session() as session:
+                            for tx in page_txs:
+                                tx_hash = tx.get("txid", "")
+                                if not tx_hash:
+                                    continue
 
-                    async with async_session() as session:
-                        for tx in raw_txs:
-                            tx_hash = tx.get("hash", "")
-                            if not tx_hash:
-                                continue
-
-                            existing = await session.execute(
-                                select(WhaleTransaction.id).where(
-                                    WhaleTransaction.tx_hash == tx_hash
+                                existing = await session.execute(
+                                    select(WhaleTransaction.id).where(
+                                        WhaleTransaction.tx_hash == tx_hash
+                                    )
                                 )
-                            )
-                            if existing.scalar_one_or_none() is not None:
-                                continue
+                                if existing.scalar_one_or_none() is not None:
+                                    continue
 
-                            output_total = tx.get("output_total", 0)
-                            amount_btc = output_total / 1e8
-                            if amount_btc < 100:
-                                continue
+                                total_out = sum(v.get("value", 0) for v in tx.get("vout", []))
+                                amount_btc = total_out / 1e8
+                                if amount_btc < 100:
+                                    continue
 
-                            # Fetch addresses from BTCScan
-                            input_addrs = []
-                            output_addrs = []
-                            try:
-                                btcscan_url = f"https://btcscan.org/api/tx/{tx_hash}"
-                                async with http.get(btcscan_url) as btc_resp:
-                                    if btc_resp.status == 200:
-                                        tx_detail = await btc_resp.json()
-                                        for vin in tx_detail.get("vin", []):
-                                            addr = vin.get("prevout", {}).get("scriptpubkey_address")
-                                            if addr:
-                                                input_addrs.append(addr)
-                                        for vout in tx_detail.get("vout", []):
-                                            addr = vout.get("scriptpubkey_address")
-                                            if addr:
-                                                output_addrs.append(addr)
-                                await asyncio.sleep(1)  # rate limit BTCScan
-                            except Exception:
-                                pass
+                                # Extract addresses (already in mempool.space response)
+                                input_addrs = []
+                                for vin in tx.get("vin", []):
+                                    prevout = vin.get("prevout") or {}
+                                    addr = prevout.get("scriptpubkey_address")
+                                    if addr:
+                                        input_addrs.append(addr)
 
-                            # Classify using known entities
-                            from_entity_info = identify_any(input_addrs)
-                            to_entity_info = identify_any(output_addrs)
+                                output_addrs = []
+                                for vout in tx.get("vout", []):
+                                    addr = vout.get("scriptpubkey_address")
+                                    if addr:
+                                        output_addrs.append(addr)
 
-                            from_entity = from_entity_info["name"] if from_entity_info else "unknown"
-                            to_entity = to_entity_info["name"] if to_entity_info else "unknown"
+                                # Classify
+                                from_info = identify_any(input_addrs)
+                                to_info = identify_any(output_addrs)
+                                from_name = from_info["name"] if from_info else "unknown"
+                                to_name = to_info["name"] if to_info else "unknown"
 
-                            if from_entity_info and not to_entity_info:
-                                direction = "exchange_out"
-                                primary = from_entity_info
-                            elif not from_entity_info and to_entity_info:
-                                direction = "exchange_in"
-                                primary = to_entity_info
-                            elif from_entity_info and to_entity_info:
-                                direction = "exchange_in"
-                                primary = to_entity_info
-                            else:
-                                direction = "unknown"
-                                primary = None
+                                if from_info and not to_info:
+                                    direction, primary = "exchange_out", from_info
+                                elif not from_info and to_info:
+                                    direction, primary = "exchange_in", to_info
+                                elif from_info and to_info:
+                                    direction, primary = "exchange_in", to_info
+                                else:
+                                    direction, primary = "unknown", None
 
-                            amount_usd = amount_btc * current_price
+                                ts = datetime.utcfromtimestamp(block_ts) if block_ts else datetime.utcnow()
 
-                            try:
-                                ts = datetime.fromisoformat(tx.get("time", "").replace("Z", "+00:00").replace("+00:00", ""))
-                            except (ValueError, AttributeError):
-                                ts = datetime.utcnow()
+                                whale_tx = WhaleTransaction(
+                                    tx_hash=tx_hash,
+                                    timestamp=ts,
+                                    amount_btc=round(amount_btc, 4),
+                                    amount_usd=round(amount_btc * current_price, 2),
+                                    direction=direction,
+                                    from_entity=from_name,
+                                    to_entity=to_name,
+                                    entity_name=primary["name"] if primary else None,
+                                    entity_type=primary["type"] if primary else None,
+                                    entity_wallet=primary["wallet"] if primary else None,
+                                    severity=calculate_severity(amount_btc),
+                                    btc_price_at_tx=current_price,
+                                    source="mempool_backfill",
+                                )
+                                session.add(whale_tx)
+                                stored_total += 1
 
-                            whale_tx = WhaleTransaction(
-                                tx_hash=tx_hash,
-                                timestamp=ts,
-                                amount_btc=round(amount_btc, 4),
-                                amount_usd=round(amount_usd, 2),
-                                direction=direction,
-                                from_entity=from_entity,
-                                to_entity=to_entity,
-                                entity_name=primary["name"] if primary else None,
-                                entity_type=primary["type"] if primary else None,
-                                entity_wallet=primary["wallet"] if primary else None,
-                                severity=calculate_severity(amount_btc),
-                                btc_price_at_tx=current_price,
-                                source="blockchair_backfill",
-                                raw_data=tx,
-                            )
-                            session.add(whale_tx)
-                            stored_total += 1
+                            await session.commit()
 
-                        await session.commit()
+                        if len(page_txs) < 25:
+                            break
 
-                    await asyncio.sleep(2)
+                        await asyncio.sleep(0.5)
 
-                except Exception as e:
-                    logger.warning(f"Blockchair fetch error at offset {offset}: {e}")
-                    break
+                    except Exception as e:
+                        logger.warning(f"Block scan error at {block_hash[:12]} offset {page_start}: {e}")
+                        break
 
         logger.info(f"Whale backfill complete: {stored_total} transactions stored")
         return stored_total

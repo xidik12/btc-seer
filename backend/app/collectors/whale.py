@@ -27,45 +27,98 @@ def calculate_severity(amount_btc: float) -> int:
 
 
 class WhaleCollector(BaseCollector):
-    """Hybrid whale collector using Blockchair (discovery) + BTCScan (details) + mempool.space (fallback).
+    """Whale collector using mempool.space block scanning + BTCScan address monitoring.
 
-    Source 1: Blockchair — discovers large tx hashes (>100 BTC)
-    Source 2: BTCScan — fetches full tx details (addresses) and monitors known entity wallets
-    Source 3: mempool.space — fallback for whale-size mempool txs if Blockchair fails
+    Primary: mempool.space — scans recent blocks for large txs (>100 BTC)
+             Already has full vin/vout with addresses, no second API call needed.
+    Secondary: BTCScan — monitors known entity wallet addresses for new txs.
+    Fallback: Blockchair — tried if mempool.space fails (often IP-banned).
     """
 
-    BLOCKCHAIR_TX_URL = "https://api.blockchair.com/bitcoin/transactions"
-    BTCSCAN_TX_URL = "https://btcscan.org/api/tx"
+    MEMPOOL_BLOCKS_URL = "https://mempool.space/api/blocks"
+    MEMPOOL_BLOCK_TXS_URL = "https://mempool.space/api/block/{block_hash}/txs/{start_index}"
     BTCSCAN_ADDR_URL = "https://btcscan.org/api/address"
-    MEMPOOL_RECENT_URL = "https://mempool.space/api/mempool/recent"
+    BLOCKCHAIR_TX_URL = "https://api.blockchair.com/bitcoin/transactions"
+
+    # Scan first N txs per block (each page = 25 txs)
+    PAGES_PER_BLOCK = 4  # 100 txs per block
+    BLOCKS_TO_SCAN = 3   # ~30 min of blocks
 
     def __init__(self):
         super().__init__()
         self._last_seen_hashes: set = set()
-        self._last_entity_check: dict[str, datetime] = {}  # addr -> last checked time
+        self._last_scanned_block: int = 0  # track highest block we've scanned
+        self._last_entity_check: dict[str, datetime] = {}
 
     async def collect(self) -> dict:
-        """Collect large BTC transactions from Blockchair, enriched via BTCScan."""
+        """Scan recent Bitcoin blocks for whale transactions (>100 BTC).
+
+        Uses mempool.space /api/blocks + /api/block/{hash}/txs/{start}.
+        Each block has ~3000 txs but whale txs are in the first 100 (sorted by fee).
+        We scan 3 blocks x 4 pages (100 txs each) = ~300 txs checked per cycle.
+        """
         transactions = []
 
-        # Step 1: Blockchair for large tx discovery
-        blockchair_txs = await self._fetch_blockchair_large_txs()
-        if blockchair_txs is not None:
-            for tx_hash, raw_tx in blockchair_txs:
-                # Step 2: BTCScan for address details
-                tx_detail = await self._fetch_tx_details(tx_hash)
-                if tx_detail:
-                    tx_data = self._process_tx_detail(tx_hash, tx_detail, raw_tx)
-                    if tx_data:
-                        transactions.append(tx_data)
-                await asyncio.sleep(0.5)  # rate limit BTCScan
-        else:
-            # Fallback: mempool.space for large mempool txs
-            mempool_txs = await self._fetch_mempool_whales()
-            for tx_data in mempool_txs:
-                transactions.append(tx_data)
+        # Step 1: Get recent blocks
+        blocks = await self.fetch_json(self.MEMPOOL_BLOCKS_URL)
+        if not blocks or not isinstance(blocks, list):
+            logger.warning("mempool.space /blocks failed, trying Blockchair fallback")
+            return await self._blockchair_fallback()
 
-        logger.info(f"Whale collector: {len(transactions)} new large txs found")
+        for block in blocks[:self.BLOCKS_TO_SCAN]:
+            block_hash = block.get("id", "")
+            block_height = block.get("height", 0)
+
+            if not block_hash:
+                continue
+
+            # Skip blocks we already scanned
+            if block_height <= self._last_scanned_block:
+                continue
+
+            # Scan pages of transactions
+            for page_start in range(0, self.PAGES_PER_BLOCK * 25, 25):
+                url = self.MEMPOOL_BLOCK_TXS_URL.format(
+                    block_hash=block_hash, start_index=page_start
+                )
+                page_txs = await self.fetch_json(url)
+                if not page_txs or not isinstance(page_txs, list):
+                    break
+
+                for tx in page_txs:
+                    tx_hash = tx.get("txid", "")
+                    if not tx_hash or tx_hash in self._last_seen_hashes:
+                        continue
+
+                    # Calculate total output
+                    total_out = sum(
+                        vout.get("value", 0) for vout in tx.get("vout", [])
+                    )
+                    amount_btc = total_out / 1e8
+
+                    if amount_btc < 100:
+                        continue
+
+                    # This tx is a whale — process it (mempool.space already has full vin/vout)
+                    tx_data = self._process_mempool_tx(tx, block.get("timestamp"))
+                    if tx_data:
+                        self._last_seen_hashes.add(tx_hash)
+                        transactions.append(tx_data)
+
+                if len(page_txs) < 25:
+                    break  # last page
+
+                await asyncio.sleep(0.3)  # gentle rate limit
+
+            # Update last scanned block
+            if block_height > self._last_scanned_block:
+                self._last_scanned_block = block_height
+
+        # Trim seen hashes to avoid memory bloat (keep last 5000)
+        if len(self._last_seen_hashes) > 5000:
+            self._last_seen_hashes = set(list(self._last_seen_hashes)[-3000:])
+
+        logger.info(f"Whale collector: {len(transactions)} new large txs from block scan")
         return {"transactions": transactions, "count": len(transactions)}
 
     async def monitor_known_addresses(self) -> dict:
@@ -88,30 +141,28 @@ class WhaleCollector(BaseCollector):
                     if not tx_hash or tx_hash in self._last_seen_hashes:
                         continue
 
-                    # Calculate total output value
                     total_out = sum(
-                        vout.get("value", 0)
-                        for vout in tx.get("vout", [])
+                        vout.get("value", 0) for vout in tx.get("vout", [])
                     )
                     amount_btc = total_out / 1e8
 
                     if amount_btc < 100:
                         continue
 
-                    # Check if tx is recent (within last 15 min if we have a last_check)
+                    # Check if tx is recent
                     tx_time = tx.get("status", {}).get("block_time")
                     if tx_time and last_check:
                         tx_dt = datetime.utcfromtimestamp(tx_time)
                         if tx_dt < last_check:
                             continue
 
-                    tx_data = self._process_tx_detail(tx_hash, tx, None)
+                    tx_data = self._process_mempool_tx(tx, tx_time)
                     if tx_data:
                         self._last_seen_hashes.add(tx_hash)
                         transactions.append(tx_data)
 
                 self._last_entity_check[addr] = now
-                await asyncio.sleep(0.5)  # rate limit
+                await asyncio.sleep(0.5)
 
             except Exception as e:
                 logger.debug(f"Error monitoring {addr[:12]}...: {e}")
@@ -122,100 +173,25 @@ class WhaleCollector(BaseCollector):
 
     # ── Private Methods ──
 
-    async def _fetch_blockchair_large_txs(self) -> list[tuple[str, dict]] | None:
-        """Fetch large tx hashes from Blockchair. Returns list of (hash, raw_data) or None on failure."""
-        params = {
-            "q": "output_total(10000000000..)",
-            "s": "time(desc)",
-            "limit": "10",
-        }
+    def _process_mempool_tx(self, tx: dict, block_timestamp: int | None = None) -> dict | None:
+        """Process a mempool.space transaction into a whale dict with entity labels.
 
-        data = await self.fetch_json(self.BLOCKCHAIR_TX_URL, params=params)
-        if not data:
-            return None
+        mempool.space tx format has vin[].prevout.scriptpubkey_address and vout[].scriptpubkey_address.
+        """
+        tx_hash = tx.get("txid", "")
 
-        raw_txs = data.get("data", [])
-        if not raw_txs:
-            return None
-
-        results = []
-        new_hashes = set()
-
-        for tx in raw_txs:
-            tx_hash = tx.get("hash", "")
-            if not tx_hash:
-                continue
-            new_hashes.add(tx_hash)
-            if tx_hash not in self._last_seen_hashes:
-                results.append((tx_hash, tx))
-
-        self._last_seen_hashes = new_hashes
-        return results
-
-    async def _fetch_tx_details(self, tx_hash: str) -> dict | None:
-        """Fetch full transaction details from BTCScan (free, includes addresses)."""
-        url = f"{self.BTCSCAN_TX_URL}/{tx_hash}"
-        return await self.fetch_json(url)
-
-    async def _fetch_address_txs(self, address: str) -> list[dict] | None:
-        """Fetch recent transactions for an address from BTCScan."""
-        url = f"{self.BTCSCAN_ADDR_URL}/{address}/txs"
-        data = await self.fetch_json(url)
-        if isinstance(data, list):
-            return data
-        return None
-
-    async def _fetch_mempool_whales(self) -> list[dict]:
-        """Fallback: check mempool.space for whale-size mempool transactions."""
-        data = await self.fetch_json(self.MEMPOOL_RECENT_URL)
-        if not data or not isinstance(data, list):
-            return []
-
-        transactions = []
-        for tx in data:
-            value = tx.get("value", 0)
-            amount_btc = value / 1e8
-
-            if amount_btc < 100:
-                continue
-
-            tx_hash = tx.get("txid", "")
-            if not tx_hash or tx_hash in self._last_seen_hashes:
-                continue
-
-            self._last_seen_hashes.add(tx_hash)
-            transactions.append({
-                "tx_hash": tx_hash,
-                "amount_btc": round(amount_btc, 4),
-                "timestamp": datetime.utcnow().isoformat(),
-                "direction": "unknown",
-                "from_entity": "unknown",
-                "to_entity": "unknown",
-                "entity_name": None,
-                "entity_type": None,
-                "entity_wallet": None,
-                "severity": calculate_severity(amount_btc),
-                "raw_data": tx,
-                "source": "mempool",
-            })
-
-        if transactions:
-            logger.info(f"Mempool fallback: {len(transactions)} whale-size txs found")
-        return transactions
-
-    def _process_tx_detail(self, tx_hash: str, tx_detail: dict, blockchair_raw: dict | None) -> dict | None:
-        """Process a BTCScan tx detail into a whale transaction dict with entity labels."""
         # Extract input addresses
         input_addrs = []
-        for vin in tx_detail.get("vin", []):
-            addr = vin.get("prevout", {}).get("scriptpubkey_address")
+        for vin in tx.get("vin", []):
+            prevout = vin.get("prevout") or {}
+            addr = prevout.get("scriptpubkey_address")
             if addr:
                 input_addrs.append(addr)
 
-        # Extract output addresses
+        # Extract output addresses and total value
         output_addrs = []
         total_out = 0
-        for vout in tx_detail.get("vout", []):
+        for vout in tx.get("vout", []):
             addr = vout.get("scriptpubkey_address")
             if addr:
                 output_addrs.append(addr)
@@ -225,22 +201,24 @@ class WhaleCollector(BaseCollector):
         if amount_btc < 100:
             return None
 
-        # Classify using known entities
-        direction, from_entity, to_entity, entity_info = self._classify_transaction(input_addrs, output_addrs)
+        # Classify
+        direction, from_entity, to_entity, entity_info = self._classify_transaction(
+            input_addrs, output_addrs
+        )
 
-        # Extract timestamp
-        timestamp = ""
-        status = tx_detail.get("status", {})
-        block_time = status.get("block_time")
-        if block_time:
-            timestamp = datetime.utcfromtimestamp(block_time).isoformat()
-        elif blockchair_raw:
-            timestamp = blockchair_raw.get("time", "")
+        # Timestamp
+        ts = block_timestamp
+        if not ts:
+            ts = tx.get("status", {}).get("block_time")
+        if ts and isinstance(ts, (int, float)):
+            timestamp = datetime.utcfromtimestamp(ts).isoformat()
+        else:
+            timestamp = datetime.utcnow().isoformat()
 
         return {
             "tx_hash": tx_hash,
             "amount_btc": round(amount_btc, 4),
-            "timestamp": timestamp or datetime.utcnow().isoformat(),
+            "timestamp": timestamp,
             "direction": direction,
             "from_entity": from_entity,
             "to_entity": to_entity,
@@ -248,9 +226,58 @@ class WhaleCollector(BaseCollector):
             "entity_type": entity_info.get("type") if entity_info else None,
             "entity_wallet": entity_info.get("wallet") if entity_info else None,
             "severity": calculate_severity(amount_btc),
-            "raw_data": blockchair_raw,
-            "source": "btcscan",
+            "raw_data": None,  # don't store full tx to save DB space
+            "source": "mempool_blocks",
         }
+
+    async def _fetch_address_txs(self, address: str) -> list[dict] | None:
+        """Fetch recent transactions for an address from BTCScan."""
+        url = f"{self.BTCSCAN_ADDR_URL}/{address}/txs"
+        data = await self.fetch_json(url)
+        if isinstance(data, list):
+            return data
+        return None
+
+    async def _blockchair_fallback(self) -> dict:
+        """Fallback: try Blockchair if mempool.space is down (often IP-banned too)."""
+        params = {
+            "q": "output_total(10000000000..)",
+            "s": "time(desc)",
+            "limit": "10",
+        }
+        data = await self.fetch_json(self.BLOCKCHAIR_TX_URL, params=params)
+        if not data or not data.get("data"):
+            logger.warning("Both mempool.space and Blockchair failed")
+            return {"transactions": [], "count": 0}
+
+        transactions = []
+        for tx in data.get("data", []):
+            tx_hash = tx.get("hash", "")
+            if not tx_hash or tx_hash in self._last_seen_hashes:
+                continue
+
+            output_total = tx.get("output_total", 0)
+            amount_btc = output_total / 1e8
+            if amount_btc < 100:
+                continue
+
+            self._last_seen_hashes.add(tx_hash)
+            transactions.append({
+                "tx_hash": tx_hash,
+                "amount_btc": round(amount_btc, 4),
+                "timestamp": tx.get("time", datetime.utcnow().isoformat()),
+                "direction": "unknown",
+                "from_entity": "unknown",
+                "to_entity": "unknown",
+                "entity_name": None,
+                "entity_type": None,
+                "entity_wallet": None,
+                "severity": calculate_severity(amount_btc),
+                "raw_data": None,
+                "source": "blockchair_fallback",
+            })
+
+        return {"transactions": transactions, "count": len(transactions)}
 
     def _classify_transaction(self, input_addrs: list[str], output_addrs: list[str]) -> tuple[str, str, str, dict | None]:
         """Classify transaction direction and identify entities.
@@ -263,7 +290,6 @@ class WhaleCollector(BaseCollector):
         from_entity = from_entity_info["name"] if from_entity_info else "unknown"
         to_entity = to_entity_info["name"] if to_entity_info else "unknown"
 
-        # Determine direction
         if from_entity_info and not to_entity_info:
             direction = "exchange_out"
             primary_entity = from_entity_info
@@ -271,7 +297,7 @@ class WhaleCollector(BaseCollector):
             direction = "exchange_in"
             primary_entity = to_entity_info
         elif from_entity_info and to_entity_info:
-            direction = "exchange_in"  # inter-entity transfer
+            direction = "exchange_in"
             primary_entity = to_entity_info
         else:
             direction = "unknown"
