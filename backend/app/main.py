@@ -56,180 +56,193 @@ logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
 
 
+_startup_error: str | None = None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup and shutdown."""
+    global _startup_error
     # Startup
     logger.info("🔮 BTC Seer starting up...")
 
-    # Initialize database
-    await init_db()
-    logger.info("Database initialized")
-
-    # Seed tracked coins (BTC, ETH, SOL, XRP)
-    await seed_tracked_coins()
-
-    # Ensure model weights dir exists on persistent volume
-    import shutil
-    import os
-    weights_dir = Path(settings.model_dir)
-    bundled_weights = Path("app/models/weights")
-    weights_dir.mkdir(parents=True, exist_ok=True)
-
-    # Check if we should force retrain (env var FORCE_RETRAIN=1)
-    force_retrain = os.getenv("FORCE_RETRAIN", "0") == "1"
-    if force_retrain:
-        logger.warning("FORCE_RETRAIN=1: Deleting existing model weights")
-        for f in weights_dir.glob("*.pt"):
-            f.unlink()
-            logger.info(f"Deleted incompatible weight: {f.name}")
-
-    # Copy bundled weights if persistent dir is empty
-    if bundled_weights.exists() and not any(weights_dir.glob("*.pt")):
-        for f in bundled_weights.iterdir():
-            if f.is_file():
-                shutil.copy2(f, weights_dir / f.name)
-                logger.info(f"Copied bundled weight: {f.name} -> {weights_dir}")
-
-    logger.info(f"Model weights dir: {weights_dir}")
-
-    # Set up scheduled jobs
-    # Data collection jobs
-    scheduler.add_job(collect_price_data, "interval", seconds=60, id="collect_price")
-    scheduler.add_job(collect_news_data, "interval", minutes=2, id="collect_news")
-    scheduler.add_job(collect_macro_data, "interval", hours=1, id="collect_macro")
-    scheduler.add_job(collect_onchain_data, "interval", hours=1, id="collect_onchain")
-    scheduler.add_job(collect_influencer_tweets, "interval", minutes=10, id="collect_influencers")
-    scheduler.add_job(collect_funding_data, "interval", minutes=30, id="collect_funding")
-    scheduler.add_job(collect_dominance_data, "interval", hours=1, id="collect_dominance")
-    scheduler.add_job(save_indicator_snapshot, "interval", hours=1, id="save_indicators")
-    scheduler.add_job(collect_coin_prices, "interval", minutes=2, id="collect_coins")
-
-    # Prediction jobs
-    scheduler.add_job(generate_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict")
-    scheduler.add_job(generate_quant_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict_quant")
-
-    # Evaluation jobs
-    scheduler.add_job(evaluate_predictions, "interval", hours=1, id="evaluate")
-    scheduler.add_job(evaluate_quant_predictions, "interval", hours=1, id="evaluate_quant")
-    scheduler.add_job(classify_news_events, "interval", minutes=5, id="classify_events")
-    scheduler.add_job(evaluate_event_impacts, "interval", minutes=30, id="evaluate_events")
-
-    # Cleanup
-    scheduler.add_job(cleanup_old_data, "interval", hours=24, id="cleanup")
-
-    # Auto-retrain: check every 6 hours if models need retraining (more frequent continuous learning)
-    scheduler.add_job(auto_retrain_models, "interval", hours=6, id="auto_retrain")
-
-    # Phrase analyzer: hourly news phrase correlation analysis
-    scheduler.add_job(analyze_news_phrases, "interval", hours=1, id="analyze_phrases")
-
-    # Continuous learner: adaptive ensemble weights + selective retrain (every 6h)
-    scheduler.add_job(run_continuous_learning, "interval", hours=6, id="continuous_learning")
-
-    # A/B testing: evaluate candidate models (every 6h)
-    scheduler.add_job(evaluate_candidates, "interval", hours=6, id="ab_testing")
-
-    # Advisor jobs
-    scheduler.add_job(run_advisor_check, "interval", minutes=settings.prediction_interval_minutes, id="advisor_check")
-    scheduler.add_job(run_trade_management, "interval", minutes=5, id="trade_management")
-
-    # Training feedback loop (daily)
-    scheduler.add_job(run_training_feedback, "interval", hours=24, id="training_feedback")
-
-    # Subscription expiry check (daily)
-    scheduler.add_job(check_subscription_expiry, "interval", hours=24, id="check_subs")
-
-    # Database backup
-    scheduler.add_job(run_database_backup, "interval", hours=settings.backup_interval_hours, id="database_backup")
-
-    scheduler.start()
-    logger.info("Scheduler started")
-
-    # Start Telegram bot if token is set
     bot = None
     dp = None
     bot_task = None
 
-    if settings.telegram_bot_token:
-        from app.bot.bot import create_bot
-        from app.bot.alerts import AlertSender
+    try:
+        # Initialize database
+        await init_db()
+        logger.info("Database initialized")
 
-        bot, dp = create_bot()
-        alert_sender = AlertSender(bot)
+        # Seed tracked coins (BTC, ETH, SOL, XRP)
+        await seed_tracked_coins()
 
-        # Add alert job
-        scheduler.add_job(
-            alert_sender.send_hourly_alerts,
-            "interval",
-            hours=1,
-            id="send_alerts",
-        )
+        # Ensure model weights dir exists on persistent volume
+        import shutil
+        import os
+        weights_dir = Path(settings.model_dir)
+        bundled_weights = Path("app/models/weights")
+        weights_dir.mkdir(parents=True, exist_ok=True)
 
-        # Clear stale webhooks + pending updates before polling
-        try:
-            await bot.delete_webhook(drop_pending_updates=True)
-            logger.info("Cleared webhook, starting polling")
-        except Exception as e:
-            logger.warning(f"delete_webhook failed: {e}")
+        # Check if we should force retrain (env var FORCE_RETRAIN=1)
+        force_retrain = os.getenv("FORCE_RETRAIN", "0") == "1"
+        if force_retrain:
+            logger.warning("FORCE_RETRAIN=1: Deleting existing model weights")
+            for f in weights_dir.glob("*.pt"):
+                f.unlink()
+                logger.info(f"Deleted incompatible weight: {f.name}")
 
-        # Brief delay to let previous Railway instance shut down
-        await asyncio.sleep(3)
+        # Copy bundled weights if persistent dir is empty
+        if bundled_weights.exists() and not any(weights_dir.glob("*.pt")):
+            for f in bundled_weights.iterdir():
+                if f.is_file():
+                    shutil.copy2(f, weights_dir / f.name)
+                    logger.info(f"Copied bundled weight: {f.name} -> {weights_dir}")
 
-        # Start polling in background with conflict detection
-        async def _run_bot_polling():
+        logger.info(f"Model weights dir: {weights_dir}")
+
+        # Set up scheduled jobs
+        # Data collection jobs
+        scheduler.add_job(collect_price_data, "interval", seconds=60, id="collect_price")
+        scheduler.add_job(collect_news_data, "interval", minutes=2, id="collect_news")
+        scheduler.add_job(collect_macro_data, "interval", hours=1, id="collect_macro")
+        scheduler.add_job(collect_onchain_data, "interval", hours=1, id="collect_onchain")
+        scheduler.add_job(collect_influencer_tweets, "interval", minutes=10, id="collect_influencers")
+        scheduler.add_job(collect_funding_data, "interval", minutes=30, id="collect_funding")
+        scheduler.add_job(collect_dominance_data, "interval", hours=1, id="collect_dominance")
+        scheduler.add_job(save_indicator_snapshot, "interval", hours=1, id="save_indicators")
+        scheduler.add_job(collect_coin_prices, "interval", minutes=2, id="collect_coins")
+
+        # Prediction jobs
+        scheduler.add_job(generate_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict")
+        scheduler.add_job(generate_quant_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict_quant")
+
+        # Evaluation jobs
+        scheduler.add_job(evaluate_predictions, "interval", hours=1, id="evaluate")
+        scheduler.add_job(evaluate_quant_predictions, "interval", hours=1, id="evaluate_quant")
+        scheduler.add_job(classify_news_events, "interval", minutes=5, id="classify_events")
+        scheduler.add_job(evaluate_event_impacts, "interval", minutes=30, id="evaluate_events")
+
+        # Cleanup
+        scheduler.add_job(cleanup_old_data, "interval", hours=24, id="cleanup")
+
+        # Auto-retrain: check every 6 hours if models need retraining (more frequent continuous learning)
+        scheduler.add_job(auto_retrain_models, "interval", hours=6, id="auto_retrain")
+
+        # Phrase analyzer: hourly news phrase correlation analysis
+        scheduler.add_job(analyze_news_phrases, "interval", hours=1, id="analyze_phrases")
+
+        # Continuous learner: adaptive ensemble weights + selective retrain (every 6h)
+        scheduler.add_job(run_continuous_learning, "interval", hours=6, id="continuous_learning")
+
+        # A/B testing: evaluate candidate models (every 6h)
+        scheduler.add_job(evaluate_candidates, "interval", hours=6, id="ab_testing")
+
+        # Advisor jobs
+        scheduler.add_job(run_advisor_check, "interval", minutes=settings.prediction_interval_minutes, id="advisor_check")
+        scheduler.add_job(run_trade_management, "interval", minutes=5, id="trade_management")
+
+        # Training feedback loop (daily)
+        scheduler.add_job(run_training_feedback, "interval", hours=24, id="training_feedback")
+
+        # Subscription expiry check (daily)
+        scheduler.add_job(check_subscription_expiry, "interval", hours=24, id="check_subs")
+
+        # Database backup
+        scheduler.add_job(run_database_backup, "interval", hours=settings.backup_interval_hours, id="database_backup")
+
+        scheduler.start()
+        logger.info("Scheduler started")
+
+        # Start Telegram bot if token is set
+        if settings.telegram_bot_token:
+            from app.bot.bot import create_bot
+            from app.bot.alerts import AlertSender
+
+            bot, dp = create_bot()
+            alert_sender = AlertSender(bot)
+
+            # Add alert job
+            scheduler.add_job(
+                alert_sender.send_hourly_alerts,
+                "interval",
+                hours=1,
+                id="send_alerts",
+            )
+
+            # Clear stale webhooks + pending updates before polling
             try:
-                logger.info("Bot polling starting...")
-                await dp.start_polling(bot)
+                await bot.delete_webhook(drop_pending_updates=True)
+                logger.info("Cleared webhook, starting polling")
             except Exception as e:
-                err_str = str(e).lower()
-                if "conflict" in err_str or "409" in err_str:
-                    logger.warning("Bot polling stopped: another instance is already running (409 Conflict)")
-                else:
-                    logger.error(f"Bot polling crashed: {e}", exc_info=True)
+                logger.warning(f"delete_webhook failed: {e}")
 
-        bot_task = asyncio.create_task(_run_bot_polling())
-        logger.info("Telegram bot started")
-    else:
-        logger.warning("TELEGRAM_BOT_TOKEN not set — bot disabled")
+            # Brief delay to let previous Railway instance shut down
+            await asyncio.sleep(3)
 
-    # Backfill historical prices from Binance, then collect fresh data + predict
-    async def _safe_run(coro, name):
-        """Run a coroutine safely — log errors but don't kill the pipeline."""
-        try:
-            await coro
-            logger.info(f"Startup: {name} completed")
-        except Exception as e:
-            logger.error(f"Startup: {name} failed: {e}", exc_info=True)
+            # Start polling in background with conflict detection
+            async def _run_bot_polling():
+                try:
+                    logger.info("Bot polling starting...")
+                    await dp.start_polling(bot)
+                except Exception as e:
+                    err_str = str(e).lower()
+                    if "conflict" in err_str or "409" in err_str:
+                        logger.warning("Bot polling stopped: another instance is already running (409 Conflict)")
+                    else:
+                        logger.error(f"Bot polling crashed: {e}", exc_info=True)
 
-    async def startup_data_pipeline():
-        # Step 1: Backfill historical data so charts work immediately
-        await _safe_run(backfill_historical_prices(), "backfill_historical_prices")
+            bot_task = asyncio.create_task(_run_bot_polling())
+            logger.info("Telegram bot started")
+        else:
+            logger.warning("TELEGRAM_BOT_TOKEN not set — bot disabled")
 
-        # Step 2: Collect fresh data from all sources (each isolated)
-        await _safe_run(collect_price_data(), "collect_price_data")
-        await _safe_run(collect_news_data(), "collect_news_data")
-        await _safe_run(collect_macro_data(), "collect_macro_data")
-        await _safe_run(collect_onchain_data(), "collect_onchain_data")
-        await _safe_run(collect_influencer_tweets(), "collect_influencer_tweets")
-        await _safe_run(collect_funding_data(), "collect_funding_data")
-        await _safe_run(collect_dominance_data(), "collect_dominance_data")
-        await _safe_run(collect_coin_prices(), "collect_coin_prices")
+        # Backfill historical prices from Binance, then collect fresh data + predict
+        async def _safe_run(coro, name):
+            """Run a coroutine safely — log errors but don't kill the pipeline."""
+            try:
+                await coro
+                logger.info(f"Startup: {name} completed")
+            except Exception as e:
+                logger.error(f"Startup: {name} failed: {e}", exc_info=True)
 
-        # Step 3: Wait briefly for data to settle, then generate first prediction
-        await asyncio.sleep(30)
-        await _safe_run(generate_prediction(), "generate_prediction")
-        await _safe_run(generate_quant_prediction(), "generate_quant_prediction")
-        await _safe_run(classify_news_events(), "classify_news_events")
-        await _safe_run(save_indicator_snapshot(), "save_indicator_snapshot")
+        async def startup_data_pipeline():
+            # Step 1: Backfill historical data so charts work immediately
+            await _safe_run(backfill_historical_prices(), "backfill_historical_prices")
 
-    asyncio.create_task(startup_data_pipeline())
+            # Step 2: Collect fresh data from all sources (each isolated)
+            await _safe_run(collect_price_data(), "collect_price_data")
+            await _safe_run(collect_news_data(), "collect_news_data")
+            await _safe_run(collect_macro_data(), "collect_macro_data")
+            await _safe_run(collect_onchain_data(), "collect_onchain_data")
+            await _safe_run(collect_influencer_tweets(), "collect_influencer_tweets")
+            await _safe_run(collect_funding_data(), "collect_funding_data")
+            await _safe_run(collect_dominance_data(), "collect_dominance_data")
+            await _safe_run(collect_coin_prices(), "collect_coin_prices")
+
+            # Step 3: Wait briefly for data to settle, then generate first prediction
+            await asyncio.sleep(30)
+            await _safe_run(generate_prediction(), "generate_prediction")
+            await _safe_run(generate_quant_prediction(), "generate_quant_prediction")
+            await _safe_run(classify_news_events(), "classify_news_events")
+            await _safe_run(save_indicator_snapshot(), "save_indicator_snapshot")
+
+        asyncio.create_task(startup_data_pipeline())
+        logger.info("Startup complete — server ready")
+
+    except Exception as e:
+        _startup_error = f"{type(e).__name__}: {e}"
+        logger.error(f"STARTUP FAILED: {_startup_error}", exc_info=True)
 
     yield
 
     # Shutdown
-    scheduler.shutdown()
-    logger.info("Scheduler stopped")
+    try:
+        scheduler.shutdown()
+        logger.info("Scheduler stopped")
+    except Exception:
+        pass
 
     if bot_task:
         bot_task.cancel()
@@ -287,6 +300,8 @@ app.include_router(public_api.router)
 
 @app.get("/health")
 async def health():
+    if _startup_error:
+        return {"status": "degraded", "error": _startup_error}
     return {"status": "ok"}
 
 
