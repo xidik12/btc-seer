@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
@@ -180,3 +181,11 @@ async def get_whale_flow_history(
         "days": days,
         "history": sorted(daily.values(), key=lambda x: x["date"]),
     }
+
+
+@router.post("/backfill")
+async def trigger_whale_backfill():
+    """Trigger whale transaction backfill from Blockchair (admin use)."""
+    from app.scheduler.jobs import backfill_whale_transactions
+    count = await backfill_whale_transactions()
+    return {"status": "ok", "transactions_stored": count}

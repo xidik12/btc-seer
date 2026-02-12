@@ -1646,6 +1646,139 @@ async def evaluate_whale_impacts():
         logger.error(f"Whale evaluation error: {e}")
 
 
+async def backfill_whale_transactions():
+    """Backfill whale transactions from Blockchair API (multiple pages).
+
+    Fetches up to 100 recent large BTC transactions.
+    Called once at startup or via admin endpoint.
+    """
+    import aiohttp
+    import ssl
+    import certifi
+    from app.collectors.whale import WhaleCollector, calculate_severity, KNOWN_EXCHANGES
+
+    logger.info("Backfilling whale transactions...")
+
+    try:
+        ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+        connector = aiohttp.TCPConnector(ssl=ssl_ctx)
+        timeout = aiohttp.ClientTimeout(total=30)
+
+        # Get current BTC price
+        async with async_session() as session:
+            price_row = await session.execute(
+                select(Price).order_by(desc(Price.timestamp)).limit(1)
+            )
+            price = price_row.scalar_one_or_none()
+            current_price = price.close if price else 68000.0
+
+        stored_total = 0
+
+        async with aiohttp.ClientSession(timeout=timeout, connector=connector) as http:
+            # Fetch multiple pages from Blockchair
+            for offset in range(0, 100, 10):
+                try:
+                    url = "https://api.blockchair.com/bitcoin/transactions"
+                    params = {
+                        "q": "output_total(10000000000..)",
+                        "s": "time(desc)",
+                        "limit": "10",
+                        "offset": str(offset),
+                    }
+                    async with http.get(url, params=params) as resp:
+                        if resp.status != 200:
+                            logger.warning(f"Blockchair returned {resp.status} at offset {offset}")
+                            break
+                        data = await resp.json()
+
+                    raw_txs = data.get("data") or []
+                    if not raw_txs:
+                        break
+
+                    async with async_session() as session:
+                        for tx in raw_txs:
+                            tx_hash = tx.get("hash", "")
+                            if not tx_hash:
+                                continue
+
+                            # Check uniqueness
+                            existing = await session.execute(
+                                select(WhaleTransaction.id).where(
+                                    WhaleTransaction.tx_hash == tx_hash
+                                )
+                            )
+                            if existing.scalar_one_or_none() is not None:
+                                continue
+
+                            output_total = tx.get("output_total", 0)
+                            amount_btc = output_total / 1e8
+                            if amount_btc < 100:
+                                continue
+
+                            # Classify
+                            input_addrs = tx.get("input_addresses", []) or []
+                            output_addrs = tx.get("output_addresses", []) or []
+
+                            from_exchange = None
+                            to_exchange = None
+                            for addr in (input_addrs if isinstance(input_addrs, list) else []):
+                                if addr in KNOWN_EXCHANGES:
+                                    from_exchange = KNOWN_EXCHANGES[addr]
+                                    break
+                            for addr in (output_addrs if isinstance(output_addrs, list) else []):
+                                if addr in KNOWN_EXCHANGES:
+                                    to_exchange = KNOWN_EXCHANGES[addr]
+                                    break
+
+                            if from_exchange and not to_exchange:
+                                direction = "exchange_out"
+                            elif not from_exchange and to_exchange:
+                                direction = "exchange_in"
+                            elif from_exchange and to_exchange:
+                                direction = "exchange_in"
+                            else:
+                                direction = "unknown"
+
+                            amount_usd = amount_btc * current_price
+
+                            try:
+                                ts = datetime.fromisoformat(tx.get("time", "").replace("Z", "+00:00").replace("+00:00", ""))
+                            except (ValueError, AttributeError):
+                                ts = datetime.utcnow()
+
+                            whale_tx = WhaleTransaction(
+                                tx_hash=tx_hash,
+                                timestamp=ts,
+                                amount_btc=round(amount_btc, 4),
+                                amount_usd=round(amount_usd, 2),
+                                direction=direction,
+                                from_entity=from_exchange or "unknown",
+                                to_entity=to_exchange or "unknown",
+                                severity=calculate_severity(amount_btc),
+                                btc_price_at_tx=current_price,
+                                source="blockchair_backfill",
+                                raw_data=tx,
+                            )
+                            session.add(whale_tx)
+                            stored_total += 1
+
+                        await session.commit()
+
+                    # Rate limit: wait between pages
+                    await asyncio.sleep(2)
+
+                except Exception as e:
+                    logger.warning(f"Blockchair fetch error at offset {offset}: {e}")
+                    break
+
+        logger.info(f"Whale backfill complete: {stored_total} transactions stored")
+        return stored_total
+
+    except Exception as e:
+        logger.error(f"Whale backfill error: {e}")
+        return 0
+
+
 async def cleanup_old_data():
     """Clean up old data with tiered retention policy (runs daily).
 

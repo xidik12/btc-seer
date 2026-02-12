@@ -41,6 +41,7 @@ from app.scheduler.jobs import (
     check_subscription_expiry,
     collect_whale_transactions,
     evaluate_whale_impacts,
+    backfill_whale_transactions,
 )
 from app.advisor.feedback import run_training_feedback, run_adaptive_weight_learning
 from app.collectors.coins import collect_coin_prices, seed_tracked_coins
@@ -227,7 +228,7 @@ async def lifespan(app: FastAPI):
             await _safe_run(collect_funding_data(), "collect_funding_data")
             await _safe_run(collect_dominance_data(), "collect_dominance_data")
             await _safe_run(collect_coin_prices(), "collect_coin_prices")
-            await _safe_run(collect_whale_transactions(), "collect_whale_transactions")
+            await _safe_run(backfill_whale_transactions(), "backfill_whale_transactions")
 
             # Step 3: Wait briefly for data to settle, then generate first prediction
             await asyncio.sleep(30)
