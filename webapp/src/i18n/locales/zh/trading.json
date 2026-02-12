@@ -79,7 +79,15 @@
     "directionLabel": "方向",
     "winRateLabel": "胜率",
     "avgRRLabel": "平均风险回报比",
-    "confidenceCalibration": "置信度校准"
+    "confidenceCalibration": "置信度校准",
+    "editPortfolio": "编辑投资组合",
+    "analyzing": "分析所有信号...",
+    "noEntryDetected": "目前没有高置信度的入场点。分析如下。",
+    "fullAnalysis": "全面市场分析",
+    "mlEnsemble": "ML集成（4个模型）",
+    "quantTheory": "量化理论（15个信号）",
+    "elliottWave": "艾略特波浪",
+    "powerLaw": "幂律模型"
   },
   "signals": {
     "title": "交易信号",

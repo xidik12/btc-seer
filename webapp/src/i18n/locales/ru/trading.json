@@ -79,7 +79,15 @@
     "directionLabel": "Направление",
     "winRateLabel": "Процент побед",
     "avgRRLabel": "Средн. Р/У",
-    "confidenceCalibration": "Калибровка уверенности"
+    "confidenceCalibration": "Калибровка уверенности",
+    "editPortfolio": "Редактировать портфель",
+    "analyzing": "Анализ всех сигналов...",
+    "noEntryDetected": "Нет уверенного входа сейчас. Анализ показан ниже.",
+    "fullAnalysis": "Полный анализ рынка",
+    "mlEnsemble": "ML-ансамбль (4 модели)",
+    "quantTheory": "Квант. теория (15 сигналов)",
+    "elliottWave": "Волны Эллиотта",
+    "powerLaw": "Power Law"
   },
   "signals": {
     "title": "Торговые сигналы",

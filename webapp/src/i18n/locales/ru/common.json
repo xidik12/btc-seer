@@ -80,7 +80,8 @@
     "premium": "Премиум",
     "settings": "Настройки",
     "about": "О приложении",
-    "admin": "Админ"
+    "admin": "Админ",
+    "signalsChannel": "Канал сигналов"
   },
   "btn": {
     "cancel": "Отмена",

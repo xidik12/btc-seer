@@ -146,6 +146,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(settings),
     }),
+  updatePortfolio: (telegramId, settings) =>
+    fetchAPI(`/advisor/portfolio/${telegramId}/update`, {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    }),
+  getSuggestion: (telegramId) =>
+    fetchAPI(`/advisor/suggest/${telegramId}`, { method: 'POST' }),
   getFeedback: (days = 30) => cachedFetch(`/advisor/feedback?days=${days}`, T120),
 
   // Mock/Paper Trading (user-specific, no cache)

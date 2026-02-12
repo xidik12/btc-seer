@@ -80,7 +80,8 @@
     "premium": "Premium",
     "settings": "Settings",
     "about": "About",
-    "admin": "Admin"
+    "admin": "Admin",
+    "signalsChannel": "Signals Channel"
   },
   "btn": {
     "cancel": "Cancel",

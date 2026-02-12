@@ -1,0 +1,115 @@
+{
+  "name": "Morning Prediction Tweet",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 9AM UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/predictions/current",
+        "options": {}
+      },
+      "id": "http-predictions",
+      "name": "Get Predictions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/market/price",
+        "options": {}
+      },
+      "id": "http-price",
+      "name": "Get Price",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/history/accuracy?days=7",
+        "options": {}
+      },
+      "id": "http-accuracy",
+      "name": "Get Accuracy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const predictions = $('Get Predictions').first().json;\nconst price = $('Get Price').first().json;\nconst accuracy = $('Get Accuracy').first().json;\n\nconst dir = predictions.direction || 'N/A';\nconst conf = predictions.confidence ? Math.round(predictions.confidence * 100) : 'N/A';\nconst change = predictions.predicted_change_pct ? predictions.predicted_change_pct.toFixed(2) : 'N/A';\nconst btcPrice = price.price ? Number(price.price).toLocaleString('en-US', {style: 'currency', currency: 'USD'}) : 'N/A';\nconst change24h = price.change_24h_pct ? price.change_24h_pct.toFixed(2) : 'N/A';\nconst acc = accuracy.accuracy_pct ? Math.round(accuracy.accuracy_pct) : 'N/A';\n\nconst emoji = dir === 'bullish' ? '🟢' : dir === 'bearish' ? '🔴' : '🟡';\n\nconst tweet = `${emoji} BTC Morning Prediction\n\n💰 Price: ${btcPrice} (${change24h}% 24h)\n📊 Direction: ${dir.toUpperCase()}\n🎯 Confidence: ${conf}%\n📈 Expected move: ${change}%\n✅ 7-day accuracy: ${acc}%\n\n#Bitcoin #BTC #Crypto`;\n\nreturn [{ json: { text: tweet } }];"
+      },
+      "id": "code-format",
+      "name": "Format Tweet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "id": "twitter-post",
+      "name": "Post Tweet",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [1100, 0],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 9AM UTC": {
+      "main": [
+        [{ "node": "Get Predictions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Predictions": {
+      "main": [
+        [{ "node": "Get Price", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Price": {
+      "main": [
+        [{ "node": "Get Accuracy", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Accuracy": {
+      "main": [
+        [{ "node": "Format Tweet", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Tweet": {
+      "main": [
+        [{ "node": "Post Tweet", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "twitter" },
+    { "name": "marketing" }
+  ]
+}

@@ -1,11 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select, desc
 
-from app.database import async_session, PortfolioState, TradeAdvice, TradeResult, Price
+from app.database import (
+    async_session, PortfolioState, TradeAdvice, TradeResult, Price,
+    Prediction, Signal, QuantPrediction, IndicatorSnapshot, EventImpact,
+)
 
 router = APIRouter(prefix="/api/advisor", tags=["advisor"])
 
@@ -375,3 +378,305 @@ async def get_feedback(days: int = Query(30, ge=1, le=365)):
     """Get aggregated AI feedback stats from mock trade outcomes."""
     from app.advisor.feedback import get_feedback_stats
     return await get_feedback_stats(days=days)
+
+
+@router.post("/portfolio/{telegram_id}/update")
+async def update_portfolio(telegram_id: int, body: PortfolioSetup):
+    """Update portfolio settings without resetting PnL."""
+    if body.max_leverage < 1 or body.max_leverage > 125:
+        raise HTTPException(400, "Max leverage must be 1-125")
+    if body.max_open_trades < 1 or body.max_open_trades > 20:
+        raise HTTPException(400, "Max open trades must be 1-20")
+    if body.max_risk_per_trade_pct < 1 or body.max_risk_per_trade_pct > 100:
+        raise HTTPException(400, "Risk per trade must be 1-100%")
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(PortfolioState).where(PortfolioState.telegram_id == telegram_id)
+        )
+        portfolio = result.scalar_one_or_none()
+
+        if not portfolio:
+            raise HTTPException(404, "Portfolio not found. Set up first.")
+
+        portfolio.balance_usdt = body.balance
+        portfolio.max_leverage = body.max_leverage
+        portfolio.max_open_trades = body.max_open_trades
+        portfolio.max_risk_per_trade_pct = body.max_risk_per_trade_pct
+        await session.commit()
+
+    return {"status": "updated"}
+
+
+@router.post("/suggest/{telegram_id}")
+async def suggest_trade(telegram_id: int):
+    """On-demand trade suggestion using full analysis pipeline.
+
+    Integrates: ensemble prediction, quant theory (15 signals), Elliott Wave,
+    Power Law, technical indicators, news/events — everything collected.
+    Returns either a new trade suggestion or a detailed analysis explaining why not.
+    """
+    from app.advisor.entry_detector import check_entry
+    from app.advisor.trade_planner import build_trade_plan
+    from app.advisor.portfolio import get_or_create_portfolio
+    from app.config import settings
+
+    # Get or create portfolio
+    portfolio = await get_or_create_portfolio(telegram_id)
+    current_price = await _get_current_price()
+    if current_price <= 0:
+        raise HTTPException(503, "No price data available")
+
+    # Fetch all latest analysis data
+    async with async_session() as session:
+        # Latest prediction (1h)
+        result = await session.execute(
+            select(Prediction).where(Prediction.timeframe == "1h")
+            .order_by(desc(Prediction.timestamp)).limit(1)
+        )
+        pred_row = result.scalar_one_or_none()
+
+        # Latest signal (1h)
+        result = await session.execute(
+            select(Signal).where(Signal.timeframe == "1h")
+            .order_by(desc(Signal.timestamp)).limit(1)
+        )
+        signal_row = result.scalar_one_or_none()
+
+        # Latest quant prediction
+        result = await session.execute(
+            select(QuantPrediction).order_by(desc(QuantPrediction.timestamp)).limit(1)
+        )
+        quant_row = result.scalar_one_or_none()
+
+        # Latest indicators
+        result = await session.execute(
+            select(IndicatorSnapshot).order_by(desc(IndicatorSnapshot.timestamp)).limit(1)
+        )
+        ind_row = result.scalar_one_or_none()
+
+        # Recent high-severity events
+        since_1h = datetime.utcnow() - timedelta(hours=1)
+        result = await session.execute(
+            select(EventImpact)
+            .where(EventImpact.timestamp >= since_1h)
+            .where(EventImpact.severity >= 7)
+        )
+        events = [
+            {"severity": e.severity, "sentiment_score": e.sentiment_score, "category": e.category}
+            for e in result.scalars().all()
+        ]
+
+    if not pred_row or not signal_row:
+        raise HTTPException(503, "No prediction data yet. Wait for first analysis cycle.")
+
+    # Build dicts for entry detector
+    prediction = {
+        "direction": pred_row.direction,
+        "confidence": pred_row.confidence,
+        "model_outputs": pred_row.model_outputs or {},
+        "magnitude_pct": pred_row.predicted_change_pct,
+    }
+
+    signal = {
+        "action": signal_row.action,
+        "entry_price": signal_row.entry_price,
+        "target_price": signal_row.target_price,
+        "stop_loss": signal_row.stop_loss,
+        "risk_rating": signal_row.risk_rating,
+        "risk_reward_ratio": round(
+            abs(signal_row.target_price - signal_row.entry_price)
+            / max(abs(signal_row.entry_price - signal_row.stop_loss), 0.01), 2
+        ),
+    }
+
+    quant = None
+    quant_breakdown = {}
+    if quant_row:
+        quant = {
+            "direction": quant_row.direction,
+            "confidence": quant_row.confidence,
+            "composite_score": quant_row.composite_score,
+            "action": quant_row.action,
+            "agreement_ratio": quant_row.agreement_ratio or 0,
+        }
+        quant_breakdown = quant_row.signal_breakdown or {}
+
+    indicators = ind_row.indicators if ind_row else None
+    atr_value = (indicators or {}).get("atr", current_price * 0.02)
+
+    # Gather Elliott Wave analysis
+    elliott_wave = None
+    try:
+        from app.api.elliott_wave import _analyze
+        import pandas as pd
+        async with async_session() as session:
+            ew_since = datetime.utcnow() - timedelta(days=120)
+            result = await session.execute(
+                select(Price).where(Price.timestamp >= ew_since).order_by(Price.timestamp)
+            )
+            ew_prices = result.scalars().all()
+
+        if ew_prices and len(ew_prices) >= 30:
+            ew_df = pd.DataFrame([
+                {"timestamp": p.timestamp, "open": p.open, "high": p.high,
+                 "low": p.low, "close": p.close, "volume": p.volume}
+                for p in ew_prices
+            ])
+            ew_df["timestamp"] = pd.to_datetime(ew_df["timestamp"])
+            ew_df = ew_df.set_index("timestamp").resample("4h").agg({
+                "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
+            }).dropna().reset_index()
+
+            if len(ew_df) >= 30:
+                ew_result = _analyze(ew_df, lookback=5)
+                ew_result.pop("swings", None)
+                elliott_wave = ew_result
+    except Exception:
+        pass
+
+    # Gather Power Law analysis
+    power_law = None
+    try:
+        from app.models.power_law_engine import PowerLawEngine
+        engine = PowerLawEngine.from_early_prices()
+        fair_value = engine.fair_value(datetime.utcnow())
+        deviation = (current_price / fair_value - 1) * 100 if fair_value > 0 else 0
+        corridor_pos = current_price / fair_value if fair_value > 0 else 1.0
+        power_law = {
+            "fair_value": round(fair_value, 2),
+            "deviation_pct": round(deviation, 2),
+            "corridor_position": round(corridor_pos, 3),
+            "zone": (
+                "undervalued" if corridor_pos < 0.7
+                else "accumulate" if corridor_pos < 0.9
+                else "fair_value" if corridor_pos < 1.2
+                else "overvalued" if corridor_pos < 1.5
+                else "extreme_overvalued"
+            ),
+        }
+    except Exception:
+        pass
+
+    # Get user's open trades
+    async with async_session() as session:
+        result = await session.execute(
+            select(TradeAdvice).where(
+                TradeAdvice.telegram_id == telegram_id,
+                TradeAdvice.status.in_(["opened", "partial_tp", "pending"]),
+                TradeAdvice.is_mock == False,
+            )
+        )
+        open_trades = result.scalars().all()
+
+    # Run entry detector
+    entry = check_entry(
+        portfolio=portfolio,
+        prediction=prediction,
+        signal=signal,
+        quant=quant,
+        indicators=indicators,
+        open_trades=open_trades,
+        events=events,
+    )
+
+    # Build comprehensive analysis object (always returned)
+    analysis = {
+        "prediction": {
+            "direction": prediction["direction"],
+            "confidence": prediction["confidence"],
+            "magnitude_pct": prediction.get("magnitude_pct"),
+            "model_outputs": prediction.get("model_outputs", {}),
+        },
+        "quant": {
+            "composite_score": quant["composite_score"] if quant else None,
+            "action": quant["action"] if quant else None,
+            "agreement_ratio": quant["agreement_ratio"] if quant else None,
+            "breakdown": quant_breakdown,
+        },
+        "elliott_wave": {
+            "pattern": elliott_wave["wave_count"]["pattern"] if elliott_wave else None,
+            "current_wave": elliott_wave["wave_count"]["current_wave"] if elliott_wave else None,
+            "direction": elliott_wave["wave_count"]["direction"] if elliott_wave else None,
+            "confidence": elliott_wave.get("confidence") if elliott_wave else None,
+            "summary": elliott_wave.get("summary") if elliott_wave else None,
+            "fib_targets": elliott_wave.get("fibonacci_targets") if elliott_wave else None,
+            "divergences": elliott_wave.get("divergences", []) if elliott_wave else [],
+        },
+        "power_law": power_law,
+        "indicators": {
+            "rsi": (indicators or {}).get("rsi"),
+            "macd_hist": (indicators or {}).get("macd_hist"),
+            "atr": atr_value,
+            "funding_rate": (indicators or {}).get("funding_rate"),
+            "fear_greed": (indicators or {}).get("fear_greed_value"),
+        },
+        "events": events,
+        "current_price": current_price,
+    }
+
+    if not entry:
+        # No entry — return analysis with reason
+        return {
+            "suggestion": None,
+            "reason": "No high-confidence entry detected. Filters not met — waiting for better confluence.",
+            "analysis": analysis,
+        }
+
+    # Entry detected — build trade plan
+    plan = build_trade_plan(
+        entry=entry,
+        portfolio=portfolio,
+        current_price=current_price,
+        atr=atr_value,
+    )
+
+    # Enrich reasoning with Elliott Wave and Power Law
+    reasoning_parts = [plan["reasoning"]]
+    if elliott_wave:
+        ew_summary = elliott_wave.get("summary", "")
+        if ew_summary:
+            reasoning_parts.append(f"Elliott: {ew_summary}")
+    if power_law:
+        reasoning_parts.append(
+            f"Power Law: {power_law['zone']} ({power_law['deviation_pct']:+.1f}% from fair value ${power_law['fair_value']:,.0f})"
+        )
+    plan["reasoning"] = " | ".join(reasoning_parts)
+
+    # Save trade advice
+    async with async_session() as session:
+        trade_advice = TradeAdvice(
+            telegram_id=telegram_id,
+            direction=plan["direction"],
+            entry_price=plan["entry_price"],
+            entry_zone_low=plan["entry_zone_low"],
+            entry_zone_high=plan["entry_zone_high"],
+            stop_loss=plan["stop_loss"],
+            take_profit_1=plan["take_profit_1"],
+            take_profit_2=plan["take_profit_2"],
+            take_profit_3=plan["take_profit_3"],
+            leverage=plan["leverage"],
+            position_size_usdt=plan["position_size_usdt"],
+            position_size_pct=plan["position_size_pct"],
+            risk_amount_usdt=plan["risk_amount_usdt"],
+            risk_reward_ratio=plan["risk_reward_ratio"],
+            confidence=plan["confidence"],
+            risk_rating=plan["risk_rating"],
+            reasoning=plan["reasoning"],
+            models_agreeing=plan["models_agreeing"],
+            urgency=plan["urgency"],
+            timeframe=plan["timeframe"],
+            prediction_id=pred_row.id,
+            signal_id=signal_row.id,
+            quant_prediction_id=quant_row.id if quant_row else None,
+            status="pending",
+        )
+        session.add(trade_advice)
+        await session.commit()
+        await session.refresh(trade_advice)
+
+    return {
+        "suggestion": _serialize_trade(trade_advice, current_price),
+        "reason": None,
+        "analysis": analysis,
+    }

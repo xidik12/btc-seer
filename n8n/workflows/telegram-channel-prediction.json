@@ -1,0 +1,135 @@
+{
+  "name": "Telegram Channel Prediction",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 30 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/predictions/current",
+        "options": {}
+      },
+      "id": "http-predictions",
+      "name": "Get Predictions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/predictions/quant",
+        "options": {}
+      },
+      "id": "http-quant",
+      "name": "Get Quant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/market/price",
+        "options": {}
+      },
+      "id": "http-price",
+      "name": "Get Price",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/signals/current",
+        "options": {}
+      },
+      "id": "http-signals",
+      "name": "Get Signals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const predictions = $('Get Predictions').first().json;\nconst quant = $('Get Quant').first().json;\nconst price = $('Get Price').first().json;\nconst signals = $('Get Signals').first().json;\n\nconst dir = predictions.direction || 'N/A';\nconst conf = predictions.confidence ? Math.round(predictions.confidence * 100) : 'N/A';\nconst change = predictions.predicted_change_pct ? predictions.predicted_change_pct.toFixed(2) : 'N/A';\nconst btcPrice = price.price ? Number(price.price).toLocaleString('en-US') : 'N/A';\nconst change24h = price.change_24h_pct ? price.change_24h_pct.toFixed(2) : 'N/A';\n\nconst action = quant.action || signals.action || 'N/A';\nconst score = quant.composite_score ? Math.round(quant.composite_score) : 'N/A';\nconst entry = signals.entry ? '$' + Number(signals.entry).toLocaleString('en-US') : 'N/A';\nconst target = signals.target ? '$' + Number(signals.target).toLocaleString('en-US') : 'N/A';\nconst stopLoss = signals.stop_loss ? '$' + Number(signals.stop_loss).toLocaleString('en-US') : 'N/A';\n\nconst dirEmoji = dir === 'bullish' ? '🟢' : dir === 'bearish' ? '🔴' : '🟡';\nconst actionEmoji = action === 'BUY' ? '🟢' : action === 'SELL' ? '🔴' : '🟡';\n\nconst now = new Date().toLocaleString('en-US', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' });\n\nconst html = `${dirEmoji} <b>BTC Seer Signal</b> — ${now} UTC\n\n💰 <b>Price:</b> $${btcPrice} (${change24h}% 24h)\n📊 <b>Direction:</b> ${dir.toUpperCase()}\n🎯 <b>Confidence:</b> ${conf}%\n📈 <b>Expected move:</b> ${change}%\n\n${actionEmoji} <b>Action:</b> ${action}\n📏 <b>Quant Score:</b> ${score}/100\n\n🎯 <b>Entry:</b> ${entry}\n✅ <b>Target:</b> ${target}\n🛑 <b>Stop Loss:</b> ${stopLoss}\n\n<i>Not financial advice. DYOR.</i>`;\n\nreturn [{ json: { message: html } }];"
+      },
+      "id": "code-format",
+      "name": "Format HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "@BTCSeerSignals",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "telegram-send",
+      "name": "Send to Channel",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1320, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [
+        [{ "node": "Get Predictions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Predictions": {
+      "main": [
+        [{ "node": "Get Quant", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Quant": {
+      "main": [
+        [{ "node": "Get Price", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Price": {
+      "main": [
+        [{ "node": "Get Signals", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Signals": {
+      "main": [
+        [{ "node": "Format HTML", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format HTML": {
+      "main": [
+        [{ "node": "Send to Channel", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "telegram" },
+    { "name": "marketing" }
+  ]
+}

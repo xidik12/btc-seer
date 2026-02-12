@@ -47,6 +47,18 @@ const menuItems = [
     descKey: 'nav.forward',
   },
   {
+    external: true,
+    href: 'https://t.me/BTCSeerSignals',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <path d="M22 2L11 13" />
+        <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+      </svg>
+    ),
+    labelKey: 'link.signalsChannel',
+    descKey: 'nav.forward',
+  },
+  {
     path: '/settings',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -83,8 +95,8 @@ export default function More() {
       <div className="space-y-2">
         {menuItems.map((item) => (
           <button
-            key={item.path}
-            onClick={() => { hapticFeedback?.selectionChanged(); navigate(item.path) }}
+            key={item.href || item.path}
+            onClick={() => { hapticFeedback?.selectionChanged(); item.external ? window.open(item.href, '_blank') : navigate(item.path) }}
             className="w-full flex items-center gap-3 bg-bg-card rounded-xl p-4 border border-white/5 hover:bg-bg-hover transition-colors text-left slide-up"
           >
             <span className="text-accent-blue shrink-0">{item.icon}</span>

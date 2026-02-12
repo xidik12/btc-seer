@@ -12,97 +12,263 @@ const ADVISOR_TABS = [
   { path: '/history', labelKey: 'advisor.tabs.history' },
 ]
 
-function PortfolioSetupCard({ telegramId, onSetup, t }) {
-  const [balance, setBalance] = useState(10)
-  const [maxLeverage, setMaxLeverage] = useState(20)
-  const [maxOpenTrades, setMaxOpenTrades] = useState(3)
-  const [riskPct, setRiskPct] = useState(10)
+function PortfolioSettingsCard({ portfolio, telegramId, onSave, isNew, t }) {
+  const [balance, setBalance] = useState(portfolio?.balance || 10)
+  const [maxLeverage, setMaxLeverage] = useState(portfolio?.max_leverage || 20)
+  const [maxOpenTrades, setMaxOpenTrades] = useState(portfolio?.max_open_trades || 3)
+  const [riskPct, setRiskPct] = useState(portfolio?.max_risk_per_trade_pct || 10)
   const [saving, setSaving] = useState(false)
+  const [collapsed, setCollapsed] = useState(!isNew)
 
-  const handleSetup = async () => {
+  useEffect(() => {
+    if (portfolio) {
+      setBalance(portfolio.balance || portfolio.balance_usdt || 10)
+      setMaxLeverage(portfolio.max_leverage || 20)
+      setMaxOpenTrades(portfolio.max_open_trades || 3)
+      setRiskPct(portfolio.max_risk_per_trade_pct || 10)
+    }
+  }, [portfolio])
+
+  const handleSave = async () => {
     setSaving(true)
     try {
-      await api.setupPortfolio(telegramId, {
+      const settings = {
         balance,
         max_leverage: maxLeverage,
         max_open_trades: maxOpenTrades,
         max_risk_per_trade_pct: riskPct,
-      })
-      onSetup()
+      }
+      if (isNew) {
+        await api.setupPortfolio(telegramId, settings)
+      } else {
+        await api.updatePortfolio(telegramId, settings)
+      }
+      onSave()
+      if (!isNew) setCollapsed(true)
     } catch (err) {
-      console.error('Portfolio setup error:', err)
+      console.error('Portfolio save error:', err)
     } finally {
       setSaving(false)
     }
   }
 
-  return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-accent-blue/20 slide-up">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-full bg-accent-blue/10 flex items-center justify-center">
-          <svg className="w-4 h-4 text-accent-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+  if (collapsed) {
+    return (
+      <button
+        onClick={() => setCollapsed(false)}
+        className="w-full flex items-center justify-between bg-bg-card rounded-xl p-3 border border-white/5 hover:bg-bg-hover transition-colors slide-up"
+      >
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+          </svg>
+          <span className="text-text-secondary text-xs font-medium">{t('advisor.editPortfolio')}</span>
+        </div>
+        <div className="flex items-center gap-3 text-[10px] text-text-muted">
+          <span>${balance}</span>
+          <span>{maxLeverage}x</span>
+          <span>{riskPct}%</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-3.5 h-3.5">
+            <polyline points="9 18 15 12 9 6" />
           </svg>
         </div>
-        <div>
-          <div className="text-text-primary text-sm font-bold">{t('advisor.setUpPortfolio')}</div>
-          <div className="text-text-muted text-[10px]">{t('advisor.confidence')}</div>
+      </button>
+    )
+  }
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-4 border border-accent-blue/20 slide-up">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-accent-blue/10 flex items-center justify-center">
+            <svg className="w-3.5 h-3.5 text-accent-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+          </div>
+          <div className="text-text-primary text-sm font-bold">
+            {isNew ? t('advisor.setUpPortfolio') : t('advisor.editPortfolio')}
+          </div>
         </div>
+        {!isNew && (
+          <button onClick={() => setCollapsed(true)} className="text-text-muted text-[10px] hover:text-text-secondary">
+            {t('btn.close', { ns: 'common' })}
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div>
           <label className="text-text-muted text-[10px] block mb-1">{t('advisor.balance')}</label>
-          <input
-            type="number"
-            value={balance}
-            onChange={e => setBalance(Number(e.target.value))}
-            min={1}
-            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50"
-          />
+          <input type="number" value={balance} onChange={e => setBalance(Number(e.target.value))} min={1}
+            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50" />
         </div>
         <div>
           <label className="text-text-muted text-[10px] block mb-1">{t('trade.leverage', { ns: 'common' })}</label>
-          <input
-            type="number"
-            value={maxLeverage}
-            onChange={e => setMaxLeverage(Number(e.target.value))}
-            min={1}
-            max={125}
-            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50"
-          />
+          <input type="number" value={maxLeverage} onChange={e => setMaxLeverage(Number(e.target.value))} min={1} max={125}
+            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50" />
         </div>
         <div>
           <label className="text-text-muted text-[10px] block mb-1">{t('portfolio.totalTrades')}</label>
-          <input
-            type="number"
-            value={maxOpenTrades}
-            onChange={e => setMaxOpenTrades(Number(e.target.value))}
-            min={1}
-            max={20}
-            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50"
-          />
+          <input type="number" value={maxOpenTrades} onChange={e => setMaxOpenTrades(Number(e.target.value))} min={1} max={20}
+            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50" />
         </div>
         <div>
           <label className="text-text-muted text-[10px] block mb-1">{t('advisor.riskLevel')}</label>
-          <input
-            type="number"
-            value={riskPct}
-            onChange={e => setRiskPct(Number(e.target.value))}
-            min={1}
-            max={100}
-            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50"
-          />
+          <input type="number" value={riskPct} onChange={e => setRiskPct(Number(e.target.value))} min={1} max={100}
+            className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50" />
         </div>
       </div>
 
-      <button
-        onClick={handleSetup}
-        disabled={saving}
-        className="w-full py-2.5 rounded-xl bg-accent-blue text-white text-xs font-bold hover:bg-accent-blue/90 transition-colors disabled:opacity-50"
-      >
-        {saving ? t('app.loading', { ns: 'common' }) : t('advisor.getSuggestion')}
+      <button onClick={handleSave} disabled={saving}
+        className="w-full py-2.5 rounded-xl bg-accent-blue text-white text-xs font-bold hover:bg-accent-blue/90 transition-colors disabled:opacity-50">
+        {saving ? t('app.loading', { ns: 'common' }) : isNew ? t('advisor.setUpPortfolio') : t('btn.save', { ns: 'common' })}
       </button>
+    </div>
+  )
+}
+
+function PortfolioCard({ portfolio, t }) {
+  if (!portfolio) return null
+
+  const pnlColor = (portfolio.total_pnl || 0) >= 0 ? 'text-accent-green' : 'text-accent-red'
+  const pnlBg = (portfolio.total_pnl || 0) >= 0 ? 'bg-accent-green/10 border-accent-green/20' : 'bg-accent-red/10 border-accent-red/20'
+
+  return (
+    <div className={`rounded-2xl p-4 border slide-up ${pnlBg}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className="text-text-muted text-[10px] font-medium">{t('advisor.portfolio')}</div>
+          <div className="text-text-primary text-xl font-bold tabular-nums">
+            {formatPrice(portfolio.balance || portfolio.total_value || 0)}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-text-muted text-[10px] font-medium">{t('portfolio.totalPnl')}</div>
+          <div className={`text-xl font-bold tabular-nums ${pnlColor}`}>
+            {portfolio.total_pnl >= 0 ? '+' : ''}{formatPrice(portfolio.total_pnl || 0)}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="text-center">
+          <div className="text-text-muted text-[9px]">{t('portfolio.winRate')}</div>
+          <div className="text-text-primary text-sm font-bold">
+            {portfolio.win_rate != null ? `${portfolio.win_rate.toFixed(0)}%` : '--'}
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="text-text-muted text-[9px]">{t('portfolio.totalTrades')}</div>
+          <div className="text-text-primary text-sm font-bold">
+            {portfolio.total_trades || 0}
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="text-text-muted text-[9px]">{t('portfolio.active')}</div>
+          <div className="text-text-primary text-sm font-bold">
+            {portfolio.active_trades || 0}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AnalysisCard({ analysis, t }) {
+  if (!analysis) return null
+
+  const pred = analysis.prediction || {}
+  const quant = analysis.quant || {}
+  const ew = analysis.elliott_wave || {}
+  const pl = analysis.power_law || {}
+  const ind = analysis.indicators || {}
+
+  const dirColor = pred.direction === 'bullish' ? 'text-accent-green' : pred.direction === 'bearish' ? 'text-accent-red' : 'text-text-muted'
+  const quantColor = (quant.composite_score || 0) > 0 ? 'text-accent-green' : (quant.composite_score || 0) < 0 ? 'text-accent-red' : 'text-text-muted'
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up space-y-3">
+      <div className="text-text-muted text-[10px] font-bold uppercase tracking-wide">{t('advisor.fullAnalysis')}</div>
+
+      {/* ML Ensemble */}
+      <div className="flex items-center justify-between">
+        <span className="text-text-muted text-[10px]">{t('advisor.mlEnsemble')}</span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-bold ${dirColor}`}>{(pred.direction || '').toUpperCase()}</span>
+          <span className="text-text-muted text-[10px]">{pred.confidence?.toFixed(0)}%</span>
+        </div>
+      </div>
+
+      {/* Quant Theory */}
+      {quant.composite_score != null && (
+        <div className="flex items-center justify-between">
+          <span className="text-text-muted text-[10px]">{t('advisor.quantTheory')}</span>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold ${quantColor}`}>{quant.action || 'N/A'}</span>
+            <span className="text-text-muted text-[10px]">{quant.composite_score > 0 ? '+' : ''}{quant.composite_score?.toFixed(0)}/100</span>
+          </div>
+        </div>
+      )}
+
+      {/* Elliott Wave */}
+      {ew.pattern && ew.pattern !== 'no_data' && ew.pattern !== 'insufficient_data' && (
+        <div className="flex items-center justify-between">
+          <span className="text-text-muted text-[10px]">{t('advisor.elliottWave')}</span>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold ${ew.direction === 'bullish' ? 'text-accent-green' : ew.direction === 'bearish' ? 'text-accent-red' : 'text-text-muted'}`}>
+              W{ew.current_wave} {ew.pattern}
+            </span>
+            <span className="text-text-muted text-[10px]">{(ew.confidence * 100)?.toFixed(0)}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* Power Law */}
+      {pl && pl.fair_value && (
+        <div className="flex items-center justify-between">
+          <span className="text-text-muted text-[10px]">{t('advisor.powerLaw')}</span>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold ${pl.deviation_pct < 0 ? 'text-accent-green' : pl.deviation_pct > 30 ? 'text-accent-red' : 'text-text-muted'}`}>
+              {pl.zone?.replace('_', ' ')}
+            </span>
+            <span className="text-text-muted text-[10px]">{pl.deviation_pct > 0 ? '+' : ''}{pl.deviation_pct?.toFixed(1)}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* Key Indicators */}
+      <div className="pt-2 border-t border-white/5 grid grid-cols-3 gap-2">
+        {ind.rsi != null && (
+          <div className="text-center">
+            <div className="text-text-muted text-[8px]">RSI</div>
+            <div className={`text-[11px] font-bold ${ind.rsi > 70 ? 'text-accent-red' : ind.rsi < 30 ? 'text-accent-green' : 'text-text-primary'}`}>
+              {ind.rsi?.toFixed(0)}
+            </div>
+          </div>
+        )}
+        {ind.fear_greed != null && (
+          <div className="text-center">
+            <div className="text-text-muted text-[8px]">F&G</div>
+            <div className={`text-[11px] font-bold ${ind.fear_greed > 70 ? 'text-accent-red' : ind.fear_greed < 30 ? 'text-accent-green' : 'text-text-primary'}`}>
+              {ind.fear_greed?.toFixed(0)}
+            </div>
+          </div>
+        )}
+        {ind.funding_rate != null && (
+          <div className="text-center">
+            <div className="text-text-muted text-[8px]">Funding</div>
+            <div className={`text-[11px] font-bold ${ind.funding_rate > 0.0005 ? 'text-accent-red' : ind.funding_rate < -0.0001 ? 'text-accent-green' : 'text-text-primary'}`}>
+              {(ind.funding_rate * 100)?.toFixed(3)}%
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Elliott Wave Summary */}
+      {ew.summary && (
+        <p className="text-text-muted text-[10px] leading-relaxed pt-1 border-t border-white/5">{ew.summary}</p>
+      )}
     </div>
   )
 }
@@ -153,53 +319,6 @@ function AIAccuracyCard({ feedback, t }) {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function PortfolioCard({ portfolio, t }) {
-  if (!portfolio) return null
-
-  const pnlColor = (portfolio.total_pnl || 0) >= 0 ? 'text-accent-green' : 'text-accent-red'
-  const pnlBg = (portfolio.total_pnl || 0) >= 0 ? 'bg-accent-green/10 border-accent-green/20' : 'bg-accent-red/10 border-accent-red/20'
-
-  return (
-    <div className={`rounded-2xl p-4 border slide-up ${pnlBg}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <div className="text-text-muted text-[10px] font-medium">{t('advisor.portfolio')}</div>
-          <div className="text-text-primary text-xl font-bold tabular-nums">
-            {formatPrice(portfolio.balance || portfolio.total_value || 0)}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-text-muted text-[10px] font-medium">{t('portfolio.totalPnl')}</div>
-          <div className={`text-xl font-bold tabular-nums ${pnlColor}`}>
-            {portfolio.total_pnl >= 0 ? '+' : ''}{formatPrice(portfolio.total_pnl || 0)}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2">
-        <div className="text-center">
-          <div className="text-text-muted text-[9px]">{t('portfolio.winRate')}</div>
-          <div className="text-text-primary text-sm font-bold">
-            {portfolio.win_rate != null ? `${portfolio.win_rate.toFixed(0)}%` : '--'}
-          </div>
-        </div>
-        <div className="text-center">
-          <div className="text-text-muted text-[9px]">{t('portfolio.totalTrades')}</div>
-          <div className="text-text-primary text-sm font-bold">
-            {portfolio.total_trades || 0}
-          </div>
-        </div>
-        <div className="text-center">
-          <div className="text-text-muted text-[9px]">{t('portfolio.active')}</div>
-          <div className="text-text-primary text-sm font-bold">
-            {portfolio.active_trades || 0}
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
@@ -394,6 +513,12 @@ export default function Advisor() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Suggestion state
+  const [suggesting, setSuggesting] = useState(false)
+  const [analysis, setAnalysis] = useState(null)
+  const [suggestError, setSuggestError] = useState(null)
+  const [suggestReason, setSuggestReason] = useState(null)
+
   const fetchData = useCallback(async () => {
     if (!telegramId) {
       setLoading(false)
@@ -428,6 +553,29 @@ export default function Advisor() {
   }, [telegramId])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  const handleGetSuggestion = async () => {
+    if (!telegramId) return
+    setSuggesting(true)
+    setSuggestError(null)
+    setSuggestReason(null)
+    setAnalysis(null)
+    try {
+      const result = await api.getSuggestion(telegramId)
+      if (result.analysis) setAnalysis(result.analysis)
+      if (result.suggestion) {
+        // New trade was created — refresh trades
+        fetchData()
+        setSuggestReason(null)
+      } else {
+        setSuggestReason(result.reason || t('advisor.noEntryDetected'))
+      }
+    } catch (err) {
+      setSuggestError(err.message || 'Failed to get suggestion')
+    } finally {
+      setSuggesting(false)
+    }
+  }
 
   const handleOpen = async (tradeId) => {
     try {
@@ -507,11 +655,57 @@ export default function Advisor() {
 
       <SubTabBar tabs={advisorTabs} />
 
-      {needsSetup ? (
-        <PortfolioSetupCard telegramId={telegramId} onSetup={fetchData} t={t} />
-      ) : (
-        <PortfolioCard portfolio={portfolio} t={t} />
+      {/* Portfolio Stats (always visible when portfolio exists) */}
+      {!needsSetup && <PortfolioCard portfolio={portfolio} t={t} />}
+
+      {/* Portfolio Settings (always editable) */}
+      <PortfolioSettingsCard
+        portfolio={portfolio}
+        telegramId={telegramId}
+        onSave={fetchData}
+        isNew={needsSetup}
+        t={t}
+      />
+
+      {/* Get Suggestion Button (always visible when portfolio exists) */}
+      {!needsSetup && (
+        <button
+          onClick={handleGetSuggestion}
+          disabled={suggesting}
+          className="w-full py-3 rounded-xl bg-gradient-to-r from-accent-blue to-accent-purple text-white text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {suggesting ? (
+            <>
+              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" strokeDasharray="50" strokeDashoffset="20" />
+              </svg>
+              {t('advisor.analyzing')}
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+              {t('advisor.getSuggestion')}
+            </>
+          )}
+        </button>
       )}
+
+      {/* Suggestion Result / Analysis */}
+      {suggestError && (
+        <div className="bg-accent-red/10 border border-accent-red/20 rounded-xl p-3 text-center">
+          <p className="text-accent-red text-xs">{suggestError}</p>
+        </div>
+      )}
+
+      {suggestReason && (
+        <div className="bg-accent-yellow/10 border border-accent-yellow/20 rounded-xl p-3 text-center">
+          <p className="text-accent-yellow text-xs">{suggestReason}</p>
+        </div>
+      )}
+
+      {analysis && <AnalysisCard analysis={analysis} t={t} />}
 
       <AIAccuracyCard feedback={feedback} t={t} />
 

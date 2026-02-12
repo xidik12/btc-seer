@@ -79,7 +79,15 @@
     "directionLabel": "Direction",
     "winRateLabel": "Win Rate",
     "avgRRLabel": "Avg R:R",
-    "confidenceCalibration": "Confidence Calibration"
+    "confidenceCalibration": "Confidence Calibration",
+    "editPortfolio": "Edit Portfolio",
+    "analyzing": "Analyzing all signals...",
+    "noEntryDetected": "No high-confidence entry right now. Analysis shown below.",
+    "fullAnalysis": "Full Market Analysis",
+    "mlEnsemble": "ML Ensemble (4 models)",
+    "quantTheory": "Quant Theory (15 signals)",
+    "elliottWave": "Elliott Wave",
+    "powerLaw": "Power Law"
   },
   "signals": {
     "title": "Trading Signals",

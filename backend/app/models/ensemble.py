@@ -111,6 +111,9 @@ class EnsemblePredictor:
         total = sum(self.weights.values())
         self.weights = {k: v / total for k, v in self.weights.items()}
 
+        # Try to load adaptive weights from DB
+        self._load_adaptive_weights()
+
         trained_models = [
             name for name, trained in [
                 ("TFT", self.tft_trained), ("LSTM", self.lstm_trained),
@@ -294,6 +297,40 @@ class EnsemblePredictor:
             }
 
         return predictions
+
+    def _load_adaptive_weights(self):
+        """Try to load adaptive weights from the most recent DB entry."""
+        try:
+            import asyncio
+            from app.database import async_session, ModelFeedback
+            from sqlalchemy import select, desc
+
+            async def _fetch():
+                async with async_session() as session:
+                    result = await session.execute(
+                        select(ModelFeedback)
+                        .where(ModelFeedback.period == "adaptive_weights")
+                        .order_by(desc(ModelFeedback.timestamp))
+                        .limit(1)
+                    )
+                    return result.scalar_one_or_none()
+
+            # Try to get event loop, create new one if needed
+            try:
+                loop = asyncio.get_running_loop()
+                # Can't await in sync __init__, will load on next cycle
+                return
+            except RuntimeError:
+                pass
+
+            fb = asyncio.run(_fetch())
+            if fb and fb.feedback_json and fb.feedback_json.get("type") == "adaptive_weights":
+                learned = fb.feedback_json["new_weights"]
+                if all(k in learned for k in ("tft", "lstm", "xgb", "timesfm")):
+                    self.weights = learned
+                    logger.info(f"Loaded adaptive weights from DB: {learned}")
+        except Exception as e:
+            logger.debug(f"Could not load adaptive weights: {e}")
 
     def update_weights(self, weights: dict):
         """Update ensemble weights (must sum to 1.0)."""

@@ -1,0 +1,102 @@
+{
+  "name": "Daily Telegram Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 22
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 10PM UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/history/accuracy?days=1",
+        "options": {}
+      },
+      "id": "http-accuracy",
+      "name": "Get Daily Accuracy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/market/price",
+        "options": {}
+      },
+      "id": "http-price",
+      "name": "Get Price",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const accuracy = $('Get Daily Accuracy').first().json;\nconst price = $('Get Price').first().json;\n\nconst acc = accuracy.accuracy_pct ? Math.round(accuracy.accuracy_pct) : 'N/A';\nconst btcPrice = price.price ? Number(price.price).toLocaleString('en-US') : 'N/A';\nconst change24h = price.change_24h_pct ? price.change_24h_pct.toFixed(2) : 'N/A';\n\nconst byTf = accuracy.by_timeframe || {};\nlet tfBreakdown = '';\nfor (const [tf, data] of Object.entries(byTf)) {\n  const tfAcc = data.accuracy_pct ? Math.round(data.accuracy_pct) : 'N/A';\n  const emoji = tfAcc >= 70 ? '✅' : tfAcc >= 50 ? '🟡' : '❌';\n  tfBreakdown += `${emoji} ${tf}: ${tfAcc}%\\n`;\n}\n\nconst resultEmoji = change24h > 0 ? '📈' : '📉';\nconst accEmoji = acc >= 70 ? '🏆' : acc >= 50 ? '📊' : '📉';\n\nconst date = new Date().toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });\n\nconst html = `${accEmoji} <b>Daily Summary</b> — ${date}\n\n${resultEmoji} <b>BTC:</b> $${btcPrice} (${change24h}% 24h)\n✅ <b>Today's accuracy:</b> ${acc}%\n${tfBreakdown ? `\\n<b>By timeframe:</b>\\n${tfBreakdown}` : ''}\n<i>See you tomorrow! 🔮</i>`;\n\nreturn [{ json: { message: html } }];"
+      },
+      "id": "code-format",
+      "name": "Format Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "@BTCSeerSignals",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "telegram-send",
+      "name": "Send to Channel",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [880, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 10PM UTC": {
+      "main": [
+        [{ "node": "Get Daily Accuracy", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Daily Accuracy": {
+      "main": [
+        [{ "node": "Get Price", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Price": {
+      "main": [
+        [{ "node": "Format Summary", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Summary": {
+      "main": [
+        [{ "node": "Send to Channel", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "telegram" },
+    { "name": "marketing" }
+  ]
+}

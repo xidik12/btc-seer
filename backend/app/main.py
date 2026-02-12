@@ -40,7 +40,7 @@ from app.scheduler.jobs import (
     run_trade_management,
     check_subscription_expiry,
 )
-from app.advisor.feedback import run_training_feedback
+from app.advisor.feedback import run_training_feedback, run_adaptive_weight_learning
 from app.collectors.coins import collect_coin_prices, seed_tracked_coins
 from app.models.phrase_analyzer import analyze_news_phrases
 from app.models.continuous_learner import run_continuous_learning
@@ -145,6 +145,9 @@ async def lifespan(app: FastAPI):
 
         # Training feedback loop (daily)
         scheduler.add_job(run_training_feedback, "interval", hours=24, id="training_feedback")
+
+        # Adaptive weight learning (daily, 1h after feedback)
+        scheduler.add_job(run_adaptive_weight_learning, "interval", hours=24, id="adaptive_weights")
 
         # Subscription expiry check (daily)
         scheduler.add_job(check_subscription_expiry, "interval", hours=24, id="check_subs")

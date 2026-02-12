@@ -1,0 +1,100 @@
+{
+  "name": "Weekly Stats Tweet",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 12,
+              "triggerAtDay": 0
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Sunday 12PM UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/history/accuracy?days=7",
+        "options": {}
+      },
+      "id": "http-accuracy",
+      "name": "Get Weekly Accuracy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/market/price",
+        "options": {}
+      },
+      "id": "http-price",
+      "name": "Get Price",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const accuracy = $('Get Weekly Accuracy').first().json;\nconst price = $('Get Price').first().json;\n\nconst acc = accuracy.accuracy_pct ? Math.round(accuracy.accuracy_pct) : 'N/A';\nconst btcPrice = price.price ? Number(price.price).toLocaleString('en-US', {style: 'currency', currency: 'USD'}) : 'N/A';\nconst change24h = price.change_24h_pct ? price.change_24h_pct.toFixed(2) : 'N/A';\n\nconst byTf = accuracy.by_timeframe || {};\nlet tfBreakdown = '';\nfor (const [tf, data] of Object.entries(byTf)) {\n  const tfAcc = data.accuracy_pct ? Math.round(data.accuracy_pct) : 'N/A';\n  tfBreakdown += `  ${tf}: ${tfAcc}%\\n`;\n}\n\nconst emoji = acc >= 70 ? '🏆' : acc >= 50 ? '📊' : '📉';\n\nconst tweet = `${emoji} BTC Seer Weekly Report\n\n💰 BTC: ${btcPrice} (${change24h}% 24h)\n✅ Weekly accuracy: ${acc}%\n${tfBreakdown ? `\\nBy timeframe:\\n${tfBreakdown}` : ''}\nAI-powered predictions, updated daily.\n\n#Bitcoin #BTC #Crypto #AI`;\n\nreturn [{ json: { text: tweet } }];"
+      },
+      "id": "code-format",
+      "name": "Format Tweet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "id": "twitter-post",
+      "name": "Post Tweet",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [880, 0],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Sunday 12PM UTC": {
+      "main": [
+        [{ "node": "Get Weekly Accuracy", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Weekly Accuracy": {
+      "main": [
+        [{ "node": "Get Price", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Price": {
+      "main": [
+        [{ "node": "Format Tweet", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Tweet": {
+      "main": [
+        [{ "node": "Post Tweet", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "twitter" },
+    { "name": "marketing" }
+  ]
+}

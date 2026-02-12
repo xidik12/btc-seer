@@ -1,4 +1,8 @@
-"""Training feedback loop: analyze mock trade outcomes vs AI predictions."""
+"""Training feedback loop: analyze mock trade outcomes vs AI predictions.
+
+Includes adaptive weight learning that adjusts ensemble model weights
+based on per-model accuracy from recent predictions.
+"""
 import logging
 from datetime import datetime, timedelta
 
@@ -6,6 +10,7 @@ from sqlalchemy import select, desc, func
 
 from app.database import (
     async_session, TradeAdvice, TradeResult, Prediction, ModelFeedback,
+    ModelPerformanceLog,
 )
 
 logger = logging.getLogger(__name__)
@@ -270,3 +275,112 @@ async def get_feedback_stats(days: int = 30) -> dict:
         ],
         "confidence_calibration": merged_cal,
     }
+
+
+async def run_adaptive_weight_learning():
+    """Adjust ensemble weights based on per-model accuracy over recent predictions.
+
+    Reads ModelPerformanceLog entries from the last 7 days, computes accuracy
+    per model, and stores updated weights that the EnsemblePredictor will pick up.
+
+    Runs daily after run_training_feedback.
+    """
+    try:
+        since = datetime.utcnow() - timedelta(days=7)
+
+        async with async_session() as session:
+            result = await session.execute(
+                select(ModelPerformanceLog)
+                .where(
+                    ModelPerformanceLog.timestamp >= since,
+                    ModelPerformanceLog.was_correct.isnot(None),
+                    ModelPerformanceLog.timeframe == "1h",
+                )
+            )
+            logs = result.scalars().all()
+
+        if len(logs) < 20:
+            logger.info(f"Adaptive learning: only {len(logs)} data points, need 20+. Skipping.")
+            return
+
+        # Compute per-model accuracy
+        model_stats = {}
+        for log in logs:
+            name = log.model_name
+            if name == "ensemble":
+                continue
+            if name not in model_stats:
+                model_stats[name] = {"correct": 0, "total": 0}
+            model_stats[name]["total"] += 1
+            if log.was_correct:
+                model_stats[name]["correct"] += 1
+
+        if not model_stats:
+            logger.info("Adaptive learning: no per-model data found.")
+            return
+
+        # Calculate accuracy and new weights
+        model_accuracy = {}
+        for name, stats in model_stats.items():
+            if stats["total"] >= 5:
+                model_accuracy[name] = stats["correct"] / stats["total"]
+            else:
+                model_accuracy[name] = 0.5  # Assume baseline if insufficient data
+
+        # Minimum weights to prevent any model from being zeroed out
+        MIN_WEIGHT = 0.05
+        DEFAULT_KEYS = {"tft": 0.40, "lstm": 0.20, "xgb": 0.25, "timesfm": 0.15}
+
+        new_weights = {}
+        for key, default_w in DEFAULT_KEYS.items():
+            acc = model_accuracy.get(key, 0.5)
+            # Scale weight by accuracy: better accuracy = higher weight
+            # Use a blend: 60% data-driven + 40% default prior
+            data_weight = max(MIN_WEIGHT, acc * default_w * 2)
+            new_weights[key] = 0.6 * data_weight + 0.4 * default_w
+
+        # Normalize to sum to 1
+        total = sum(new_weights.values())
+        new_weights = {k: round(v / total, 4) for k, v in new_weights.items()}
+
+        # Store in ModelFeedback as a special "weights" entry
+        async with async_session() as session:
+            feedback = ModelFeedback(
+                period="adaptive_weights",
+                total_trades=len(logs),
+                winning_trades=sum(1 for l in logs if l.was_correct),
+                direction_accuracy=round(
+                    sum(1 for l in logs if l.was_correct) / len(logs) * 100, 2
+                ),
+                avg_confidence=0,
+                avg_predicted_rr=0,
+                avg_achieved_rr=0,
+                avg_pnl_pct=0,
+                feedback_json={
+                    "type": "adaptive_weights",
+                    "new_weights": new_weights,
+                    "model_accuracy": {k: round(v, 4) for k, v in model_accuracy.items()},
+                    "sample_size": {k: v["total"] for k, v in model_stats.items()},
+                },
+            )
+            session.add(feedback)
+            await session.commit()
+
+        logger.info(
+            f"Adaptive learning: updated weights {new_weights} "
+            f"(accuracy: {model_accuracy}, n={len(logs)})"
+        )
+
+        # Try to update live ensemble if available
+        try:
+            from app.models.ensemble import EnsemblePredictor
+            # The weights will be picked up on next prediction cycle
+            # by reading from DB in the scheduler
+        except Exception:
+            pass
+
+        return new_weights
+
+    except Exception as e:
+        logger.error(f"Adaptive weight learning error: {e}", exc_info=True)
+        return None
