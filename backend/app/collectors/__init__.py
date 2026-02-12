@@ -12,6 +12,7 @@ from app.collectors.etf import ETFCollector
 from app.collectors.exchange_flows import ExchangeFlowCollector
 from app.collectors.derivatives_extended import DerivativesExtendedCollector
 from app.collectors.stablecoin import StablecoinCollector
+from app.collectors.whale import WhaleCollector
 
 __all__ = [
     "MarketCollector",
@@ -28,4 +29,5 @@ __all__ = [
     "ExchangeFlowCollector",
     "DerivativesExtendedCollector",
     "StablecoinCollector",
+    "WhaleCollector",
 ]

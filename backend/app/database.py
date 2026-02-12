@@ -621,6 +621,41 @@ class CoinReport(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
 
+class WhaleTransaction(Base):
+    """Large BTC transactions (>100 BTC) tracked for whale movement analysis."""
+    __tablename__ = "whale_transactions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tx_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    amount_btc: Mapped[float] = mapped_column(Float)
+    amount_usd: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # Classification
+    direction: Mapped[str] = mapped_column(String(20), default="unknown")  # exchange_in, exchange_out, whale_to_whale, unknown
+    from_entity: Mapped[str] = mapped_column(String(100), default="unknown")
+    to_entity: Mapped[str] = mapped_column(String(100), default="unknown")
+    severity: Mapped[int] = mapped_column(Integer, default=5)  # 1-10 based on amount
+    btc_price_at_tx: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # Impact tracking (mirrors EventImpact)
+    change_pct_1h: Mapped[float] = mapped_column(Float, nullable=True)
+    change_pct_4h: Mapped[float] = mapped_column(Float, nullable=True)
+    change_pct_24h: Mapped[float] = mapped_column(Float, nullable=True)
+    evaluated_1h: Mapped[bool] = mapped_column(Boolean, default=False)
+    evaluated_4h: Mapped[bool] = mapped_column(Boolean, default=False)
+    evaluated_24h: Mapped[bool] = mapped_column(Boolean, default=False)
+    direction_was_predictive: Mapped[bool] = mapped_column(Boolean, nullable=True)
+
+    # Entity identification
+    entity_name: Mapped[str] = mapped_column(String(100), nullable=True)     # "BlackRock", "MicroStrategy", "Binance"
+    entity_type: Mapped[str] = mapped_column(String(30), nullable=True)      # "exchange", "institution", "government", "individual", "unknown"
+    entity_wallet: Mapped[str] = mapped_column(String(20), nullable=True)    # "cold", "hot", "custody", "treasury"
+
+    source: Mapped[str] = mapped_column(String(50), default="blockchair")
+    raw_data: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+
 class ModelFeedback(Base):
     """Aggregated feedback from mock trade outcomes vs AI predictions."""
     __tablename__ = "model_feedback"

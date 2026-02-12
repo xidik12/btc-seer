@@ -199,6 +199,21 @@ class FeatureBuilder:
         "m2_ratio",                   # BTC / M2 money supply (trillions)
     ]
 
+    WHALE_FEATURES = [
+        "whale_tx_1h_count",            # Number of whale txs in last 1h
+        "whale_tx_24h_count",           # Number of whale txs in last 24h
+        "whale_exchange_in_1h",         # Exchange deposits in last 1h
+        "whale_exchange_out_1h",        # Exchange withdrawals in last 1h
+        "whale_exchange_in_24h",        # Exchange deposits in last 24h
+        "whale_exchange_out_24h",       # Exchange withdrawals in last 24h
+        "whale_net_flow_1h_btc",        # Net flow in last 1h (positive = inflow/bearish)
+        "whale_net_flow_24h_btc",       # Net flow in last 24h
+        "whale_avg_severity_1h",        # Average severity of 1h txs
+        "whale_avg_severity_24h",       # Average severity of 24h txs
+        "whale_directional_signal",     # -1 (bearish) to +1 (bullish)
+        "whale_historical_accuracy",    # Historical predictive accuracy
+    ]
+
     ALL_FEATURES = (
         TECHNICAL_FEATURES + SENTIMENT_FEATURES + MACRO_FEATURES
         + ONCHAIN_FEATURES + EVENT_MEMORY_FEATURES
@@ -206,7 +221,7 @@ class FeatureBuilder:
         + PHRASE_FEATURES + SUPPLY_FEATURES
         + DERIVATIVES_EXTENDED_FEATURES + ETF_FEATURES
         + EXCHANGE_FLOW_FEATURES + STABLECOIN_FEATURES
-        + POWER_LAW_FEATURES
+        + POWER_LAW_FEATURES + WHALE_FEATURES
     )
 
     def __init__(self):
@@ -231,6 +246,7 @@ class FeatureBuilder:
         etf_data: dict = None,
         exchange_flow_data: dict = None,
         stablecoin_data: dict = None,
+        whale_data: dict = None,
     ) -> dict:
         """Build complete feature vector from all data sources."""
 
@@ -338,6 +354,12 @@ class FeatureBuilder:
                     features[feat] = float(np.log10(fval)) if fval > 0 else 0.0
                 else:
                     features[feat] = float(val) if val is not None else 0.0
+
+        # ── Whale movement features ──
+        if whale_data:
+            for feat in self.WHALE_FEATURES:
+                val = whale_data.get(feat)
+                features[feat] = float(val) if val is not None else 0.0
 
         # ── Power Law & long-term features ──
         current_price = features.get("current_price", 0)

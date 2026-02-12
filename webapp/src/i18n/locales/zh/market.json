@@ -639,5 +639,38 @@
     "actualMove": "实际变动",
     "conf": "置信",
     "calibrationDesc": "更高的置信度应对应更高的准确率。点的大小反映样本量。"
+  },
+  "whales": {
+    "title": "鲸鱼观察器",
+    "noData": "暂无鲸鱼数据",
+    "noWhales": "此筛选条件下无鲸鱼交易",
+    "directionBreakdown": "方向分布 (24小时)",
+    "direction": {
+      "exchange_in": "转入交易所",
+      "exchange_out": "从交易所转出",
+      "whale_to_whale": "鲸鱼间转账",
+      "unknown": "未知"
+    },
+    "entityType": {
+      "exchange": "交易所",
+      "institution": "机构",
+      "government": "政府",
+      "individual": "个人",
+      "unknown": "未知"
+    },
+    "filter": {
+      "all": "全部",
+      "exchange_in": "转入",
+      "exchange_out": "转出",
+      "institutions": "机构",
+      "notable": "重要"
+    },
+    "stats": {
+      "count24h": "24小时鲸鱼交易",
+      "netFlow": "净流量 (BTC)",
+      "avgSize": "平均规模 (BTC)",
+      "accuracy": "预测准确率",
+      "mostActive": "最活跃"
+    }
   }
 }

@@ -147,6 +147,13 @@ const quickIcons = {
       <path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5" />
     </svg>
   ),
+  whales: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12c0-3.5 3-7 9-7s9 3.5 9 7-3 6-9 6-9-2.5-9-6z" />
+      <circle cx="8" cy="11" r="1" fill="currentColor" />
+      <path d="M21 12c1 1 2 2 2 3" />
+    </svg>
+  ),
 }
 
 const CATEGORIES = [
@@ -171,6 +178,7 @@ const CATEGORIES = [
     titleKey: 'category.market',
     links: [
       { path: '/coins', labelKey: 'link.coins', icon: 'coins' },
+      { path: '/whales', labelKey: 'link.whales', icon: 'whales' },
       { path: '/news', labelKey: 'link.news', icon: 'news' },
       { path: '/events', labelKey: 'link.events', icon: 'events' },
       { path: '/history', labelKey: 'link.history', icon: 'history' },
