@@ -121,7 +121,7 @@ export default function Whales() {
     try {
       const [statsData, txData] = await Promise.all([
         api.getWhaleStats(),
-        api.getRecentWhales(24, 50, filter === 'all' ? undefined : filter),
+        api.getRecentWhales(168, 50, filter === 'all' ? undefined : filter),
       ])
       setStats(statsData)
       setTransactions(txData?.transactions || [])
@@ -138,7 +138,11 @@ export default function Whales() {
     return () => clearInterval(interval)
   }, [fetchData])
 
+  // Use 7d stats if 24h has no data, show the richer view
   const s24 = stats?.stats_24h || {}
+  const s7d = stats?.stats_7d || {}
+  const s = s24.count > 0 ? s24 : s7d
+  const periodLabel = s24.count > 0 ? '24h' : '7d'
 
   return (
     <div className="px-4 pt-2 pb-20">
@@ -149,19 +153,19 @@ export default function Whales() {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-          <p className="text-text-muted text-[10px]">{t('market:whales.stats.count24h')}</p>
-          <p className="text-text-primary text-lg font-bold">{s24.count ?? '--'}</p>
+          <p className="text-text-muted text-[10px]">{t('market:whales.stats.count24h')} ({periodLabel})</p>
+          <p className="text-text-primary text-lg font-bold">{s.count ?? '--'}</p>
         </div>
         <div className="bg-bg-card rounded-xl p-3 border border-white/5">
           <p className="text-text-muted text-[10px]">{t('market:whales.stats.netFlow')}</p>
-          <p className={`text-lg font-bold ${(s24.net_flow_btc || 0) > 0 ? 'text-accent-red' : (s24.net_flow_btc || 0) < 0 ? 'text-accent-green' : 'text-text-primary'}`}>
-            {s24.net_flow_btc != null ? `${s24.net_flow_btc > 0 ? '+' : ''}${s24.net_flow_btc.toLocaleString()}` : '--'}
+          <p className={`text-lg font-bold ${(s.net_flow_btc || 0) > 0 ? 'text-accent-red' : (s.net_flow_btc || 0) < 0 ? 'text-accent-green' : 'text-text-primary'}`}>
+            {s.net_flow_btc != null ? `${s.net_flow_btc > 0 ? '+' : ''}${s.net_flow_btc.toLocaleString()}` : '--'}
           </p>
         </div>
         <div className="bg-bg-card rounded-xl p-3 border border-white/5">
           <p className="text-text-muted text-[10px]">{t('market:whales.stats.avgSize')}</p>
           <p className="text-text-primary text-lg font-bold">
-            {s24.avg_btc ? `${s24.avg_btc.toLocaleString()}` : '--'}
+            {s.avg_btc ? `${s.avg_btc.toLocaleString()}` : '--'}
           </p>
         </div>
         <div className="bg-bg-card rounded-xl p-3 border border-white/5">
@@ -173,35 +177,35 @@ export default function Whales() {
       </div>
 
       {/* Direction Breakdown Bar */}
-      {s24.count > 0 && (
+      {s.count > 0 && (
         <div className="bg-bg-card rounded-xl p-3 border border-white/5 mb-3">
           <p className="text-text-muted text-[10px] mb-2">{t('market:whales.directionBreakdown')}</p>
           <div className="flex rounded-full overflow-hidden h-3">
-            {s24.exchange_in > 0 && (
+            {s.exchange_in > 0 && (
               <div
                 className="bg-accent-red/70 transition-all"
-                style={{ width: `${(s24.exchange_in / s24.count) * 100}%` }}
+                style={{ width: `${(s.exchange_in / s.count) * 100}%` }}
                 title={t('market:whales.direction.exchange_in')}
               />
             )}
-            {s24.exchange_out > 0 && (
+            {s.exchange_out > 0 && (
               <div
                 className="bg-accent-green/70 transition-all"
-                style={{ width: `${(s24.exchange_out / s24.count) * 100}%` }}
+                style={{ width: `${(s.exchange_out / s.count) * 100}%` }}
                 title={t('market:whales.direction.exchange_out')}
               />
             )}
-            {(s24.unknown + s24.whale_to_whale) > 0 && (
+            {(s.unknown + s.whale_to_whale) > 0 && (
               <div
                 className="bg-white/20 transition-all"
-                style={{ width: `${((s24.unknown + s24.whale_to_whale) / s24.count) * 100}%` }}
+                style={{ width: `${((s.unknown + s.whale_to_whale) / s.count) * 100}%` }}
               />
             )}
           </div>
           <div className="flex justify-between text-[9px] text-text-muted mt-1">
-            <span className="text-accent-red">{t('market:whales.direction.exchange_in')} ({s24.exchange_in})</span>
-            <span className="text-accent-green">{t('market:whales.direction.exchange_out')} ({s24.exchange_out})</span>
-            <span>{t('market:whales.direction.unknown')} ({(s24.unknown || 0) + (s24.whale_to_whale || 0)})</span>
+            <span className="text-accent-red">{t('market:whales.direction.exchange_in')} ({s.exchange_in})</span>
+            <span className="text-accent-green">{t('market:whales.direction.exchange_out')} ({s.exchange_out})</span>
+            <span>{t('market:whales.direction.unknown')} ({(s.unknown || 0) + (s.whale_to_whale || 0)})</span>
           </div>
         </div>
       )}
