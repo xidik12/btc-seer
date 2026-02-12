@@ -651,16 +651,26 @@
       "whale_to_whale": "Whale to Whale",
       "unknown": "Unknown"
     },
+    "entityType": {
+      "exchange": "Exchange",
+      "institution": "Institution",
+      "government": "Government",
+      "individual": "Individual",
+      "unknown": "Unknown"
+    },
     "filter": {
       "all": "All",
       "exchange_in": "Deposits",
-      "exchange_out": "Withdrawals"
+      "exchange_out": "Withdrawals",
+      "institutions": "Institutions",
+      "notable": "Notable"
     },
     "stats": {
       "count24h": "24h Whale Txs",
       "netFlow": "Net Flow (BTC)",
       "avgSize": "Avg Size (BTC)",
-      "accuracy": "Predictive Accuracy"
+      "accuracy": "Predictive Accuracy",
+      "mostActive": "Most Active"
     }
   }
 }

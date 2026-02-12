@@ -23,8 +23,69 @@ const SEVERITY_COLORS = {
   4: 'bg-bg-hover',
 }
 
+const ENTITY_TYPE_STYLES = {
+  exchange:    { bg: 'bg-accent-blue/20',   text: 'text-accent-blue',   border: 'border-accent-blue/30' },
+  institution: { bg: 'bg-purple-500/20',    text: 'text-purple-400',    border: 'border-purple-500/30' },
+  government:  { bg: 'bg-accent-yellow/20', text: 'text-accent-yellow', border: 'border-accent-yellow/30' },
+  individual:  { bg: 'bg-accent-orange/20', text: 'text-accent-orange', border: 'border-accent-orange/30' },
+}
+
+const FILTER_OPTIONS = [
+  { key: 'all',          directionFilter: null,           entityTypeFilter: null },
+  { key: 'exchange_in',  directionFilter: 'exchange_in',  entityTypeFilter: null },
+  { key: 'exchange_out', directionFilter: 'exchange_out', entityTypeFilter: null },
+  { key: 'institutions', directionFilter: null,           entityTypeFilter: 'institution' },
+  { key: 'notable',      directionFilter: null,           entityTypeFilter: '__notable__' },
+]
+
 function getSeverityColor(severity) {
   return SEVERITY_COLORS[severity] || 'bg-bg-hover'
+}
+
+function EntityBadge({ entityName, entityType, t }) {
+  if (!entityName || !entityType) return null
+  const style = ENTITY_TYPE_STYLES[entityType] || ENTITY_TYPE_STYLES.exchange
+  const typeLabel = t(`market:whales.entityType.${entityType}`, entityType)
+
+  return (
+    <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md border ${style.bg} ${style.text} ${style.border} font-medium`}>
+      <EntityIcon type={entityType} />
+      {entityName}
+      <span className="opacity-60">({typeLabel})</span>
+    </span>
+  )
+}
+
+function EntityIcon({ type }) {
+  const cls = "w-2.5 h-2.5 shrink-0"
+  switch (type) {
+    case 'exchange':
+      return (
+        <svg viewBox="0 0 16 16" fill="currentColor" className={cls}>
+          <path d="M8 1L1 5v6l7 4 7-4V5L8 1zm0 2.18L12.93 6 8 8.82 3.07 6 8 3.18z"/>
+        </svg>
+      )
+    case 'institution':
+      return (
+        <svg viewBox="0 0 16 16" fill="currentColor" className={cls}>
+          <path d="M8 1L1 4v1h14V4L8 1zM2 6v6h2V6H2zm4 0v6h2V6H6zm4 0v6h2V6h-2zm4 0v6h1V6h-1zM1 13v2h14v-2H1z"/>
+        </svg>
+      )
+    case 'government':
+      return (
+        <svg viewBox="0 0 16 16" fill="currentColor" className={cls}>
+          <path d="M8 0L6.5 3H2l3.5 3L4 10l4-2.5L12 10 10.5 6 14 3H9.5L8 0z"/>
+        </svg>
+      )
+    case 'individual':
+      return (
+        <svg viewBox="0 0 16 16" fill="currentColor" className={cls}>
+          <circle cx="8" cy="4" r="3"/><path d="M2 14c0-3.31 2.69-6 6-6s6 2.69 6 6H2z"/>
+        </svg>
+      )
+    default:
+      return null
+  }
 }
 
 function DirectionIcon({ direction }) {
@@ -57,13 +118,14 @@ function DirectionIcon({ direction }) {
 
 function WhaleCard({ tx, t }) {
   const directionLabel = t(`market:whales.direction.${tx.direction}`, tx.direction?.replace(/_/g, ' '))
+  const isNotable = tx.entity_type && tx.entity_type !== 'exchange'
 
   return (
-    <div className="bg-bg-card rounded-xl p-3 border border-white/5 slide-up">
+    <div className={`bg-bg-card rounded-xl p-3 border slide-up ${isNotable ? 'border-purple-500/20' : 'border-white/5'}`}>
       <div className="flex items-start gap-3">
         <DirectionIcon direction={tx.direction} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-text-primary text-sm font-bold">
               {tx.amount_btc?.toLocaleString()} BTC
             </span>
@@ -76,6 +138,13 @@ function WhaleCard({ tx, t }) {
               S{tx.severity}
             </span>
           </div>
+
+          {/* Entity badge */}
+          {tx.entity_name && (
+            <div className="mb-1">
+              <EntityBadge entityName={tx.entity_name} entityType={tx.entity_type} t={t} />
+            </div>
+          )}
 
           <div className="flex items-center gap-2 text-[10px] text-text-muted mb-1">
             <span className={
@@ -119,12 +188,27 @@ export default function Whales() {
 
   const fetchData = useCallback(async () => {
     try {
+      const activeFilter = FILTER_OPTIONS.find(f => f.key === filter)
+      const direction = activeFilter?.directionFilter || undefined
+      // For 'notable', we fetch all and filter client-side; for specific entity type, pass to API
+      const entityType = activeFilter?.entityTypeFilter === '__notable__' ? undefined : activeFilter?.entityTypeFilter || undefined
+
       const [statsData, txData] = await Promise.all([
         api.getWhaleStats(),
-        api.getRecentWhales(168, 50, filter === 'all' ? undefined : filter),
+        api.getRecentWhales(168, 100, direction, entityType),
       ])
       setStats(statsData)
-      setTransactions(txData?.transactions || [])
+
+      let txList = txData?.transactions || []
+
+      // Client-side filter for 'notable' (non-exchange entities)
+      if (activeFilter?.entityTypeFilter === '__notable__') {
+        txList = txList.filter(tx =>
+          tx.entity_type && tx.entity_type !== 'exchange' && tx.entity_type !== 'unknown'
+        )
+      }
+
+      setTransactions(txList)
     } catch (err) {
       console.error('Whale data error:', err)
     } finally {
@@ -169,9 +253,9 @@ export default function Whales() {
           </p>
         </div>
         <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-          <p className="text-text-muted text-[10px]">{t('market:whales.stats.accuracy')}</p>
-          <p className="text-text-primary text-lg font-bold">
-            {stats?.predictive_accuracy != null ? `${stats.predictive_accuracy}%` : '--'}
+          <p className="text-text-muted text-[10px]">{t('market:whales.stats.mostActive')}</p>
+          <p className="text-text-primary text-sm font-bold truncate">
+            {s.most_active_entity || '--'}
           </p>
         </div>
       </div>
@@ -211,18 +295,18 @@ export default function Whales() {
       )}
 
       {/* Filter Buttons */}
-      <div className="flex gap-2 mb-3">
-        {['all', 'exchange_in', 'exchange_out'].map(f => (
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+        {FILTER_OPTIONS.map(f => (
           <button
-            key={f}
-            onClick={() => { setFilter(f); setLoading(true) }}
-            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-              filter === f
+            key={f.key}
+            onClick={() => { setFilter(f.key); setLoading(true) }}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
+              filter === f.key
                 ? 'bg-accent-blue/20 border-accent-blue text-accent-blue'
                 : 'bg-bg-card border-white/5 text-text-muted'
             }`}
           >
-            {t(`market:whales.filter.${f}`)}
+            {t(`market:whales.filter.${f.key}`)}
           </button>
         ))}
       </div>

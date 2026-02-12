@@ -1522,74 +1522,100 @@ async def evaluate_quant_predictions():
         logger.error(f"Quant prediction evaluation error: {e}")
 
 
+async def _store_whale_transactions(transactions: list[dict], source_label: str):
+    """Shared helper to store whale transaction dicts into the database."""
+    if not transactions:
+        return 0
+
+    async with async_session() as session:
+        price_row = await session.execute(
+            select(Price).order_by(desc(Price.timestamp)).limit(1)
+        )
+        price = price_row.scalar_one_or_none()
+        current_price = price.close if price else None
+
+        stored = 0
+        for tx_data in transactions:
+            existing = await session.execute(
+                select(WhaleTransaction.id).where(
+                    WhaleTransaction.tx_hash == tx_data["tx_hash"]
+                )
+            )
+            if existing.scalar_one_or_none() is not None:
+                continue
+
+            amount_usd = tx_data["amount_btc"] * current_price if current_price else None
+
+            whale_tx = WhaleTransaction(
+                tx_hash=tx_data["tx_hash"],
+                timestamp=datetime.fromisoformat(tx_data["timestamp"]) if tx_data.get("timestamp") else datetime.utcnow(),
+                amount_btc=tx_data["amount_btc"],
+                amount_usd=amount_usd,
+                direction=tx_data["direction"],
+                from_entity=tx_data["from_entity"],
+                to_entity=tx_data["to_entity"],
+                entity_name=tx_data.get("entity_name"),
+                entity_type=tx_data.get("entity_type"),
+                entity_wallet=tx_data.get("entity_wallet"),
+                severity=tx_data["severity"],
+                btc_price_at_tx=current_price,
+                source=tx_data.get("source", source_label),
+                raw_data=tx_data.get("raw_data"),
+            )
+            session.add(whale_tx)
+            stored += 1
+
+            # For severity >= 9, also create EventImpact
+            if tx_data["severity"] >= 9 and current_price:
+                entity_label = tx_data.get("entity_name") or tx_data["from_entity"]
+                if entity_label == "unknown":
+                    entity_label = tx_data["to_entity"]
+                direction_label = tx_data["direction"].replace("_", " ")
+                title = f"Whale {direction_label}: {tx_data['amount_btc']:.0f} BTC"
+                if entity_label and entity_label != "unknown":
+                    title += f" ({entity_label})"
+                if amount_usd:
+                    title += f" ${amount_usd:,.0f}"
+
+                event = EventImpact(
+                    timestamp=whale_tx.timestamp,
+                    title=title,
+                    source="whale_tracker",
+                    category="whale_movement",
+                    subcategory=tx_data["direction"],
+                    keywords=f"whale,{tx_data['direction']},{tx_data['from_entity']},{tx_data['to_entity']}",
+                    severity=tx_data["severity"],
+                    sentiment_score=-0.5 if tx_data["direction"] == "exchange_in" else 0.5 if tx_data["direction"] == "exchange_out" else 0.0,
+                    price_at_event=current_price,
+                )
+                session.add(event)
+
+        await session.commit()
+
+    if stored:
+        logger.info(f"Whale transactions stored ({source_label}): {stored} new")
+    return stored
+
+
 async def collect_whale_transactions():
-    """Collect and store large BTC transactions (runs every 10 min)."""
+    """Collect and store large BTC transactions (runs every 10 min).
+
+    Uses Blockchair for discovery + BTCScan for address details + mempool.space fallback.
+    """
     try:
         result = await whale_collector.collect()
-        transactions = result.get("transactions", [])
-        if not transactions:
-            return
-
-        # Get current BTC price
-        async with async_session() as session:
-            price_row = await session.execute(
-                select(Price).order_by(desc(Price.timestamp)).limit(1)
-            )
-            price = price_row.scalar_one_or_none()
-            current_price = price.close if price else None
-
-            stored = 0
-            for tx_data in transactions:
-                # Check uniqueness
-                existing = await session.execute(
-                    select(WhaleTransaction.id).where(
-                        WhaleTransaction.tx_hash == tx_data["tx_hash"]
-                    )
-                )
-                if existing.scalar_one_or_none() is not None:
-                    continue
-
-                amount_usd = tx_data["amount_btc"] * current_price if current_price else None
-
-                whale_tx = WhaleTransaction(
-                    tx_hash=tx_data["tx_hash"],
-                    timestamp=datetime.fromisoformat(tx_data["timestamp"]) if tx_data.get("timestamp") else datetime.utcnow(),
-                    amount_btc=tx_data["amount_btc"],
-                    amount_usd=amount_usd,
-                    direction=tx_data["direction"],
-                    from_entity=tx_data["from_entity"],
-                    to_entity=tx_data["to_entity"],
-                    severity=tx_data["severity"],
-                    btc_price_at_tx=current_price,
-                    source="blockchair",
-                    raw_data=tx_data.get("raw_data"),
-                )
-                session.add(whale_tx)
-                stored += 1
-
-                # For severity >= 9, also create EventImpact
-                if tx_data["severity"] >= 9 and current_price:
-                    direction_label = tx_data["direction"].replace("_", " ")
-                    event = EventImpact(
-                        timestamp=whale_tx.timestamp,
-                        title=f"Whale {direction_label}: {tx_data['amount_btc']:.0f} BTC (${amount_usd:,.0f})" if amount_usd else f"Whale {direction_label}: {tx_data['amount_btc']:.0f} BTC",
-                        source="whale_tracker",
-                        category="whale_movement",
-                        subcategory=tx_data["direction"],
-                        keywords=f"whale,{tx_data['direction']},{tx_data['from_entity']},{tx_data['to_entity']}",
-                        severity=tx_data["severity"],
-                        sentiment_score=-0.5 if tx_data["direction"] == "exchange_in" else 0.5 if tx_data["direction"] == "exchange_out" else 0.0,
-                        price_at_event=current_price,
-                    )
-                    session.add(event)
-
-            await session.commit()
-
-        if stored:
-            logger.info(f"Whale transactions stored: {stored} new")
-
+        await _store_whale_transactions(result.get("transactions", []), "blockchair+btcscan")
     except Exception as e:
         logger.error(f"Whale collection error: {e}")
+
+
+async def monitor_entity_wallets():
+    """Monitor known entity wallets for new large transactions (runs every 10 min, offset by 5 min)."""
+    try:
+        result = await whale_collector.monitor_known_addresses()
+        await _store_whale_transactions(result.get("transactions", []), "entity_monitor")
+    except Exception as e:
+        logger.error(f"Entity wallet monitor error: {e}")
 
 
 async def evaluate_whale_impacts():
@@ -1647,15 +1673,17 @@ async def evaluate_whale_impacts():
 
 
 async def backfill_whale_transactions():
-    """Backfill whale transactions from Blockchair API (multiple pages).
+    """Backfill whale transactions from Blockchair + BTCScan (multiple pages).
 
     Fetches up to 100 recent large BTC transactions.
+    Uses BTCScan to get addresses for entity labeling.
     Called once at startup or via admin endpoint.
     """
     import aiohttp
     import ssl
     import certifi
-    from app.collectors.whale import WhaleCollector, calculate_severity, KNOWN_EXCHANGES
+    from app.collectors.whale import calculate_severity
+    from app.collectors.known_entities import identify_any
 
     logger.info("Backfilling whale transactions...")
 
@@ -1675,7 +1703,6 @@ async def backfill_whale_transactions():
         stored_total = 0
 
         async with aiohttp.ClientSession(timeout=timeout, connector=connector) as http:
-            # Fetch multiple pages from Blockchair
             for offset in range(0, 100, 10):
                 try:
                     url = "https://api.blockchair.com/bitcoin/transactions"
@@ -1701,7 +1728,6 @@ async def backfill_whale_transactions():
                             if not tx_hash:
                                 continue
 
-                            # Check uniqueness
                             existing = await session.execute(
                                 select(WhaleTransaction.id).where(
                                     WhaleTransaction.tx_hash == tx_hash
@@ -1715,29 +1741,45 @@ async def backfill_whale_transactions():
                             if amount_btc < 100:
                                 continue
 
-                            # Classify
-                            input_addrs = tx.get("input_addresses", []) or []
-                            output_addrs = tx.get("output_addresses", []) or []
+                            # Fetch addresses from BTCScan
+                            input_addrs = []
+                            output_addrs = []
+                            try:
+                                btcscan_url = f"https://btcscan.org/api/tx/{tx_hash}"
+                                async with http.get(btcscan_url) as btc_resp:
+                                    if btc_resp.status == 200:
+                                        tx_detail = await btc_resp.json()
+                                        for vin in tx_detail.get("vin", []):
+                                            addr = vin.get("prevout", {}).get("scriptpubkey_address")
+                                            if addr:
+                                                input_addrs.append(addr)
+                                        for vout in tx_detail.get("vout", []):
+                                            addr = vout.get("scriptpubkey_address")
+                                            if addr:
+                                                output_addrs.append(addr)
+                                await asyncio.sleep(1)  # rate limit BTCScan
+                            except Exception:
+                                pass
 
-                            from_exchange = None
-                            to_exchange = None
-                            for addr in (input_addrs if isinstance(input_addrs, list) else []):
-                                if addr in KNOWN_EXCHANGES:
-                                    from_exchange = KNOWN_EXCHANGES[addr]
-                                    break
-                            for addr in (output_addrs if isinstance(output_addrs, list) else []):
-                                if addr in KNOWN_EXCHANGES:
-                                    to_exchange = KNOWN_EXCHANGES[addr]
-                                    break
+                            # Classify using known entities
+                            from_entity_info = identify_any(input_addrs)
+                            to_entity_info = identify_any(output_addrs)
 
-                            if from_exchange and not to_exchange:
+                            from_entity = from_entity_info["name"] if from_entity_info else "unknown"
+                            to_entity = to_entity_info["name"] if to_entity_info else "unknown"
+
+                            if from_entity_info and not to_entity_info:
                                 direction = "exchange_out"
-                            elif not from_exchange and to_exchange:
+                                primary = from_entity_info
+                            elif not from_entity_info and to_entity_info:
                                 direction = "exchange_in"
-                            elif from_exchange and to_exchange:
+                                primary = to_entity_info
+                            elif from_entity_info and to_entity_info:
                                 direction = "exchange_in"
+                                primary = to_entity_info
                             else:
                                 direction = "unknown"
+                                primary = None
 
                             amount_usd = amount_btc * current_price
 
@@ -1752,8 +1794,11 @@ async def backfill_whale_transactions():
                                 amount_btc=round(amount_btc, 4),
                                 amount_usd=round(amount_usd, 2),
                                 direction=direction,
-                                from_entity=from_exchange or "unknown",
-                                to_entity=to_exchange or "unknown",
+                                from_entity=from_entity,
+                                to_entity=to_entity,
+                                entity_name=primary["name"] if primary else None,
+                                entity_type=primary["type"] if primary else None,
+                                entity_wallet=primary["wallet"] if primary else None,
                                 severity=calculate_severity(amount_btc),
                                 btc_price_at_tx=current_price,
                                 source="blockchair_backfill",
@@ -1764,7 +1809,6 @@ async def backfill_whale_transactions():
 
                         await session.commit()
 
-                    # Rate limit: wait between pages
                     await asyncio.sleep(2)
 
                 except Exception as e:

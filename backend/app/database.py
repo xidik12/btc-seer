@@ -647,6 +647,11 @@ class WhaleTransaction(Base):
     evaluated_24h: Mapped[bool] = mapped_column(Boolean, default=False)
     direction_was_predictive: Mapped[bool] = mapped_column(Boolean, nullable=True)
 
+    # Entity identification
+    entity_name: Mapped[str] = mapped_column(String(100), nullable=True)     # "BlackRock", "MicroStrategy", "Binance"
+    entity_type: Mapped[str] = mapped_column(String(30), nullable=True)      # "exchange", "institution", "government", "individual", "unknown"
+    entity_wallet: Mapped[str] = mapped_column(String(20), nullable=True)    # "cold", "hot", "custody", "treasury"
+
     source: Mapped[str] = mapped_column(String(50), default="blockchair")
     raw_data: Mapped[dict] = mapped_column(JSON, nullable=True)
 

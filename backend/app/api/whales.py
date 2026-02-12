@@ -15,6 +15,7 @@ async def get_recent_whales(
     hours: int = Query(24, ge=1, le=168),
     limit: int = Query(50, ge=1, le=200),
     direction: str = Query(None),
+    entity_type: str = Query(None),
     min_btc: float = Query(None, ge=0),
     session: AsyncSession = Depends(get_session),
 ):
@@ -25,6 +26,8 @@ async def get_recent_whales(
 
     if direction:
         query = query.where(WhaleTransaction.direction == direction)
+    if entity_type:
+        query = query.where(WhaleTransaction.entity_type == entity_type)
     if min_btc is not None:
         query = query.where(WhaleTransaction.amount_btc >= min_btc)
 
@@ -45,6 +48,9 @@ async def get_recent_whales(
                 "direction": tx.direction,
                 "from_entity": tx.from_entity,
                 "to_entity": tx.to_entity,
+                "entity_name": tx.entity_name,
+                "entity_type": tx.entity_type,
+                "entity_wallet": tx.entity_wallet,
                 "severity": tx.severity,
                 "btc_price_at_tx": tx.btc_price_at_tx,
                 "change_pct_1h": tx.change_pct_1h,
@@ -54,6 +60,55 @@ async def get_recent_whales(
             }
             for tx in txs
         ],
+    }
+
+
+@router.get("/entities")
+async def get_entities(
+    session: AsyncSession = Depends(get_session),
+):
+    """Get list of known entities with latest whale activity."""
+    from app.collectors.known_entities import get_entities_summary
+
+    entities = get_entities_summary()
+
+    # Enrich with latest activity from DB
+    now = datetime.utcnow()
+    since_7d = now - timedelta(days=7)
+
+    result = await session.execute(
+        select(WhaleTransaction).where(
+            WhaleTransaction.timestamp >= since_7d,
+            WhaleTransaction.entity_name.isnot(None),
+        ).order_by(desc(WhaleTransaction.timestamp))
+    )
+    txs = result.scalars().all()
+
+    # Group activity by entity
+    entity_activity: dict[str, dict] = {}
+    for tx in txs:
+        name = tx.entity_name
+        if name not in entity_activity:
+            entity_activity[name] = {
+                "tx_count_7d": 0,
+                "total_btc_7d": 0.0,
+                "last_seen": tx.timestamp.isoformat(),
+                "last_direction": tx.direction,
+            }
+        entity_activity[name]["tx_count_7d"] += 1
+        entity_activity[name]["total_btc_7d"] += tx.amount_btc
+
+    # Merge
+    for entity in entities:
+        activity = entity_activity.get(entity["name"], {})
+        entity["tx_count_7d"] = activity.get("tx_count_7d", 0)
+        entity["total_btc_7d"] = round(activity.get("total_btc_7d", 0), 2)
+        entity["last_seen"] = activity.get("last_seen")
+        entity["last_direction"] = activity.get("last_direction")
+
+    return {
+        "entities": entities,
+        "total": len(entities),
     }
 
 
@@ -85,12 +140,14 @@ async def get_whale_stats(
                 "exchange_in": 0, "exchange_out": 0,
                 "whale_to_whale": 0, "unknown": 0,
                 "net_flow_btc": 0, "top_exchanges": {},
+                "most_active_entity": None,
             }
 
         directions = {"exchange_in": 0, "exchange_out": 0, "whale_to_whale": 0, "unknown": 0}
         exchange_counts = {}
+        entity_counts = {}
         total_btc = 0
-        net_flow = 0  # positive = net inflow (bearish), negative = net outflow (bullish)
+        net_flow = 0
 
         for tx in txs:
             total_btc += tx.amount_btc
@@ -106,6 +163,11 @@ async def get_whale_stats(
                 if entity and entity != "unknown":
                     exchange_counts[entity] = exchange_counts.get(entity, 0) + 1
 
+            if tx.entity_name:
+                entity_counts[tx.entity_name] = entity_counts.get(tx.entity_name, 0) + 1
+
+        most_active = max(entity_counts, key=entity_counts.get) if entity_counts else None
+
         return {
             "count": len(txs),
             "total_btc": round(total_btc, 2),
@@ -116,6 +178,7 @@ async def get_whale_stats(
             "unknown": directions["unknown"],
             "net_flow_btc": round(net_flow, 2),
             "top_exchanges": dict(sorted(exchange_counts.items(), key=lambda x: -x[1])[:5]),
+            "most_active_entity": most_active,
         }
 
     # Predictive accuracy
@@ -209,34 +272,34 @@ async def seed_whale_data(
     # Only verified individual transactions reported by news/on-chain trackers
     VERIFIED_WHALES = [
         # Garrett Jin (ex-BitForex CEO) — 5,000 BTC to Binance after $230M Hyperliquid liquidation
-        # Sources: blockchain.news, panewslab.com, coinfomania.com
         {"time": "2026-02-07 14:30:00", "btc": 5000, "dir": "exchange_in",
          "from": "Garrett Jin", "to": "Binance", "price": 70200,
+         "entity_name": "Binance", "entity_type": "exchange", "entity_wallet": "hot",
          "source": "blockchain.news / Lookonchain"},
-        # Panic seller dumps 2,500 BTC on Binance (had accumulated at ~$81K)
-        # Sources: ambcrypto.com, ainvest.com, Lookonchain
+        # Panic seller dumps 2,500 BTC on Binance
         {"time": "2026-02-08 09:20:00", "btc": 2500, "dir": "exchange_in",
          "from": "unknown", "to": "Binance", "price": 69100,
+         "entity_name": "Binance", "entity_type": "exchange", "entity_wallet": "hot",
          "source": "ambcrypto / Lookonchain"},
-        # Whale withdraws 2,786 BTC from Binance to cold storage (F&G Index at 6-10)
-        # Source: blockchainreporter.net
+        # Whale withdraws 2,786 BTC from Binance to cold storage
         {"time": "2026-02-08 16:45:00", "btc": 2786, "dir": "exchange_out",
          "from": "Binance", "to": "unknown", "price": 68500,
+         "entity_name": "Binance", "entity_type": "exchange", "entity_wallet": "hot",
          "source": "blockchainreporter.net"},
         # Same whale also withdrew 630 BTC hours earlier
-        # Source: blockchainreporter.net
         {"time": "2026-02-08 14:10:00", "btc": 630, "dir": "exchange_out",
          "from": "Binance", "to": "unknown", "price": 68800,
+         "entity_name": "Binance", "entity_type": "exchange", "entity_wallet": "hot",
          "source": "blockchainreporter.net"},
         # Institutional buyer withdraws 2,989 BTC from Coinbase Institutional
-        # Source: bitcoinworld.co.in
         {"time": "2026-02-06 20:30:00", "btc": 2989, "dir": "exchange_out",
          "from": "Coinbase", "to": "unknown", "price": 65200,
+         "entity_name": "Coinbase", "entity_type": "exchange", "entity_wallet": "cold",
          "source": "bitcoinworld.co.in"},
         # Separate institutional withdrawal: 3,483 BTC from Coinbase Institutional
-        # Source: bitcoinworld.co.in
         {"time": "2026-02-07 03:15:00", "btc": 3483, "dir": "exchange_out",
          "from": "Coinbase", "to": "unknown", "price": 66800,
+         "entity_name": "Coinbase", "entity_type": "exchange", "entity_wallet": "cold",
          "source": "bitcoinworld.co.in"},
     ]
 
@@ -271,6 +334,9 @@ async def seed_whale_data(
                 direction=w["dir"],
                 from_entity=w["from"],
                 to_entity=w["to"],
+                entity_name=w.get("entity_name"),
+                entity_type=w.get("entity_type"),
+                entity_wallet=w.get("entity_wallet"),
                 severity=_severity(w["btc"]),
                 btc_price_at_tx=w["price"],
                 source=w["source"],

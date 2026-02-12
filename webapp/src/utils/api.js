@@ -240,12 +240,14 @@ export const api = {
   getCoinReport: (address) => cachedFetch(`/coins/report/${address}`, T120),
 
   // Whales
-  getRecentWhales: (hours = 24, limit = 50, direction) => {
+  getRecentWhales: (hours = 24, limit = 50, direction, entityType) => {
     let url = `/whales/recent?hours=${hours}&limit=${limit}`
     if (direction) url += `&direction=${direction}`
+    if (entityType) url += `&entity_type=${entityType}`
     return cachedFetch(url, T60)
   },
   getWhaleStats: () => cachedFetch('/whales/stats', T120),
+  getWhaleEntities: () => cachedFetch('/whales/entities', T300),
   getWhaleFlowHistory: (days = 7) => cachedFetch(`/whales/flow-history?days=${days}`, T300),
 
   // Referral

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from contextlib import asynccontextmanager
@@ -40,6 +41,7 @@ from app.scheduler.jobs import (
     run_trade_management,
     check_subscription_expiry,
     collect_whale_transactions,
+    monitor_entity_wallets,
     evaluate_whale_impacts,
     backfill_whale_transactions,
 )
@@ -117,6 +119,8 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(save_indicator_snapshot, "interval", hours=1, id="save_indicators")
         scheduler.add_job(collect_coin_prices, "interval", minutes=2, id="collect_coins")
         scheduler.add_job(collect_whale_transactions, "interval", minutes=10, id="collect_whales")
+        scheduler.add_job(monitor_entity_wallets, "interval", minutes=10, id="monitor_entities",
+                          next_run_time=datetime.utcnow() + timedelta(minutes=5))  # offset by 5 min
 
         # Prediction jobs
         scheduler.add_job(generate_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict")

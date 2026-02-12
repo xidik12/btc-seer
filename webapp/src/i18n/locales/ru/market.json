@@ -651,16 +651,26 @@
       "whale_to_whale": "Кит к киту",
       "unknown": "Неизвестно"
     },
+    "entityType": {
+      "exchange": "Биржа",
+      "institution": "Институция",
+      "government": "Правительство",
+      "individual": "Личность",
+      "unknown": "Неизвестно"
+    },
     "filter": {
       "all": "Все",
       "exchange_in": "Депозиты",
-      "exchange_out": "Выводы"
+      "exchange_out": "Выводы",
+      "institutions": "Институции",
+      "notable": "Важные"
     },
     "stats": {
       "count24h": "Транзакции за 24ч",
       "netFlow": "Чистый поток (BTC)",
       "avgSize": "Средний размер (BTC)",
-      "accuracy": "Точность прогноза"
+      "accuracy": "Точность прогноза",
+      "mostActive": "Самый активный"
     }
   }
 }

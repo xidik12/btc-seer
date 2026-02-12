@@ -651,16 +651,26 @@
       "whale_to_whale": "鲸鱼间转账",
       "unknown": "未知"
     },
+    "entityType": {
+      "exchange": "交易所",
+      "institution": "机构",
+      "government": "政府",
+      "individual": "个人",
+      "unknown": "未知"
+    },
     "filter": {
       "all": "全部",
       "exchange_in": "转入",
-      "exchange_out": "转出"
+      "exchange_out": "转出",
+      "institutions": "机构",
+      "notable": "重要"
     },
     "stats": {
       "count24h": "24小时鲸鱼交易",
       "netFlow": "净流量 (BTC)",
       "avgSize": "平均规模 (BTC)",
-      "accuracy": "预测准确率"
+      "accuracy": "预测准确率",
+      "mostActive": "最活跃"
     }
   }
 }
