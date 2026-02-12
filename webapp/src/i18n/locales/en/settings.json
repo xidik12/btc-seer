@@ -65,6 +65,22 @@
       "powerlaw": "Power Law deviation tracking"
     }
   },
+  "referral": {
+    "title": "Invite Friends",
+    "subtitle": "Share your code — both get +7 days Premium",
+    "yourCode": "Your Code",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "friendsReferred": "Friends Referred",
+    "bonusEarned": "Bonus Earned",
+    "shareLink": "Share Invite Link",
+    "shareText": "Join BTC Seer — AI-powered Bitcoin predictions! Use my link for 7 days free Premium:",
+    "showLeaderboard": "Show Leaderboard",
+    "hideLeaderboard": "Hide Leaderboard",
+    "refs": "refs",
+    "noReferrals": "No referrals yet — be the first!",
+    "referredBy": "Referred by"
+  },
   "subscriptionPage": {
     "title": "Subscription",
     "tier": "Tier",

@@ -17,7 +17,7 @@ from app.database import init_db
 from app.api import predictions, signals, news, market, history, influencers, events, quant, coins
 from app.api import advisor as advisor_api
 from app.api import admin as admin_api
-from app.api import powerlaw, public_api, liquidations, elliott_wave, subscription, auth as auth_api
+from app.api import powerlaw, public_api, liquidations, elliott_wave, subscription, auth as auth_api, referral as referral_api
 from app.scheduler.jobs import (
     backfill_historical_prices,
     collect_price_data,
@@ -295,6 +295,7 @@ app.include_router(coins.router)
 app.include_router(elliott_wave.router)
 app.include_router(subscription.router)
 app.include_router(auth_api.router)
+app.include_router(referral_api.router)
 app.include_router(public_api.router)
 
 

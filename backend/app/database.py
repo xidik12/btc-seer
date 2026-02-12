@@ -365,6 +365,11 @@ class BotUser(Base):
     subscription_end: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     stars_payment_id: Mapped[str] = mapped_column(String(200), nullable=True)
 
+    # Referral system
+    referral_code: Mapped[str] = mapped_column(String(20), unique=True, nullable=True, index=True)
+    referred_by: Mapped[int] = mapped_column(BigInteger, nullable=True)
+    referral_count: Mapped[int] = mapped_column(Integer, default=0)
+
     # Admin / ban
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
     ban_reason: Mapped[str] = mapped_column(String(500), nullable=True)
@@ -381,6 +386,18 @@ class PaymentHistory(Base):
     stars_amount: Mapped[int] = mapped_column(Integer)
     payment_id: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class Referral(Base):
+    """Tracks referral relationships and bonus grants."""
+    __tablename__ = "referrals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    referrer_telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    referee_telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    referrer_bonus_days: Mapped[int] = mapped_column(Integer, default=7)
+    referee_bonus_days: Mapped[int] = mapped_column(Integer, default=7)
 
 
 class PortfolioState(Base):

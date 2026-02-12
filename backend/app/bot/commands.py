@@ -3,6 +3,7 @@ from datetime import datetime
 
 from aiogram import Router
 from aiogram.filters import CommandStart, Command
+from aiogram.filters.command import CommandObject
 from aiogram.types import Message
 from sqlalchemy import select, desc
 
@@ -13,6 +14,7 @@ from app.database import (
 )
 from app.bot.keyboards import main_keyboard, settings_keyboard, back_keyboard, advisor_keyboard, trade_close_keyboard, subscribe_keyboard
 from app.bot.subscription import require_premium, is_premium, get_status_text, grant_trial
+from app.bot.referral import parse_referral_code, process_referral
 from app.signals.generator import DISCLAIMER
 
 logger = logging.getLogger(__name__)
@@ -20,9 +22,12 @@ router = Router()
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message):
-    """Handle /start command — subscribe and show main menu."""
+async def cmd_start(message: Message, command: CommandObject):
+    """Handle /start command — subscribe, process referrals, show main menu."""
     is_new = False
+    referral_info = None
+    referral_code = parse_referral_code(command.args)
+
     async with async_session() as session:
         result = await session.execute(
             select(BotUser).where(BotUser.telegram_id == message.from_user.id)
@@ -44,6 +49,10 @@ async def cmd_start(message: Message):
                 await grant_trial(user, session)
             else:
                 await session.commit()
+
+            # Process referral for new users only
+            if referral_code:
+                referral_info = await process_referral(user, referral_code, session)
         else:
             # Grant trial to existing users who missed it during beta
             if settings.subscription_enabled:
@@ -67,6 +76,13 @@ async def cmd_start(message: Message):
         else:
             status_line = f"\n\nStatus: <b>{status}</b>"
 
+    # Referral bonus message
+    referral_line = ""
+    if referral_info:
+        ref_user = referral_info.get("referrer_username") or "a friend"
+        bonus = referral_info["bonus_days"]
+        referral_line = f"\n\n🎁 Referred by @{ref_user} — you both got +{bonus} days Premium!"
+
     await message.answer(
         "🔮 <b>BTC Seer</b> — Bitcoin Price Prediction System\n\n"
         "I use ML models analyzing 60+ features from news, market data, "
@@ -75,7 +91,8 @@ async def cmd_start(message: Message):
         "📈 Full trading signals (entry, target, stop-loss)\n"
         "📰 Real-time news sentiment analysis\n"
         "🎯 Transparent accuracy tracking"
-        f"{status_line}\n\n"
+        f"{status_line}"
+        f"{referral_line}\n\n"
         f"<i>{DISCLAIMER}</i>",
         parse_mode="HTML",
         reply_markup=main_keyboard(),

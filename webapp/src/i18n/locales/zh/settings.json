@@ -56,6 +56,22 @@
       "powerlaw": "幂律偏差跟踪"
     }
   },
+  "referral": {
+    "title": "邀请好友",
+    "subtitle": "分享邀请码 — 双方各获 +7 天高级版",
+    "yourCode": "您的邀请码",
+    "copy": "复制",
+    "copied": "已复制！",
+    "friendsReferred": "已邀请好友",
+    "bonusEarned": "已获奖励",
+    "shareLink": "分享邀请链接",
+    "shareText": "加入 BTC Seer — AI 驱动的比特币预测！使用我的链接免费获得 7 天高级版：",
+    "showLeaderboard": "显示排行榜",
+    "hideLeaderboard": "隐藏排行榜",
+    "refs": "次邀请",
+    "noReferrals": "暂无邀请 — 成为第一个！",
+    "referredBy": "由此用户邀请"
+  },
   "subscriptionPage": {
     "title": "订阅",
     "tier": "等级",

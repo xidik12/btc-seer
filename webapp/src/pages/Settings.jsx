@@ -5,6 +5,7 @@ import { api } from '../utils/api'
 import { useTelegram } from '../hooks/useTelegram'
 import { useLanguageSwitch } from '../i18n/useLanguage'
 import AlertSettings from '../components/AlertSettings'
+import ReferralCard from '../components/ReferralCard'
 
 const TIERS = [
   {
@@ -207,6 +208,8 @@ export default function Settings() {
       </div>
 
       <AlertSettings />
+
+      <ReferralCard />
 
       {/* Subscription Section */}
       <div className="space-y-3">

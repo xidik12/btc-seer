@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     premium_price_stars_quarterly: int = 1250   # 90 days (save 17%)
     premium_price_stars_yearly: int = 4500      # 365 days (save 25%)
 
+    # Referral system
+    referral_bonus_days: int = 7
+    referral_enabled: bool = True
+    bot_username: str = "BTCSeerBot"
+
     # API Monetization (disabled by default — all free)
     api_key_enabled: bool = False
     api_free_rate_limit: int = 60       # requests/hr

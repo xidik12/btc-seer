@@ -231,4 +231,8 @@ export const api = {
     body: JSON.stringify({ address }),
   }),
   getCoinReport: (address) => cachedFetch(`/coins/report/${address}`, T120),
+
+  // Referral
+  getReferralInfo: (initData) => fetchAPI('/referral/info', { headers: { 'X-Telegram-Init-Data': initData } }),
+  getReferralLeaderboard: () => cachedFetch('/referral/leaderboard', T120),
 }
