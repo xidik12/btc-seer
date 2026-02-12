@@ -249,33 +249,37 @@ async def seed_whale_data(
         if btc >= 200: return 5
         return 4
 
-    stored = 0
-    for w in VERIFIED_WHALES:
-        # Deterministic hash so re-running is idempotent
-        seed_str = f"{w['time']}-{w['btc']}-{w['dir']}-{w['from']}-{w['to']}"
-        tx_hash = hashlib.sha256(seed_str.encode()).hexdigest()[:64]
+    try:
+        stored = 0
+        for w in VERIFIED_WHALES:
+            # Deterministic hash so re-running is idempotent
+            seed_str = f"{w['time']}-{w['btc']}-{w['dir']}-{w['from']}-{w['to']}"
+            tx_hash = hashlib.sha256(seed_str.encode()).hexdigest()[:64]
 
-        existing = await session.execute(
-            select(WhaleTransaction.id).where(WhaleTransaction.tx_hash == tx_hash)
-        )
-        if existing.scalar_one_or_none() is not None:
-            continue
+            existing = await session.execute(
+                select(WhaleTransaction.id).where(WhaleTransaction.tx_hash == tx_hash)
+            )
+            if existing.scalar_one_or_none() is not None:
+                continue
 
-        ts = datetime.fromisoformat(w["time"])
-        whale_tx = WhaleTransaction(
-            tx_hash=tx_hash,
-            timestamp=ts,
-            amount_btc=w["btc"],
-            amount_usd=round(w["btc"] * w["price"], 2),
-            direction=w["dir"],
-            from_entity=w["from"],
-            to_entity=w["to"],
-            severity=_severity(w["btc"]),
-            btc_price_at_tx=w["price"],
-            source=w["source"],
-        )
-        session.add(whale_tx)
-        stored += 1
+            ts = datetime.fromisoformat(w["time"])
+            whale_tx = WhaleTransaction(
+                tx_hash=tx_hash,
+                timestamp=ts,
+                amount_btc=w["btc"],
+                amount_usd=round(w["btc"] * w["price"], 2),
+                direction=w["dir"],
+                from_entity=w["from"],
+                to_entity=w["to"],
+                severity=_severity(w["btc"]),
+                btc_price_at_tx=w["price"],
+                source=w["source"],
+            )
+            session.add(whale_tx)
+            stored += 1
 
-    await session.commit()
-    return {"status": "ok", "transactions_seeded": stored}
+        await session.commit()
+        return {"status": "ok", "transactions_seeded": stored}
+    except Exception as e:
+        await session.rollback()
+        return {"status": "error", "error": f"{type(e).__name__}: {e}"}
