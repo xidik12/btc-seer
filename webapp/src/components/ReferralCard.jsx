@@ -58,10 +58,6 @@ export default function ReferralCard() {
     )
   }
 
-  if (error || !info) {
-    return null
-  }
-
   return (
     <div className="bg-bg-card rounded-2xl p-4 slide-up">
       <h3 className="text-text-primary font-semibold text-sm mb-1">
@@ -71,48 +67,58 @@ export default function ReferralCard() {
         {t('referral.subtitle', 'Share your code — both get +7 days Premium')}
       </p>
 
-      {/* Referral Code */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 bg-bg-secondary rounded-xl px-3 py-2.5 font-mono text-text-primary text-sm tracking-widest text-center">
-          {info.referral_code}
-        </div>
-        <button
-          onClick={handleCopy}
-          className="px-3 py-2.5 rounded-xl bg-accent-blue/10 text-accent-blue text-xs font-semibold active:scale-95 transition-all whitespace-nowrap"
-        >
-          {copied ? t('referral.copied', 'Copied!') : t('referral.copy', 'Copy')}
-        </button>
-      </div>
+      {info ? (
+        <>
+          {/* Referral Code */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex-1 bg-bg-secondary rounded-xl px-3 py-2.5 font-mono text-text-primary text-sm tracking-widest text-center">
+              {info.referral_code}
+            </div>
+            <button
+              onClick={handleCopy}
+              className="px-3 py-2.5 rounded-xl bg-accent-blue/10 text-accent-blue text-xs font-semibold active:scale-95 transition-all whitespace-nowrap"
+            >
+              {copied ? t('referral.copied', 'Copied!') : t('referral.copy', 'Copy')}
+            </button>
+          </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="bg-bg-secondary rounded-xl p-2.5 text-center">
-          <p className="text-text-primary font-bold text-lg">{info.referral_count}</p>
-          <p className="text-text-muted text-[10px]">
-            {t('referral.friendsReferred', 'Friends Referred')}
-          </p>
-        </div>
-        <div className="bg-bg-secondary rounded-xl p-2.5 text-center">
-          <p className="text-accent-green font-bold text-lg">+{info.total_bonus_days}d</p>
-          <p className="text-text-muted text-[10px]">
-            {t('referral.bonusEarned', 'Bonus Earned')}
-          </p>
-        </div>
-      </div>
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="bg-bg-secondary rounded-xl p-2.5 text-center">
+              <p className="text-text-primary font-bold text-lg">{info.referral_count}</p>
+              <p className="text-text-muted text-[10px]">
+                {t('referral.friendsReferred', 'Friends Referred')}
+              </p>
+            </div>
+            <div className="bg-bg-secondary rounded-xl p-2.5 text-center">
+              <p className="text-accent-green font-bold text-lg">+{info.total_bonus_days}d</p>
+              <p className="text-text-muted text-[10px]">
+                {t('referral.bonusEarned', 'Bonus Earned')}
+              </p>
+            </div>
+          </div>
 
-      {/* Share Button */}
-      <button
-        onClick={handleShare}
-        className="w-full py-2.5 rounded-xl bg-accent-blue text-white font-semibold text-sm active:scale-[0.98] transition-all mb-3"
-      >
-        {t('referral.shareLink', 'Share Invite Link')}
-      </button>
+          {/* Share Button */}
+          <button
+            onClick={handleShare}
+            className="w-full py-2.5 rounded-xl bg-accent-blue text-white font-semibold text-sm active:scale-[0.98] transition-all mb-3"
+          >
+            {t('referral.shareLink', 'Share Invite Link')}
+          </button>
 
-      {/* Referred By badge */}
-      {info.referred_by && (
-        <div className="bg-accent-green/10 border border-accent-green/20 rounded-xl px-3 py-2 text-center mb-3">
-          <p className="text-accent-green text-xs font-medium">
-            {t('referral.referredBy', 'Referred by')} @{info.referred_by}
+          {/* Referred By badge */}
+          {info.referred_by && (
+            <div className="bg-accent-green/10 border border-accent-green/20 rounded-xl px-3 py-2 text-center mb-3">
+              <p className="text-accent-green text-xs font-medium">
+                {t('referral.referredBy', 'Referred by')} @{info.referred_by}
+              </p>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="bg-bg-secondary rounded-xl px-3 py-4 text-center mb-3">
+          <p className="text-text-muted text-xs">
+            {error || 'Open in Telegram to get your referral code'}
           </p>
         </div>
       )}
