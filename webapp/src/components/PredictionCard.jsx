@@ -5,6 +5,22 @@ import { formatPricePrecise, formatTimeAgo } from '../utils/format.js'
 
 const POLL_INTERVAL = 30_000
 
+function useCountdown() {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  // Next prediction is at the top of the next hour (UTC)
+  const next = new Date(now)
+  next.setUTCMinutes(0, 0, 0)
+  next.setUTCHours(next.getUTCHours() + 1)
+  const diff = Math.max(0, Math.floor((next - now) / 1000))
+  const mm = String(Math.floor(diff / 60)).padStart(2, '0')
+  const ss = String(diff % 60).padStart(2, '0')
+  return `${mm}:${ss}`
+}
+
 export default function PredictionCard() {
   const { t } = useTranslation('dashboard')
   const [data, setData] = useState(null)
@@ -63,6 +79,7 @@ export default function PredictionCard() {
   })
 
   const timestamp = rows.find((r) => r.timestamp)?.timestamp
+  const countdown = useCountdown()
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
@@ -71,9 +88,12 @@ export default function PredictionCard() {
           <span className="text-[10px] font-bold text-accent-blue">{t('prediction.aiModel')}</span>
           <span className="text-text-muted text-[8px]">{t('prediction.modelDescription')}</span>
         </div>
-        {timestamp && (
-          <span className="text-text-muted text-[10px]">{formatTimeAgo(timestamp)}</span>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="text-accent-blue text-[10px] font-mono tabular-nums">{countdown}</span>
+          {timestamp && (
+            <span className="text-text-muted text-[10px]">{formatTimeAgo(timestamp)}</span>
+          )}
+        </div>
       </div>
 
       <div className="space-y-1.5">

@@ -104,6 +104,12 @@ class Prediction(Base):
     was_correct: Mapped[bool] = mapped_column(Boolean, nullable=True)
     model_outputs: Mapped[dict] = mapped_column(JSON, nullable=True)
 
+    # Self-learning fields (auto-migrated)
+    error_pct: Mapped[float] = mapped_column(Float, nullable=True)              # (actual - predicted) / predicted * 100
+    volatility_regime: Mapped[str] = mapped_column(String(20), nullable=True)  # low, normal, high, extreme
+    trend_state: Mapped[str] = mapped_column(String(20), nullable=True)        # trending_up, trending_down, ranging
+    evaluation_notes: Mapped[dict] = mapped_column(JSON, nullable=True)        # analysis summary
+
 
 class Signal(Base):
     __tablename__ = "signals"
@@ -702,6 +708,64 @@ class ApiUsageLog(Base):
     response_time_ms: Mapped[float] = mapped_column(Float, nullable=True)
     ip_address: Mapped[str] = mapped_column(String(45), nullable=True)
     tier: Mapped[str] = mapped_column(String(20), nullable=True)
+
+
+class PredictionAnalysis(Base):
+    """Detailed post-mortem for each evaluated prediction."""
+    __tablename__ = "prediction_analyses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    prediction_id: Mapped[int] = mapped_column(Integer, index=True)
+    timeframe: Mapped[str] = mapped_column(String(10))
+
+    # Error metrics
+    error_pct: Mapped[float] = mapped_column(Float, nullable=True)
+    abs_error_pct: Mapped[float] = mapped_column(Float, nullable=True)
+    direction_correct: Mapped[bool] = mapped_column(Boolean, nullable=True)
+
+    # Per-model breakdown
+    per_model_results: Mapped[dict] = mapped_column(JSON, nullable=True)  # {model: {predicted, correct, prob}}
+
+    # Market regime at prediction time
+    volatility_regime: Mapped[str] = mapped_column(String(20), nullable=True)  # low, normal, high, extreme
+    trend_state: Mapped[str] = mapped_column(String(20), nullable=True)        # trending_up, trending_down, ranging
+    rsi_at_prediction: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # Feature analysis
+    top_features: Mapped[dict] = mapped_column(JSON, nullable=True)  # most influential features
+
+    # Model agreement
+    model_agreement_score: Mapped[float] = mapped_column(Float, nullable=True)  # 0-1
+    dissenting_models: Mapped[str] = mapped_column(Text, nullable=True)  # comma-separated
+
+
+class LearnedPattern(Base):
+    """Patterns discovered from error analysis for self-learning."""
+    __tablename__ = "learned_patterns"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+
+    # Pattern definition
+    pattern_type: Mapped[str] = mapped_column(String(50), index=True)  # model_disagreement, volatility_regime, feature_threshold, confidence_calibration, time_pattern
+    timeframe: Mapped[str] = mapped_column(String(10), nullable=True)
+    description: Mapped[str] = mapped_column(Text)
+
+    # Machine-readable conditions
+    conditions: Mapped[dict] = mapped_column(JSON)  # e.g. {"rsi_gt": 75, "direction": "bullish"}
+
+    # Statistics
+    sample_size: Mapped[int] = mapped_column(Integer, default=0)
+    accuracy_when_pattern: Mapped[float] = mapped_column(Float, nullable=True)  # accuracy when pattern is active
+    accuracy_when_not_pattern: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # Adjustments to apply
+    confidence_modifier: Mapped[float] = mapped_column(Float, default=1.0)  # < 1.0 = reduce confidence
+    direction_bias: Mapped[float] = mapped_column(Float, default=0.0)  # adjustment to bullish_prob
+
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 def _add_missing_columns(connection):

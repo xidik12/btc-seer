@@ -30,7 +30,13 @@ from app.scheduler.jobs import (
     collect_dominance_data,
     save_indicator_snapshot,
     generate_prediction,
+    generate_prediction_1h,
+    generate_prediction_4h,
+    generate_prediction_24h,
     generate_quant_prediction,
+    generate_quant_prediction_1h,
+    generate_quant_prediction_4h,
+    generate_quant_prediction_24h,
     evaluate_predictions,
     evaluate_quant_predictions,
     classify_news_events,
@@ -50,6 +56,7 @@ from app.collectors.coins import collect_coin_prices, seed_tracked_coins
 from app.models.phrase_analyzer import analyze_news_phrases
 from app.models.continuous_learner import run_continuous_learning
 from app.models.ab_tester import evaluate_candidates
+from app.models.pattern_learner import run_pattern_discovery
 from app.scheduler.backup import run_database_backup
 
 logging.basicConfig(
@@ -58,7 +65,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-scheduler = AsyncIOScheduler()
+scheduler = AsyncIOScheduler(timezone="utc")
 
 
 _startup_error: str | None = None
@@ -122,12 +129,26 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(monitor_entity_wallets, "interval", minutes=10, id="monitor_entities",
                           next_run_time=datetime.utcnow() + timedelta(minutes=5))  # offset by 5 min
 
-        # Prediction jobs
-        scheduler.add_job(generate_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict")
-        scheduler.add_job(generate_quant_prediction, "interval", minutes=settings.prediction_interval_minutes, id="predict_quant")
+        # Prediction jobs — time-aligned cron schedules (UTC)
+        # 1h: every hour at :00
+        scheduler.add_job(generate_prediction_1h, "cron", minute=0, id="predict_1h")
+        # 4h: at 00:00, 04:00, 08:00, 12:00, 16:00, 20:00 (minute 2)
+        scheduler.add_job(generate_prediction_4h, "cron", hour="0,4,8,12,16,20", minute=2, id="predict_4h")
+        # 24h: once daily at 00:04
+        scheduler.add_job(generate_prediction_24h, "cron", hour=0, minute=4, id="predict_24h")
 
-        # Evaluation jobs
-        scheduler.add_job(evaluate_predictions, "interval", hours=1, id="evaluate")
+        # Quant predictions — offset by 1 minute from ML predictions
+        scheduler.add_job(generate_quant_prediction_1h, "cron", minute=1, id="predict_quant_1h")
+        scheduler.add_job(generate_quant_prediction_4h, "cron", hour="0,4,8,12,16,20", minute=3, id="predict_quant_4h")
+        scheduler.add_job(generate_quant_prediction_24h, "cron", hour=0, minute=5, id="predict_quant_24h")
+
+        # Evaluation jobs — time-aligned
+        # 1h: evaluate at :05 every hour
+        scheduler.add_job(evaluate_predictions, "cron", minute=5, kwargs={"timeframe_filter": "1h"}, id="evaluate_1h")
+        # 4h: evaluate at :07 on 4h boundaries
+        scheduler.add_job(evaluate_predictions, "cron", hour="0,4,8,12,16,20", minute=7, kwargs={"timeframe_filter": "4h"}, id="evaluate_4h")
+        # 24h: evaluate at 00:09 daily
+        scheduler.add_job(evaluate_predictions, "cron", hour=0, minute=9, kwargs={"timeframe_filter": "24h"}, id="evaluate_24h")
         scheduler.add_job(evaluate_quant_predictions, "interval", hours=1, id="evaluate_quant")
         scheduler.add_job(classify_news_events, "interval", minutes=5, id="classify_events")
         scheduler.add_job(evaluate_event_impacts, "interval", minutes=30, id="evaluate_events")
@@ -148,8 +169,11 @@ async def lifespan(app: FastAPI):
         # A/B testing: evaluate candidate models (every 6h)
         scheduler.add_job(evaluate_candidates, "interval", hours=6, id="ab_testing")
 
+        # Pattern learning: discover accuracy patterns every 6h
+        scheduler.add_job(run_pattern_discovery, "cron", hour="0,6,12,18", minute=30, id="pattern_learning")
+
         # Advisor jobs
-        scheduler.add_job(run_advisor_check, "interval", minutes=settings.prediction_interval_minutes, id="advisor_check")
+        scheduler.add_job(run_advisor_check, "interval", minutes=30, id="advisor_check")
         scheduler.add_job(run_trade_management, "interval", minutes=5, id="trade_management")
 
         # Training feedback loop (daily)

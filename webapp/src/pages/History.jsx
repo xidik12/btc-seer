@@ -390,6 +390,200 @@ function PredictionRow({ p, tf }) {
   )
 }
 
+// ── Analysis Tab Components ──
+
+function AnalysisPanel({ timeframe, days }) {
+  const { t } = useTranslation(['market', 'common'])
+  const [analysis, setAnalysis] = useState(null)
+  const [patterns, setPatterns] = useState(null)
+  const [progress, setProgress] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    Promise.all([
+      api.getPredictionAnalysis(timeframe, days).catch(() => null),
+      api.getPredictionPatterns().catch(() => null),
+      api.getLearningProgress(days).catch(() => null),
+    ]).then(([a, p, l]) => {
+      setAnalysis(a)
+      setPatterns(p)
+      setProgress(l)
+      setLoading(false)
+    })
+  }, [timeframe, days])
+
+  if (loading) {
+    return (
+      <div className="animate-pulse space-y-3">
+        <div className="h-32 bg-bg-card rounded-2xl" />
+        <div className="h-48 bg-bg-card rounded-2xl" />
+      </div>
+    )
+  }
+
+  const summary = analysis?.summary
+  const modelAccuracy = summary?.per_model_accuracy || {}
+  const regimeAccuracy = summary?.regime_accuracy || {}
+  const rolling7d = progress?.rolling_7d || []
+
+  return (
+    <div className="space-y-3">
+      {/* Error Metrics Summary */}
+      {summary && (
+        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <h3 className="text-text-secondary text-xs font-semibold mb-3">ERROR ANALYSIS</h3>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <div className="text-text-muted text-[9px]">MEAN ERROR</div>
+              <div className="text-text-primary text-sm font-bold tabular-nums">
+                {summary.mean_error_pct != null ? `${summary.mean_error_pct > 0 ? '+' : ''}${summary.mean_error_pct.toFixed(2)}%` : '--'}
+              </div>
+            </div>
+            <div>
+              <div className="text-text-muted text-[9px]">AVG |ERROR|</div>
+              <div className="text-text-primary text-sm font-bold tabular-nums">
+                {summary.mean_abs_error_pct != null ? `${summary.mean_abs_error_pct.toFixed(2)}%` : '--'}
+              </div>
+            </div>
+            <div>
+              <div className="text-text-muted text-[9px]">ANALYZED</div>
+              <div className="text-text-primary text-sm font-bold tabular-nums">{summary.total_analyzed}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Per-Model Accuracy */}
+      {Object.keys(modelAccuracy).length > 0 && (
+        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <h3 className="text-text-secondary text-xs font-semibold mb-3">PER-MODEL ACCURACY</h3>
+          <div className="space-y-2">
+            {Object.entries(modelAccuracy).map(([name, stats]) => (
+              <div key={name} className="flex items-center justify-between">
+                <span className="text-text-primary text-xs font-medium capitalize">{name}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-20 h-1.5 bg-bg-primary/50 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${
+                        stats.accuracy_pct >= 60 ? 'bg-accent-green' : stats.accuracy_pct >= 45 ? 'bg-accent-yellow' : 'bg-accent-red'
+                      }`}
+                      style={{ width: `${Math.min(stats.accuracy_pct || 0, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-text-muted text-[10px] tabular-nums w-14 text-right">
+                    {stats.accuracy_pct != null ? `${stats.accuracy_pct}%` : '--'} ({stats.total})
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Volatility Regime Accuracy */}
+      {Object.keys(regimeAccuracy).length > 0 && (
+        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <h3 className="text-text-secondary text-xs font-semibold mb-3">BY VOLATILITY REGIME</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(regimeAccuracy).map(([regime, stats]) => (
+              <div key={regime} className="bg-bg-secondary/30 rounded-lg p-2">
+                <div className="text-[9px] text-text-muted uppercase">{regime}</div>
+                <div className={`text-sm font-bold tabular-nums ${
+                  stats.accuracy_pct >= 60 ? 'text-accent-green' : stats.accuracy_pct >= 45 ? 'text-accent-yellow' : 'text-accent-red'
+                }`}>
+                  {stats.accuracy_pct != null ? `${stats.accuracy_pct}%` : '--'}
+                </div>
+                <div className="text-[9px] text-text-muted">{stats.total} predictions</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Learning Progress Chart */}
+      {rolling7d.length >= 3 && (
+        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <h3 className="text-text-secondary text-xs font-semibold mb-3">
+            LEARNING PROGRESS (7-DAY ROLLING)
+          </h3>
+          <div className="h-[160px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={rolling7d} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 6" stroke="#1e1e30" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 9, fill: '#5a5a70' }}
+                  tickFormatter={(d) => formatDate(d)}
+                  axisLine={false} tickLine={false}
+                  minTickGap={40}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  ticks={[25, 50, 75]}
+                  tick={{ fontSize: 9, fill: '#5a5a70' }}
+                  axisLine={false} tickLine={false}
+                  tickFormatter={v => `${v}%`}
+                />
+                <ReferenceLine y={50} stroke="#ff4d6a" strokeDasharray="3 4" strokeWidth={0.5} />
+                <Tooltip
+                  contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
+                  formatter={(v) => [`${v}%`, 'Accuracy']}
+                  labelFormatter={(d) => formatDate(d)}
+                />
+                <Line type="monotone" dataKey="accuracy_pct" stroke="#4a9eff" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Active Patterns */}
+      {patterns?.patterns?.length > 0 && (
+        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <h3 className="text-text-secondary text-xs font-semibold mb-3">
+            ACTIVE PATTERNS ({patterns.total})
+          </h3>
+          <div className="space-y-2">
+            {patterns.patterns.slice(0, 10).map(p => (
+              <div key={p.id} className="bg-bg-secondary/30 rounded-lg p-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                    p.confidence_modifier < 1 ? 'bg-accent-red/15 text-accent-red' : 'bg-accent-green/15 text-accent-green'
+                  }`}>
+                    {p.confidence_modifier < 1 ? '-' : '+'}{Math.abs((1 - p.confidence_modifier) * 100).toFixed(0)}%
+                  </span>
+                  <span className="text-[9px] text-text-muted uppercase">{p.pattern_type}</span>
+                  {p.timeframe && <span className="text-[9px] text-accent-blue font-bold">{p.timeframe.toUpperCase()}</span>}
+                </div>
+                <div className="text-[10px] text-text-secondary">{p.description}</div>
+                <div className="text-[9px] text-text-muted mt-0.5">n={p.sample_size}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* System Status */}
+      {progress && (
+        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <h3 className="text-text-secondary text-xs font-semibold mb-2">SELF-LEARNING STATUS</h3>
+          <div className="grid grid-cols-2 gap-3 text-center">
+            <div>
+              <div className="text-text-muted text-[9px]">PATTERNS ACTIVE</div>
+              <div className="text-accent-blue text-sm font-bold">{progress.active_patterns}</div>
+            </div>
+            <div>
+              <div className="text-text-muted text-[9px]">MODEL PERF LOGS</div>
+              <div className="text-accent-blue text-sm font-bold">{progress.performance_log_entries}</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main Page ──
 
 export default function History() {
@@ -399,6 +593,7 @@ export default function History() {
   const [predictions, setPredictions] = useState([])
   const [allTfData, setAllTfData] = useState({})
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('predictions') // predictions | analysis
 
   // Fetch per-timeframe data for accuracy rings
   const fetchAll = useCallback(async () => {
@@ -482,7 +677,33 @@ export default function History() {
         ))}
       </div>
 
-      {loading ? (
+      {/* Predictions / Analysis Toggle */}
+      <div className="flex gap-1 bg-bg-secondary/50 rounded-lg p-0.5">
+        <button
+          onClick={() => setActiveTab('predictions')}
+          className={`flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === 'predictions'
+              ? 'bg-white/10 text-text-primary'
+              : 'text-text-muted hover:text-text-secondary'
+          }`}
+        >
+          {t('market:history.records', 'Predictions')}
+        </button>
+        <button
+          onClick={() => setActiveTab('analysis')}
+          className={`flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+            activeTab === 'analysis'
+              ? 'bg-white/10 text-text-primary'
+              : 'text-text-muted hover:text-text-secondary'
+          }`}
+        >
+          Analysis
+        </button>
+      </div>
+
+      {activeTab === 'analysis' ? (
+        <AnalysisPanel timeframe={timeframe} days={days} />
+      ) : loading ? (
         <div className="animate-pulse space-y-3">
           <div className="h-20 bg-bg-card rounded-2xl" />
           <div className="h-[200px] bg-bg-card rounded-2xl" />
