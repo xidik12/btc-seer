@@ -33,6 +33,7 @@ from app.scheduler.jobs import (
     generate_prediction_1h,
     generate_prediction_4h,
     generate_prediction_24h,
+    deduplicate_predictions,
     generate_quant_prediction,
     generate_quant_prediction_1h,
     generate_quant_prediction_4h,
@@ -258,10 +259,14 @@ async def lifespan(app: FastAPI):
             await _safe_run(collect_coin_prices(), "collect_coin_prices")
             await _safe_run(backfill_whale_transactions(), "backfill_whale_transactions")
 
-            # Step 3: Wait briefly for data to settle, then generate first prediction
+            # Step 3: Clean up duplicate predictions from old 30-min scheduler
+            await _safe_run(deduplicate_predictions(), "deduplicate_predictions")
+
+            # Step 4: Wait briefly for data to settle, then generate first prediction (1h only)
+            # The cron scheduler handles 4h/24h at their proper UTC times
             await asyncio.sleep(30)
-            await _safe_run(generate_prediction(), "generate_prediction")
-            await _safe_run(generate_quant_prediction(), "generate_quant_prediction")
+            await _safe_run(generate_prediction(timeframes=["1h"]), "generate_prediction_1h")
+            await _safe_run(generate_quant_prediction(timeframes=["1h"]), "generate_quant_prediction_1h")
             await _safe_run(classify_news_events(), "classify_news_events")
             await _safe_run(save_indicator_snapshot(), "save_indicator_snapshot")
 

@@ -2474,3 +2474,90 @@ async def check_subscription_expiry():
 
     except Exception as e:
         logger.error(f"Subscription expiry check error: {e}")
+
+
+async def deduplicate_predictions():
+    """Remove duplicate predictions created by the old 30-min-all-timeframes scheduler.
+
+    Keeps at most 1 prediction per timeframe per time window:
+      - 1h: 1 per hour
+      - 4h: 1 per 4-hour block
+      - 24h / 1w / 1mo: 1 per calendar day
+
+    Within each window, keeps the evaluated prediction (was_correct IS NOT NULL)
+    or the earliest one if none are evaluated.
+    """
+    try:
+        async with async_session() as session:
+            total_deleted = 0
+
+            for timeframe in ["1h", "4h", "24h", "1w", "1mo"]:
+                result = await session.execute(
+                    select(Prediction)
+                    .where(Prediction.timeframe == timeframe)
+                    .order_by(Prediction.timestamp)
+                )
+                preds = result.scalars().all()
+
+                if not preds:
+                    continue
+
+                # Group predictions by their time window
+                windows: dict[str, list] = {}
+                for p in preds:
+                    ts = p.timestamp
+                    if timeframe == "1h":
+                        key = ts.strftime("%Y-%m-%d-%H")
+                    elif timeframe == "4h":
+                        block = (ts.hour // 4) * 4
+                        key = f"{ts.strftime('%Y-%m-%d')}-{block:02d}"
+                    else:  # 24h, 1w, 1mo
+                        key = ts.strftime("%Y-%m-%d")
+                    windows.setdefault(key, []).append(p)
+
+                # Keep the best prediction per window, delete the rest
+                for window_key, group in windows.items():
+                    if len(group) <= 1:
+                        continue
+
+                    # Prefer evaluated predictions, then earliest
+                    evaluated = [p for p in group if p.was_correct is not None]
+                    if evaluated:
+                        keep = evaluated[0]
+                    else:
+                        keep = group[0]
+
+                    for p in group:
+                        if p.id != keep.id:
+                            await session.delete(p)
+                            total_deleted += 1
+
+                logger.info(f"Dedup [{timeframe}]: {len(preds)} → {len(windows)} (removed {len(preds) - len(windows)})")
+
+            # Also deduplicate QuantPrediction (1 per hour max)
+            qresult = await session.execute(
+                select(QuantPrediction).order_by(QuantPrediction.timestamp)
+            )
+            quants = qresult.scalars().all()
+            if quants:
+                q_windows: dict[str, list] = {}
+                for q in quants:
+                    key = q.timestamp.strftime("%Y-%m-%d-%H")
+                    q_windows.setdefault(key, []).append(q)
+
+                q_deleted = 0
+                for window_key, group in q_windows.items():
+                    if len(group) <= 1:
+                        continue
+                    keep = group[0]
+                    for q in group[1:]:
+                        await session.delete(q)
+                        q_deleted += 1
+                logger.info(f"Dedup [quant]: {len(quants)} → {len(q_windows)} (removed {q_deleted})")
+                total_deleted += q_deleted
+
+            await session.commit()
+            logger.info(f"Deduplication complete: removed {total_deleted} duplicate predictions")
+
+    except Exception as e:
+        logger.error(f"Deduplication error: {e}", exc_info=True)
