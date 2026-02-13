@@ -262,11 +262,11 @@ async def lifespan(app: FastAPI):
             # Step 3: Clean up duplicate predictions from old 30-min scheduler
             await _safe_run(deduplicate_predictions(), "deduplicate_predictions")
 
-            # Step 4: Wait briefly for data to settle, then generate first prediction (1h only)
-            # The cron scheduler handles 4h/24h at their proper UTC times
+            # Step 4: Wait briefly for data to settle, then generate predictions for all timeframes
+            # so the dashboard has data immediately. Cron scheduler takes over after this.
             await asyncio.sleep(30)
-            await _safe_run(generate_prediction(timeframes=["1h"]), "generate_prediction_1h")
-            await _safe_run(generate_quant_prediction(timeframes=["1h"]), "generate_quant_prediction_1h")
+            await _safe_run(generate_prediction(), "generate_prediction")
+            await _safe_run(generate_quant_prediction(), "generate_quant_prediction")
             await _safe_run(classify_news_events(), "classify_news_events")
             await _safe_run(save_indicator_snapshot(), "save_indicator_snapshot")
 
