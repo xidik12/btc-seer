@@ -36,7 +36,9 @@ class Settings(BaseSettings):
 
     # ML — /data/weights persists on Railway volume, fallback to bundled weights
     model_dir: str = "/data/weights"
-    prediction_interval_minutes: int = 30  # Predict every 30 min for faster history buildup
+    # Deprecated: predictions are now time-aligned (1h/4h/24h cron schedules)
+    # Kept for backward compatibility with .env files
+    prediction_interval_minutes: int = 30
 
     # Binance
     binance_base_url: str = "https://api.binance.com"

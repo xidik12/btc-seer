@@ -1,13 +1,40 @@
 {
   "title": "About BTC Seer",
   "version": "Version",
-  "description": "AI-powered Bitcoin analysis and trading platform",
-  "heroSubtitle": "Real-time predictions, trading signals, and deep market analysis — powered by a 4-model AI ensemble analyzing 192 features across 13 data categories.",
+  "description": "AI-powered Bitcoin analysis and trading platform with self-learning predictions",
+  "heroSubtitle": "Real-time predictions, trading signals, and deep market analysis — powered by a 4-model AI ensemble analyzing 192 features across 13 data categories with time-aligned self-learning predictions.",
+  "project": {
+    "title": "Incognito Generation",
+    "subtitle": "An Incognito Generation project",
+    "description": "BTC Seer is developed by Salakhitdinov Khidayotullo as part of the Incognito Generation project — building next-generation tools for crypto traders powered by artificial intelligence and machine learning."
+  },
   "whatIs": {
     "title": "WHAT IS BTC SEER?",
     "p1": "BTC Seer is a production-grade Bitcoin prediction platform that analyzes <b>192 engineered features</b> across 13 categories — technical indicators, news sentiment, on-chain metrics, derivatives data, macro markets, ETF flows, exchange flows, stablecoin supply, social signals, and more.",
-    "p2": "It generates predictions across <b>5 timeframes</b> (1H, 4H, 24H, 1W, 1MO) using a <b>4-model ensemble</b>: Temporal Fusion Transformer (40%), XGBoost (25%), LSTM (20%), and Google TimesFM (15%) — with adaptive weighting that shifts based on model performance.",
-    "p3": "The system runs <b>24 background jobs</b> continuously — collecting data every minute, generating predictions, evaluating accuracy, retraining models, and learning from market events."
+    "p2": "It generates <b>time-aligned predictions</b> across <b>5 timeframes</b> (1H, 4H, 24H, 1W, 1MO) using a <b>4-model ensemble</b>: Temporal Fusion Transformer (40%), XGBoost (25%), LSTM (20%), and Google TimesFM (15%) — with adaptive weighting that shifts based on model performance.",
+    "p3": "The system features a <b>self-learning feedback loop</b> — it evaluates every prediction, discovers accuracy patterns, populates per-model performance logs, and automatically adjusts confidence and direction based on what it learns."
+  },
+  "selfLearning": {
+    "title": "Self-Learning Prediction System",
+    "intro": "BTC Seer doesn't just predict — it learns from every prediction it makes. Here's the complete feedback loop:",
+    "step1_label": "Predict:",
+    "step1_desc": " Time-aligned predictions are generated at fixed UTC intervals — 1h every hour, 4h every 4 hours, 24h once daily. Pattern adjustments are applied before storing.",
+    "step2_label": "Evaluate:",
+    "step2_desc": " After each window closes, the system compares predicted vs actual price, computes error metrics, classifies volatility regime and trend state, and creates a detailed analysis record.",
+    "step3_label": "Log Per-Model Performance:",
+    "step3_desc": " Each individual model (TFT, LSTM, XGBoost, TimesFM) is scored separately. This feeds the continuous learning system that adjusts ensemble weights.",
+    "step4_label": "Discover Patterns:",
+    "step4_desc": " Every 6 hours, the pattern engine analyzes all evaluations to find accuracy patterns — model disagreement effects, volatility regime impacts, RSI threshold behaviors, confidence calibration gaps, and time-of-day biases.",
+    "step5_label": "Apply Learnings:",
+    "step5_desc": " Discovered patterns automatically modify future predictions — reducing confidence when patterns suggest lower accuracy, boosting it when conditions favor the models."
+  },
+  "timeAligned": {
+    "title": "Time-Aligned Predictions",
+    "intro": "Predictions are now generated at fixed UTC times instead of arbitrary intervals, ensuring each timeframe is properly aligned:",
+    "1h": "Generated every hour at :00 UTC. Evaluated at :05 after the window closes.",
+    "4h": "Generated every 4 hours (00:02, 04:02, 08:02, 12:02, 16:02, 20:02 UTC). Evaluated at :07.",
+    "24h": "Generated once daily at 00:04 UTC. Includes 1W and 1MO timeframes. Evaluated at 00:09.",
+    "note": "A countdown timer on the dashboard shows when the next prediction arrives."
   },
   "byTheNumbers": {
     "title": "BY THE NUMBERS",
@@ -22,15 +49,15 @@
     "title": "HOW TO USE BTC SEER",
     "subtitle": "New here? Follow these 5 steps to get started:",
     "step1_label": "Start on Dashboard",
-    "step1_desc": " — check the live BTC price, dual prediction cards (AI + Quant), trading signals, and market overview at a glance.",
+    "step1_desc": " — check the live BTC price, dual prediction cards (AI + Quant) with countdown timer, trading signals, and market overview at a glance.",
     "step2_label": "Read Signals",
     "step2_desc": " — view AI-generated entry, target, and stop-loss levels with confidence scores and risk ratings.",
     "step3_label": "Check Sentiment",
     "step3_desc": " — browse news sentiment, Fear & Greed index, influencer mood, and social volume to gauge market emotion.",
     "step4_label": "Dive Deeper",
     "step4_desc": " — explore technical analysis (45+ indicators), Power Law, Elliott Wave, liquidation maps, on-chain metrics, and ETF flows.",
-    "step5_label": "Practice First",
-    "step5_desc": " — use Paper Trading to test strategies with virtual money before risking real capital."
+    "step5_label": "Review Accuracy",
+    "step5_desc": " — check the History page's Analysis tab to see per-model accuracy, error distributions, active learned patterns, and the 7-day rolling accuracy trend."
   },
   "architecture": {
     "title": "AI Ensemble Architecture",
@@ -45,7 +72,7 @@
     "xgboostDesc": "Gradient-boosted trees — excels at feature-based classification with 192 engineered inputs",
     "lstmDesc": "Recurrent neural network — detects sequential patterns in 168-hour (1 week) lookback windows",
     "timesfmDesc": "Zero-shot foundation model — provides a baseline from pre-trained time-series knowledge",
-    "adaptiveNote": "Weights are adaptive — the system shifts allocation based on each model's recent accuracy. A sentiment modifier (up to ±50%) amplifies or dampens the ensemble signal based on real-time market mood.",
+    "adaptiveNote": "Weights are adaptive — the continuous learning system shifts allocation based on each model's recent accuracy from per-model performance logs. A sentiment modifier (up to ±50%) amplifies or dampens the ensemble signal. Learned patterns can further adjust confidence when specific market conditions are detected.",
     "features": "{{count}} features across {{categories}} data categories",
     "dataCategories": "Data Categories"
   },
@@ -74,10 +101,10 @@
       { "freq": "Every 5 min", "desc": "Event classification — news categorized into regulatory, technical, market, macro, supply, exchange events" },
       { "freq": "Every 10 min", "desc": "Influencer tweets — weighted by market impact (Elon, Saylor, CZ, Cathie Wood, etc.)" },
       { "freq": "Every 30 min", "desc": "Funding rates, open interest, and derivatives data from Binance perpetuals" },
-      { "freq": "Every 1 hr", "desc": "Macro indicators (DXY, gold, S&P 500, VIX, treasuries), on-chain metrics, BTC dominance, technical snapshot, phrase analysis" },
-      { "freq": "Configurable", "desc": "AI predictions (ensemble + quant theory), prediction evaluation, Telegram alerts" },
-      { "freq": "Every 6 hrs", "desc": "Auto-retraining, continuous learning, A/B testing of candidate models" },
-      { "freq": "Every 24 hrs", "desc": "Data cleanup (90d price/news, 180d macro/on-chain), subscription checks" }
+      { "freq": "Every 1 hr", "desc": "1H prediction + quant, macro indicators, on-chain metrics, BTC dominance, technical snapshot, phrase analysis" },
+      { "freq": "Every 4 hrs", "desc": "4H prediction + quant at 00/04/08/12/16/20 UTC" },
+      { "freq": "Daily 00:04", "desc": "24H/1W/1MO predictions + quant, data cleanup, subscription checks" },
+      { "freq": "Every 6 hrs", "desc": "Auto-retraining, continuous learning, A/B testing, pattern discovery" }
     ]
   },
   "howAiWorks": {
@@ -86,27 +113,31 @@
     "step1_desc": " 4 models independently analyze 192 features and vote on each prediction. TFT leads at 40%, but weights adapt based on recent performance — reducing individual model bias.",
     "step2_label": "Continuous Learning:",
     "step2_desc": " Models auto-retrain every 6 hours using the latest market data. If accuracy drops below 55% or 50+ new predictions are evaluated, retraining triggers immediately.",
-    "step3_label": "Event Memory:",
-    "step3_desc": " The system stores up to 500 historical events, tracking their actual impact at 1h, 4h, 24h, and 7d. When similar events occur, it pattern-matches to predict expected impact.",
-    "step4_label": "Phrase Analyzer:",
-    "step4_desc": " Learns which specific news words and phrases historically move the market. Over time, this builds a language-to-price correlation map that improves sentiment accuracy.",
-    "step5_label": "A/B Testing:",
-    "step5_desc": " New model candidates compete against production models before promotion. Only models that outperform the current ensemble get deployed — ensuring quality never regresses.",
-    "step6_label": "Hot Swapping:",
-    "step6_desc": " When retraining produces better weights, the ensemble hot-swaps them without stopping the prediction pipeline. Zero downtime, continuous improvement.",
-    "step7_label": "Accuracy Tracking:",
-    "step7_desc": " Every prediction is evaluated against actual price movements and scored. Full transparency — you can see exactly how well the models perform over time."
+    "step3_label": "Per-Model Performance Logging:",
+    "step3_desc": " Every evaluation logs each model's prediction vs reality separately. This feeds the weight adjustment system — models that perform well get more influence, degraded models get less.",
+    "step4_label": "Pattern Discovery:",
+    "step4_desc": " Every 6 hours, the system analyzes all prediction evaluations to discover accuracy patterns — volatility regime effects, model disagreement signals, RSI threshold behaviors, confidence miscalibrations, and time-of-day biases.",
+    "step5_label": "Event Memory:",
+    "step5_desc": " The system stores up to 500 historical events, tracking their actual impact at 1h, 4h, 24h, and 7d. When similar events occur, it pattern-matches to predict expected impact.",
+    "step6_label": "Phrase Analyzer:",
+    "step6_desc": " Learns which specific news words and phrases historically move the market. Over time, this builds a language-to-price correlation map that improves sentiment accuracy.",
+    "step7_label": "A/B Testing:",
+    "step7_desc": " New model candidates compete against production models before promotion. Only models that outperform the current ensemble get deployed — ensuring quality never regresses.",
+    "step8_label": "Hot Swapping:",
+    "step8_desc": " When retraining produces better weights, the ensemble hot-swaps them without stopping the prediction pipeline. Zero downtime, continuous improvement.",
+    "step9_label": "Deep Error Analysis:",
+    "step9_desc": " Every prediction gets a detailed post-mortem — error percentage, volatility regime, trend state, per-model breakdown, model agreement score, and top influential features. All visible in the History Analysis tab."
   },
   "howItHelps": {
     "title": "HOW IT HELPS YOU",
     "coinsMarket": "Coins & Market Data",
     "coinsMarketDesc": "Track BTC, ETH, SOL, XRP, and more — search any coin, generate AI analysis reports",
     "accuracyTransparency": "Accuracy & Transparency",
-    "accuracyTransparencyDesc": "Every prediction scored against actual results — see model performance, hit rates, and confidence calibration"
+    "accuracyTransparencyDesc": "Every prediction scored against actual results — see per-model accuracy, error distributions, learned patterns, and confidence calibration in the Analysis tab"
   },
   "whatsInside": {
     "title": "WHAT'S INSIDE",
-    "dashboard": { "name": "Dashboard", "desc": "Live BTC price, dual prediction cards, trading signals, Fear & Greed, news, on-chain, dominance, supply, and macro overview" },
+    "dashboard": { "name": "Dashboard", "desc": "Live BTC price, dual prediction cards with countdown timer, trading signals, Fear & Greed, news, on-chain, dominance, supply, and macro overview" },
     "signals": { "name": "Signals", "desc": "Actionable entry/target/stop-loss levels with confidence, risk rating, and signal strength" },
     "advisor": { "name": "Advisor", "desc": "AI-powered trade plans with position sizing, risk management, and reversal detection" },
     "technical": { "name": "Technical", "desc": "Charts with 45+ indicators — RSI, MACD, Bollinger, Ichimoku, GARCH, wavelets, and more" },
@@ -116,7 +147,7 @@
     "coins": { "name": "Coins", "desc": "Track BTC, ETH, SOL, XRP — search any coin, generate AI analysis reports" },
     "news": { "name": "News", "desc": "Real-time news from 25+ sources with AI sentiment scoring and phrase analysis" },
     "events": { "name": "Events", "desc": "Market-moving events with AI impact predictions based on historical pattern matching" },
-    "history": { "name": "History", "desc": "Past predictions and their outcomes — full accuracy audit trail" },
+    "history": { "name": "History", "desc": "Past predictions with Analysis tab — per-model accuracy, error metrics, active patterns, learning progress" },
     "paperTrading": { "name": "Paper Trading", "desc": "Practice with virtual money — track P&L without risk" },
     "learn": { "name": "Learn", "desc": "Trading education — basics, strategies, technical analysis, psychology, and patterns" },
     "tools": { "name": "Tools", "desc": "Calculators and utilities for position sizing, risk management, and trade planning" },
@@ -127,7 +158,7 @@
   "features": {
     "title": "Features",
     "predictions": "AI Price Predictions",
-    "predictionsDesc": "Multi-timeframe forecasts using ensemble of 4 ML models",
+    "predictionsDesc": "Time-aligned multi-timeframe forecasts using ensemble of 4 ML models with self-learning",
     "signals": "Trading Signals",
     "signalsDesc": "Actionable buy/sell signals with entry, target, and stop-loss",
     "technical": "Technical Analysis",
@@ -151,14 +182,23 @@
     "coinsTokens": "Coins & Tokens",
     "etfFlows": "ETF Flows",
     "learnEducate": "Learn & Educate",
-    "eventMemory": "Event Memory"
+    "eventMemory": "Event Memory",
+    "selfLearning": "Self-Learning AI"
   },
   "credits": {
-    "title": "Credits",
+    "title": "Credits & Community",
     "createdBy": "Created by <b>Salakhitdinov Khidayotullo</b> — full-stack developer, AI researcher, and crypto enthusiast.",
+    "projectNote": "Part of the Incognito Generation project",
     "builtWith": "Built with React, Python, and love for Bitcoin",
     "poweredBy": "Powered by multiple AI models and real-time market data",
-    "joinTelegram": "Join on Telegram"
+    "joinCounsil": "BTC SEER COUNSIL",
+    "joinTelegram": "Telegram Bot"
+  },
+  "donate": {
+    "title": "Support BTC Seer",
+    "description": "Help improve the platform — donate BTC to fund development, server costs, and new features. Every satoshi counts!",
+    "copy": "Copy",
+    "copied": "Copied!"
   },
   "disclaimer": {
     "title": "Disclaimer",

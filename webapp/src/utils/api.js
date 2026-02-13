@@ -71,6 +71,11 @@ export const api = {
   getQuantHistory: (days = 7) => cachedFetch(`/predictions/quant/history?days=${days}`, T60),
   getPredictionHistory: (timeframe = '1h', days = 7) =>
     cachedFetch(`/predictions/history?timeframe=${timeframe}&days=${days}`, T60),
+  getPredictionAnalysis: (timeframe = '1h', days = 30) =>
+    cachedFetch(`/predictions/analysis?timeframe=${timeframe}&days=${days}`, T120),
+  getPredictionPatterns: () => cachedFetch('/predictions/patterns', T120),
+  getLearningProgress: (days = 30) =>
+    cachedFetch(`/predictions/learning-progress?days=${days}`, T120),
 
   // Signals
   getCurrentSignals: () => cachedFetch('/signals/current', T30),

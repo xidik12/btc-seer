@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const I = (children, sm) => (
@@ -6,8 +7,19 @@ const I = (children, sm) => (
   </svg>
 )
 
+const BTC_DONATION = '12yRGpUfFznzZoz4yVfZKRxLSkAwbanw2B'
+const COMMUNITY_LINK = 'https://t.me/+-72wnR04tPUyZmIy'
+
 export default function About() {
   const { t } = useTranslation(['about', 'common'])
+  const [copied, setCopied] = useState(false)
+
+  const copyBtc = () => {
+    navigator.clipboard.writeText(BTC_DONATION).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {})
+  }
 
   const stats = [
     { value: '192', labelKey: 'about:byTheNumbers.features' },
@@ -37,7 +49,7 @@ export default function About() {
     'supplyMining', 'derivatives', 'phraseAnalysis',
   ]
 
-  const aiSteps = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
+  const aiSteps = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({
     num: n,
     label: t(`about:howAiWorks.step${n}_label`),
     desc: t(`about:howAiWorks.step${n}_desc`),
@@ -71,6 +83,18 @@ export default function About() {
         </p>
       </div>
 
+      {/* Incognito Generation Project */}
+      <div className="bg-bg-card rounded-2xl p-4 gradient-border">
+        <div className="flex items-center gap-3 mb-3">
+          <img src="/incognito-generation.png" alt="Incognito Generation" className="w-12 h-12 rounded-lg" />
+          <div>
+            <h3 className="text-text-primary text-sm font-bold">{t('about:project.title')}</h3>
+            <p className="text-text-muted text-[10px]">{t('about:project.subtitle')}</p>
+          </div>
+        </div>
+        <p className="text-text-muted text-[11px]">{t('about:project.description')}</p>
+      </div>
+
       {/* What is BTC Seer */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
         <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('about:whatIs.title')}</h3>
@@ -79,6 +103,35 @@ export default function About() {
           <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p2') }} />
           <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p3') }} />
         </div>
+      </div>
+
+      {/* Self-Learning Prediction System */}
+      <div className="bg-bg-card rounded-2xl p-4 gradient-border">
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{String(t('about:selfLearning.title')).toUpperCase()}</h3>
+        <p className="text-text-muted text-[11px] mb-3">{t('about:selfLearning.intro')}</p>
+        <div className="space-y-2 text-[11px] text-text-muted">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <div key={n} className="flex items-start gap-2">
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-green/20 text-accent-green text-[10px] font-bold flex items-center justify-center">{n}</span>
+              <p><span className="text-text-secondary font-semibold">{t(`about:selfLearning.step${n}_label`)}</span>{t(`about:selfLearning.step${n}_desc`)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Time-Aligned Predictions */}
+      <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{String(t('about:timeAligned.title')).toUpperCase()}</h3>
+        <p className="text-text-muted text-[10px] mb-3">{t('about:timeAligned.intro')}</p>
+        <div className="space-y-1.5">
+          {['1h', '4h', '24h'].map((tf) => (
+            <div key={tf} className="flex gap-2 py-1.5 border-b border-white/[0.03] last:border-0">
+              <span className="text-accent-blue text-[11px] font-bold w-10 flex-shrink-0">{tf.toUpperCase()}</span>
+              <span className="text-text-muted text-[10px]">{t(`about:timeAligned.${tf}`)}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-text-muted text-[10px] mt-2 italic">{t('about:timeAligned.note')}</p>
       </div>
 
       {/* By the Numbers */}
@@ -229,6 +282,7 @@ export default function About() {
             { icon: I(<><path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /></>, true), labelKey: 'about:features.etfFlows' },
             { icon: I(<><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></>, true), labelKey: 'about:features.learnEducate' },
             { icon: I(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>, true), labelKey: 'about:features.eventMemory' },
+            { icon: I(<><path d="M4 4h16v16H4z" /><path d="M9 9h6v6H9z" /><path d="M4 9h5M15 9h5M4 15h5M15 15h5M9 4v5M9 15v5M15 4v5M15 15v5" /></>, true), labelKey: 'about:features.selfLearning' },
           ].map((f) => (
             <div key={f.labelKey} className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02]">
               <span className="shrink-0">{f.icon}</span>
@@ -238,28 +292,64 @@ export default function About() {
         </div>
       </div>
 
-      {/* Creator / Community */}
-      <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-2">{String(t('about:credits.title')).toUpperCase()}</h3>
-        <div className="text-text-muted text-[11px] space-y-2">
-          <p dangerouslySetInnerHTML={{ __html: t('about:credits.createdBy') }} />
-          <p>
-            {t('about:credits.builtWith')}
-          </p>
-          <a
-            href="https://t.me/btc_seer_bot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 mt-1 px-3 py-1.5 rounded-lg bg-accent-blue/10 text-accent-blue text-[11px] font-semibold border border-accent-blue/20"
-          >
-            {t('about:credits.joinTelegram')}
-          </a>
+      {/* Creator + Project + Community */}
+      <div className="bg-bg-card rounded-2xl p-4 gradient-border">
+        <h3 className="text-text-secondary text-xs font-semibold mb-3">{String(t('about:credits.title')).toUpperCase()}</h3>
+        <div className="text-text-muted text-[11px] space-y-3">
+          <div className="flex items-center gap-3">
+            <img src="/incognito-generation.png" alt="Incognito Generation" className="w-10 h-10 rounded-lg" />
+            <div>
+              <p dangerouslySetInnerHTML={{ __html: t('about:credits.createdBy') }} />
+              <p className="text-[10px] mt-0.5">{t('about:credits.projectNote')}</p>
+            </div>
+          </div>
+          <p>{t('about:credits.builtWith')}</p>
+
+          {/* Community + Bot buttons */}
+          <div className="flex gap-2">
+            <a
+              href={COMMUNITY_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-accent-blue/10 text-accent-blue text-[11px] font-semibold border border-accent-blue/20"
+            >
+              {t('about:credits.joinCounsil')}
+            </a>
+            <a
+              href="https://t.me/btc_seer_bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 text-text-secondary text-[11px] font-semibold border border-white/10"
+            >
+              {t('about:credits.joinTelegram')}
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* BTC Donation */}
+      <div className="bg-bg-card rounded-2xl p-4 border border-accent-yellow/15">
+        <h3 className="text-accent-yellow text-xs font-semibold mb-2">{String(t('about:donate.title')).toUpperCase()}</h3>
+        <p className="text-text-muted text-[10px] mb-3">{t('about:donate.description')}</p>
+        <div
+          onClick={copyBtc}
+          className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/5 cursor-pointer hover:border-accent-yellow/30 transition-colors"
+        >
+          <span className="text-accent-yellow text-sm">&#8383;</span>
+          <span className="text-text-primary text-[10px] font-mono break-all flex-1">{BTC_DONATION}</span>
+          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full transition-all ${
+            copied
+              ? 'bg-accent-green/15 text-accent-green'
+              : 'bg-white/5 text-text-muted'
+          }`}>
+            {copied ? t('about:donate.copied') : t('about:donate.copy')}
+          </span>
         </div>
       </div>
 
       {/* Disclaimer */}
-      <div className="bg-bg-card rounded-2xl p-4 border border-accent-yellow/15">
-        <h3 className="text-accent-yellow text-xs font-semibold mb-2">{String(t('about:disclaimer.title')).toUpperCase()}</h3>
+      <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/10">
+        <h3 className="text-accent-red text-xs font-semibold mb-2">{String(t('about:disclaimer.title')).toUpperCase()}</h3>
         <p className="text-text-muted text-[10px]">
           {t('about:disclaimer.text')}
         </p>

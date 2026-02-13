@@ -13,6 +13,7 @@ from app.database import (
     FundingRate, BtcDominance, IndicatorSnapshot, AlertLog, ModelVersion,
     PortfolioState, TradeAdvice, TradeResult, BotUser,
     PredictionContext, ModelPerformanceLog, WhaleTransaction,
+    PredictionAnalysis,
     timestamp_diff_order,
 )
 from app.collectors import (
@@ -491,8 +492,11 @@ async def collect_influencer_tweets():
         logger.error(f"Influencer collection error: {e}")
 
 
-async def generate_prediction():
-    """Generate ML prediction (runs every hour).
+async def generate_prediction(timeframes: list[str] | None = None):
+    """Generate ML prediction for specified timeframes.
+
+    If timeframes is None, generates for all timeframes (used on startup).
+    Otherwise filters ensemble output to only the requested timeframes.
 
     Incorporates event memory: queries historical event impacts to understand
     how similar past events affected BTC price, and feeds this as features
@@ -843,6 +847,30 @@ async def generate_prediction():
         atr = features.get("atr", current_price * 0.02)
         volatility = features.get("volatility_24h", 2.0)
 
+        # Filter to requested timeframes only
+        if timeframes is not None:
+            predictions = {tf: pred for tf, pred in predictions.items() if tf in timeframes}
+
+        if not predictions:
+            logger.warning(f"No predictions for requested timeframes: {timeframes}")
+            return
+
+        # Apply learned pattern adjustments
+        try:
+            from app.models.pattern_learner import get_active_adjustments
+            for tf, pred in predictions.items():
+                adjustments = await get_active_adjustments(tf, features, pred.get("model_outputs", {}))
+                if adjustments["confidence_modifier"] != 1.0 or adjustments["direction_bias"] != 0.0:
+                    original_conf = pred["confidence"]
+                    pred["confidence"] = max(10, min(95, pred["confidence"] * adjustments["confidence_modifier"]))
+                    logger.info(
+                        f"Pattern adjustment [{tf}]: confidence {original_conf:.0f}→{pred['confidence']:.0f} "
+                        f"(modifier={adjustments['confidence_modifier']:.2f}, "
+                        f"bias={adjustments['direction_bias']:+.3f})"
+                    )
+        except Exception as e:
+            logger.debug(f"Pattern adjustment error (non-critical): {e}")
+
         # Generate signals
         signals = signal_generator.generate(predictions, current_price, atr, volatility)
 
@@ -915,8 +943,27 @@ async def generate_prediction():
         logger.error(f"Prediction generation error: {e}", exc_info=True)
 
 
-async def generate_quant_prediction():
-    """Generate quant theory-based prediction (runs every 30 min alongside ML).
+# ── Time-aligned prediction wrappers ──
+
+async def generate_prediction_1h():
+    """Generate ML prediction for 1h timeframe only (runs every hour at :00)."""
+    await generate_prediction(timeframes=["1h"])
+
+
+async def generate_prediction_4h():
+    """Generate ML prediction for 4h timeframe only (runs every 4h at :02)."""
+    await generate_prediction(timeframes=["4h"])
+
+
+async def generate_prediction_24h():
+    """Generate ML prediction for 24h/1w/1mo timeframes (runs daily at 00:04)."""
+    await generate_prediction(timeframes=["24h", "1w", "1mo"])
+
+
+async def generate_quant_prediction(timeframes: list[str] | None = None):
+    """Generate quant theory-based prediction for specified timeframes.
+
+    If timeframes is None, generates for all timeframes (used on startup).
 
     Uses 15+ proven BTC prediction theories: Pi Cycle, Rainbow Chart,
     Mayer Multiple, Halving Cycle, Mean Reversion, Momentum, Funding Rate, etc.
@@ -1052,16 +1099,41 @@ async def generate_quant_prediction():
         logger.error(f"Quant prediction error: {e}", exc_info=True)
 
 
-async def evaluate_predictions():
-    """Evaluate past predictions against actual prices (runs every hour)."""
+# ── Time-aligned quant prediction wrappers ──
+
+async def generate_quant_prediction_1h():
+    """Generate quant prediction for 1h timeframe (runs every hour at :01)."""
+    await generate_quant_prediction(timeframes=["1h"])
+
+
+async def generate_quant_prediction_4h():
+    """Generate quant prediction for 4h timeframe (runs every 4h at :03)."""
+    await generate_quant_prediction(timeframes=["4h"])
+
+
+async def generate_quant_prediction_24h():
+    """Generate quant prediction for 24h/1w/1mo timeframes (runs daily at 00:05)."""
+    await generate_quant_prediction(timeframes=["24h", "1w", "1mo"])
+
+
+async def evaluate_predictions(timeframe_filter: str | None = None):
+    """Evaluate past predictions against actual prices with deep error analysis.
+
+    Args:
+        timeframe_filter: If set, only evaluate predictions for this timeframe (e.g. "1h", "4h", "24h").
+    """
     try:
         async with async_session() as session:
             # Find unevaluated predictions older than their timeframe
-            result = await session.execute(
+            query = (
                 select(Prediction)
                 .where(Prediction.was_correct.is_(None))
                 .where(Prediction.timestamp < datetime.utcnow() - timedelta(hours=1))
             )
+            if timeframe_filter:
+                query = query.where(Prediction.timeframe == timeframe_filter)
+
+            result = await session.execute(query)
             predictions = result.scalars().all()
 
             evaluated_count = 0
@@ -1105,14 +1177,151 @@ async def evaluate_predictions():
                 pred.was_correct = (pred.direction == actual_direction) or (
                     pred.direction == "neutral" and abs(actual_price - pred.current_price) / pred.current_price < 0.005
                 )
+
+                # ── Compute error metrics ──
+                if pred.predicted_price and pred.predicted_price > 0:
+                    pred.error_pct = (actual_price - pred.predicted_price) / pred.predicted_price * 100
+                else:
+                    pred.error_pct = None
+
+                # ── Classify volatility regime ──
+                try:
+                    # Look up PredictionContext for features at prediction time
+                    ctx_result = await session.execute(
+                        select(PredictionContext)
+                        .where(PredictionContext.prediction_id == pred.id)
+                        .limit(1)
+                    )
+                    ctx = ctx_result.scalar_one_or_none()
+
+                    features_snapshot = ctx.features if ctx else {}
+                    vol_24h = features_snapshot.get("volatility_24h", 2.0) if features_snapshot else 2.0
+                    rsi_val = features_snapshot.get("rsi", 50.0) if features_snapshot else 50.0
+
+                    if vol_24h < 1.0:
+                        pred.volatility_regime = "low"
+                    elif vol_24h < 3.0:
+                        pred.volatility_regime = "normal"
+                    elif vol_24h < 6.0:
+                        pred.volatility_regime = "high"
+                    else:
+                        pred.volatility_regime = "extreme"
+
+                    # ── Classify trend state ──
+                    sma_20 = features_snapshot.get("sma_20", 0) if features_snapshot else 0
+                    sma_50 = features_snapshot.get("sma_50", 0) if features_snapshot else 0
+                    if sma_20 and sma_50 and sma_20 > 0 and sma_50 > 0:
+                        ratio = sma_20 / sma_50
+                        if ratio > 1.01:
+                            pred.trend_state = "trending_up"
+                        elif ratio < 0.99:
+                            pred.trend_state = "trending_down"
+                        else:
+                            pred.trend_state = "ranging"
+                    else:
+                        pred.trend_state = "ranging"
+
+                    # ── Per-model results analysis ──
+                    per_model = {}
+                    model_outputs = pred.model_outputs or {}
+                    model_count = 0
+                    agree_count = 0
+                    dissenting = []
+
+                    for model_name, model_data in model_outputs.items():
+                        if not isinstance(model_data, dict):
+                            continue
+                        model_dir = model_data.get("direction", "neutral")
+                        model_prob = model_data.get("bullish_prob", model_data.get("prob"))
+                        model_correct = (model_dir == actual_direction)
+
+                        per_model[model_name] = {
+                            "predicted": model_dir,
+                            "correct": model_correct,
+                            "prob": model_prob,
+                        }
+
+                        model_count += 1
+                        if model_dir == pred.direction:
+                            agree_count += 1
+                        else:
+                            dissenting.append(model_name)
+
+                        # ── Populate ModelPerformanceLog (critical fix) ──
+                        session.add(ModelPerformanceLog(
+                            prediction_id=pred.id,
+                            model_name=model_name,
+                            timeframe=pred.timeframe,
+                            predicted_direction=model_dir,
+                            predicted_prob=model_prob,
+                            actual_direction=actual_direction,
+                            was_correct=model_correct,
+                            confidence=pred.confidence,
+                        ))
+
+                    # Also log ensemble result
+                    session.add(ModelPerformanceLog(
+                        prediction_id=pred.id,
+                        model_name="ensemble",
+                        timeframe=pred.timeframe,
+                        predicted_direction=pred.direction,
+                        predicted_prob=None,
+                        actual_direction=actual_direction,
+                        was_correct=pred.was_correct,
+                        confidence=pred.confidence,
+                    ))
+
+                    agreement_score = agree_count / model_count if model_count > 0 else 0.0
+
+                    # Extract top features
+                    top_features = None
+                    if features_snapshot:
+                        # Get features with highest absolute values (normalized)
+                        feature_items = {
+                            k: v for k, v in features_snapshot.items()
+                            if isinstance(v, (int, float)) and not np.isnan(v)
+                        }
+                        if feature_items:
+                            sorted_features = sorted(feature_items.items(), key=lambda x: abs(x[1]), reverse=True)
+                            top_features = dict(sorted_features[:10])
+
+                    # ── Create PredictionAnalysis record ──
+                    analysis = PredictionAnalysis(
+                        prediction_id=pred.id,
+                        timeframe=pred.timeframe,
+                        error_pct=pred.error_pct,
+                        abs_error_pct=abs(pred.error_pct) if pred.error_pct is not None else None,
+                        direction_correct=pred.was_correct,
+                        per_model_results=per_model if per_model else None,
+                        volatility_regime=pred.volatility_regime,
+                        trend_state=pred.trend_state,
+                        rsi_at_prediction=rsi_val,
+                        top_features=top_features,
+                        model_agreement_score=agreement_score,
+                        dissenting_models=",".join(dissenting) if dissenting else None,
+                    )
+                    session.add(analysis)
+
+                    pred.evaluation_notes = {
+                        "error_pct": round(pred.error_pct, 4) if pred.error_pct is not None else None,
+                        "volatility": pred.volatility_regime,
+                        "trend": pred.trend_state,
+                        "agreement": round(agreement_score, 2),
+                        "dissenting": dissenting,
+                    }
+
+                except Exception as e:
+                    logger.debug(f"Error analysis for prediction {pred.id}: {e}")
+
                 evaluated_count += 1
 
             await session.commit()
 
-        logger.info(f"Evaluated {evaluated_count}/{len(predictions)} predictions")
+        tf_label = f" [{timeframe_filter}]" if timeframe_filter else ""
+        logger.info(f"Evaluated{tf_label} {evaluated_count}/{len(predictions)} predictions")
 
     except Exception as e:
-        logger.error(f"Prediction evaluation error: {e}")
+        logger.error(f"Prediction evaluation error: {e}", exc_info=True)
 
 
 async def classify_news_events():
@@ -2265,3 +2474,90 @@ async def check_subscription_expiry():
 
     except Exception as e:
         logger.error(f"Subscription expiry check error: {e}")
+
+
+async def deduplicate_predictions():
+    """Remove duplicate predictions created by the old 30-min-all-timeframes scheduler.
+
+    Keeps at most 1 prediction per timeframe per time window:
+      - 1h: 1 per hour
+      - 4h: 1 per 4-hour block
+      - 24h / 1w / 1mo: 1 per calendar day
+
+    Within each window, keeps the evaluated prediction (was_correct IS NOT NULL)
+    or the earliest one if none are evaluated.
+    """
+    try:
+        async with async_session() as session:
+            total_deleted = 0
+
+            for timeframe in ["1h", "4h", "24h", "1w", "1mo"]:
+                result = await session.execute(
+                    select(Prediction)
+                    .where(Prediction.timeframe == timeframe)
+                    .order_by(Prediction.timestamp)
+                )
+                preds = result.scalars().all()
+
+                if not preds:
+                    continue
+
+                # Group predictions by their time window
+                windows: dict[str, list] = {}
+                for p in preds:
+                    ts = p.timestamp
+                    if timeframe == "1h":
+                        key = ts.strftime("%Y-%m-%d-%H")
+                    elif timeframe == "4h":
+                        block = (ts.hour // 4) * 4
+                        key = f"{ts.strftime('%Y-%m-%d')}-{block:02d}"
+                    else:  # 24h, 1w, 1mo
+                        key = ts.strftime("%Y-%m-%d")
+                    windows.setdefault(key, []).append(p)
+
+                # Keep the best prediction per window, delete the rest
+                for window_key, group in windows.items():
+                    if len(group) <= 1:
+                        continue
+
+                    # Prefer evaluated predictions, then earliest
+                    evaluated = [p for p in group if p.was_correct is not None]
+                    if evaluated:
+                        keep = evaluated[0]
+                    else:
+                        keep = group[0]
+
+                    for p in group:
+                        if p.id != keep.id:
+                            await session.delete(p)
+                            total_deleted += 1
+
+                logger.info(f"Dedup [{timeframe}]: {len(preds)} → {len(windows)} (removed {len(preds) - len(windows)})")
+
+            # Also deduplicate QuantPrediction (1 per hour max)
+            qresult = await session.execute(
+                select(QuantPrediction).order_by(QuantPrediction.timestamp)
+            )
+            quants = qresult.scalars().all()
+            if quants:
+                q_windows: dict[str, list] = {}
+                for q in quants:
+                    key = q.timestamp.strftime("%Y-%m-%d-%H")
+                    q_windows.setdefault(key, []).append(q)
+
+                q_deleted = 0
+                for window_key, group in q_windows.items():
+                    if len(group) <= 1:
+                        continue
+                    keep = group[0]
+                    for q in group[1:]:
+                        await session.delete(q)
+                        q_deleted += 1
+                logger.info(f"Dedup [quant]: {len(quants)} → {len(q_windows)} (removed {q_deleted})")
+                total_deleted += q_deleted
+
+            await session.commit()
+            logger.info(f"Deduplication complete: removed {total_deleted} duplicate predictions")
+
+    except Exception as e:
+        logger.error(f"Deduplication error: {e}", exc_info=True)
