@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, desc, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_session, WhaleTransaction
+from app.database import get_session, WhaleTransaction, AddressLabel
 
 router = APIRouter(prefix="/api/whales", tags=["whales"])
 
@@ -57,6 +57,8 @@ async def get_recent_whales(
                 "change_pct_4h": tx.change_pct_4h,
                 "change_pct_24h": tx.change_pct_24h,
                 "direction_was_predictive": tx.direction_was_predictive,
+                "from_address": tx.from_address,
+                "to_address": tx.to_address,
             }
             for tx in txs
         ],
@@ -243,6 +245,71 @@ async def get_whale_flow_history(
     return {
         "days": days,
         "history": sorted(daily.values(), key=lambda x: x["date"]),
+    }
+
+
+@router.get("/address/{address}")
+async def get_address_transactions(
+    address: str,
+    limit: int = Query(50, ge=1, le=200),
+    session: AsyncSession = Depends(get_session),
+):
+    """Get all whale transactions involving a specific Bitcoin address, with entity label if known."""
+    from app.collectors.known_entities import identify_entity
+    from sqlalchemy import or_
+
+    # Look up entity label
+    label = identify_entity(address)
+
+    # Check AddressLabel cache if not in static DB
+    if not label:
+        result = await session.execute(
+            select(AddressLabel).where(AddressLabel.address == address)
+        )
+        cached = result.scalar_one_or_none()
+        if cached and cached.entity_name:
+            label = {
+                "name": cached.entity_name,
+                "type": cached.entity_type,
+                "wallet": cached.wallet_type,
+                "source": cached.source,
+                "confidence": cached.confidence,
+            }
+
+    # Find all whale txs involving this address
+    query = select(WhaleTransaction).where(
+        or_(
+            WhaleTransaction.from_address == address,
+            WhaleTransaction.to_address == address,
+        )
+    ).order_by(desc(WhaleTransaction.timestamp)).limit(limit)
+
+    result = await session.execute(query)
+    txs = result.scalars().all()
+
+    return {
+        "address": address,
+        "label": label,
+        "transaction_count": len(txs),
+        "transactions": [
+            {
+                "id": tx.id,
+                "tx_hash": tx.tx_hash,
+                "timestamp": tx.timestamp.isoformat(),
+                "amount_btc": tx.amount_btc,
+                "amount_usd": tx.amount_usd,
+                "direction": tx.direction,
+                "from_entity": tx.from_entity,
+                "to_entity": tx.to_entity,
+                "from_address": tx.from_address,
+                "to_address": tx.to_address,
+                "entity_name": tx.entity_name,
+                "entity_type": tx.entity_type,
+                "severity": tx.severity,
+                "role": "sender" if tx.from_address == address else "receiver",
+            }
+            for tx in txs
+        ],
     }
 
 

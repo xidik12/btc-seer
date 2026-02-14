@@ -658,8 +658,27 @@ class WhaleTransaction(Base):
     entity_type: Mapped[str] = mapped_column(String(30), nullable=True)      # "exchange", "institution", "government", "individual", "unknown"
     entity_wallet: Mapped[str] = mapped_column(String(20), nullable=True)    # "cold", "hot", "custody", "treasury"
 
+    # Actual Bitcoin addresses (for transaction chaining)
+    from_address: Mapped[str] = mapped_column(String(100), nullable=True, index=True)
+    to_address: Mapped[str] = mapped_column(String(100), nullable=True, index=True)
+
     source: Mapped[str] = mapped_column(String(50), default="blockchair")
     raw_data: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+
+class AddressLabel(Base):
+    """Cached address-to-entity resolution results (from APIs and manual lookups)."""
+    __tablename__ = "address_labels"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    address: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    entity_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    entity_type: Mapped[str] = mapped_column(String(30), nullable=True)    # exchange, institution, government, individual, mining_pool
+    wallet_type: Mapped[str] = mapped_column(String(20), nullable=True)    # cold, hot, custody, treasury, seized
+    source: Mapped[str] = mapped_column(String(50), default="manual")      # walletexplorer, blockchair, manual, api_miss
+    confidence: Mapped[float] = mapped_column(Float, default=0.5)          # 0.0 - 1.0
+    last_checked: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
 
 class ModelFeedback(Base):

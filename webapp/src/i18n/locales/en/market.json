@@ -656,6 +656,7 @@
       "institution": "Institution",
       "government": "Government",
       "individual": "Individual",
+      "mining_pool": "Mining Pool",
       "unknown": "Unknown"
     },
     "filter": {
@@ -671,6 +672,15 @@
       "avgSize": "Avg Size (BTC)",
       "accuracy": "Predictive Accuracy",
       "mostActive": "Most Active"
+    },
+    "addressDetail": {
+      "title": "Address Detail",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "unknown": "Unknown Entity",
+      "viewOnMempool": "View on mempool.space",
+      "txCount": "{{count}} whale transactions",
+      "noTxs": "No whale transactions found for this address"
     }
   }
 }

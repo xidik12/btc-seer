@@ -254,6 +254,7 @@ export const api = {
   getWhaleStats: () => cachedFetch('/whales/stats', T120),
   getWhaleEntities: () => cachedFetch('/whales/entities', T300),
   getWhaleFlowHistory: (days = 7) => cachedFetch(`/whales/flow-history?days=${days}`, T300),
+  getAddressTransactions: (address, limit = 50) => cachedFetch(`/whales/address/${address}?limit=${limit}`, T60),
 
   // Referral
   getReferralInfo: (initData) => fetchAPI('/referral/info', { headers: { 'X-Telegram-Init-Data': initData } }),

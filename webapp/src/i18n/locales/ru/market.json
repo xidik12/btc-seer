@@ -656,6 +656,7 @@
       "institution": "Институция",
       "government": "Правительство",
       "individual": "Личность",
+      "mining_pool": "Майнинг пул",
       "unknown": "Неизвестно"
     },
     "filter": {
@@ -671,6 +672,15 @@
       "avgSize": "Средний размер (BTC)",
       "accuracy": "Точность прогноза",
       "mostActive": "Самый активный"
+    },
+    "addressDetail": {
+      "title": "Детали адреса",
+      "copy": "Копировать",
+      "copied": "Скопировано!",
+      "unknown": "Неизвестная сущность",
+      "viewOnMempool": "Посмотреть на mempool.space",
+      "txCount": "{{count}} транзакций китов",
+      "noTxs": "Транзакции китов для этого адреса не найдены"
     }
   }
 }
