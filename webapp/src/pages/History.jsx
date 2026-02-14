@@ -20,7 +20,7 @@ import {
   ZAxis,
 } from 'recharts'
 import { api } from '../utils/api'
-import { formatPrice, formatDate, formatTime, getDirectionColor, formatPercent } from '../utils/format'
+import { formatPrice, formatDate, formatTime, getDirectionColor, formatPercent, safeFixed } from '../utils/format'
 
 const TIMEFRAMES = ['1h', '4h', '24h']
 const DAY_OPTIONS = [7, 14, 30, 90]
@@ -48,7 +48,7 @@ function AccuracyRing({ label, correct, total, size = 80, strokeWidth = 6 }) {
         />
       </svg>
       <div className="absolute flex flex-col items-center justify-center" style={{ width: size, height: size }}>
-        <span className="text-text-primary text-base font-bold tabular-nums">{pct.toFixed(0)}%</span>
+        <span className="text-text-primary text-base font-bold tabular-nums">{safeFixed(pct, 0)}%</span>
       </div>
       <div className="mt-1 text-center">
         <div className="text-text-primary text-[11px] font-semibold">{label}</div>
@@ -102,7 +102,7 @@ function AccuracyTrendChart({ history, timeframe }) {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, d]) => ({
         date,
-        accuracy: +(d.correct / d.total * 100).toFixed(1),
+        accuracy: +(safeFixed(d.correct / d.total * 100, 1, '0')),
         total: d.total,
         correct: d.correct,
       }))
@@ -187,7 +187,7 @@ function ConfidenceChart({ history }) {
     return Object.entries(buckets)
       .map(([conf, d]) => ({
         confidence: +conf,
-        accuracy: +(d.correct / d.total * 100).toFixed(1),
+        accuracy: +(safeFixed(d.correct / d.total * 100, 1, '0')),
         count: d.total,
       }))
       .sort((a, b) => a.confidence - b.confidence)
@@ -264,9 +264,9 @@ function WinLossBar({ history }) {
         <div className="bg-accent-red transition-all duration-500" style={{ width: `${100 - winPct}%` }} />
       </div>
       <div className="flex justify-between mt-2 text-[10px]">
-        <span className="text-accent-green font-bold">{t('market:history.winsLabel', { count: wins, pct: winPct.toFixed(0) })}</span>
+        <span className="text-accent-green font-bold">{t('market:history.winsLabel', { count: wins, pct: safeFixed(winPct, 0) })}</span>
         <span className="text-text-muted">{t('market:history.evaluatedLabel', { count: evaluated.length })}</span>
-        <span className="text-accent-red font-bold">{t('market:history.lossesLabel', { count: losses, pct: (100 - winPct).toFixed(0) })}</span>
+        <span className="text-accent-red font-bold">{t('market:history.lossesLabel', { count: losses, pct: safeFixed(100 - winPct, 0) })}</span>
       </div>
     </div>
   )
@@ -285,8 +285,8 @@ function DirectionBreakdown({ history }) {
   const bullWins = bulls.filter(p => p.was_correct).length
   const bearWins = bears.filter(p => p.was_correct).length
 
-  const bullAcc = bulls.length > 0 ? (bullWins / bulls.length * 100).toFixed(0) : '--'
-  const bearAcc = bears.length > 0 ? (bearWins / bears.length * 100).toFixed(0) : '--'
+  const bullAcc = bulls.length > 0 ? safeFixed(bullWins / bulls.length * 100, 0) : '--'
+  const bearAcc = bears.length > 0 ? safeFixed(bearWins / bears.length * 100, 0) : '--'
 
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -337,7 +337,7 @@ function PredictionRow({ p, tf }) {
               {p.direction === 'bullish' ? '▲' : p.direction === 'bearish' ? '▼' : '◄►'}{' '}
               {p.direction.charAt(0).toUpperCase() + p.direction.slice(1)}
             </span>
-            <span className="text-text-muted text-[10px] tabular-nums">{p.confidence?.toFixed(0)}% {t('market:history.conf')}</span>
+            <span className="text-text-muted text-[10px] tabular-nums">{safeFixed(p.confidence, 0)}% {t('market:history.conf')}</span>
           </div>
           <div className="text-[10px] text-text-muted mt-0.5 tabular-nums">
             {formatDate(p.timestamp)} {formatTime(p.timestamp)}
@@ -353,7 +353,7 @@ function PredictionRow({ p, tf }) {
             <div className={`text-[10px] tabular-nums font-medium ${
               priceDelta >= 0 ? 'text-accent-green' : 'text-accent-red'
             }`}>
-              → {formatPrice(p.actual_price)} ({priceDelta >= 0 ? '+' : ''}{priceDelta.toFixed(2)}%)
+              → {formatPrice(p.actual_price)} ({priceDelta >= 0 ? '+' : ''}{safeFixed(priceDelta, 2)}%)
             </div>
           ) : (
             <div className="text-[10px] text-text-muted">{t('market:history.pending')}</div>
@@ -380,7 +380,7 @@ function PredictionRow({ p, tf }) {
               <div className={`font-medium tabular-nums ${
                 priceDelta != null ? (priceDelta >= 0 ? 'text-accent-green' : 'text-accent-red') : 'text-text-muted'
               }`}>
-                {priceDelta != null ? `${priceDelta >= 0 ? '+' : ''}${priceDelta.toFixed(3)}%` : '--'}
+                {priceDelta != null ? `${priceDelta >= 0 ? '+' : ''}${safeFixed(priceDelta, 3)}%` : '--'}
               </div>
             </div>
           </div>
@@ -437,13 +437,13 @@ function AnalysisPanel({ timeframe, days }) {
             <div>
               <div className="text-text-muted text-[9px]">MEAN ERROR</div>
               <div className="text-text-primary text-sm font-bold tabular-nums">
-                {summary.mean_error_pct != null ? `${summary.mean_error_pct > 0 ? '+' : ''}${summary.mean_error_pct.toFixed(2)}%` : '--'}
+                {summary.mean_error_pct != null ? `${summary.mean_error_pct > 0 ? '+' : ''}${safeFixed(summary.mean_error_pct, 2)}%` : '--'}
               </div>
             </div>
             <div>
               <div className="text-text-muted text-[9px]">AVG |ERROR|</div>
               <div className="text-text-primary text-sm font-bold tabular-nums">
-                {summary.mean_abs_error_pct != null ? `${summary.mean_abs_error_pct.toFixed(2)}%` : '--'}
+                {summary.mean_abs_error_pct != null ? `${safeFixed(summary.mean_abs_error_pct, 2)}%` : '--'}
               </div>
             </div>
             <div>
@@ -551,7 +551,7 @@ function AnalysisPanel({ timeframe, days }) {
                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
                     p.confidence_modifier < 1 ? 'bg-accent-red/15 text-accent-red' : 'bg-accent-green/15 text-accent-green'
                   }`}>
-                    {p.confidence_modifier < 1 ? '-' : '+'}{Math.abs((1 - p.confidence_modifier) * 100).toFixed(0)}%
+                    {p.confidence_modifier < 1 ? '-' : '+'}{safeFixed(Math.abs((1 - p.confidence_modifier) * 100), 0)}%
                   </span>
                   <span className="text-[9px] text-text-muted uppercase">{p.pattern_type}</span>
                   {p.timeframe && <span className="text-[9px] text-accent-blue font-bold">{p.timeframe.toUpperCase()}</span>}

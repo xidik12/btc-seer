@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import numpy as np
 import pandas as pd
@@ -2068,7 +2068,7 @@ async def backfill_whale_transactions():
                                 else:
                                     direction, primary = "unknown", None
 
-                                ts = datetime.utcfromtimestamp(block_ts) if block_ts else datetime.utcnow()
+                                ts = datetime.fromtimestamp(block_ts, tz=timezone.utc) if block_ts else datetime.now(timezone.utc)
 
                                 whale_tx = WhaleTransaction(
                                     tx_hash=tx_hash,

@@ -10,6 +10,7 @@ import {
   getDirectionColor,
   getActionColor,
   getActionBg,
+  safeFixed,
 } from '../utils/format.js'
 
 const POLL_INTERVAL = 60_000
@@ -150,7 +151,7 @@ export default function SignalPanel() {
       <div className="flex items-center justify-between mb-4 px-1">
         <span className="text-text-secondary text-xs">{t('signalPanel.confidence')}</span>
         <span className={`text-sm font-semibold ${actionColorClass}`}>
-          {confidence.toFixed(0)}%
+          {safeFixed(confidence, 0)}%
         </span>
       </div>
 

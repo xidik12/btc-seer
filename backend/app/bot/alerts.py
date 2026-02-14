@@ -2,12 +2,11 @@ import logging
 from datetime import datetime
 
 from aiogram import Bot
-from sqlalchemy import select
+from sqlalchemy import select, or_, and_, desc
 
 from app.database import async_session, BotUser, Price, Prediction, Signal, AlertLog
-from app.bot.subscription import is_premium
+from app.config import settings
 from app.signals.generator import DISCLAIMER
-from sqlalchemy import desc
 
 logger = logging.getLogger(__name__)
 
@@ -85,16 +84,26 @@ class AlertSender:
                 logger.warning("No predictions available for alerts")
                 return
 
-            # Get subscribed users whose interval is due
-            result = await session.execute(
+            # Get subscribed users whose interval is due, filtered by premium status
+            query = (
                 select(BotUser)
                 .where(BotUser.subscribed == True)
                 .where(BotUser.alert_interval.in_(due_intervals))
             )
+            # When subscription is enabled, filter premium users in SQL
+            if settings.subscription_enabled:
+                now = datetime.utcnow()
+                query = query.where(
+                    or_(
+                        and_(
+                            BotUser.subscription_tier == "premium",
+                            BotUser.subscription_end > now,
+                        ),
+                        BotUser.trial_end > now,
+                    )
+                )
+            result = await session.execute(query)
             users = result.scalars().all()
-
-        # Only send to premium users
-        users = [u for u in users if is_premium(u)]
 
         if not users:
             logger.info(f"No users due for alerts (intervals: {due_intervals})")

@@ -110,6 +110,11 @@ export function formatMarketCap(value) {
   return `$${value.toFixed(0)}`
 }
 
+export function safeFixed(val, digits = 2, fallback = '--') {
+  if (val == null || !isFinite(val)) return fallback
+  return val.toFixed(digits)
+}
+
 export function formatSupply(value, symbol) {
   if (isBadNumber(value) && value !== 0) return '--'
   const formatted = formatNumber(value)

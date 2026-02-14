@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
-import { formatPricePrecise, formatTimeAgo } from '../utils/format.js'
+import { formatPricePrecise, formatTimeAgo, safeFixed } from '../utils/format.js'
 
 const POLL_INTERVAL = 30_000
 
@@ -139,7 +139,7 @@ export default function PredictionCard() {
                       </span>
                     )}
                     <span className={`text-[10px] ${accent} opacity-70`}>
-                      ({changePct > 0 ? '+' : ''}{changePct.toFixed(2)}%)
+                      ({changePct > 0 ? '+' : ''}{safeFixed(changePct, 2)}%)
                     </span>
                   </div>
                 </div>
@@ -151,7 +151,7 @@ export default function PredictionCard() {
                     />
                   </div>
                   <span className="text-text-muted text-[10px] tabular-nums w-7 text-right">
-                    {confidence.toFixed(0)}%
+                    {safeFixed(confidence, 0)}%
                   </span>
                 </div>
               </div>

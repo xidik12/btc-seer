@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { safeFixed } from '../../utils/format'
 import CalculationModal, { ClickableStat } from './CalculationModal'
 
 export default function PLGold({ data }) {
@@ -44,7 +45,7 @@ export default function PLGold({ data }) {
               )}
             </div>
             <div className="text-[#ffd700] text-2xl font-bold tabular-nums">
-              {data.btc_in_gold_oz?.toFixed(2)} oz
+              {safeFixed(data.btc_in_gold_oz, 2)} oz
             </div>
           </div>
           <div
@@ -61,7 +62,7 @@ export default function PLGold({ data }) {
               )}
             </div>
             <div className="text-accent-blue text-2xl font-bold tabular-nums">
-              {data.model_oz?.toFixed(2)} oz
+              {safeFixed(data.model_oz, 2)} oz
             </div>
           </div>
         </div>
@@ -71,7 +72,7 @@ export default function PLGold({ data }) {
             className={`font-bold ${multColor} ${calcs.multiplier ? 'cursor-pointer hover:opacity-80' : ''}`}
             onClick={() => showCalc('multiplier', t('market:powerLaw.dashboard.multiplier'))}
           >
-            {data.multiplier?.toFixed(2)}x
+            {safeFixed(data.multiplier, 2)}x
           </span>
         </div>
       </div>
@@ -80,7 +81,7 @@ export default function PLGold({ data }) {
       <div className="grid grid-cols-3 gap-2">
         <ClickableStat
           label={t('market:powerLaw.dashboard.rSquared')}
-          value={data.r_squared?.toFixed(3)}
+          value={safeFixed(data.r_squared, 3)}
           color="text-accent-green"
           calcKey="r_squared"
           calculations={calcs}
@@ -88,14 +89,14 @@ export default function PLGold({ data }) {
         />
         <ClickableStat
           label={t('market:powerLaw.dashboard.slope')}
-          value={data.slope?.toFixed(3)}
+          value={safeFixed(data.slope, 3)}
           calcKey="slope"
           calculations={calcs}
           onShowCalc={showCalc}
         />
         <ClickableStat
           label={t('market:powerLaw.dashboard.logVol')}
-          value={data.log_volatility?.toFixed(2)}
+          value={safeFixed(data.log_volatility, 2)}
           calcKey="log_volatility"
           calculations={calcs}
           onShowCalc={showCalc}
@@ -110,7 +111,7 @@ export default function PLGold({ data }) {
             {Object.entries(data.projections).map(([key, val]) => (
               <div key={key} className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
                 <div className="text-text-muted text-[9px] mb-1">{key.replace('dec_', 'Dec ')}</div>
-                <div className="text-[#ffd700] text-sm font-bold">{val?.toFixed(1)} oz</div>
+                <div className="text-[#ffd700] text-sm font-bold">{safeFixed(val, 1)} oz</div>
               </div>
             ))}
           </div>

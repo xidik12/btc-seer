@@ -71,6 +71,7 @@ scheduler = AsyncIOScheduler(timezone="utc")
 
 
 _startup_error: str | None = None
+_data_ready = False
 
 
 @asynccontextmanager
@@ -301,8 +302,14 @@ async def lifespan(app: FastAPI):
             await _safe_run(classify_news_events(), "classify_news_events")
             await _safe_run(save_indicator_snapshot(), "save_indicator_snapshot")
 
-        asyncio.create_task(startup_data_pipeline())
-        logger.info("Startup complete — server ready")
+        async def _startup_wrapper():
+            global _data_ready
+            await startup_data_pipeline()
+            _data_ready = True
+            logger.info("Data pipeline ready")
+
+        asyncio.create_task(_startup_wrapper())
+        logger.info("Startup complete — server ready, data pipeline loading in background")
 
     except Exception as e:
         _startup_error = f"{type(e).__name__}: {e}"
@@ -377,6 +384,8 @@ app.include_router(public_api.router)
 async def health():
     if _startup_error:
         return {"status": "degraded", "error": _startup_error}
+    if not _data_ready:
+        return {"status": "warming_up"}
     return {"status": "ok"}
 
 

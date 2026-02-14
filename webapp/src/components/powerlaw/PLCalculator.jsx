@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../utils/api'
+import { safeFixed } from '../../utils/format'
 
 export default function PLCalculator() {
   const { t } = useTranslation(['market', 'common'])
@@ -105,7 +106,7 @@ export default function PLCalculator() {
             <div className="text-center">
               <div className="text-text-muted text-[10px] mb-1">{t('market:powerLaw.calculator.btcNeeded')}</div>
               <div className="text-accent-blue text-3xl font-bold tabular-nums">
-                {result.btc_needed?.toFixed(4)} BTC
+                {safeFixed(result.btc_needed, 4)} BTC
               </div>
               <div className="text-text-muted text-xs mt-1">
                 ≈ ${result.btc_value_usd?.toLocaleString()} @ ${result.current_btc_price?.toLocaleString()}

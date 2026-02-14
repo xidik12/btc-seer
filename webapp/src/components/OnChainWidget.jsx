@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
-import { formatNumber } from '../utils/format.js'
+import { formatNumber, safeFixed } from '../utils/format.js'
 
 export default function OnChainWidget() {
   const { t } = useTranslation('dashboard')
@@ -93,7 +93,7 @@ export default function OnChainWidget() {
               <p className="text-text-primary font-semibold text-sm">{m.value}</p>
               {m.change != null ? (
                 <p className={`text-[10px] mt-0.5 ${m.change < 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-                  {m.change > 0 ? '+' : ''}{m.change.toFixed(1)}% {m.desc}
+                  {m.change > 0 ? '+' : ''}{safeFixed(m.change, 1)}% {m.desc}
                 </p>
               ) : (
                 <p className="text-text-muted text-[10px] mt-0.5">{m.desc}</p>

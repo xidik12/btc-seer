@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { safeFixed } from '../../utils/format'
 import CalculationModal, { ClickableStat } from './CalculationModal'
 
 function ProjectionCard({ label, value, calcKey, calculations, onShowCalc }) {
@@ -86,7 +87,7 @@ export default function PLDashboard({ data }) {
               className={`text-xs font-medium ${deviationColor} ${calcs.deviation_pct ? 'cursor-pointer' : ''}`}
               onClick={(e) => { e.stopPropagation(); showCalc('deviation_pct', t('market:powerLaw.dashboard.deviation')) }}
             >
-              {data.deviation_pct > 0 ? '+' : ''}{data.deviation_pct?.toFixed(1)}%
+              {data.deviation_pct > 0 ? '+' : ''}{safeFixed(data.deviation_pct, 1)}%
             </div>
           </div>
         </div>
@@ -96,7 +97,7 @@ export default function PLDashboard({ data }) {
       <div className="grid grid-cols-4 gap-2">
         <ClickableStat
           label={t('market:powerLaw.dashboard.multiplier')}
-          value={`${data.multiplier?.toFixed(2)}x`}
+          value={`${safeFixed(data.multiplier, 2)}x`}
           color={data.multiplier > 1 ? 'text-accent-yellow' : 'text-accent-green'}
           calcKey="multiplier"
           calculations={calcs}
@@ -104,14 +105,14 @@ export default function PLDashboard({ data }) {
         />
         <ClickableStat
           label={t('market:powerLaw.dashboard.slope')}
-          value={data.slope?.toFixed(3)}
+          value={safeFixed(data.slope, 3)}
           calcKey="slope"
           calculations={calcs}
           onShowCalc={showCalc}
         />
         <ClickableStat
           label={t('market:powerLaw.dashboard.rSquared')}
-          value={data.r_squared?.toFixed(3)}
+          value={safeFixed(data.r_squared, 3)}
           color="text-accent-green"
           calcKey="r_squared"
           calculations={calcs}
@@ -119,14 +120,14 @@ export default function PLDashboard({ data }) {
         />
         <ClickableStat
           label={t('market:powerLaw.dashboard.logVol')}
-          value={data.log_volatility?.toFixed(2)}
+          value={safeFixed(data.log_volatility, 2)}
           calcKey="log_volatility"
           calculations={calcs}
           onShowCalc={showCalc}
         />
         <ClickableStat
           label={t('market:powerLaw.dashboard.cagr')}
-          value={`${data.cagr?.toFixed(0)}%`}
+          value={`${safeFixed(data.cagr, 0)}%`}
           color="text-accent-green"
           calcKey="cagr"
           calculations={calcs}
@@ -140,13 +141,13 @@ export default function PLDashboard({ data }) {
         />
         <ClickableStat
           label={t('market:powerLaw.dashboard.intercept')}
-          value={data.intercept?.toFixed(3)}
+          value={safeFixed(data.intercept, 3)}
           calculations={{}}
           onShowCalc={() => {}}
         />
         <ClickableStat
           label={t('market:powerLaw.dashboard.deviation')}
-          value={`${data.deviation_pct > 0 ? '+' : ''}${data.deviation_pct?.toFixed(1)}%`}
+          value={`${data.deviation_pct > 0 ? '+' : ''}${safeFixed(data.deviation_pct, 1)}%`}
           color={deviationColor}
           calcKey="deviation_pct"
           calculations={calcs}

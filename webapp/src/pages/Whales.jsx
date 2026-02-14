@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
-import { formatTimeAgo } from '../utils/format'
+import { formatTimeAgo, safeFixed } from '../utils/format'
 import SubTabBar from '../components/SubTabBar'
 
 const MARKET_TABS = [
@@ -248,7 +248,7 @@ function WhaleCard({ tx, t, onAddressClick }) {
             </span>
             {tx.amount_usd && (
               <span className="text-text-muted text-xs">
-                ${(tx.amount_usd / 1e6).toFixed(1)}M
+                ${safeFixed(tx.amount_usd / 1e6, 1)}M
               </span>
             )}
             <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${getSeverityColor(tx.severity)}`}>
@@ -290,7 +290,7 @@ function WhaleCard({ tx, t, onAddressClick }) {
             <span className="text-text-muted">{formatTimeAgo(tx.timestamp)}</span>
             {tx.change_pct_1h != null && (
               <span className={tx.change_pct_1h >= 0 ? 'text-accent-green' : 'text-accent-red'}>
-                1h: {tx.change_pct_1h > 0 ? '+' : ''}{tx.change_pct_1h.toFixed(2)}%
+                1h: {tx.change_pct_1h > 0 ? '+' : ''}{safeFixed(tx.change_pct_1h, 2)}%
               </span>
             )}
             {tx.direction_was_predictive != null && (
