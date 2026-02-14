@@ -4,12 +4,12 @@ import { api } from '../../utils/api'
 
 export default function PLCalculator() {
   const { t } = useTranslation(['market', 'common'])
-  const [expenses, setExpenses] = useState(3000)
-  const [years, setYears] = useState(30)
+  const [expenses, setExpenses] = useState('3000')
+  const [years, setYears] = useState('30')
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [apr, setApr] = useState(4)
-  const [ltv, setLtv] = useState(50)
-  const [inflation, setInflation] = useState(3)
+  const [apr, setApr] = useState('4')
+  const [ltv, setLtv] = useState('50')
+  const [inflation, setInflation] = useState('3')
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -17,11 +17,11 @@ export default function PLCalculator() {
     setLoading(true)
     try {
       const data = await api.getPowerLawCalculator({
-        monthly_expenses: expenses,
-        years,
-        apr,
-        ltv,
-        inflation,
+        monthly_expenses: Number(expenses) || 0,
+        years: Number(years) || 30,
+        apr: Number(apr) || 4,
+        ltv: Number(ltv) || 50,
+        inflation: Number(inflation) || 3,
       })
       setResult(data)
     } catch (err) {
@@ -45,7 +45,7 @@ export default function PLCalculator() {
             <input
               type="number"
               value={expenses}
-              onChange={e => setExpenses(Number(e.target.value))}
+              onChange={e => setExpenses(e.target.value)}
               className="w-full bg-bg-primary border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent-blue focus:outline-none"
             />
           </div>
@@ -54,7 +54,7 @@ export default function PLCalculator() {
             <input
               type="number"
               value={years}
-              onChange={e => setYears(Number(e.target.value))}
+              onChange={e => setYears(e.target.value)}
               min={5}
               max={50}
               className="w-full bg-bg-primary border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent-blue focus:outline-none"
@@ -72,17 +72,17 @@ export default function PLCalculator() {
             <div className="space-y-3 border-t border-white/5 pt-3">
               <div>
                 <label className="text-text-muted text-[10px] block mb-1">{t('market:powerLaw.calculator.apr')} (%)</label>
-                <input type="number" value={apr} onChange={e => setApr(Number(e.target.value))} min={0} max={30} step={0.5}
+                <input type="number" value={apr} onChange={e => setApr(e.target.value)} min={0} max={30} step={0.5}
                   className="w-full bg-bg-primary border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent-blue focus:outline-none" />
               </div>
               <div>
                 <label className="text-text-muted text-[10px] block mb-1">{t('market:powerLaw.calculator.ltv')} (%)</label>
-                <input type="number" value={ltv} onChange={e => setLtv(Number(e.target.value))} min={10} max={90}
+                <input type="number" value={ltv} onChange={e => setLtv(e.target.value)} min={10} max={90}
                   className="w-full bg-bg-primary border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent-blue focus:outline-none" />
               </div>
               <div>
                 <label className="text-text-muted text-[10px] block mb-1">{t('market:powerLaw.calculator.inflation')} (%)</label>
-                <input type="number" value={inflation} onChange={e => setInflation(Number(e.target.value))} min={0} max={20} step={0.5}
+                <input type="number" value={inflation} onChange={e => setInflation(e.target.value)} min={0} max={20} step={0.5}
                   className="w-full bg-bg-primary border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent-blue focus:outline-none" />
               </div>
             </div>

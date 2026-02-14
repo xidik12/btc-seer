@@ -486,7 +486,8 @@ export default function PriceChart() {
 
           {/* Volume bars */}
           {overlays.vol && (
-            <div className="h-[36px] px-1">
+            <div className="h-[52px] px-1 relative">
+              <div className="absolute top-0.5 left-14 z-10 text-[8px] text-[#3a3a55] font-semibold">VOL</div>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={visibleChartData} margin={{ top: 0, right: 8, left: 4, bottom: 0 }}>
                   <XAxis dataKey="time" hide />
@@ -498,9 +499,21 @@ export default function PriceChart() {
                     axisLine={false}
                     tickLine={false}
                     domain={[0, 'auto']}
-                    tickCount={2}
+                    tickCount={3}
                   />
-                  <Bar yAxisId="vol" dataKey="volume" fill="#4a9eff" opacity={0.25} radius={[1, 1, 0, 0]} isAnimationActive={false} />
+                  <Bar
+                    yAxisId="vol"
+                    dataKey="volume"
+                    opacity={0.5}
+                    radius={[1, 1, 0, 0]}
+                    isAnimationActive={false}
+                    shape={(props) => {
+                      const { x, y, width, height, index } = props
+                      const d = visibleChartData[index]
+                      const color = d && d.close >= d.open ? '#00d68f' : '#ff4d6a'
+                      return <rect x={x} y={y} width={width} height={height} fill={color} opacity={0.5} rx={1} />
+                    }}
+                  />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>

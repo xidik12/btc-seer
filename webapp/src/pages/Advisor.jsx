@@ -13,19 +13,19 @@ const ADVISOR_TABS = [
 ]
 
 function PortfolioSettingsCard({ portfolio, telegramId, onSave, isNew, t }) {
-  const [balance, setBalance] = useState(portfolio?.balance || 10)
-  const [maxLeverage, setMaxLeverage] = useState(portfolio?.max_leverage || 20)
-  const [maxOpenTrades, setMaxOpenTrades] = useState(portfolio?.max_open_trades || 3)
-  const [riskPct, setRiskPct] = useState(portfolio?.max_risk_per_trade_pct || 10)
+  const [balance, setBalance] = useState(String(portfolio?.balance || 10))
+  const [maxLeverage, setMaxLeverage] = useState(String(portfolio?.max_leverage || 20))
+  const [maxOpenTrades, setMaxOpenTrades] = useState(String(portfolio?.max_open_trades || 3))
+  const [riskPct, setRiskPct] = useState(String(portfolio?.max_risk_per_trade_pct || 10))
   const [saving, setSaving] = useState(false)
   const [collapsed, setCollapsed] = useState(!isNew)
 
   useEffect(() => {
     if (portfolio) {
-      setBalance(portfolio.balance || portfolio.balance_usdt || 10)
-      setMaxLeverage(portfolio.max_leverage || 20)
-      setMaxOpenTrades(portfolio.max_open_trades || 3)
-      setRiskPct(portfolio.max_risk_per_trade_pct || 10)
+      setBalance(String(portfolio.balance || portfolio.balance_usdt || 10))
+      setMaxLeverage(String(portfolio.max_leverage || 20))
+      setMaxOpenTrades(String(portfolio.max_open_trades || 3))
+      setRiskPct(String(portfolio.max_risk_per_trade_pct || 10))
     }
   }, [portfolio])
 
@@ -33,10 +33,10 @@ function PortfolioSettingsCard({ portfolio, telegramId, onSave, isNew, t }) {
     setSaving(true)
     try {
       const settings = {
-        balance,
-        max_leverage: maxLeverage,
-        max_open_trades: maxOpenTrades,
-        max_risk_per_trade_pct: riskPct,
+        balance: Number(balance) || 1,
+        max_leverage: Number(maxLeverage) || 1,
+        max_open_trades: Number(maxOpenTrades) || 1,
+        max_risk_per_trade_pct: Number(riskPct) || 1,
       }
       if (isNew) {
         await api.setupPortfolio(telegramId, settings)
@@ -100,22 +100,22 @@ function PortfolioSettingsCard({ portfolio, telegramId, onSave, isNew, t }) {
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div>
           <label className="text-text-muted text-[10px] block mb-1">{t('advisor.balance')}</label>
-          <input type="number" value={balance} onChange={e => setBalance(Number(e.target.value))} min={1}
+          <input type="number" value={balance} onChange={e => setBalance(e.target.value)} min={1}
             className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50" />
         </div>
         <div>
           <label className="text-text-muted text-[10px] block mb-1">{t('trade.leverage', { ns: 'common' })}</label>
-          <input type="number" value={maxLeverage} onChange={e => setMaxLeverage(Number(e.target.value))} min={1} max={125}
+          <input type="number" value={maxLeverage} onChange={e => setMaxLeverage(e.target.value)} min={1} max={125}
             className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50" />
         </div>
         <div>
           <label className="text-text-muted text-[10px] block mb-1">{t('portfolio.totalTrades')}</label>
-          <input type="number" value={maxOpenTrades} onChange={e => setMaxOpenTrades(Number(e.target.value))} min={1} max={20}
+          <input type="number" value={maxOpenTrades} onChange={e => setMaxOpenTrades(e.target.value)} min={1} max={20}
             className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50" />
         </div>
         <div>
           <label className="text-text-muted text-[10px] block mb-1">{t('advisor.riskLevel')}</label>
-          <input type="number" value={riskPct} onChange={e => setRiskPct(Number(e.target.value))} min={1} max={100}
+          <input type="number" value={riskPct} onChange={e => setRiskPct(e.target.value)} min={1} max={100}
             className="w-full bg-bg-secondary border border-white/10 rounded-lg px-3 py-2 text-text-primary text-xs focus:outline-none focus:border-accent-blue/50" />
         </div>
       </div>
