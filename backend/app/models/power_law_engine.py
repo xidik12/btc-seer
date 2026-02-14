@@ -142,10 +142,10 @@ class PowerLawEngine:
     def from_db_prices(cls, price_rows):
         """Fit from SQLAlchemy Price rows (have .timestamp and .close)."""
         data = [(p.timestamp, p.close) for p in price_rows if p.close and p.close > 0]
-        if len(data) < 50:
-            # Supplement with early prices from static file
-            data = cls._load_early_prices() + data
-        return cls.fit(data)
+        # Always supplement with early prices to ensure full historical coverage.
+        # The weekly resampling in _ols_log_log handles deduplication.
+        early = cls._load_early_prices()
+        return cls.fit(early + data)
 
     @classmethod
     def from_early_prices(cls):
@@ -268,10 +268,22 @@ class RatioModel:
 
         Args:
             ratio_data: list of (datetime, float_ratio) tuples
+
+        Raises:
+            ValueError if data spans less than 365 days (regression would be unreliable).
         """
+        if len(ratio_data) >= 2:
+            dates_sorted = sorted(d for d, _ in ratio_data)
+            span_days = (dates_sorted[-1] - dates_sorted[0]).days
+            if span_days < 365:
+                raise ValueError(
+                    f"Ratio data spans only {span_days} days — need at least 365 for a reliable fit"
+                )
+
         result = _ols_log_log(
             [d for d, _ in ratio_data],
             [v for _, v in ratio_data],
+            resample_days=7,
         )
         if result is None:
             raise ValueError("Not enough valid data points for ratio regression")
