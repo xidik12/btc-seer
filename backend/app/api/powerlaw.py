@@ -67,27 +67,69 @@ async def _get_engine(session: AsyncSession) -> PowerLawEngine:
     return engine
 
 
+def _load_early_ratios() -> tuple[list, list, list]:
+    """Load historical BTC ratios from static early price + macro data.
+
+    Returns (gold_ratios, m2_ratios, spx_ratios) as lists of (datetime, ratio).
+    Sources: LBMA gold fix, S&P 500 monthly close, FRED M2 money supply.
+    """
+    btc_path = DATA_DIR / "btc_early_prices.json"
+    macro_path = DATA_DIR / "macro_early_data.json"
+    if not btc_path.exists() or not macro_path.exists():
+        return [], [], []
+
+    with open(btc_path) as f:
+        btc_data = json.load(f)
+    with open(macro_path) as f:
+        macro_data = json.load(f)
+
+    # Build macro lookup by YYYY-MM
+    macro_by_month = {}
+    for m in macro_data:
+        key = m["date"][:7]  # "2011-01"
+        macro_by_month[key] = m
+
+    gold_ratios, m2_ratios, spx_ratios = [], [], []
+    for item in btc_data:
+        btc_price = item["price"]
+        if btc_price <= 0:
+            continue
+        d = datetime.fromisoformat(item["date"])
+        month_key = item["date"][:7]
+        m = macro_by_month.get(month_key)
+        if not m:
+            continue
+        if m["gold"] and m["gold"] > 0:
+            gold_ratios.append((d, btc_price / m["gold"]))
+        if m["sp500"] and m["sp500"] > 0:
+            spx_ratios.append((d, btc_price / m["sp500"]))
+        if m["m2_supply"] and m["m2_supply"] > 0:
+            m2_ratios.append((d, btc_price / m["m2_supply"]))
+
+    return gold_ratios, m2_ratios, spx_ratios
+
+
 async def _get_ratio_models(session: AsyncSession) -> dict:
     """Fit Gold, M2, SPX ratio models from historical data."""
     now_ts = time.time()
     if _ratio_cache["gold"] and (now_ts - _ratio_cache["fitted_at"]) < CACHE_TTL:
         return _ratio_cache
 
-    # Get ALL prices + macro data for ratio computation
+    # Start with full historical ratios from static data
+    gold_ratios, m2_ratios, spx_ratios = _load_early_ratios()
+
+    # Supplement with DB prices + macro data
     price_result = await session.execute(select(Price).order_by(Price.timestamp))
     prices = price_result.scalars().all()
 
     macro_result = await session.execute(select(MacroData).order_by(MacroData.timestamp))
     macros = macro_result.scalars().all()
 
-    # Build macro lookup by date
     macro_by_date = {}
     for m in macros:
         day_key = m.timestamp.strftime("%Y-%m-%d")
         macro_by_date[day_key] = m
 
-    # Build ratio time series
-    gold_ratios, m2_ratios, spx_ratios = [], [], []
     for p in prices:
         if not p.close or p.close <= 0:
             continue
@@ -100,20 +142,6 @@ async def _get_ratio_models(session: AsyncSession) -> dict:
                 spx_ratios.append((p.timestamp, p.close / m.sp500))
             if hasattr(m, 'm2_supply') and m.m2_supply and m.m2_supply > 0:
                 m2_ratios.append((p.timestamp, p.close / m.m2_supply))
-
-    # Fit each ratio model (with fallback to early prices for BTC/Gold)
-    # Supplement with early data if not enough points
-    early_prices = PowerLawEngine._load_early_prices()
-
-    for d, btc_price in early_prices:
-        # Historical gold price approximation for early years
-        # Gold was ~$1,200-1,800/oz during 2011-2013
-        day_key = d.strftime("%Y-%m-%d")
-        if day_key not in macro_by_date and d.year >= 2011 and btc_price > 0:
-            # Approximate gold prices by year
-            gold_approx = {2011: 1571, 2012: 1669, 2013: 1411}.get(d.year)
-            if gold_approx:
-                gold_ratios.append((d, btc_price / gold_approx))
 
     try:
         _ratio_cache["gold"] = RatioModel.fit(gold_ratios) if len(gold_ratios) >= 20 else None

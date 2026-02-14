@@ -268,18 +268,7 @@ class RatioModel:
 
         Args:
             ratio_data: list of (datetime, float_ratio) tuples
-
-        Raises:
-            ValueError if data spans less than 365 days (regression would be unreliable).
         """
-        if len(ratio_data) >= 2:
-            dates_sorted = sorted(d for d, _ in ratio_data)
-            span_days = (dates_sorted[-1] - dates_sorted[0]).days
-            if span_days < 365:
-                raise ValueError(
-                    f"Ratio data spans only {span_days} days — need at least 365 for a reliable fit"
-                )
-
         result = _ols_log_log(
             [d for d, _ in ratio_data],
             [v for _, v in ratio_data],
