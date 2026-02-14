@@ -83,14 +83,21 @@ async def cmd_start(message: Message, command: CommandObject):
         bonus = referral_info["bonus_days"]
         referral_line = f"\n\n🎁 Referred by @{ref_user} — you both got +{bonus} days Premium!"
 
+    name = message.from_user.first_name or "there"
+
     await message.answer(
-        "🔮 <b>BTC Seer</b> — Bitcoin Price Prediction System\n\n"
-        "I use ML models analyzing 60+ features from news, market data, "
-        "on-chain metrics, and sentiment to predict Bitcoin's price direction.\n\n"
-        "📊 Hourly predictions with confidence scores\n"
-        "📈 Full trading signals (entry, target, stop-loss)\n"
-        "📰 Real-time news sentiment analysis\n"
-        "🎯 Transparent accuracy tracking"
+        f"Hey {name}, welcome to <b>BTC Seer</b>!\n\n"
+        "I'm your AI-powered Bitcoin analyst. I crunch 60+ data points "
+        "every hour — news, on-chain flows, market structure, whale moves "
+        "— and turn them into clear, actionable predictions.\n\n"
+        "<b>Here's how to get started:</b>\n"
+        "/predict — see the latest price predictions\n"
+        "/signal — get a trading signal with entry, target & stop-loss\n"
+        "/advisor — open the AI trading advisor\n"
+        "/news — browse real-time crypto news with sentiment\n"
+        "/accuracy — check my prediction track record\n"
+        "/settings — choose your alert frequency\n\n"
+        "Or just tap the buttons below to explore."
         f"{status_line}"
         f"{referral_line}\n\n"
         f"<i>{DISCLAIMER}</i>",

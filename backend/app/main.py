@@ -211,6 +211,34 @@ async def lifespan(app: FastAPI):
                 id="send_alerts",
             )
 
+            # Set bot description & command menu
+            try:
+                from aiogram.types import BotCommand
+
+                await bot.set_my_description(
+                    "BTC Seer — AI-powered Bitcoin predictions.\n\n"
+                    "Hit /start to begin. I'll analyze 60+ market signals "
+                    "every hour and give you clear price predictions, "
+                    "trading signals, and real-time news sentiment.\n\n"
+                    "Free 7-day trial included."
+                )
+                await bot.set_my_short_description(
+                    "AI Bitcoin predictions, trading signals & whale tracking."
+                )
+                await bot.set_my_commands([
+                    BotCommand(command="start", description="Start the bot & see the main menu"),
+                    BotCommand(command="predict", description="Latest price predictions"),
+                    BotCommand(command="signal", description="Trading signal with entry & stop-loss"),
+                    BotCommand(command="advisor", description="AI trading advisor & portfolio"),
+                    BotCommand(command="news", description="Real-time crypto news & sentiment"),
+                    BotCommand(command="accuracy", description="Prediction track record"),
+                    BotCommand(command="settings", description="Alert frequency preferences"),
+                    BotCommand(command="subscribe", description="View subscription plans"),
+                ])
+                logger.info("Bot description & commands set")
+            except Exception as e:
+                logger.warning(f"set_my_description/commands failed: {e}")
+
             # Clear stale webhooks + pending updates before polling
             try:
                 await bot.delete_webhook(drop_pending_updates=True)
