@@ -26,6 +26,7 @@ export default function PredictionCard() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const countdown = useCountdown()
 
   const fetchData = useCallback(async () => {
     try {
@@ -79,7 +80,6 @@ export default function PredictionCard() {
   })
 
   const timestamp = rows.find((r) => r.timestamp)?.timestamp
-  const countdown = useCountdown()
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
