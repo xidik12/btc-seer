@@ -72,7 +72,7 @@ async def get_current_price(session: AsyncSession = Depends(get_session)):
 
     change_24h = None
     change_24h_pct = None
-    if price_24h:
+    if price_24h and price_24h.close:
         change_24h = price.close - price_24h.close
         change_24h_pct = (change_24h / price_24h.close) * 100
 

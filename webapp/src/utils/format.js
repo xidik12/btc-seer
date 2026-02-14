@@ -6,8 +6,12 @@ function getLocale() {
   return LOCALE_MAP[i18n.language] || 'en-US'
 }
 
+function isBadNumber(n) {
+  return n == null || !isFinite(n)
+}
+
 export function formatPrice(price) {
-  if (!price && price !== 0) return '--'
+  if (isBadNumber(price) && price !== 0) return '--'
   return new Intl.NumberFormat(getLocale(), {
     style: 'currency',
     currency: 'USD',
@@ -17,7 +21,7 @@ export function formatPrice(price) {
 }
 
 export function formatPricePrecise(price) {
-  if (!price && price !== 0) return '--'
+  if (isBadNumber(price) && price !== 0) return '--'
   return new Intl.NumberFormat(getLocale(), {
     style: 'currency',
     currency: 'USD',
@@ -27,13 +31,13 @@ export function formatPricePrecise(price) {
 }
 
 export function formatPercent(pct) {
-  if (!pct && pct !== 0) return '--'
+  if (isBadNumber(pct) && pct !== 0) return '--'
   const sign = pct >= 0 ? '+' : ''
   return `${sign}${pct.toFixed(2)}%`
 }
 
 export function formatNumber(num) {
-  if (!num && num !== 0) return '--'
+  if (isBadNumber(num) && num !== 0) return '--'
   if (num >= 1e9) return `${(num / 1e9).toFixed(1)}B`
   if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`
   if (num >= 1e3) return `${(num / 1e3).toFixed(1)}K`
@@ -89,7 +93,7 @@ export function getActionBg(action) {
 }
 
 export function formatCoinPrice(price) {
-  if (!price && price !== 0) return '--'
+  if (isBadNumber(price) && price !== 0) return '--'
   const locale = getLocale()
   if (price >= 1000) return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price)
   if (price >= 1) return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price)
@@ -98,7 +102,7 @@ export function formatCoinPrice(price) {
 }
 
 export function formatMarketCap(value) {
-  if (!value && value !== 0) return '--'
+  if (isBadNumber(value) && value !== 0) return '--'
   if (value >= 1e12) return `$${(value / 1e12).toFixed(1)}T`
   if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`
   if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`
@@ -107,7 +111,7 @@ export function formatMarketCap(value) {
 }
 
 export function formatSupply(value, symbol) {
-  if (!value && value !== 0) return '--'
+  if (isBadNumber(value) && value !== 0) return '--'
   const formatted = formatNumber(value)
   return symbol ? `${formatted} ${symbol}` : formatted
 }

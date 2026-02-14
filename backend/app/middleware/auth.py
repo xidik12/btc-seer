@@ -126,6 +126,12 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         bucket = _clean_bucket(bucket)
         _rate_limit_buckets[key_hash] = bucket
 
+        # Periodic cleanup: prune empty buckets to prevent unbounded growth
+        if len(_rate_limit_buckets) > 1000:
+            empty_keys = [k for k, v in _rate_limit_buckets.items() if not v]
+            for k in empty_keys:
+                del _rate_limit_buckets[k]
+
         if len(bucket) >= rate_limit:
             return JSONResponse(
                 status_code=429,

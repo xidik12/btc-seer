@@ -196,6 +196,8 @@ class PowerLawEngine:
 
     def find_milestone_date(self, target_price):
         """Find the date when model predicts target_price."""
+        if self.slope == 0:
+            return "N/A"
         log_target = math.log10(target_price)
         log_days = (log_target - self.intercept) / self.slope
         days = 10 ** log_days
@@ -306,7 +308,7 @@ class RatioModel:
 
     def find_milestone_date(self, target_ratio):
         """Find date when model predicts the target ratio."""
-        if target_ratio <= 0:
+        if target_ratio <= 0 or self.slope == 0:
             return "N/A"
         log_target = math.log10(target_ratio)
         log_days = (log_target - self.intercept) / self.slope
