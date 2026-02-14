@@ -215,6 +215,12 @@ class WhaleCollector(BaseCollector):
         else:
             timestamp = datetime.utcnow().isoformat()
 
+        # Pick primary addresses for transaction chaining
+        from_addr = input_addrs[0] if input_addrs else None
+        # Primary output = largest value output (not change)
+        primary_output = max(tx.get("vout", []), key=lambda v: v.get("value", 0), default={})
+        to_addr = primary_output.get("scriptpubkey_address")
+
         return {
             "tx_hash": tx_hash,
             "amount_btc": round(amount_btc, 4),
@@ -226,6 +232,8 @@ class WhaleCollector(BaseCollector):
             "entity_type": entity_info.get("type") if entity_info else None,
             "entity_wallet": entity_info.get("wallet") if entity_info else None,
             "severity": calculate_severity(amount_btc),
+            "from_address": from_addr,
+            "to_address": to_addr,
             "raw_data": None,  # don't store full tx to save DB space
             "source": "mempool_blocks",
         }
@@ -273,6 +281,8 @@ class WhaleCollector(BaseCollector):
                 "entity_type": None,
                 "entity_wallet": None,
                 "severity": calculate_severity(amount_btc),
+                "from_address": None,
+                "to_address": None,
                 "raw_data": None,
                 "source": "blockchair_fallback",
             })

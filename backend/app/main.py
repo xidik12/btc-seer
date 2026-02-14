@@ -51,6 +51,7 @@ from app.scheduler.jobs import (
     monitor_entity_wallets,
     evaluate_whale_impacts,
     backfill_whale_transactions,
+    resolve_unknown_whale_addresses,
 )
 from app.advisor.feedback import run_training_feedback, run_adaptive_weight_learning
 from app.collectors.coins import collect_coin_prices, seed_tracked_coins
@@ -129,6 +130,8 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(collect_whale_transactions, "interval", minutes=10, id="collect_whales")
         scheduler.add_job(monitor_entity_wallets, "interval", minutes=10, id="monitor_entities",
                           next_run_time=datetime.utcnow() + timedelta(minutes=5))  # offset by 5 min
+        scheduler.add_job(resolve_unknown_whale_addresses, "interval", minutes=30, id="resolve_addresses",
+                          next_run_time=datetime.utcnow() + timedelta(minutes=15))  # offset by 15 min
 
         # Prediction jobs — time-aligned cron schedules (UTC)
         # 1h: every hour at :00

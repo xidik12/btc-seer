@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const I = (children, sm) => (
@@ -13,6 +13,15 @@ const COMMUNITY_LINK = 'https://t.me/+-72wnR04tPUyZmIy'
 export default function About() {
   const { t } = useTranslation(['about', 'common'])
   const [copied, setCopied] = useState(false)
+  const tg = window.Telegram?.WebApp
+
+  const openTelegramLink = useCallback((url) => {
+    if (tg?.openTelegramLink) {
+      tg.openTelegramLink(url)
+    } else {
+      window.open(url, '_blank')
+    }
+  }, [tg])
 
   const copyBtc = () => {
     navigator.clipboard.writeText(BTC_DONATION).then(() => {
@@ -307,22 +316,18 @@ export default function About() {
 
           {/* Community + Bot buttons */}
           <div className="flex gap-2">
-            <a
-              href={COMMUNITY_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => openTelegramLink(COMMUNITY_LINK)}
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-accent-blue/10 text-accent-blue text-[11px] font-semibold border border-accent-blue/20"
             >
               {t('about:credits.joinCounsil')}
-            </a>
-            <a
-              href="https://t.me/btc_seer_bot"
-              target="_blank"
-              rel="noopener noreferrer"
+            </button>
+            <button
+              onClick={() => openTelegramLink('https://t.me/btc_seer_bot')}
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 text-text-secondary text-[11px] font-semibold border border-white/10"
             >
               {t('about:credits.joinTelegram')}
-            </a>
+            </button>
           </div>
         </div>
       </div>

@@ -26,6 +26,7 @@ export default function PredictionCard() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const countdown = useCountdown()
 
   const fetchData = useCallback(async () => {
     try {
@@ -79,7 +80,6 @@ export default function PredictionCard() {
   })
 
   const timestamp = rows.find((r) => r.timestamp)?.timestamp
-  const countdown = useCountdown()
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
@@ -112,7 +112,7 @@ export default function PredictionCard() {
               <div key={row.timeframe} className="rounded-lg px-3 py-2 border border-white/5 bg-bg-secondary">
                 <div className="flex items-center justify-between">
                   <span className="text-text-muted text-xs font-semibold">{tfLabels[row.timeframe]}</span>
-                  <span className="text-text-muted text-xs">--</span>
+                  <span className="text-text-muted text-[10px]">{t('prediction.pending', { defaultValue: 'Pending' })}</span>
                 </div>
               </div>
             )

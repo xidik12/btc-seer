@@ -833,7 +833,7 @@ async def generate_prediction(timeframes: list[str] | None = None):
                 price_history=price_history,
             )
         except Exception as e:
-            logger.error(f"Ensemble prediction failed: {e}, using fallback")
+            logger.error(f"Ensemble prediction failed: {e}", exc_info=True)
             # Fallback: Use simple momentum-based predictions when ensemble fails
             recent_change = ((prices[-1].close - prices[-24].close) / prices[-24].close * 100) if len(prices) >= 24 else 0
             direction = "bullish" if recent_change > 0 else "bearish"
@@ -841,6 +841,8 @@ async def generate_prediction(timeframes: list[str] | None = None):
                 "1h": {"direction": direction, "confidence": 50, "magnitude_pct": recent_change * 0.1, "model_outputs": {}},
                 "4h": {"direction": direction, "confidence": 45, "magnitude_pct": recent_change * 0.3, "model_outputs": {}},
                 "24h": {"direction": direction, "confidence": 40, "magnitude_pct": recent_change * 0.8, "model_outputs": {}},
+                "1w": {"direction": direction, "confidence": 35, "magnitude_pct": recent_change * 1.5, "model_outputs": {}},
+                "1mo": {"direction": direction, "confidence": 30, "magnitude_pct": recent_change * 3.0, "model_outputs": {}},
             }
 
         current_price = float(prices[-1].close)
@@ -1768,6 +1770,8 @@ async def _store_whale_transactions(transactions: list[dict], source_label: str)
                 entity_wallet=tx_data.get("entity_wallet"),
                 severity=tx_data["severity"],
                 btc_price_at_tx=current_price,
+                from_address=tx_data.get("from_address"),
+                to_address=tx_data.get("to_address"),
                 source=tx_data.get("source", source_label),
                 raw_data=tx_data.get("raw_data"),
             )
@@ -1804,6 +1808,85 @@ async def _store_whale_transactions(transactions: list[dict], source_label: str)
     if stored:
         logger.info(f"Whale transactions stored ({source_label}): {stored} new")
     return stored
+
+
+async def resolve_unknown_whale_addresses():
+    """Resolve unknown whale addresses using WalletExplorer + Blockchair APIs (runs every 30 min).
+
+    Finds whale txs where entity_name IS NULL and from_address/to_address exist,
+    resolves them via online APIs, and updates entity info on the transaction.
+    Limited to 20 addresses per run to stay within rate limits.
+    """
+    from app.collectors.address_resolver import AddressResolver
+
+    resolver = AddressResolver()
+    try:
+        async with async_session() as session:
+            # Find txs with unknown entities but known addresses
+            result = await session.execute(
+                select(WhaleTransaction).where(
+                    WhaleTransaction.entity_name.is_(None),
+                    (WhaleTransaction.from_address.isnot(None)) | (WhaleTransaction.to_address.isnot(None)),
+                ).order_by(desc(WhaleTransaction.timestamp)).limit(40)
+            )
+            txs = result.scalars().all()
+
+            if not txs:
+                return
+
+            resolved_count = 0
+            addresses_checked = 0
+            max_addresses = 20
+
+            for tx in txs:
+                if addresses_checked >= max_addresses:
+                    break
+
+                from_label = None
+                to_label = None
+
+                # Try resolving from_address
+                if tx.from_address and addresses_checked < max_addresses:
+                    from_label = await resolver.resolve(tx.from_address, session)
+                    addresses_checked += 1
+
+                # Try resolving to_address
+                if tx.to_address and addresses_checked < max_addresses:
+                    to_label = await resolver.resolve(tx.to_address, session)
+                    addresses_checked += 1
+
+                # Update transaction if we found labels
+                if from_label or to_label:
+                    if from_label:
+                        tx.from_entity = from_label["name"]
+                    if to_label:
+                        tx.to_entity = to_label["name"]
+
+                    # Determine primary entity and direction
+                    primary = to_label or from_label
+                    tx.entity_name = primary["name"]
+                    tx.entity_type = primary.get("type")
+                    tx.entity_wallet = primary.get("wallet")
+
+                    # Re-classify direction
+                    if from_label and not to_label:
+                        tx.direction = "exchange_out"
+                    elif not from_label and to_label:
+                        tx.direction = "exchange_in"
+                    elif from_label and to_label:
+                        tx.direction = "exchange_in"
+
+                    resolved_count += 1
+
+            await session.commit()
+
+            if resolved_count:
+                logger.info(f"Address resolver: resolved {resolved_count} whale txs ({addresses_checked} addresses checked)")
+
+    except Exception as e:
+        logger.error(f"Address resolution error: {e}")
+    finally:
+        await resolver.close()
 
 
 async def collect_whale_transactions():

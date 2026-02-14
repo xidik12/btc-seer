@@ -24,10 +24,11 @@ const SEVERITY_COLORS = {
 }
 
 const ENTITY_TYPE_STYLES = {
-  exchange:    { bg: 'bg-accent-blue/20',   text: 'text-accent-blue',   border: 'border-accent-blue/30' },
-  institution: { bg: 'bg-purple-500/20',    text: 'text-purple-400',    border: 'border-purple-500/30' },
-  government:  { bg: 'bg-accent-yellow/20', text: 'text-accent-yellow', border: 'border-accent-yellow/30' },
-  individual:  { bg: 'bg-accent-orange/20', text: 'text-accent-orange', border: 'border-accent-orange/30' },
+  exchange:     { bg: 'bg-accent-blue/20',   text: 'text-accent-blue',   border: 'border-accent-blue/30' },
+  institution:  { bg: 'bg-purple-500/20',    text: 'text-purple-400',    border: 'border-purple-500/30' },
+  government:   { bg: 'bg-accent-yellow/20', text: 'text-accent-yellow', border: 'border-accent-yellow/30' },
+  individual:   { bg: 'bg-accent-orange/20', text: 'text-accent-orange', border: 'border-accent-orange/30' },
+  mining_pool:  { bg: 'bg-teal-500/20',      text: 'text-teal-400',      border: 'border-teal-500/30' },
 }
 
 const FILTER_OPTIONS = [
@@ -40,6 +41,11 @@ const FILTER_OPTIONS = [
 
 function getSeverityColor(severity) {
   return SEVERITY_COLORS[severity] || 'bg-bg-hover'
+}
+
+function truncateAddr(addr) {
+  if (!addr || addr.length < 16) return addr || ''
+  return `${addr.slice(0, 8)}...${addr.slice(-6)}`
 }
 
 function EntityBadge({ entityName, entityType, t }) {
@@ -83,6 +89,12 @@ function EntityIcon({ type }) {
           <circle cx="8" cy="4" r="3"/><path d="M2 14c0-3.31 2.69-6 6-6s6 2.69 6 6H2z"/>
         </svg>
       )
+    case 'mining_pool':
+      return (
+        <svg viewBox="0 0 16 16" fill="currentColor" className={cls}>
+          <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a2 2 0 110 4 2 2 0 010-4zM4 10l2-1h4l2 1v2H4v-2z"/>
+        </svg>
+      )
     default:
       return null
   }
@@ -116,7 +128,112 @@ function DirectionIcon({ direction }) {
   )
 }
 
-function WhaleCard({ tx, t }) {
+function AddressChip({ address, onClick }) {
+  if (!address) return <span className="text-text-muted font-mono text-[9px]">--</span>
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(address) }}
+      className="text-[9px] font-mono text-accent-blue hover:text-accent-blue/80 hover:underline transition-colors cursor-pointer"
+      title={address}
+    >
+      {truncateAddr(address)}
+    </button>
+  )
+}
+
+function AddressDetailPanel({ address, onClose, t }) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!address) return
+    setLoading(true)
+    api.getAddressTransactions(address, 20)
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [address])
+
+  if (!address) return null
+
+  const copyAddress = () => {
+    navigator.clipboard.writeText(address).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="bg-bg-card rounded-xl border border-accent-blue/20 p-3 mb-3 slide-up">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-bold text-text-primary">{t('market:whales.addressDetail.title')}</h3>
+        <button onClick={onClose} className="text-text-muted hover:text-text-primary text-xs px-2 py-1">
+          &times;
+        </button>
+      </div>
+
+      {/* Full address with copy */}
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[10px] font-mono text-text-primary break-all flex-1">{address}</span>
+        <button
+          onClick={copyAddress}
+          className="text-[9px] px-2 py-1 bg-white/5 rounded border border-white/10 text-text-muted hover:text-text-primary shrink-0"
+        >
+          {copied ? t('market:whales.addressDetail.copied') : t('market:whales.addressDetail.copy')}
+        </button>
+      </div>
+
+      {/* Entity label */}
+      {data?.label ? (
+        <div className="mb-2">
+          <EntityBadge entityName={data.label.name} entityType={data.label.type} t={t} />
+        </div>
+      ) : (
+        !loading && (
+          <span className="text-[9px] text-text-muted mb-2 inline-block px-1.5 py-0.5 bg-white/5 rounded">
+            {t('market:whales.addressDetail.unknown')}
+          </span>
+        )
+      )}
+
+      {/* Mempool link */}
+      <a
+        href={`https://mempool.space/address/${address}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-[9px] text-accent-blue hover:underline block mb-2"
+      >
+        {t('market:whales.addressDetail.viewOnMempool')}
+      </a>
+
+      {/* Transaction list */}
+      {loading ? (
+        <div className="flex justify-center py-4">
+          <div className="w-4 h-4 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : data?.transactions?.length > 0 ? (
+        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+          <p className="text-[9px] text-text-muted">{t('market:whales.addressDetail.txCount', { count: data.transaction_count })}</p>
+          {data.transactions.map(tx => (
+            <div key={tx.tx_hash} className="flex items-center gap-2 text-[9px] py-1 border-t border-white/5">
+              <span className={tx.role === 'sender' ? 'text-accent-red' : 'text-accent-green'}>
+                {tx.role === 'sender' ? 'OUT' : 'IN'}
+              </span>
+              <span className="text-text-primary font-bold">{tx.amount_btc?.toLocaleString()} BTC</span>
+              <span className="text-text-muted">{formatTimeAgo(tx.timestamp)}</span>
+              <span className="text-text-muted font-mono">{tx.tx_hash?.slice(0, 8)}...</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[9px] text-text-muted py-2">{t('market:whales.addressDetail.noTxs')}</p>
+      )}
+    </div>
+  )
+}
+
+function WhaleCard({ tx, t, onAddressClick }) {
   const directionLabel = t(`market:whales.direction.${tx.direction}`, tx.direction?.replace(/_/g, ' '))
   const isNotable = tx.entity_type && tx.entity_type !== 'exchange'
 
@@ -143,6 +260,15 @@ function WhaleCard({ tx, t }) {
           {tx.entity_name && (
             <div className="mb-1">
               <EntityBadge entityName={tx.entity_name} entityType={tx.entity_type} t={t} />
+            </div>
+          )}
+
+          {/* Address flow: from → to (clickable) */}
+          {(tx.from_address || tx.to_address) && (
+            <div className="flex items-center gap-1 mb-1 text-[9px]">
+              <AddressChip address={tx.from_address} onClick={onAddressClick} />
+              <span className="text-text-muted">&rarr;</span>
+              <AddressChip address={tx.to_address} onClick={onAddressClick} />
             </div>
           )}
 
@@ -185,6 +311,7 @@ export default function Whales() {
   const [transactions, setTransactions] = useState([])
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(true)
+  const [selectedAddress, setSelectedAddress] = useState(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -221,6 +348,10 @@ export default function Whales() {
     const interval = setInterval(fetchData, 120_000) // 2 min
     return () => clearInterval(interval)
   }, [fetchData])
+
+  const handleAddressClick = useCallback((address) => {
+    setSelectedAddress(prev => prev === address ? null : address)
+  }, [])
 
   // Use 7d stats if 24h has no data, show the richer view
   const s24 = stats?.stats_24h || {}
@@ -311,6 +442,15 @@ export default function Whales() {
         ))}
       </div>
 
+      {/* Address Detail Panel */}
+      {selectedAddress && (
+        <AddressDetailPanel
+          address={selectedAddress}
+          onClose={() => setSelectedAddress(null)}
+          t={t}
+        />
+      )}
+
       {/* Transaction List */}
       {loading ? (
         <div className="flex justify-center py-12">
@@ -323,7 +463,7 @@ export default function Whales() {
       ) : (
         <div className="space-y-2">
           {transactions.map(tx => (
-            <WhaleCard key={tx.tx_hash || tx.id} tx={tx} t={t} />
+            <WhaleCard key={tx.tx_hash || tx.id} tx={tx} t={t} onAddressClick={handleAddressClick} />
           ))}
         </div>
       )}
