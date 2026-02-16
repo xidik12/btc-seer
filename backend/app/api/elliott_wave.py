@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/elliott-wave", tags=["elliott-wave"])
 
-FIB_RATIOS = [0.236, 0.382, 0.5, 0.618, 0.786, 1.0, 1.272, 1.618, 2.618]
+FIB_RETRACEMENT_RATIOS = [0.236, 0.382, 0.5, 0.618, 0.786]
+FIB_EXTENSION_RATIOS = [1.0, 1.272, 1.618, 2.618, 4.236]
 
 
 # ── Technical helpers (standalone, mirroring TechnicalFeatures) ──
@@ -142,116 +143,231 @@ def label_waves(swings: List[dict]) -> dict:
     }
 
 
+def _validate_impulse_rules(waves: List[dict], direction: str) -> tuple:
+    """Validate Elliott Wave impulse rules and return (valid, w1_range, w2_retrace, w3_range, w4_retrace, w5_range).
+
+    Returns (False, ...) if hard rules are violated.
+    """
+    if direction == "bullish":
+        w1_range = waves[0]["end_price"] - waves[0]["start_price"]
+        w2_retrace = waves[0]["end_price"] - waves[1]["end_price"]
+        w3_range = waves[2]["end_price"] - waves[2]["start_price"]
+        w4_retrace = waves[2]["end_price"] - waves[3]["end_price"]
+        w5_range = waves[4]["end_price"] - waves[4]["start_price"]
+
+        # Rule 1: Wave 2 never retraces > 100% of Wave 1
+        if w2_retrace > w1_range:
+            return (False, w1_range, w2_retrace, w3_range, w4_retrace, w5_range)
+        # Rule 2: Wave 3 never shortest of 1, 3, 5
+        if w3_range < w1_range and w3_range < w5_range:
+            return (False, w1_range, w2_retrace, w3_range, w4_retrace, w5_range)
+        # Rule 3: Wave 4 never overlaps Wave 1 territory
+        if waves[3]["end_price"] < waves[0]["end_price"]:
+            return (False, w1_range, w2_retrace, w3_range, w4_retrace, w5_range)
+    else:
+        w1_range = abs(waves[0]["start_price"] - waves[0]["end_price"])
+        w2_retrace = abs(waves[1]["end_price"] - waves[1]["start_price"])
+        w3_range = abs(waves[2]["start_price"] - waves[2]["end_price"])
+        w4_retrace = abs(waves[3]["end_price"] - waves[3]["start_price"])
+        w5_range = abs(waves[4]["start_price"] - waves[4]["end_price"])
+
+        if w2_retrace > w1_range:
+            return (False, w1_range, w2_retrace, w3_range, w4_retrace, w5_range)
+        if w3_range < w1_range and w3_range < w5_range:
+            return (False, w1_range, w2_retrace, w3_range, w4_retrace, w5_range)
+        if waves[3]["end_price"] > waves[0]["end_price"]:
+            return (False, w1_range, w2_retrace, w3_range, w4_retrace, w5_range)
+
+    return (True, w1_range, w2_retrace, w3_range, w4_retrace, w5_range)
+
+
+def _compute_impulse_confidence(w1_range: float, w2_retrace: float, w3_range: float,
+                                w4_retrace: float, w5_range: float) -> float:
+    """Multi-factor dynamic confidence scoring for impulse patterns."""
+    confidence = 0.40  # Base — must earn the rest
+
+    # +0.15 if W3 is the longest wave
+    if w3_range >= w1_range and w3_range >= w5_range:
+        confidence += 0.15
+
+    # +0.05 if W3 is extended (>1.5x W1)
+    if w1_range > 0 and w3_range > 1.5 * w1_range:
+        confidence += 0.05
+
+    # +0.08 if W2 retracement matches Fibonacci target (0.5, 0.618, 0.786)
+    if w1_range > 0:
+        w2_ratio = w2_retrace / w1_range
+        for target in [0.5, 0.618, 0.786]:
+            if abs(w2_ratio - target) < 0.05:
+                confidence += 0.08
+                break
+
+    # +0.08 if W3 extension matches Fibonacci target (1.618, 2.618)
+    if w1_range > 0:
+        w3_ratio = w3_range / w1_range
+        for target in [1.618, 2.618]:
+            if abs(w3_ratio - target) < 0.15:
+                confidence += 0.08
+                break
+
+    # +0.05 if W5 matches target (0.618, 1.0, 1.618 of W1)
+    if w1_range > 0:
+        w5_ratio = w5_range / w1_range
+        for target in [0.618, 1.0, 1.618]:
+            if abs(w5_ratio - target) < 0.1:
+                confidence += 0.05
+                break
+
+    # +/- 0.05 for W2/W4 alternation (sharp vs sideways differ = good)
+    if w1_range > 0 and w3_range > 0:
+        w2_pct = w2_retrace / w1_range
+        w4_pct = w4_retrace / w3_range
+        w2_sharp = w2_pct > 0.5
+        w4_sharp = w4_pct > 0.5
+        if w2_sharp != w4_sharp:
+            confidence += 0.05  # Good alternation
+        else:
+            confidence -= 0.05  # Both same character
+
+    return round(min(confidence, 0.95), 2)
+
+
+def _detect_current_wave(swings: List[dict], direction: str) -> tuple:
+    """Progressive matching: try 5-wave, then 4, 3, 2 from most recent swings.
+
+    Returns (current_wave_label, waves_list, num_validated) or None if no match.
+    """
+    candidates = swings[-10:]
+    start_type = "low" if direction == "bullish" else "high"
+
+    # Try from 6 swing points (complete 5-wave) down to 3 (wave 2 forming)
+    for num_points in [6, 5, 4, 3]:
+        if len(candidates) < num_points:
+            continue
+
+        wave_points = candidates[-num_points:]
+        if wave_points[0]["type"] != start_type:
+            # Try shifting by one
+            if len(candidates) >= num_points + 1:
+                wave_points = candidates[-(num_points + 1):-1]
+                if wave_points[0]["type"] != start_type:
+                    continue
+            else:
+                continue
+
+        # Build wave list from available points
+        waves = []
+        labels = ["1", "2", "3", "4", "5"]
+        for i in range(len(wave_points) - 1):
+            waves.append({
+                "label": labels[i],
+                "start_price": wave_points[i]["price"],
+                "end_price": wave_points[i + 1]["price"],
+                "start_idx": wave_points[i]["index"],
+                "end_idx": wave_points[i + 1]["index"],
+            })
+
+        # Need at least 2 waves to validate anything
+        if len(waves) < 2:
+            continue
+
+        # Validate the waves we have
+        valid = True
+
+        if direction == "bullish":
+            w1_range = waves[0]["end_price"] - waves[0]["start_price"]
+            w2_retrace = waves[0]["end_price"] - waves[1]["end_price"]
+            # Rule 1 check
+            if w2_retrace > w1_range:
+                valid = False
+
+            if len(waves) >= 3:
+                w3_range = waves[2]["end_price"] - waves[2]["start_price"]
+            if len(waves) >= 4:
+                # Wave 4 overlap check
+                if waves[3]["end_price"] < waves[0]["end_price"]:
+                    valid = False
+            if len(waves) >= 5:
+                w5_range = waves[4]["end_price"] - waves[4]["start_price"]
+                if w3_range < w1_range and w3_range < w5_range:
+                    valid = False
+        else:
+            w1_range = abs(waves[0]["start_price"] - waves[0]["end_price"])
+            w2_retrace = abs(waves[1]["end_price"] - waves[1]["start_price"])
+            if w2_retrace > w1_range:
+                valid = False
+
+            if len(waves) >= 3:
+                w3_range = abs(waves[2]["start_price"] - waves[2]["end_price"])
+            if len(waves) >= 4:
+                if waves[3]["end_price"] > waves[0]["end_price"]:
+                    valid = False
+            if len(waves) >= 5:
+                w5_range = abs(waves[4]["start_price"] - waves[4]["end_price"])
+                if w3_range < w1_range and w3_range < w5_range:
+                    valid = False
+
+        if not valid:
+            continue
+
+        # Map num_points to current wave
+        wave_map = {6: "5", 5: "4", 4: "3", 3: "2"}
+        current_wave = wave_map[num_points]
+
+        # If 6 points and last swing is very recent, wave 5 may be "forming"
+        if num_points == 6:
+            current_wave = "5"
+
+        return current_wave, waves, num_points
+
+    return None
+
+
 def _try_impulse(swings: List[dict]) -> Optional[dict]:
-    """Try to identify a 5-wave impulse pattern."""
-    # Need at least 6 swing points for 5 waves
-    candidates = swings[-10:]  # Look at recent swings
-    if len(candidates) < 6:
+    """Try to identify a 5-wave impulse pattern with dynamic confidence."""
+    candidates = swings[-10:]
+    if len(candidates) < 3:
         return None
 
-    # Determine direction from first two swings
+    # Determine direction from first swing
     if candidates[0]["type"] == "low":
         direction = "bullish"
     else:
         direction = "bearish"
 
-    # Try to extract 5 waves from the last 6+ swings
-    wave_points = candidates[-6:]
+    # Progressive current wave detection
+    detection = _detect_current_wave(swings, direction)
+    if detection is None:
+        return None
 
-    if direction == "bullish":
-        # Bullish impulse: low-high-low-high-low-high (W1↑ W2↓ W3↑ W4↓ W5↑)
-        if wave_points[0]["type"] != "low":
-            wave_points = candidates[-7:-1] if len(candidates) >= 7 else None
-            if not wave_points or wave_points[0]["type"] != "low":
-                return None
+    current_wave, waves, num_points = detection
 
-        waves = [
-            {"label": "1", "start_price": wave_points[0]["price"], "end_price": wave_points[1]["price"],
-             "start_idx": wave_points[0]["index"], "end_idx": wave_points[1]["index"]},
-            {"label": "2", "start_price": wave_points[1]["price"], "end_price": wave_points[2]["price"],
-             "start_idx": wave_points[1]["index"], "end_idx": wave_points[2]["index"]},
-            {"label": "3", "start_price": wave_points[2]["price"], "end_price": wave_points[3]["price"],
-             "start_idx": wave_points[2]["index"], "end_idx": wave_points[3]["index"]},
-            {"label": "4", "start_price": wave_points[3]["price"], "end_price": wave_points[4]["price"],
-             "start_idx": wave_points[3]["index"], "end_idx": wave_points[4]["index"]},
-            {"label": "5", "start_price": wave_points[4]["price"], "end_price": wave_points[5]["price"],
-             "start_idx": wave_points[4]["index"], "end_idx": wave_points[5]["index"]},
-        ]
-
-        # Validate rules
-        w1_range = waves[0]["end_price"] - waves[0]["start_price"]
-        w2_retrace = waves[0]["end_price"] - waves[1]["end_price"]
-        w3_range = waves[2]["end_price"] - waves[2]["start_price"]
-        w5_range = waves[4]["end_price"] - waves[4]["start_price"]
-
-        # Rule 1: Wave 2 never retraces > 100% of Wave 1
-        if w2_retrace > w1_range:
+    # For full 5-wave patterns, compute detailed confidence
+    if len(waves) == 5:
+        valid, w1_range, w2_retrace, w3_range, w4_retrace, w5_range = _validate_impulse_rules(waves, direction)
+        if not valid:
             return None
-
-        # Rule 2: Wave 3 never shortest of 1, 3, 5
-        if w3_range < w1_range and w3_range < w5_range:
-            return None
-
-        # Rule 3: Wave 4 never overlaps Wave 1 territory
-        if waves[3]["end_price"] < waves[0]["end_price"]:
-            return None
-
+        confidence = _compute_impulse_confidence(w1_range, w2_retrace, w3_range, w4_retrace, w5_range)
     else:
-        # Bearish impulse: high-low-high-low-high-low
-        if wave_points[0]["type"] != "high":
-            wave_points = candidates[-7:-1] if len(candidates) >= 7 else None
-            if not wave_points or wave_points[0]["type"] != "high":
-                return None
-
-        waves = [
-            {"label": "1", "start_price": wave_points[0]["price"], "end_price": wave_points[1]["price"],
-             "start_idx": wave_points[0]["index"], "end_idx": wave_points[1]["index"]},
-            {"label": "2", "start_price": wave_points[1]["price"], "end_price": wave_points[2]["price"],
-             "start_idx": wave_points[1]["index"], "end_idx": wave_points[2]["index"]},
-            {"label": "3", "start_price": wave_points[2]["price"], "end_price": wave_points[3]["price"],
-             "start_idx": wave_points[2]["index"], "end_idx": wave_points[3]["index"]},
-            {"label": "4", "start_price": wave_points[3]["price"], "end_price": wave_points[4]["price"],
-             "start_idx": wave_points[3]["index"], "end_idx": wave_points[4]["index"]},
-            {"label": "5", "start_price": wave_points[4]["price"], "end_price": wave_points[5]["price"],
-             "start_idx": wave_points[4]["index"], "end_idx": wave_points[5]["index"]},
-        ]
-
-        w1_range = abs(waves[0]["start_price"] - waves[0]["end_price"])
-        w2_retrace = abs(waves[1]["end_price"] - waves[1]["start_price"])
-        w3_range = abs(waves[2]["start_price"] - waves[2]["end_price"])
-        w5_range = abs(waves[4]["start_price"] - waves[4]["end_price"])
-
-        if w2_retrace > w1_range:
-            return None
-        if w3_range < w1_range and w3_range < w5_range:
-            return None
-        if waves[3]["end_price"] > waves[0]["end_price"]:
-            return None
-
-    # Determine current wave (which one is still forming)
-    current_wave = "5"
-    confidence = 0.65
-
-    # Higher confidence if wave 3 is longest
-    if w3_range >= w1_range and w3_range >= w5_range:
-        confidence += 0.15
+        # Partial pattern — lower confidence proportional to completeness
+        confidence = 0.40 + 0.08 * len(waves)
+        confidence = round(min(confidence, 0.72), 2)
 
     return {
         "pattern": "impulse",
         "current_wave": current_wave,
         "direction": direction,
         "waves": waves,
-        "confidence": round(min(confidence, 1.0), 2),
+        "confidence": confidence,
     }
 
 
 def _try_corrective(swings: List[dict]) -> Optional[dict]:
-    """Try to identify a corrective (ABC) pattern from recent swings."""
+    """Try to identify a corrective (ABC) pattern with sub-type classification."""
     if len(swings) < 4:
         return None
 
     recent = swings[-4:]
-    # ABC correction: 3 waves
     waves = [
         {"label": "A", "start_price": recent[0]["price"], "end_price": recent[1]["price"],
          "start_idx": recent[0]["index"], "end_idx": recent[1]["index"]},
@@ -262,20 +378,45 @@ def _try_corrective(swings: List[dict]) -> Optional[dict]:
     ]
 
     a_range = abs(waves[0]["end_price"] - waves[0]["start_price"])
+    b_range = abs(waves[1]["end_price"] - waves[1]["start_price"])
     c_range = abs(waves[2]["end_price"] - waves[2]["start_price"])
 
-    # Determine type: zigzag if C >= A, flat if C < A
     if recent[0]["type"] == "high":
         direction = "bearish"
     else:
         direction = "bullish"
 
+    # Sub-type classification
+    b_retrace_of_a = b_range / a_range if a_range > 0 else 0
+
+    if 0.38 <= b_retrace_of_a <= 0.88 and c_range >= 0.9 * a_range:
+        sub_type = "zigzag"
+        confidence = 0.55
+        if a_range > 0:
+            c_ratio = c_range / a_range
+            for target in [1.0, 1.618]:
+                if abs(c_ratio - target) < 0.1:
+                    confidence += 0.05
+                    break
+    elif 0.80 <= b_retrace_of_a <= 1.20 and 0.8 <= (c_range / a_range if a_range > 0 else 0) <= 1.2:
+        sub_type = "flat"
+        confidence = 0.50
+    elif b_range > a_range and c_range > a_range:
+        sub_type = "expanded_flat"
+        confidence = 0.45
+    else:
+        sub_type = "irregular"
+        confidence = 0.30
+
+    confidence = round(min(confidence, 0.95), 2)
+
     return {
         "pattern": "corrective",
+        "sub_type": sub_type,
         "current_wave": "C",
         "direction": direction,
         "waves": waves,
-        "confidence": 0.5,
+        "confidence": confidence,
     }
 
 
@@ -301,8 +442,8 @@ def calculate_fib_targets(waves: List[dict], direction: str) -> dict:
     ref_price = last_wave["end_price"]
 
     if direction == "bullish":
-        # Resistance projections above current
-        for ratio in FIB_RATIOS:
+        # Resistance projections above current (extensions)
+        for ratio in FIB_EXTENSION_RATIOS:
             price = ref_price + w1_range * ratio
             resistance_levels.append({
                 "price": round(price, 2),
@@ -310,7 +451,7 @@ def calculate_fib_targets(waves: List[dict], direction: str) -> dict:
                 "label": f"{ratio:.3f} extension",
             })
         # Support retracement below current
-        for ratio in [0.236, 0.382, 0.5, 0.618, 0.786]:
+        for ratio in FIB_RETRACEMENT_RATIOS:
             price = ref_price - w1_range * ratio
             support_levels.append({
                 "price": round(price, 2),
@@ -318,15 +459,15 @@ def calculate_fib_targets(waves: List[dict], direction: str) -> dict:
                 "label": f"{ratio:.3f} retracement",
             })
     else:
-        # Bearish — support below, resistance above
-        for ratio in FIB_RATIOS:
+        # Bearish — support below (extensions), resistance above (retracements)
+        for ratio in FIB_EXTENSION_RATIOS:
             price = ref_price - w1_range * ratio
             support_levels.append({
                 "price": round(price, 2),
                 "ratio": ratio,
                 "label": f"{ratio:.3f} extension",
             })
-        for ratio in [0.236, 0.382, 0.5, 0.618, 0.786]:
+        for ratio in FIB_RETRACEMENT_RATIOS:
             price = ref_price + w1_range * ratio
             resistance_levels.append({
                 "price": round(price, 2),
@@ -485,7 +626,9 @@ def _analyze(df: pd.DataFrame, lookback: int = 5) -> dict:
     if pattern == "impulse":
         summary = f"BTC is in Wave {current} of a {direction} impulse pattern."
     elif pattern == "corrective":
-        summary = f"BTC is in Wave {current} of a {direction} corrective pattern."
+        sub_type = wave_count.get("sub_type", "")
+        sub_label = f" ({sub_type.replace('_', ' ')})" if sub_type else ""
+        summary = f"BTC is in Wave {current} of a {direction} corrective{sub_label} pattern."
     else:
         summary = f"Elliott Wave pattern is {pattern}. More data needed for clear wave count."
 
@@ -493,13 +636,17 @@ def _analyze(df: pd.DataFrame, lookback: int = 5) -> dict:
         last_div = divergences[-1]
         summary += f" {last_div['type'].capitalize()} divergence detected on {last_div['indicator']}."
 
+    wc_result = {
+        "pattern": wave_count["pattern"],
+        "current_wave": wave_count["current_wave"],
+        "direction": wave_count["direction"],
+        "waves": wave_count["waves"],
+    }
+    if wave_count.get("sub_type"):
+        wc_result["sub_type"] = wave_count["sub_type"]
+
     return {
-        "wave_count": {
-            "pattern": wave_count["pattern"],
-            "current_wave": wave_count["current_wave"],
-            "direction": wave_count["direction"],
-            "waves": wave_count["waves"],
-        },
+        "wave_count": wc_result,
         "fibonacci_targets": fib_targets,
         "divergences": divergences,
         "confidence": wave_count["confidence"],

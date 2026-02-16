@@ -60,6 +60,40 @@ RSS_FEEDS = {
     "reuters_business": "https://news.google.com/rss/search?q=site:reuters.com+bitcoin+OR+crypto+OR+federal+reserve&hl=en-US&gl=US&ceid=US:en",
     "ft_crypto": "https://news.google.com/rss/search?q=site:ft.com+bitcoin+OR+cryptocurrency+OR+digital+asset&hl=en-US&gl=US&ceid=US:en",
     "bloomberg_crypto": "https://news.google.com/rss/search?q=site:bloomberg.com+bitcoin+OR+crypto+OR+stablecoin&hl=en-US&gl=US&ceid=US:en",
+
+    # ── Russian crypto news ──
+    "bits_media_ru": "https://bits.media/rss2/",
+    "forklog_ru": "https://forklog.com/feed/",
+    "coinspot_ru": "https://coinspot.io/feed/",
+    "google_news_btc_ru": "https://news.google.com/rss/search?q=bitcoin+OR+%D0%B1%D0%B8%D1%82%D0%BA%D0%BE%D0%B8%D0%BD+OR+%D0%BA%D1%80%D0%B8%D0%BF%D1%82%D0%BE&hl=ru&gl=RU&ceid=RU:ru",
+    "google_news_rbc_ru": "https://news.google.com/rss/search?q=site:rbc.ru+%D0%B1%D0%B8%D1%82%D0%BA%D0%BE%D0%B8%D0%BD+OR+%D0%BA%D1%80%D0%B8%D0%BF%D1%82%D0%BE%D0%B2%D0%B0%D0%BB%D1%8E%D1%82%D0%B0&hl=ru&gl=RU&ceid=RU:ru",
+
+    # ── Chinese crypto news ──
+    "8btc_cn": "https://www.8btc.com/feed",
+    "google_news_btc_cn": "https://news.google.com/rss/search?q=%E6%AF%94%E7%89%B9%E5%B8%81+OR+%E5%8A%A0%E5%AF%86%E8%B4%A7%E5%B8%81+OR+bitcoin&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+
+    # ── Spanish crypto news ──
+    "criptonoticias_es": "https://www.criptonoticias.com/feed/",
+    "beincrypto_es": "https://es.beincrypto.com/feed/",
+    "cointelegraph_es": "https://es.cointelegraph.com/rss",
+    "diariobitcoin_es": "https://www.diariobitcoin.com/feed/",
+    "google_news_btc_es": "https://news.google.com/rss/search?q=bitcoin+OR+criptomoneda+OR+cripto&hl=es&gl=ES&ceid=ES:es",
+}
+
+# Map feed source names to language codes
+FEED_LANGUAGE_HINTS = {
+    "bits_media_ru": "ru",
+    "forklog_ru": "ru",
+    "coinspot_ru": "ru",
+    "google_news_btc_ru": "ru",
+    "google_news_rbc_ru": "ru",
+    "8btc_cn": "zh-cn",
+    "google_news_btc_cn": "zh-cn",
+    "criptonoticias_es": "es",
+    "beincrypto_es": "es",
+    "cointelegraph_es": "es",
+    "diariobitcoin_es": "es",
+    "google_news_btc_es": "es",
 }
 
 CRYPTOPANIC_URL = "https://cryptopanic.com/api/v1/posts/"
@@ -142,6 +176,8 @@ class NewsCollector(BaseCollector):
 
                 feed = feedparser.parse(content)
 
+                lang_hint = FEED_LANGUAGE_HINTS.get(source)
+
                 for entry in feed.entries[:15]:  # Last 15 per source
                     published = ""
                     if hasattr(entry, "published"):
@@ -156,6 +192,7 @@ class NewsCollector(BaseCollector):
                         "published": published,
                         "sentiment_score": None,
                         "raw_sentiment": None,
+                        "language": lang_hint,
                     })
 
             except Exception as e:

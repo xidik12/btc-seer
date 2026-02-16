@@ -75,6 +75,7 @@ class News(Base):
     url: Mapped[str] = mapped_column(Text, nullable=True)
     sentiment_score: Mapped[float] = mapped_column(Float, nullable=True)
     raw_sentiment: Mapped[str] = mapped_column(String(20), nullable=True)
+    language: Mapped[str] = mapped_column(String(10), nullable=True, default="en")
 
 
 class Feature(Base):
@@ -179,6 +180,7 @@ class InfluencerTweet(Base):
     url: Mapped[str] = mapped_column(Text, nullable=True)
     sentiment_score: Mapped[float] = mapped_column(Float, nullable=True)
     published_at: Mapped[str] = mapped_column(String(100), nullable=True)
+    language: Mapped[str] = mapped_column(String(10), nullable=True, default="en")
 
 
 class EventImpact(Base):

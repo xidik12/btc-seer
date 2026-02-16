@@ -35,6 +35,7 @@ PyWavelets>=1.6  # Wavelet decomposition
 # NLP / Sentiment
 vaderSentiment==3.3.2
 transformers==4.47.1
+langdetect==1.0.9
 
 # Data Collection
 aiohttp==3.11.11

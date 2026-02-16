@@ -203,6 +203,17 @@ SOCIAL_SIGNAL_FEEDS = {
 
     # Specific influencer news
     "saylor_news": "https://news.google.com/rss/search?q=%22MicroStrategy%22+OR+%22Michael+Saylor%22+bitcoin&hl=en-US&gl=US&ceid=US:en",
+
+    # ── International crypto opinion feeds ──
+    "influencer_ru": "https://news.google.com/rss/search?q=%D0%B1%D0%B8%D1%82%D0%BA%D0%BE%D0%B8%D0%BD+%D0%BF%D1%80%D0%BE%D0%B3%D0%BD%D0%BE%D0%B7+OR+%D0%BA%D1%80%D0%B8%D0%BF%D1%82%D0%BE+%D0%BC%D0%BD%D0%B5%D0%BD%D0%B8%D0%B5&hl=ru&gl=RU&ceid=RU:ru",
+    "influencer_cn": "https://news.google.com/rss/search?q=%E6%AF%94%E7%89%B9%E5%B8%81+%E5%88%86%E6%9E%90+OR+%E5%8A%A0%E5%AF%86%E8%B4%A7%E5%B8%81+%E4%B8%93%E5%AE%B6&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+    "influencer_es": "https://news.google.com/rss/search?q=bitcoin+prediccion+OR+criptomoneda+analisis+OR+cripto+opinion&hl=es&gl=ES&ceid=ES:es",
+}
+
+SOCIAL_FEED_LANGUAGE_HINTS = {
+    "influencer_ru": "ru",
+    "influencer_cn": "zh-cn",
+    "influencer_es": "es",
 }
 
 
@@ -240,6 +251,8 @@ class InfluencerCollector(BaseCollector):
 
                 feed = feedparser.parse(content)
 
+                lang_hint = SOCIAL_FEED_LANGUAGE_HINTS.get(feed_name)
+
                 for entry in feed.entries[:10]:
                     title = entry.get("title", "")
                     link = entry.get("link", "")
@@ -248,7 +261,25 @@ class InfluencerCollector(BaseCollector):
                     if not title:
                         continue
 
-                    # Match influencer names in the title
+                    # For non-English feeds, accept all entries (skip English keyword check)
+                    if lang_hint:
+                        # Use a generic influencer entry for international feeds
+                        all_tweets.append({
+                            "source": f"news_{feed_name}",
+                            "influencer": f"intl_{lang_hint}",
+                            "username": f"intl_{lang_hint}",
+                            "role": "International Crypto News",
+                            "category": "analyst",
+                            "weight": 5,
+                            "text": title,
+                            "url": link,
+                            "published": published,
+                            "sentiment_score": None,
+                            "language": lang_hint,
+                        })
+                        continue
+
+                    # Match influencer names in the title (English feeds)
                     matched_influencer = self._match_influencer(title)
                     if not matched_influencer:
                         continue
@@ -265,7 +296,7 @@ class InfluencerCollector(BaseCollector):
                         "text": title,
                         "url": link,
                         "published": published,
-                        "sentiment_score": None,  # Will be scored by job
+                        "sentiment_score": None,
                     })
 
             except Exception as e:

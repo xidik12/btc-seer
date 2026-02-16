@@ -310,6 +310,7 @@ async def collect_news_data():
             existing_titles = {row[0].lower().strip() for row in result.all()}
 
         analyzer = SentimentAnalyzer()
+        analyzer.load_multilingual()
         new_count = 0
 
         async with async_session() as session:
@@ -323,8 +324,13 @@ async def collect_news_data():
                     continue
                 existing_titles.add(title.lower())
 
-                # Score sentiment
-                sentiment = analyzer.analyze_text(title)
+                # Detect language (from hint or auto-detect)
+                language = item.get("language")
+                if not language:
+                    language = analyzer.detect_language(title)
+
+                # Score sentiment with language awareness
+                sentiment = analyzer.analyze_text(title, language=language)
                 score = sentiment["combined_score"]
 
                 news = News(
@@ -334,6 +340,7 @@ async def collect_news_data():
                     url=item.get("url", ""),
                     sentiment_score=score,
                     raw_sentiment=item.get("raw_sentiment"),
+                    language=language,
                 )
                 session.add(news)
                 new_count += 1
@@ -449,6 +456,7 @@ async def collect_influencer_tweets():
             existing_texts = {row[0].lower().strip() for row in result.all()}
 
         analyzer = SentimentAnalyzer()
+        analyzer.load_multilingual()
         new_count = 0
 
         async with async_session() as session:
@@ -458,8 +466,13 @@ async def collect_influencer_tweets():
                     continue
                 existing_texts.add(text.lower())
 
-                # Analyze sentiment
-                sentiment = analyzer.analyze_text(text)
+                # Detect language (from hint or auto-detect)
+                language = tweet.get("language")
+                if not language:
+                    language = analyzer.detect_language(text)
+
+                # Analyze sentiment with language awareness
+                sentiment = analyzer.analyze_text(text, language=language)
                 score = sentiment["combined_score"]
 
                 # Weight score by influencer's impact (1-10)
@@ -477,6 +490,7 @@ async def collect_influencer_tweets():
                     url=tweet.get("url", ""),
                     sentiment_score=weighted_score,
                     published_at=tweet.get("published", ""),
+                    language=language,
                 )
                 session.add(tweet_record)
                 new_count += 1

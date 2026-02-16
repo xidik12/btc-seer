@@ -13,6 +13,8 @@ class SentimentAnalyzer:
         self._vader = None
         self._finbert = None
         self._finbert_tokenizer = None
+        self._xlm_model = None
+        self._xlm_tokenizer = None
 
     @property
     def vader(self):
@@ -34,8 +36,49 @@ class SentimentAnalyzer:
             except Exception as e:
                 logger.warning(f"Could not load FinBERT: {e}. Using VADER only.")
 
-    def analyze_text(self, text: str, use_finbert: bool = False) -> dict:
-        """Analyze sentiment of a text string."""
+    def load_multilingual(self):
+        """Load XLM-RoBERTa multilingual sentiment model (lazy)."""
+        if self._xlm_model is None:
+            try:
+                from transformers import AutoModelForSequenceClassification, AutoTokenizer
+                model_name = "cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual"
+                self._xlm_tokenizer = AutoTokenizer.from_pretrained(model_name)
+                self._xlm_model = AutoModelForSequenceClassification.from_pretrained(model_name)
+                self._xlm_model.eval()
+                logger.info("XLM-RoBERTa multilingual sentiment model loaded")
+            except Exception as e:
+                logger.warning(f"Could not load XLM-RoBERTa: {e}. Non-English will use VADER fallback.")
+
+    def detect_language(self, text: str) -> str:
+        """Detect language of text. Returns ISO 639-1 code (e.g. 'en', 'ru', 'zh-cn', 'es')."""
+        try:
+            from langdetect import detect
+            lang = detect(text)
+            return lang
+        except Exception:
+            return "en"
+
+    def analyze_text(self, text: str, use_finbert: bool = False, language: str = "en") -> dict:
+        """Analyze sentiment of a text string.
+
+        For English: uses VADER + optional FinBERT.
+        For non-English: uses XLM-RoBERTa if loaded, else VADER fallback.
+        """
+        if language and language != "en":
+            # Non-English path
+            xlm_score = self._xlm_score(text)
+            kw_mod = self.keyword_modifier(text, language=language)
+            combined = max(-1.0, min(1.0, xlm_score + kw_mod))
+            return {
+                "text": text[:200],
+                "vader_score": None,
+                "finbert_score": None,
+                "xlm_score": xlm_score,
+                "combined_score": combined,
+                "language": language,
+            }
+
+        # English path (original behavior)
         vader_score = self._vader_score(text)
 
         result = {
@@ -43,6 +86,7 @@ class SentimentAnalyzer:
             "vader_score": vader_score,
             "finbert_score": None,
             "combined_score": vader_score,
+            "language": "en",
         }
 
         if use_finbert and self._finbert is not None:
@@ -119,6 +163,30 @@ class SentimentAnalyzer:
             logger.error(f"FinBERT error: {e}")
             return self._vader_score(text)
 
+    def _xlm_score(self, text: str) -> float:
+        """Get XLM-RoBERTa multilingual sentiment score (-1 to 1)."""
+        if self._xlm_model is None:
+            # Fallback to VADER (works poorly for non-English but better than 0)
+            return self._vader_score(text)
+        try:
+            import torch
+
+            inputs = self._xlm_tokenizer(
+                text, return_tensors="pt", truncation=True, max_length=512, padding=True
+            )
+            with torch.no_grad():
+                outputs = self._xlm_model(**inputs)
+
+            probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
+            # XLM-RoBERTa sentiment: [negative, neutral, positive]
+            negative = probs[0][0].item()
+            positive = probs[0][2].item()
+            return positive - negative  # Range: -1 to 1
+
+        except Exception as e:
+            logger.error(f"XLM-RoBERTa error: {e}")
+            return self._vader_score(text)
+
     # Crypto-specific keyword sentiment modifiers
     BULLISH_KEYWORDS = [
         "etf approved", "institutional", "adoption", "partnership",
@@ -132,11 +200,41 @@ class SentimentAnalyzer:
         "lawsuit", "sec", "crackdown", "investigation",
     ]
 
-    def keyword_modifier(self, text: str) -> float:
+    # Multilingual keyword modifiers
+    MULTILINGUAL_BULLISH = {
+        "ru": [
+            "\u0440\u043e\u0441\u0442", "\u0431\u044b\u0447\u0438\u0439", "\u043f\u0440\u043e\u0440\u044b\u0432", "\u0438\u043d\u0441\u0442\u0438\u0442\u0443\u0446\u0438\u043e\u043d\u0430\u043b\u044c\u043d\u044b\u0439", "\u043f\u0430\u0440\u0442\u043d\u0435\u0440\u0441\u0442\u0432\u043e",
+            "\u043f\u0440\u0438\u043d\u044f\u0442\u0438\u0435", "\u0440\u0430\u043b\u043b\u0438", "\u043f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430", "\u0440\u0435\u043a\u043e\u0440\u0434",
+        ],
+        "zh-cn": [
+            "\u725b\u5e02", "\u7a81\u7834", "\u673a\u6784", "\u91c7\u7528", "\u4e0a\u6da8", "\u5229\u597d", "\u5408\u4f5c", "\u5347\u7ea7",
+        ],
+        "es": [
+            "alcista", "ruptura", "institucional", "adopcion", "subida",
+            "rally", "soporte", "maximo",
+        ],
+    }
+
+    MULTILINGUAL_BEARISH = {
+        "ru": [
+            "\u0432\u0437\u043b\u043e\u043c", "\u043a\u0440\u0430\u0445", "\u0437\u0430\u043f\u0440\u0435\u0442", "\u043c\u0435\u0434\u0432\u0435\u0436\u0438\u0439", "\u043f\u0430\u0434\u0435\u043d\u0438\u0435",
+            "\u0431\u0430\u043d\u043a\u0440\u043e\u0442\u0441\u0442\u0432\u043e", "\u0440\u0435\u0433\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435", "\u043c\u043e\u0448\u0435\u043d\u043d\u0438\u0447\u0435\u0441\u0442\u0432\u043e",
+        ],
+        "zh-cn": [
+            "\u9ed1\u5ba2", "\u5d29\u76d8", "\u7981\u6b62", "\u718a\u5e02", "\u4e0b\u8dcc", "\u7206\u4ed3", "\u76d1\u7ba1", "\u8bc8\u9a97",
+        ],
+        "es": [
+            "hackeo", "caida", "prohibicion", "bajista", "colapso",
+            "bancarrota", "regulacion", "fraude",
+        ],
+    }
+
+    def keyword_modifier(self, text: str, language: str = "en") -> float:
         """Additional sentiment modifier based on crypto-specific keywords."""
         text_lower = text.lower()
         score = 0.0
 
+        # English keywords always checked
         for kw in self.BULLISH_KEYWORDS:
             if kw in text_lower:
                 score += 0.1
@@ -144,5 +242,15 @@ class SentimentAnalyzer:
         for kw in self.BEARISH_KEYWORDS:
             if kw in text_lower:
                 score -= 0.1
+
+        # Multilingual keywords
+        lang_key = language if language in self.MULTILINGUAL_BULLISH else None
+        if lang_key:
+            for kw in self.MULTILINGUAL_BULLISH[lang_key]:
+                if kw in text_lower:
+                    score += 0.1
+            for kw in self.MULTILINGUAL_BEARISH.get(lang_key, []):
+                if kw in text_lower:
+                    score -= 0.1
 
         return max(-0.5, min(0.5, score))
