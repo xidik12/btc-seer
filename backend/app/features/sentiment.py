@@ -78,24 +78,27 @@ class SentimentAnalyzer:
                 "language": language,
             }
 
-        # English path (original behavior)
+        # English path — VADER + crypto keyword modifier + optional FinBERT
         vader_score = self._vader_score(text)
+        kw_mod = self.keyword_modifier(text, language="en")
 
-        result = {
-            "text": text[:200],
-            "vader_score": vader_score,
-            "finbert_score": None,
-            "combined_score": vader_score,
-            "language": "en",
-        }
-
+        base_score = vader_score
         if use_finbert and self._finbert is not None:
             finbert_score = self._finbert_score(text)
-            result["finbert_score"] = finbert_score
-            # Weighted combination: FinBERT is better for financial text
-            result["combined_score"] = 0.6 * finbert_score + 0.4 * vader_score
+            base_score = 0.6 * finbert_score + 0.4 * vader_score
+        else:
+            finbert_score = None
 
-        return result
+        combined = max(-1.0, min(1.0, base_score + kw_mod))
+
+        return {
+            "text": text[:200],
+            "vader_score": vader_score,
+            "finbert_score": finbert_score,
+            "combined_score": combined,
+            "keyword_modifier": kw_mod,
+            "language": "en",
+        }
 
     def analyze_batch(self, texts: list[str], use_finbert: bool = False) -> list[dict]:
         """Analyze sentiment of multiple texts."""
@@ -189,15 +192,39 @@ class SentimentAnalyzer:
 
     # Crypto-specific keyword sentiment modifiers
     BULLISH_KEYWORDS = [
-        "etf approved", "institutional", "adoption", "partnership",
-        "bullish", "rally", "surge", "breakout", "all-time high",
-        "accumulation", "halving", "upgrade", "support",
+        # Institutional / corporate buying
+        "buys", "bought", "buying", "purchase", "purchased", "acquires", "acquired",
+        "accumulate", "accumulation", "adds to", "treasury",
+        "strategic reserve", "bitcoin reserve", "btc reserve",
+        # ETF / market structure
+        "etf approved", "etf approval", "spot etf", "etf inflows", "inflows",
+        "institutional", "adoption", "partnership",
+        # Price action
+        "bullish", "rally", "surge", "breakout", "all-time high", "ath",
+        "soars", "skyrockets", "pumps", "moon", "mooning",
+        "new high", "record high", "outperform",
+        # Fundamentals
+        "halving", "upgrade", "support", "integration",
+        "whale buy", "whale accumulation", "smart money",
+        "bullish divergence", "golden cross",
     ]
 
     BEARISH_KEYWORDS = [
-        "hack", "exploit", "crash", "ban", "regulation", "tariff",
-        "bearish", "dump", "sell-off", "bankruptcy", "fraud",
-        "lawsuit", "sec", "crackdown", "investigation",
+        # Security / fraud
+        "hack", "hacked", "exploit", "exploited", "vulnerability",
+        "rug pull", "rugpull", "rug-pull", "ponzi", "scam",
+        "fraud", "stolen", "theft", "drained",
+        # Market / regulatory
+        "crash", "crashes", "crashed", "ban", "banned",
+        "regulation", "tariff", "bearish",
+        "dump", "dumping", "sell-off", "selloff", "sell pressure",
+        "bankruptcy", "bankrupt", "insolvent",
+        "lawsuit", "sued", "sec charges", "sec", "crackdown", "investigation",
+        "delisting", "delisted", "de-peg", "depeg",
+        # Liquidation / forced selling
+        "liquidation", "liquidated", "margin call",
+        "outflows", "etf outflows", "whale sell", "whale dump",
+        "death cross", "bearish divergence",
     ]
 
     # Multilingual keyword modifiers

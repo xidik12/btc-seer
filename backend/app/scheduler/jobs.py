@@ -481,9 +481,9 @@ async def collect_influencer_tweets():
                 sentiment = analyzer.analyze_text(text, language=language)
                 score = sentiment["combined_score"]
 
-                # Weight score by influencer's impact (1-10)
+                # Weight score by influencer's impact (1-10), clamped to [-1, 1]
                 weight = tweet.get("weight", 5)
-                weighted_score = score * (weight / 5)  # Normalize around weight=5
+                weighted_score = max(-1.0, min(1.0, score * (weight / 5)))
 
                 tweet_record = InfluencerTweet(
                     timestamp=datetime.utcnow(),
