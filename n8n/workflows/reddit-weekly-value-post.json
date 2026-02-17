@@ -1,0 +1,162 @@
+{
+  "name": "Reddit Weekly Value Post",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 15,
+              "triggerAtDay": 2
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Tuesday 15:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "get-performance-card",
+      "name": "Get Performance Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "get-daily-summary",
+      "name": "Get Daily Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const performanceCard = $('Get Performance Card').first().json;\nconst dailySummary = $('Get Daily Summary').first().json;\n\nconst prompt = `Write a 500-1000 word analysis post for r/CryptoCurrency. Data:\\n\\nPerformance Card (7 days): ${JSON.stringify(performanceCard)}\\n\\nDaily Summary: ${JSON.stringify(dailySummary)}\\n\\nStructure: catchy title, TLDR at top, detailed analysis with data, methodology section explaining AI prediction approach, results/accuracy, conclusion. Reddit markdown. Educational tone — provide value, don't just promote. Mention BTC Seer bot naturally at the end. Return JSON: {\"title\": \"...\", \"body\": \"...\"}.`;\n\nreturn [{ json: { prompt } }];"
+      },
+      "id": "build-prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 2000, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Data-driven, educational, transparent about accuracy. Never financial advice.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "claude-api",
+      "name": "Claude Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text;\n\n// Extract JSON from Claude's response\nlet parsed;\ntry {\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  parsed = JSON.parse(jsonMatch[0]);\n} catch (e) {\n  parsed = { title: 'BTC Seer Weekly Analysis', body: text };\n}\n\nreturn [{ json: { title: parsed.title, body: parsed.body } }];"
+      },
+      "id": "extract-format",
+      "name": "Extract & Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth.reddit.com/api/submit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{ $env.REDDIT_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/x-www-form-urlencoded" },
+            { "name": "User-Agent", "value": "n8n:btc-seer:v1.0" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ 'kind=self&sr=CryptoCurrency&title=' + encodeURIComponent($json.title) + '&text=' + encodeURIComponent($json.body) }}",
+        "options": {}
+      },
+      "id": "reddit-submit",
+      "name": "Post to Reddit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 0]
+    }
+  ],
+  "connections": {
+    "Weekly Tuesday 15:00 UTC": {
+      "main": [
+        [
+          { "node": "Get Performance Card", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Performance Card": {
+      "main": [
+        [
+          { "node": "Get Daily Summary", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Daily Summary": {
+      "main": [
+        [
+          { "node": "Build Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          { "node": "Claude Generate", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Generate": {
+      "main": [
+        [
+          { "node": "Extract & Format", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract & Format": {
+      "main": [
+        [
+          { "node": "Post to Reddit", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [
+    { "name": "reddit" },
+    { "name": "marketing" },
+    { "name": "ai" }
+  ]
+}

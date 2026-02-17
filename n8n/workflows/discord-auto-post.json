@@ -1,0 +1,121 @@
+{
+  "name": "Discord Auto Post",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "dc-schedule",
+      "name": "Every 30 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "dc-fetch-summary",
+      "name": "Get Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/signals/current",
+        "options": {}
+      },
+      "id": "dc-fetch-signal",
+      "name": "Get Signal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Get Summary').first().json;\nconst signal = $('Get Signal').first().json;\nconst price = data.price?.current;\nconst dir = data.predictions?.['1h']?.direction || 'N/A';\nconst conf = data.predictions?.['1h']?.confidence || 0;\nconst emoji = dir === 'bullish' ? '\uD83D\uDFE2' : dir === 'bearish' ? '\uD83D\uDD34' : '\uD83D\uDFE1';\n\nconst embed = {\n  embeds: [{\n    title: `${emoji} BTC Prediction Update`,\n    color: dir === 'bullish' ? 0x00ff00 : dir === 'bearish' ? 0xff0000 : 0xffff00,\n    fields: [\n      { name: \"\uD83D\uDCB0 Price\", value: `$${price?.toLocaleString() || 'N/A'}`, inline: true },\n      { name: \"\uD83D\uDCCA Direction\", value: dir.toUpperCase(), inline: true },\n      { name: \"\uD83C\uDFAF Confidence\", value: `${Math.round(conf)}%`, inline: true },\n      { name: \"\uD83D\uDCC8 1h Target\", value: `$${data.predictions?.['1h']?.predicted_price?.toLocaleString() || 'N/A'}`, inline: true },\n      { name: \"\uD83D\uDCC8 4h Target\", value: `$${data.predictions?.['4h']?.predicted_price?.toLocaleString() || 'N/A'}`, inline: true },\n      { name: \"\uD83D\uDCC8 24h Target\", value: `$${data.predictions?.['24h']?.predicted_price?.toLocaleString() || 'N/A'}`, inline: true },\n      { name: \"\u2705 7d Accuracy\", value: `${data.accuracy_7d?.overall_pct || 'N/A'}%`, inline: true },\n      { name: \"\uD83C\uDF21\uFE0F Sentiment\", value: data.sentiment?.label?.toUpperCase() || 'N/A', inline: true },\n      { name: \"\uD83D\uDE31 Fear/Greed\", value: `${data.macro?.fear_greed_index || 'N/A'} (${data.macro?.fear_greed_label || 'N/A'})`, inline: true }\n    ],\n    footer: { text: \"BTC Seer AI | Try @BTC_Seer_Bot on Telegram\" },\n    timestamp: new Date().toISOString()\n  }]\n};\nreturn [{ json: embed }];"
+      },
+      "id": "dc-build-embed",
+      "name": "Build Discord Embed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://discord.com/api/v10/channels/{{ $env.DISCORD_CHANNEL_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bot {{ $env.DISCORD_BOT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "dc-post",
+      "name": "Post to Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date().toISOString();\nconst embed = $('Build Discord Embed').first().json;\nconst title = embed.embeds?.[0]?.title || 'Unknown';\nconsole.log(`[${now}] Discord embed posted: ${title}`);\nreturn [{ json: { status: 'posted', platform: 'discord', timestamp: now, embed_title: title } }];"
+      },
+      "id": "dc-log",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [
+        [{ "node": "Get Summary", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Summary": {
+      "main": [
+        [{ "node": "Get Signal", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Signal": {
+      "main": [
+        [{ "node": "Build Discord Embed", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Discord Embed": {
+      "main": [
+        [{ "node": "Post to Discord", "type": "main", "index": 0 }]
+      ]
+    },
+    "Post to Discord": {
+      "main": [
+        [{ "node": "Log Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "discord" },
+    { "name": "marketing" },
+    { "name": "ai" }
+  ]
+}

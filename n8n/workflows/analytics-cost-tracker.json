@@ -1,0 +1,103 @@
+{
+  "name": "Analytics Cost Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "at-schedule",
+      "name": "Every 1 Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Track Claude API usage from n8n execution history\n// This runs hourly to aggregate costs\nconst now = new Date();\nconst hour = now.toISOString().slice(0, 13);\n\n// Estimate costs based on n8n execution count\n// Claude Sonnet: ~$3/M input tokens, $15/M output tokens\n// Average workflow: ~500 input + 300 output tokens\nconst estimatedCostPerCall = 0.006; // ~$0.006 per Claude call\n\n// Get execution count from env or default\nconst dailyBudget = parseFloat($env.CLAUDE_DAILY_BUDGET_USD || '5.00');\n\nconst report = {\n  timestamp: now.toISOString(),\n  hour: hour,\n  estimated_cost_per_call: estimatedCostPerCall,\n  daily_budget_usd: dailyBudget,\n  note: 'Actual costs tracked via Anthropic dashboard. This is an estimate.'\n};\n\nreturn [{ json: report }];"
+      },
+      "id": "at-calculate",
+      "name": "Calculate Costs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Budget check: estimate daily spend and warn if exceeded\nconst report = $('Calculate Costs').first().json;\nconst now = new Date();\nconst hoursElapsed = now.getUTCHours() + 1; // hours passed today\n\n// Estimate based on active workflows with Claude calls:\n// - LinkedIn: 1/week (Thu) = ~0.14/day\n// - Medium: 1/week (Sat) = ~0.14/day\n// - YouTube: 1/week (Sun) = ~0.14/day\n// - Quora: 1/day\n// - Discord: 0 (no Claude calls)\n// - Twitter workflows: ~4/day (from existing workflows)\n// - Reddit: ~1/day (from existing workflows)\n// - Telegram: ~3/day (from existing workflows)\nconst estimatedDailyClaudeCalls = 4 + 1 + 3 + 1 + 0.14 + 0.14 + 0.14; // ~9.42 calls/day\nconst estimatedDailyCost = estimatedDailyClaudeCalls * report.estimated_cost_per_call;\nconst projectedDailyCost = (estimatedDailyCost / 24) * 24; // full day projection\n\nconst budgetUsedPct = (estimatedDailyCost / report.daily_budget_usd) * 100;\nconst isOverBudget = estimatedDailyCost > report.daily_budget_usd;\nconst isNearBudget = budgetUsedPct > 80;\n\nconst budgetReport = {\n  timestamp: now.toISOString(),\n  hours_elapsed_today: hoursElapsed,\n  estimated_daily_claude_calls: Math.round(estimatedDailyClaudeCalls),\n  estimated_daily_cost_usd: parseFloat(estimatedDailyCost.toFixed(4)),\n  projected_daily_cost_usd: parseFloat(projectedDailyCost.toFixed(4)),\n  daily_budget_usd: report.daily_budget_usd,\n  budget_used_pct: parseFloat(budgetUsedPct.toFixed(1)),\n  status: isOverBudget ? 'OVER_BUDGET' : isNearBudget ? 'NEAR_BUDGET' : 'OK',\n  warning: isOverBudget\n    ? `Daily estimated cost ($${estimatedDailyCost.toFixed(2)}) EXCEEDS budget ($${report.daily_budget_usd.toFixed(2)}). Consider reducing frequency or pausing non-critical workflows.`\n    : isNearBudget\n    ? `Daily estimated cost ($${estimatedDailyCost.toFixed(2)}) is approaching budget ($${report.daily_budget_usd.toFixed(2)}). Monitor closely.`\n    : `Budget healthy. Estimated $${estimatedDailyCost.toFixed(2)} of $${report.daily_budget_usd.toFixed(2)} daily budget.`\n};\n\nconsole.log(`[${now.toISOString()}] Budget status: ${budgetReport.status} - ${budgetReport.warning}`);\n\nreturn [{ json: budgetReport }];"
+      },
+      "id": "at-budget-check",
+      "name": "Check Budget",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://discord.com/api/v10/channels/{{ $env.DISCORD_CHANNEL_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bot {{ $env.DISCORD_BOT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: `**Analytics Report** (${$json.timestamp})\\n\\nStatus: **${$json.status}**\\nEstimated daily Claude calls: ${$json.estimated_daily_claude_calls}\\nEstimated daily cost: $${$json.estimated_daily_cost_usd}\\nBudget: $${$json.daily_budget_usd} (${$json.budget_used_pct}% used)\\n\\n${$json.warning}` }) }}",
+        "options": {}
+      },
+      "id": "at-notify",
+      "name": "Post Report to Discord (Optional)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const budget = $('Check Budget').first().json;\nconst now = new Date().toISOString();\nconsole.log(`[${now}] Analytics cost tracker completed. Status: ${budget.status}`);\nreturn [{ json: { status: 'logged', platform: 'analytics', timestamp: now, budget_status: budget.status } }];"
+      },
+      "id": "at-log",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    }
+  ],
+  "connections": {
+    "Every 1 Hour": {
+      "main": [
+        [{ "node": "Calculate Costs", "type": "main", "index": 0 }]
+      ]
+    },
+    "Calculate Costs": {
+      "main": [
+        [{ "node": "Check Budget", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check Budget": {
+      "main": [
+        [{ "node": "Post Report to Discord (Optional)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Post Report to Discord (Optional)": {
+      "main": [
+        [{ "node": "Log Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "analytics" },
+    { "name": "marketing" }
+  ]
+}

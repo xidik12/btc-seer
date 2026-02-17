@@ -1,0 +1,180 @@
+{
+  "name": "Telegram Breaking News (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/trending-analysis",
+        "options": {}
+      },
+      "id": "fetch-trending",
+      "name": "Fetch Trending Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-has-events",
+              "leftValue": "={{ $json.has_events }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-events",
+      "name": "Has High Severity Events?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Fetch Trending Analysis').first().json;\n\n// Filter for high severity events\nconst events = data.events || [];\nconst highSeverityEvents = events.filter(e => e.severity === 'high');\n\n// Check for qualifying events: large_price_move with move_pct >= 5, or whale_activity\nconst qualifyingEvents = highSeverityEvents.filter(e => {\n  if (e.type === 'large_price_move' && e.move_pct >= 5) return true;\n  if (e.type === 'whale_activity') return true;\n  return false;\n});\n\nif (qualifyingEvents.length === 0) {\n  // No qualifying events, stop execution\n  return [];\n}\n\nconst prompt = `BREAKING: There's a major Bitcoin market event. Data:\n\nEvents: ${JSON.stringify(qualifyingEvents)}\n\nFull Trending Analysis: ${JSON.stringify(data)}\n\nWrite an urgent Telegram alert explaining what happened, what BTC Seer's AI says about it, and what to watch next. Use Telegram Markdown. Keep it concise (max 500 chars).`;\n\nreturn [{ json: { prompt } }];"
+      },
+      "id": "build-prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 500, system: 'You are BTC Seer AI, the voice of BTC Seer on Telegram — an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "claude-api",
+      "name": "Claude Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet text = '';\n\nif (response.content && response.content.length > 0) {\n  text = response.content[0].text;\n} else {\n  text = '*BREAKING*\\n\\nMajor Bitcoin market event detected. Details incoming...';\n}\n\nreturn [{ json: { text } }];"
+      },
+      "id": "extract-text",
+      "name": "Extract Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-post",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1320, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Telegram API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          { "node": "Fetch Trending Analysis", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Trending Analysis": {
+      "main": [
+        [
+          { "node": "Has High Severity Events?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Has High Severity Events?": {
+      "main": [
+        [
+          { "node": "Build Prompt", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          { "node": "Claude Generate", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Generate": {
+      "main": [
+        [
+          { "node": "Extract Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Response": {
+      "main": [
+        [
+          { "node": "Send to Telegram", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "telegram" },
+    { "name": "marketing" },
+    { "name": "ai" }
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "name": "LinkedIn Weekly Post (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 14,
+              "triggerAtDay": 4
+            }
+          ]
+        }
+      },
+      "id": "li-schedule",
+      "name": "Thursday 14:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "li-fetch-performance",
+      "name": "Get Performance Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "li-fetch-summary",
+      "name": "Get Daily Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const performance = $('Get Performance Card').first().json;\nconst summary = $('Get Daily Summary').first().json;\n\nconst prompt = `Write a LinkedIn thought-leadership post about AI in Bitcoin trading. Data:\n\nPerformance (7d): ${JSON.stringify(performance, null, 2)}\n\nDaily Summary: ${JSON.stringify(summary, null, 2)}\n\nProfessional tone, use data to back claims. Structure: hook paragraph, 2-3 insight paragraphs, key takeaway, soft CTA. Mention BTC Seer naturally. 800-1200 chars.`;\n\nreturn [{ json: { prompt } }];"
+      },
+      "id": "li-build-prompt",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 1500, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Data-driven, educational, transparent about accuracy. Never financial advice.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "li-claude-api",
+      "name": "Claude Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $('Claude Generate').first().json;\nconst text = response.content[0].text.trim();\nreturn [{ json: { text } }];"
+      },
+      "id": "li-extract",
+      "name": "Extract Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('Extract Response').first().json.text;\nconst body = {\n  author: `urn:li:person:${$env.LINKEDIN_PERSON_URN}`,\n  lifecycleState: \"PUBLISHED\",\n  specificContent: {\n    \"com.linkedin.ugc.ShareContent\": {\n      shareCommentary: { text: text },\n      shareMediaCategory: \"NONE\"\n    }\n  },\n  visibility: { \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\" }\n};\nreturn [{ json: { linkedinBody: JSON.stringify(body) } }];"
+      },
+      "id": "li-build-body",
+      "name": "Build LinkedIn Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/v2/ugcPosts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.LINKEDIN_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Restli-Protocol-Version", "value": "2.0.0" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ $json.linkedinBody }}",
+        "options": {}
+      },
+      "id": "li-post",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('Extract Response').first().json.text;\nconst now = new Date().toISOString();\nconsole.log(`[${now}] LinkedIn post published: ${text.substring(0, 80)}...`);\nreturn [{ json: { status: 'posted', platform: 'linkedin', timestamp: now, post_length: text.length } }];"
+      },
+      "id": "li-log",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 0]
+    }
+  ],
+  "connections": {
+    "Thursday 14:00 UTC": {
+      "main": [
+        [{ "node": "Get Performance Card", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Performance Card": {
+      "main": [
+        [{ "node": "Get Daily Summary", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Daily Summary": {
+      "main": [
+        [{ "node": "Build Claude Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [{ "node": "Claude Generate", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude Generate": {
+      "main": [
+        [{ "node": "Extract Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Response": {
+      "main": [
+        [{ "node": "Build LinkedIn Body", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build LinkedIn Body": {
+      "main": [
+        [{ "node": "Post to LinkedIn", "type": "main", "index": 0 }]
+      ]
+    },
+    "Post to LinkedIn": {
+      "main": [
+        [{ "node": "Log Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "linkedin" },
+    { "name": "marketing" },
+    { "name": "ai" }
+  ]
+}

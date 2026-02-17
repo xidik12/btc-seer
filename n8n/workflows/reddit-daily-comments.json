@@ -1,0 +1,196 @@
+{
+  "name": "Reddit Daily Comments",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://oauth.reddit.com/r/Bitcoin+CryptoCurrency/search?q=bitcoin+prediction&sort=new&t=day&limit=5",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{ $env.REDDIT_ACCESS_TOKEN }}" },
+            { "name": "User-Agent", "value": "n8n:btc-seer:v1.0" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "reddit-search",
+      "name": "Search Reddit Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst posts = response.data?.children || [];\n\n// Filter to genuine questions and pick max 2\nconst questions = posts\n  .filter(p => {\n    const title = (p.data.title || '').toLowerCase();\n    return (\n      title.includes('?') ||\n      title.includes('predict') ||\n      title.includes('will bitcoin') ||\n      title.includes('what do you think') ||\n      title.includes('opinion') ||\n      title.includes('help')\n    );\n  })\n  .slice(0, 2)\n  .map(p => ({\n    postId: p.data.id,\n    title: p.data.title,\n    subreddit: p.data.subreddit,\n    selftext: (p.data.selftext || '').substring(0, 300)\n  }));\n\nif (questions.length === 0) {\n  return [{ json: { skip: true, reason: 'No suitable questions found' } }];\n}\n\nreturn questions.map(q => ({ json: q }));"
+      },
+      "id": "filter-questions",
+      "name": "Filter Questions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "notTrue" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-has-questions",
+      "name": "Has Questions?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const post = $input.first().json;\n\nconst prompt = `Someone on Reddit asked: '${post.title}'\\n\\nContext: ${post.selftext || 'No additional context.'}\\n\\nWrite a helpful, detailed answer. Mention that AI prediction tools exist (like BTC Seer) but focus on being genuinely helpful. Reddit markdown. Max 500 chars.`;\n\nreturn [{ json: { prompt, postId: post.postId } }];"
+      },
+      "id": "build-prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 500, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Data-driven, educational, transparent about accuracy. Never financial advice.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "claude-api",
+      "name": "Claude Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text;\nconst postId = $('Build Prompt').first().json.postId;\n\nreturn [{ json: { text, thingId: 't3_' + postId } }];"
+      },
+      "id": "extract-comment",
+      "name": "Extract Comment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth.reddit.com/api/comment",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{ $env.REDDIT_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/x-www-form-urlencoded" },
+            { "name": "User-Agent", "value": "n8n:btc-seer:v1.0" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ 'thing_id=' + encodeURIComponent($json.thingId) + '&text=' + encodeURIComponent($json.text) }}",
+        "options": {}
+      },
+      "id": "reddit-comment",
+      "name": "Post Reddit Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 0]
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [
+        [
+          { "node": "Search Reddit Posts", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Search Reddit Posts": {
+      "main": [
+        [
+          { "node": "Filter Questions", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Filter Questions": {
+      "main": [
+        [
+          { "node": "Has Questions?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Has Questions?": {
+      "main": [
+        [
+          { "node": "Build Prompt", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          { "node": "Claude Generate", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Generate": {
+      "main": [
+        [
+          { "node": "Extract Comment", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Comment": {
+      "main": [
+        [
+          { "node": "Post Reddit Comment", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [
+    { "name": "reddit" },
+    { "name": "marketing" },
+    { "name": "ai" }
+  ]
+}

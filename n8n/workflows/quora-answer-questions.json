@@ -1,0 +1,162 @@
+{
+  "name": "Quora Answer Questions (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 12
+            }
+          ]
+        }
+      },
+      "id": "qa-schedule",
+      "name": "Daily 12:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Quora has no public API, so we define target questions/topics to answer.\n// In production, these could come from web scraping, manual input, or a stored queue.\nconst searchTerms = [\n  'Can AI predict Bitcoin price?',\n  'How accurate are Bitcoin prediction bots?',\n  'Best Bitcoin prediction tools 2026',\n  'Is it possible to predict cryptocurrency prices with machine learning?',\n  'What is the most accurate Bitcoin forecast model?',\n  'How do AI trading bots work for crypto?',\n  'Should I trust AI Bitcoin predictions?'\n];\n\n// Pick 1-2 random questions for today\nconst shuffled = searchTerms.sort(() => Math.random() - 0.5);\nconst selected = shuffled.slice(0, 2);\n\nreturn selected.map(q => ({ json: { question: q } }));"
+      },
+      "id": "qa-set-questions",
+      "name": "Set Search Terms",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "qa-fetch-performance",
+      "name": "Get Performance Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const question = $('Set Search Terms').first().json.question;\nconst performance = $('Get Performance Data').first().json;\n\nconst prompt = `Answer this Bitcoin prediction question for Quora: '${question}'\n\nUse this real data from BTC Seer's track record to support your answer:\n${JSON.stringify(performance, null, 2)}\n\nWrite a detailed, authoritative answer (300-500 words). Include data from BTC Seer's track record. Mention the Telegram bot @BTC_Seer_Bot naturally. Quora format — personal, expert tone. Start with a direct answer, then elaborate with evidence and nuance.`;\n\nreturn [{ json: { prompt, question } }];"
+      },
+      "id": "qa-build-prompt",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 1000, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Data-driven, educational, transparent about accuracy. Never financial advice.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "qa-claude-api",
+      "name": "Claude Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $('Claude Generate').first().json;\nconst text = response.content[0].text.trim();\nconst question = $('Build Claude Prompt').first().json.question;\nreturn [{ json: { text, question } }];"
+      },
+      "id": "qa-extract",
+      "name": "Extract Answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Quora has no public API for posting answers.\n// This node logs the generated answer for manual posting or future automation.\n// If Quora session cookies become available, the HTTP node below can be enabled.\n\nconst question = $('Extract Answer').first().json.question;\nconst answer = $('Extract Answer').first().json.text;\nconst now = new Date().toISOString();\n\nconsole.log(`[${now}] Quora answer generated for: ${question}`);\nconsole.log(`Answer preview: ${answer.substring(0, 200)}...`);\nconsole.log(`Full answer length: ${answer.length} chars`);\n\nreturn [{ json: {\n  status: 'generated',\n  platform: 'quora',\n  timestamp: now,\n  question: question,\n  answer: answer,\n  answer_length: answer.length,\n  note: 'Quora has no public API. Answer generated for manual posting. Enable HTTP node with session cookies for automated posting.'\n} }];"
+      },
+      "id": "qa-log",
+      "name": "Log Answer for Manual Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://discord.com/api/v10/channels/{{ $env.DISCORD_CHANNEL_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bot {{ $env.DISCORD_BOT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: `**Quora Answer Ready** \\n\\n**Q:** ${$json.question}\\n\\n**A (preview):** ${$json.answer.substring(0, 500)}...\\n\\n_Full answer saved in execution log. Post manually to Quora._` }) }}",
+        "options": {}
+      },
+      "id": "qa-notify",
+      "name": "Notify via Discord (Optional)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 0]
+    }
+  ],
+  "connections": {
+    "Daily 12:00 UTC": {
+      "main": [
+        [{ "node": "Set Search Terms", "type": "main", "index": 0 }]
+      ]
+    },
+    "Set Search Terms": {
+      "main": [
+        [{ "node": "Get Performance Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Performance Data": {
+      "main": [
+        [{ "node": "Build Claude Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [{ "node": "Claude Generate", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude Generate": {
+      "main": [
+        [{ "node": "Extract Answer", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Answer": {
+      "main": [
+        [{ "node": "Log Answer for Manual Post", "type": "main", "index": 0 }]
+      ]
+    },
+    "Log Answer for Manual Post": {
+      "main": [
+        [{ "node": "Notify via Discord (Optional)", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "quora" },
+    { "name": "marketing" },
+    { "name": "ai" }
+  ]
+}

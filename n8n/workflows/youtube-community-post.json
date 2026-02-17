@@ -1,0 +1,148 @@
+{
+  "name": "YouTube Community Post (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 16,
+              "triggerAtDay": 0
+            }
+          ]
+        }
+      },
+      "id": "yt-schedule",
+      "name": "Sunday 16:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "yt-fetch-performance",
+      "name": "Get Performance Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const performance = $('Get Performance Card').first().json;\n\nconst prompt = `Write a YouTube community post summarizing this week's Bitcoin AI predictions. Data:\n\n${JSON.stringify(performance, null, 2)}\n\nCasual, visual-friendly (use emojis for data points). Ask viewers to comment their prediction. Mention @BTC_Seer_Bot on Telegram. Max 500 chars.`;\n\nreturn [{ json: { prompt } }];"
+      },
+      "id": "yt-build-prompt",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 800, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Data-driven, educational, transparent about accuracy. Never financial advice.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "yt-claude-api",
+      "name": "Claude Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $('Claude Generate').first().json;\nconst text = response.content[0].text.trim();\nreturn [{ json: { text } }];"
+      },
+      "id": "yt-extract",
+      "name": "Extract Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&key={{ $env.YOUTUBE_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.YOUTUBE_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ snippet: { channelId: $env.YOUTUBE_CHANNEL_ID, topLevelComment: { snippet: { textOriginal: $json.text } } } }) }}",
+        "options": {}
+      },
+      "id": "yt-post",
+      "name": "Post to YouTube (Placeholder)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('Extract Response').first().json.text;\nconst now = new Date().toISOString();\nconsole.log(`[${now}] YouTube community post: ${text.substring(0, 80)}...`);\nconsole.log('NOTE: YouTube Community Posts API requires YouTube Studio access. This node uses commentThreads as a placeholder. For production, consider using YouTube Studio internal API or manual posting with the generated text.');\nreturn [{ json: { status: 'posted', platform: 'youtube', timestamp: now, post_length: text.length, note: 'Uses commentThreads API as placeholder. YouTube Community Posts require YouTube Studio API access.' } }];"
+      },
+      "id": "yt-log",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    }
+  ],
+  "connections": {
+    "Sunday 16:00 UTC": {
+      "main": [
+        [{ "node": "Get Performance Card", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Performance Card": {
+      "main": [
+        [{ "node": "Build Claude Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [{ "node": "Claude Generate", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude Generate": {
+      "main": [
+        [{ "node": "Extract Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Response": {
+      "main": [
+        [{ "node": "Post to YouTube (Placeholder)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Post to YouTube (Placeholder)": {
+      "main": [
+        [{ "node": "Log Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "youtube" },
+    { "name": "marketing" },
+    { "name": "ai" }
+  ]
+}

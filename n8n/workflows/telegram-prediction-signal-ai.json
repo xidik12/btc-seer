@@ -1,0 +1,162 @@
+{
+  "name": "Telegram Prediction Signal (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 30 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "fetch-daily-summary",
+      "name": "Fetch Daily Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, -60]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/signals/current",
+        "options": {}
+      },
+      "id": "fetch-current-signal",
+      "name": "Fetch Current Signal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "const dailySummary = $('Fetch Daily Summary').first().json;\nconst currentSignal = $('Fetch Current Signal').first().json;\n\nconst prompt = `Generate a Telegram prediction signal post. Data:\n\nDaily Summary: ${JSON.stringify(dailySummary)}\n\nCurrent Signal: ${JSON.stringify(currentSignal)}\n\nFormat with Telegram Markdown. Include: current price, AI prediction direction + confidence, entry/target/stop-loss if available, a 'Why?' reasoning section explaining the key factors. Vary the structure — sometimes lead with the signal, sometimes with the reasoning. Max 800 chars.`;\n\nreturn [{ json: { prompt } }];"
+      },
+      "id": "build-prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 1000, system: 'You are BTC Seer AI, the voice of BTC Seer on Telegram — an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "claude-api",
+      "name": "Claude Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet text = '';\n\nif (response.content && response.content.length > 0) {\n  text = response.content[0].text;\n} else {\n  text = '*BTC Seer Signal*\\n\\nUnable to generate signal at this time. Check back soon.';\n}\n\nreturn [{ json: { text } }];"
+      },
+      "id": "extract-text",
+      "name": "Extract Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-post",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1100, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Telegram API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [
+        [
+          { "node": "Fetch Daily Summary", "type": "main", "index": 0 },
+          { "node": "Fetch Current Signal", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Daily Summary": {
+      "main": [
+        [
+          { "node": "Build Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Current Signal": {
+      "main": [
+        [
+          { "node": "Build Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          { "node": "Claude Generate", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Generate": {
+      "main": [
+        [
+          { "node": "Extract Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Response": {
+      "main": [
+        [
+          { "node": "Send to Telegram", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "telegram" },
+    { "name": "marketing" },
+    { "name": "ai" }
+  ]
+}

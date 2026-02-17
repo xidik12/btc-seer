@@ -1,0 +1,180 @@
+{
+  "name": "Medium Weekly Article (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10,
+              "triggerAtDay": 6
+            }
+          ]
+        }
+      },
+      "id": "md-schedule",
+      "name": "Saturday 10:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "md-fetch-performance",
+      "name": "Get Performance Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "md-fetch-summary",
+      "name": "Get Daily Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/history/accuracy?days=30",
+        "options": {}
+      },
+      "id": "md-fetch-accuracy",
+      "name": "Get 30d Accuracy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const performance = $('Get Performance Card').first().json;\nconst summary = $('Get Daily Summary').first().json;\nconst accuracy = $('Get 30d Accuracy').first().json;\n\nconst prompt = `Write a 1500-2000 word Medium article analyzing this week's Bitcoin market through the lens of AI predictions. Data:\n\nPerformance (7d): ${JSON.stringify(performance, null, 2)}\n\nDaily Summary: ${JSON.stringify(summary, null, 2)}\n\n30-Day Accuracy: ${JSON.stringify(accuracy, null, 2)}\n\nStructure: compelling title, introduction with hook, methodology section, this week's performance analysis, market insights, what the AI sees ahead, conclusion. Markdown format. Educational and authoritative. Return as JSON: {\"title\": \"...\", \"content\": \"...\"}.`;\n\nreturn [{ json: { prompt } }];"
+      },
+      "id": "md-build-prompt",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 4000, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Data-driven, educational, transparent about accuracy. Never financial advice.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "md-claude-api",
+      "name": "Claude Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $('Claude Generate').first().json;\nconst raw = response.content[0].text.trim();\n\n// Parse the JSON response from Claude\nlet parsed;\ntry {\n  // Try direct JSON parse\n  parsed = JSON.parse(raw);\n} catch (e) {\n  // Try extracting JSON from markdown code block\n  const jsonMatch = raw.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[1].trim());\n  } else {\n    // Fallback: use raw text as content\n    parsed = { title: 'Weekly Bitcoin AI Predictions Analysis', content: raw };\n  }\n}\n\nreturn [{ json: { title: parsed.title, content: parsed.content } }];"
+      },
+      "id": "md-extract",
+      "name": "Extract Article",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.medium.com/v1/users/me/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.MEDIUM_INTEGRATION_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.title, contentFormat: 'markdown', content: $json.content, tags: ['bitcoin', 'cryptocurrency', 'ai', 'trading', 'machine-learning'], publishStatus: 'public' }) }}",
+        "options": {}
+      },
+      "id": "md-post",
+      "name": "Post to Medium",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const title = $('Extract Article').first().json.title;\nconst content = $('Extract Article').first().json.content;\nconst now = new Date().toISOString();\nconsole.log(`[${now}] Medium article published: ${title}`);\nreturn [{ json: { status: 'posted', platform: 'medium', timestamp: now, title: title, content_length: content.length } }];"
+      },
+      "id": "md-log",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 0]
+    }
+  ],
+  "connections": {
+    "Saturday 10:00 UTC": {
+      "main": [
+        [{ "node": "Get Performance Card", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Performance Card": {
+      "main": [
+        [{ "node": "Get Daily Summary", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Daily Summary": {
+      "main": [
+        [{ "node": "Get 30d Accuracy", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get 30d Accuracy": {
+      "main": [
+        [{ "node": "Build Claude Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [{ "node": "Claude Generate", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude Generate": {
+      "main": [
+        [{ "node": "Extract Article", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Article": {
+      "main": [
+        [{ "node": "Post to Medium", "type": "main", "index": 0 }]
+      ]
+    },
+    "Post to Medium": {
+      "main": [
+        [{ "node": "Log Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "medium" },
+    { "name": "marketing" },
+    { "name": "ai" }
+  ]
+}

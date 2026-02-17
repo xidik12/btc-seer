@@ -1,0 +1,169 @@
+{
+  "name": "Instagram Prediction Post",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 10:30 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "get-daily-summary",
+      "name": "Get Daily Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const dailySummary = $input.first().json;\n\nconst prompt = `Write an Instagram caption for a Bitcoin prediction card. Data:\\n\\n${JSON.stringify(dailySummary)}\\n\\nInstagram-optimized: hook in first line, use line breaks, 5-10 relevant hashtags at the end (#Bitcoin #BTC #CryptoAI #Trading #BitcoinPrediction etc). Mention 'link in bio' for @BTC_Seer_Bot. Max 400 chars before hashtags.`;\n\nreturn [{ json: { prompt } }];"
+      },
+      "id": "build-prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 500, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Data-driven, educational, transparent about accuracy. Never financial advice.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "claude-api",
+      "name": "Claude Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst caption = response.content[0].text;\n\n// NOTE: Instagram requires an image_url for media creation.\n// In production, generate a prediction card image and host it,\n// or use a pre-generated image URL from the BTC Seer API.\n// The placeholder image_url below should be replaced with an\n// actual image endpoint that returns a valid public image.\nconst imageUrl = 'https://btc-oracle-production.up.railway.app/api/market/price';\n\nreturn [{ json: { caption, imageUrl } }];"
+      },
+      "id": "extract-format",
+      "name": "Extract & Format for IG",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://graph.facebook.com/v18.0/' + $env.META_IG_USER_ID + '/media' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ image_url: $json.imageUrl, caption: $json.caption, access_token: $env.META_PAGE_ACCESS_TOKEN }) }}",
+        "options": {}
+      },
+      "id": "ig-create-media",
+      "name": "IG Create Media Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://graph.facebook.com/v18.0/' + $env.META_IG_USER_ID + '/media_publish' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ creation_id: $json.id, access_token: $env.META_PAGE_ACCESS_TOKEN }) }}",
+        "options": {}
+      },
+      "id": "ig-publish",
+      "name": "IG Publish Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 0]
+    }
+  ],
+  "connections": {
+    "Daily 10:30 UTC": {
+      "main": [
+        [
+          { "node": "Get Daily Summary", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Daily Summary": {
+      "main": [
+        [
+          { "node": "Build Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          { "node": "Claude Generate", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Generate": {
+      "main": [
+        [
+          { "node": "Extract & Format for IG", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract & Format for IG": {
+      "main": [
+        [
+          { "node": "IG Create Media Container", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "IG Create Media Container": {
+      "main": [
+        [
+          { "node": "IG Publish Media", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [
+    { "name": "instagram" },
+    { "name": "marketing" },
+    { "name": "ai" }
+  ]
+}

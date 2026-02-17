@@ -15,7 +15,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import settings
 from app.database import init_db
-from app.api import predictions, signals, news, market, history, influencers, events, quant, coins, whales
+from app.api import predictions, signals, news, market, history, influencers, events, quant, coins, whales, marketing
 from app.api import advisor as advisor_api
 from app.api import admin as admin_api
 from app.api import powerlaw, public_api, liquidations, elliott_wave, subscription, auth as auth_api, referral as referral_api
@@ -377,6 +377,7 @@ app.include_router(subscription.router)
 app.include_router(auth_api.router)
 app.include_router(referral_api.router)
 app.include_router(whales.router)
+app.include_router(marketing.router)
 app.include_router(public_api.router)
 
 
