@@ -138,7 +138,7 @@ async def get_event_memory_status(
     )
     first_ts = first_event.scalar()
     if first_ts and total_count:
-        days_span = max((datetime.utcnow() - first_ts).days, 1)
+        days_span = max((datetime.utcnow() - first_ts).total_seconds() / 86400, 0.1)
         avg_per_day = round(total_count / days_span, 2)
     else:
         avg_per_day = 0.0

@@ -78,22 +78,81 @@ RSS_FEEDS = {
     "cointelegraph_es": "https://es.cointelegraph.com/rss",
     "diariobitcoin_es": "https://www.diariobitcoin.com/feed/",
     "google_news_btc_es": "https://news.google.com/rss/search?q=bitcoin+OR+criptomoneda+OR+cripto&hl=es&gl=ES&ceid=ES:es",
+
+    # ── Arabic crypto news ──
+    "cointelegraph_ar": "https://ar.cointelegraph.com/rss",
+    "google_news_btc_ar": "https://news.google.com/rss/search?q=%D8%A8%D9%8A%D8%AA%D9%83%D9%88%D9%8A%D9%86+OR+%D8%B9%D9%85%D9%84%D8%A9+%D8%B1%D9%82%D9%85%D9%8A%D8%A9+OR+bitcoin&hl=ar&gl=AE&ceid=AE:ar",
+    "google_news_saudi_btc": "https://news.google.com/rss/search?q=%D8%A8%D9%8A%D8%AA%D9%83%D9%88%D9%8A%D9%86+OR+%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9+%D9%83%D8%B1%D9%8A%D8%A8%D8%AA%D9%88+OR+bitcoin+saudi&hl=ar&gl=SA&ceid=SA:ar",
+
+    # ── Japanese crypto news ──
+    "cointelegraph_jp": "https://jp.cointelegraph.com/rss",
+    "google_news_btc_jp": "https://news.google.com/rss/search?q=%E3%83%93%E3%83%83%E3%83%88%E3%82%B3%E3%82%A4%E3%83%B3+OR+%E4%BB%AE%E6%83%B3%E9%80%9A%E8%B2%A8+OR+bitcoin&hl=ja&gl=JP&ceid=JP:ja",
+
+    # ── Korean crypto news ──
+    "google_news_btc_kr": "https://news.google.com/rss/search?q=%EB%B9%84%ED%8A%B8%EC%BD%94%EC%9D%B8+OR+%EC%95%94%ED%98%B8%ED%99%94%ED%8F%90+OR+bitcoin&hl=ko&gl=KR&ceid=KR:ko",
+
+    # ── Turkish crypto news ──
+    "cointelegraph_tr": "https://tr.cointelegraph.com/rss",
+    "google_news_btc_tr": "https://news.google.com/rss/search?q=bitcoin+OR+kripto+para+OR+kripto&hl=tr&gl=TR&ceid=TR:tr",
+
+    # ── Portuguese / Brazilian crypto news ──
+    "cointelegraph_br": "https://br.cointelegraph.com/rss",
+    "beincrypto_br": "https://br.beincrypto.com/feed/",
+    "google_news_btc_br": "https://news.google.com/rss/search?q=bitcoin+OR+criptomoeda+OR+cripto&hl=pt-BR&gl=BR&ceid=BR:pt-419",
+
+    # ── Hindi / Indian crypto news ──
+    "google_news_btc_in": "https://news.google.com/rss/search?q=bitcoin+OR+%E0%A4%AC%E0%A4%BF%E0%A4%9F%E0%A4%95%E0%A5%89%E0%A4%87%E0%A4%A8+OR+crypto+india&hl=hi&gl=IN&ceid=IN:hi",
+
+    # ── Italian crypto news ──
+    "cointelegraph_it": "https://it.cointelegraph.com/rss",
+
+    # ── German crypto news ──
+    "cointelegraph_de": "https://de.cointelegraph.com/rss",
+
+    # ── Country adoption / sovereign BTC (English, multi-region) ──
+    "google_news_btc_reserve": "https://news.google.com/rss/search?q=bitcoin+reserve+OR+strategic+bitcoin+OR+sovereign+bitcoin+OR+country+bitcoin&hl=en-US&gl=US&ceid=US:en",
+    "google_news_mideast_btc": "https://news.google.com/rss/search?q=bitcoin+OR+crypto+saudi+OR+uae+OR+qatar+OR+dubai+OR+bahrain+OR+israel&hl=en-US&gl=US&ceid=US:en",
 }
 
 # Map feed source names to language codes
 FEED_LANGUAGE_HINTS = {
+    # Russian
     "bits_media_ru": "ru",
     "forklog_ru": "ru",
     "coinspot_ru": "ru",
     "google_news_btc_ru": "ru",
     "google_news_rbc_ru": "ru",
+    # Chinese
     "8btc_cn": "zh-cn",
     "google_news_btc_cn": "zh-cn",
+    # Spanish
     "criptonoticias_es": "es",
     "beincrypto_es": "es",
     "cointelegraph_es": "es",
     "diariobitcoin_es": "es",
     "google_news_btc_es": "es",
+    # Arabic
+    "cointelegraph_ar": "ar",
+    "google_news_btc_ar": "ar",
+    "google_news_saudi_btc": "ar",
+    # Japanese
+    "cointelegraph_jp": "ja",
+    "google_news_btc_jp": "ja",
+    # Korean
+    "google_news_btc_kr": "ko",
+    # Turkish
+    "cointelegraph_tr": "tr",
+    "google_news_btc_tr": "tr",
+    # Portuguese
+    "cointelegraph_br": "pt",
+    "beincrypto_br": "pt",
+    "google_news_btc_br": "pt",
+    # Hindi
+    "google_news_btc_in": "hi",
+    # Italian
+    "cointelegraph_it": "it",
+    # German
+    "cointelegraph_de": "de",
 }
 
 CRYPTOPANIC_URL = "https://cryptopanic.com/api/v1/posts/"
