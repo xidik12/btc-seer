@@ -1,0 +1,290 @@
+{
+  "name": "Owner Report — Weekly Business",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 20 * * 0"
+            }
+          ]
+        }
+      },
+      "id": "wbr-schedule",
+      "name": "Sunday 20:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/user-metrics",
+        "options": {}
+      },
+      "id": "wbr-fetch-users",
+      "name": "Fetch User Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, -180]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/revenue-metrics?days=7",
+        "options": {}
+      },
+      "id": "wbr-fetch-revenue",
+      "name": "Fetch Revenue Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "wbr-fetch-performance",
+      "name": "Fetch Performance Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 180]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/referral-leaderboard",
+        "options": {}
+      },
+      "id": "wbr-fetch-referrals",
+      "name": "Fetch Referral Leaderboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 360]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/charts/weekly-summary.png?size=telegram",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "wbr-fetch-chart",
+      "name": "Fetch Weekly Chart",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 540]
+    },
+    {
+      "parameters": {
+        "jsCode": "const users = $('Fetch User Metrics').first().json;\nconst revenue = $('Fetch Revenue Metrics').first().json;\nconst perf = $('Fetch Performance Card').first().json;\nconst referrals = $('Fetch Referral Leaderboard').first().json;\n\nconst prompt = `Analyze the following weekly business metrics for BTC Seer and provide:\n1. Key highlights (what went well)\n2. Concerns (what needs attention)\n3. Trends (compare to implied previous performance)\n4. Top 3 actionable recommendations for next week\n\nBe concise and direct. This is an internal owner report, not public-facing.\n\nUser Metrics: ${JSON.stringify(users)}\n\nRevenue Metrics (7 days): ${JSON.stringify(revenue)}\n\nPerformance Card (7 days): ${JSON.stringify(perf)}\n\nReferral Leaderboard: ${JSON.stringify(referrals)}\n\nFormat as plain text with sections. Max 800 words.`;\n\nreturn [{ json: { prompt, users, revenue, perf, referrals } }];"
+      },
+      "id": "wbr-build-prompt",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 2000, system: 'You are BTC Seer AI, the social media voice of BTC Seer \\u2014 an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording \\u2014 never post the same structure twice. Use emojis sparingly but effectively.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "wbr-claude-api",
+      "name": "Claude Analyze Trends",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet analysis = '';\n\nif (response.content && response.content.length > 0) {\n  analysis = response.content[0].text;\n} else {\n  analysis = 'Claude analysis unavailable this week.';\n}\n\nreturn [{ json: { analysis } }];"
+      },
+      "id": "wbr-extract-analysis",
+      "name": "Extract Analysis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "const users = $('Build Claude Prompt').first().json.users;\nconst revenue = $('Build Claude Prompt').first().json.revenue;\nconst perf = $('Build Claude Prompt').first().json.perf;\nconst referrals = $('Build Claude Prompt').first().json.referrals;\nconst analysis = $('Extract Analysis').first().json.analysis;\n\nconst weekEnd = new Date().toISOString().split('T')[0];\nconst weekStart = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];\n\nconst totalUsers = users.total_users ?? users.totalUsers ?? 0;\nconst newUsers = users.new_users_week ?? users.newUsersWeek ?? users.new_users_today ?? 0;\nconst premiumUsers = users.premium_users ?? users.premiumUsers ?? 0;\nconst trialUsers = users.trial_users ?? users.trialUsers ?? 0;\nconst churnRate = users.churn_rate ?? users.churnRate ?? 'N/A';\n\nconst stars = revenue.total_stars ?? revenue.totalStars ?? 0;\nconst usd = revenue.total_usd ?? revenue.totalUsd ?? (stars * 0.02).toFixed(2);\nconst conversions = revenue.trial_conversions ?? revenue.trialConversions ?? 0;\nconst arpu = revenue.arpu ?? (premiumUsers > 0 ? (stars / premiumUsers).toFixed(1) : '0');\n\nconst predMade = perf.predictions_made ?? perf.predictionsMade ?? 0;\nconst predCorrect = perf.predictions_correct ?? perf.predictionsCorrect ?? 0;\nconst accuracy = perf.accuracy ?? (predMade > 0 ? ((predCorrect / predMade) * 100).toFixed(1) : '0.0');\nconst signals = perf.trading_signals ?? perf.tradingSignals ?? 0;\nconst profitable = perf.profitable_signals ?? perf.profitableSignals ?? 0;\n\nconst topReferrers = Array.isArray(referrals.leaderboard ?? referrals) ? (referrals.leaderboard ?? referrals).slice(0, 5) : [];\nconst referralList = topReferrers.length > 0\n  ? topReferrers.map((r, i) => `  ${i + 1}. ${r.username ?? r.name ?? 'User'} \\u2014 ${r.referrals ?? r.count ?? 0} referrals`).join('\\n')\n  : '  No referral data';\n\nconst report = `\\u{1F4CA} <b>Weekly Business Report</b>\\n${weekStart} \\u2192 ${weekEnd}\\n\\n` +\n  `<b>\\u{1F465} USERS</b>\\n+${newUsers} new | ${totalUsers} total | ${premiumUsers} premium | ${trialUsers} trial | churn: ${churnRate}\\n\\n` +\n  `<b>\\u{1F4B0} REVENUE</b>\\n${stars} Stars (~$${usd}) | ${conversions} conversions | ARPU: ${arpu}\\n\\n` +\n  `<b>\\u{1F3AF} PREDICTIONS</b>\\n${predMade} made | ${predCorrect} correct (${accuracy}%) | ${signals} signals | ${profitable} profitable\\n\\n` +\n  `<b>\\u{1F517} TOP REFERRERS</b>\\n${referralList}\\n\\n` +\n  `<b>\\u{1F916} AI ANALYSIS</b>\\n${analysis}`;\n\nconst discordSummary = `**Weekly Business Report** (${weekStart} \\u2192 ${weekEnd})\\n\\n` +\n  `**Users:** +${newUsers} new | ${totalUsers} total | ${premiumUsers} premium\\n` +\n  `**Revenue:** ${stars} Stars (~$${usd}) | ${conversions} conversions\\n` +\n  `**Predictions:** ${predMade} made | ${accuracy}% accuracy\\n` +\n  `**Signals:** ${signals} total | ${profitable} profitable\\n\\n` +\n  `Full report sent to Telegram.`;\n\nreturn [{ json: { report, discordSummary } }];"
+      },
+      "id": "wbr-combine-report",
+      "name": "Combine Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendPhoto",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.ADMIN_TELEGRAM_ID, photo: 'https://btc-oracle-production.up.railway.app/api/charts/weekly-summary.png?size=telegram', caption: $json.report.substring(0, 1024), parse_mode: 'HTML' }) }}",
+        "options": {}
+      },
+      "id": "wbr-send-telegram",
+      "name": "Send to Admin Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1400, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.discordSummary }) }}",
+        "options": {}
+      },
+      "id": "wbr-send-discord",
+      "name": "Send to Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1400, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const tgResult = $('Send to Admin Telegram').first().json;\nconst discordResult = $('Send to Discord').first().json;\nconst now = new Date().toISOString();\n\nconst tgSuccess = tgResult.ok === true;\nconsole.log(`[${now}] Weekly Business Report — TG: ${tgSuccess ? 'OK' : 'FAIL'} | Discord: sent`);\n\nreturn [{ json: { logged: true, telegram: tgSuccess, timestamp: now } }];"
+      },
+      "id": "wbr-log",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1620, 120]
+    }
+  ],
+  "connections": {
+    "Sunday 20:00 UTC": {
+      "main": [
+        [
+          { "node": "Fetch User Metrics", "type": "main", "index": 0 },
+          { "node": "Fetch Revenue Metrics", "type": "main", "index": 0 },
+          { "node": "Fetch Performance Card", "type": "main", "index": 0 },
+          { "node": "Fetch Referral Leaderboard", "type": "main", "index": 0 },
+          { "node": "Fetch Weekly Chart", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch User Metrics": {
+      "main": [
+        [
+          { "node": "Build Claude Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Revenue Metrics": {
+      "main": [
+        [
+          { "node": "Build Claude Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Performance Card": {
+      "main": [
+        [
+          { "node": "Build Claude Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Referral Leaderboard": {
+      "main": [
+        [
+          { "node": "Build Claude Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Weekly Chart": {
+      "main": [
+        [
+          { "node": "Build Claude Prompt", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [
+          { "node": "Claude Analyze Trends", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Analyze Trends": {
+      "main": [
+        [
+          { "node": "Extract Analysis", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Analysis": {
+      "main": [
+        [
+          { "node": "Combine Report", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Combine Report": {
+      "main": [
+        [
+          { "node": "Send to Admin Telegram", "type": "main", "index": 0 },
+          { "node": "Send to Discord", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send to Admin Telegram": {
+      "main": [
+        [
+          { "node": "Log Result", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send to Discord": {
+      "main": [
+        [
+          { "node": "Log Result", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "report" }
+  ]
+}

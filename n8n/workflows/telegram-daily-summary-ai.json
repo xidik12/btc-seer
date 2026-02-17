@@ -44,7 +44,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const dailySummary = $('Fetch Daily Summary').first().json;\nconst performanceCard = $('Fetch Performance Card').first().json;\n\nconst prompt = `Generate a comprehensive daily summary post for Telegram. Data:\n\nDaily Summary: ${JSON.stringify(dailySummary)}\n\nPerformance Card (1 day): ${JSON.stringify(performanceCard)}\n\nCover: today's BTC price action, prediction accuracy for the day, key market events, sentiment analysis, what to watch tomorrow. Use Telegram Markdown formatting. Max 1500 chars.`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const dailySummary = $('Fetch Daily Summary').first().json;\nconst performanceCard = $('Fetch Performance Card').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/price.png?hours=24&size=telegram';\n\nconst prompt = `Generate a comprehensive daily summary post for Telegram. Data:\n\nDaily Summary: ${JSON.stringify(dailySummary)}\n\nPerformance Card (1 day): ${JSON.stringify(performanceCard)}\n\nA 24-hour price chart image is available at: ${chartUrl}\nInclude this chart URL in the message so Telegram shows it as a preview.\n\nCover: today's BTC price action, prediction accuracy for the day, key market events, sentiment analysis, what to watch tomorrow. Use Telegram Markdown formatting. Max 1500 chars.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "build-prompt",
       "name": "Build Prompt",

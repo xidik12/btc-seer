@@ -44,7 +44,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const performanceCard = $('Get Performance Card').first().json;\nconst dailySummary = $('Get Daily Summary').first().json;\n\nconst prompt = `Write a 500-1000 word analysis post for r/CryptoCurrency. Data:\\n\\nPerformance Card (7 days): ${JSON.stringify(performanceCard)}\\n\\nDaily Summary: ${JSON.stringify(dailySummary)}\\n\\nStructure: catchy title, TLDR at top, detailed analysis with data, methodology section explaining AI prediction approach, results/accuracy, conclusion. Reddit markdown. Educational tone — provide value, don't just promote. Mention BTC Seer bot naturally at the end. Return JSON: {\"title\": \"...\", \"body\": \"...\"}.`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const performanceCard = $('Get Performance Card').first().json;\nconst dailySummary = $('Get Daily Summary').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/accuracy.png?days=7&size=default';\n\nconst prompt = `Write a 500-1000 word analysis post for r/CryptoCurrency. Data:\\n\\nPerformance Card (7 days): ${JSON.stringify(performanceCard)}\\n\\nDaily Summary: ${JSON.stringify(dailySummary)}\\n\\nA chart image is available at: ${chartUrl} — include this URL in your post so it shows as a preview image.\\n\\nStructure: catchy title, TLDR at top, detailed analysis with data, methodology section explaining AI prediction approach, results/accuracy, conclusion. Reddit markdown. Educational tone — provide value, don't just promote. Mention BTC Seer bot naturally at the end. Return JSON: {\"title\": \"...\", \"body\": \"...\"}.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "build-prompt",
       "name": "Build Prompt",

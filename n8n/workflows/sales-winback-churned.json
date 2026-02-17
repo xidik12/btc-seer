@@ -1,0 +1,215 @@
+{
+  "name": "Sales — Win-Back Churned Users",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 15 * * *"
+            }
+          ]
+        }
+      },
+      "id": "wbc-schedule",
+      "name": "Daily 15:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/churned-users?days_since=3",
+        "options": {}
+      },
+      "id": "wbc-fetch-churned",
+      "name": "Fetch Churned Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, -60]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "wbc-fetch-accuracy",
+      "name": "Fetch 7-Day Accuracy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "const churned = $('Fetch Churned Users').first().json;\nconst accuracy = $('Fetch 7-Day Accuracy').first().json;\n\nconst users = Array.isArray(churned) ? churned : (churned.users || []);\n\nif (users.length === 0) {\n  return [{ json: { skip: true, message: 'No churned users to win back today' } }];\n}\n\nreturn users.map(user => ({\n  json: {\n    skip: false,\n    userId: user.telegram_id || user.chat_id || user.id,\n    username: user.username || user.first_name || 'there',\n    daysSinceChurn: user.days_since_churn || user.days_inactive || 3,\n    previousPlan: user.previous_plan || user.last_plan || 'Premium',\n    totalPredictions: user.total_predictions || user.prediction_count || 0,\n    missedSignals: user.missed_signals || 0,\n    accuracy: JSON.stringify(accuracy)\n  }\n}));"
+      },
+      "id": "wbc-prepare-users",
+      "name": "Prepare Churned Users",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.skip }}",
+              "value2": true,
+              "operation": "notEqual"
+            }
+          ]
+        }
+      },
+      "id": "wbc-filter-skip",
+      "name": "Filter Active",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { username, daysSinceChurn, previousPlan, totalPredictions, missedSignals, accuracy } = $json;\n\nconst prompt = `Write a win-back Telegram DM for churned user \"${username}\" who left ${daysSinceChurn} days ago.\n\nUser context:\n- Was on: ${previousPlan} plan\n- Total predictions before leaving: ${totalPredictions}\n- Signals missed since leaving: ${missedSignals}\n- Current 7-day platform accuracy: ${accuracy}\n\nStrategy:\n- Acknowledge they left — no guilt trips\n- Show what they've been missing with SPECIFIC data from the accuracy stats\n- If missed signals data is available, mention how many profitable signals they missed\n- Offer a compelling reason to come back (improved features, better accuracy, etc.)\n- Make re-subscribing effortless with a clear /premium CTA\n- Tone: respectful, data-driven, no begging\n\nRules:\n- Use HTML formatting (<b>, <i>, <code>) — NOT Markdown\n- Keep under 900 characters\n- Lead with value, not desperation\n- Be transparent about accuracy (including any misses in the data)\n- Never give financial advice\n- Vary your approach — sometimes lead with stats, sometimes with a story, sometimes with a question`;\n\nreturn [{ json: { prompt, userId: $json.userId } }];"
+      },
+      "id": "wbc-build-prompt",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, -60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 1024, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "wbc-claude-api",
+      "name": "Claude Generate Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1160, -60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet text = '';\n\nif (response.content && response.content.length > 0) {\n  text = response.content[0].text;\n} else {\n  text = '<b>We\\'ve missed you at BTC Seer</b>\\n\\nOur AI has been making some strong calls while you were away. Come see what you missed — tap /premium to reactivate.';\n}\n\nreturn [{ json: { text, userId: $('Build Claude Prompt').first().json.userId } }];"
+      },
+      "id": "wbc-extract-text",
+      "name": "Extract Message Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, -60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.userId, text: $json.text, parse_mode: 'HTML' }) }}",
+        "options": {}
+      },
+      "id": "wbc-telegram-send",
+      "name": "Send Telegram DM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1600, -60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\nconst userId = $('Extract Message Text').first().json.userId;\nconst success = result.ok === true;\n\nconsole.log(`[Win-Back] Sent to user ${userId}: ${success ? 'OK' : 'FAILED'}`);\n\nreturn [{ json: { userId, success, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "wbc-log-result",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1820, -60]
+    }
+  ],
+  "connections": {
+    "Daily 15:00 UTC": {
+      "main": [
+        [
+          { "node": "Fetch Churned Users", "type": "main", "index": 0 },
+          { "node": "Fetch 7-Day Accuracy", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Churned Users": {
+      "main": [
+        [
+          { "node": "Prepare Churned Users", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch 7-Day Accuracy": {
+      "main": [
+        [
+          { "node": "Prepare Churned Users", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Churned Users": {
+      "main": [
+        [
+          { "node": "Filter Active", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Filter Active": {
+      "main": [
+        [
+          { "node": "Build Claude Prompt", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [
+          { "node": "Claude Generate Message", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Generate Message": {
+      "main": [
+        [
+          { "node": "Extract Message Text", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Message Text": {
+      "main": [
+        [
+          { "node": "Send Telegram DM", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Telegram DM": {
+      "main": [
+        [
+          { "node": "Log Result", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "sales" }
+  ]
+}

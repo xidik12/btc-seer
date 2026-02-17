@@ -1,0 +1,255 @@
+{
+  "name": "Sales — Onboarding Sequence",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "onb-schedule",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/new-users?hours=6",
+        "options": {}
+      },
+      "id": "onb-fetch-6h",
+      "name": "Fetch New Users (6h)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, -270]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/new-users?hours=24",
+        "options": {}
+      },
+      "id": "onb-fetch-24h",
+      "name": "Fetch Users at 24h",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, -90]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/new-users?hours=48",
+        "options": {}
+      },
+      "id": "onb-fetch-48h",
+      "name": "Fetch Users at 48h",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 90]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/new-users?hours=72",
+        "options": {}
+      },
+      "id": "onb-fetch-72h",
+      "name": "Fetch Users at 72h",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 270]
+    },
+    {
+      "parameters": {
+        "jsCode": "const users6h = $('Fetch New Users (6h)').first().json;\nconst users24h = $('Fetch Users at 24h').first().json;\nconst users48h = $('Fetch Users at 48h').first().json;\nconst users72h = $('Fetch Users at 72h').first().json;\n\nconst allUsers = [];\n\nconst addUsers = (data, stage) => {\n  const list = Array.isArray(data) ? data : (data.users || []);\n  list.forEach(u => allUsers.push({ ...u, stage }));\n};\n\naddUsers(users6h, 'welcome');\naddUsers(users24h, 'signals');\naddUsers(users48h, 'accuracy');\naddUsers(users72h, 'referral');\n\nif (allUsers.length === 0) {\n  return [{ json: { skip: true, message: 'No onboarding users at this time' } }];\n}\n\nreturn allUsers.map(user => ({\n  json: {\n    skip: false,\n    userId: user.telegram_id || user.chat_id || user.id,\n    username: user.username || user.first_name || 'there',\n    stage: user.stage\n  }\n}));"
+      },
+      "id": "onb-merge-users",
+      "name": "Merge & Tag Stage",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.skip }}",
+              "value2": true,
+              "operation": "notEqual"
+            }
+          ]
+        }
+      },
+      "id": "onb-filter-skip",
+      "name": "Filter Active",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { stage, username } = $json;\n\nlet stageInstructions = '';\n\nswitch (stage) {\n  case 'welcome':\n    stageInstructions = `This user JUST joined (within the last 6 hours). Write an enthusiastic welcome message.\n- Introduce BTC Seer briefly (AI-powered Bitcoin predictions)\n- Tell them to try /predict as their first command\n- Mention they have a free Premium trial active\n- Keep it warm and short (under 600 chars)\n- Make them feel like they made a great decision joining`;\n    break;\n\n  case 'signals':\n    stageInstructions = `This user has been here 24 hours. Time to introduce trading signals.\n- Ask how their first day went\n- Introduce the /signal command for real-time trading signals\n- Briefly explain what signals include (direction, confidence, timeframe)\n- Encourage them to check the next signal\n- Keep it under 600 chars`;\n    break;\n\n  case 'accuracy':\n    stageInstructions = `This user has been here 48 hours. Show them the track record.\n- Acknowledge they've been exploring for 2 days\n- Introduce /accuracy to see the platform's prediction track record\n- Emphasize transparency — we show wins AND misses\n- This builds trust and differentiates from scam bots\n- Keep it under 600 chars`;\n    break;\n\n  case 'referral':\n    stageInstructions = `This user has been here 72 hours. Time for the referral play.\n- They've had 3 days to see value — now invite them to share\n- Introduce /referral command\n- Highlight the reward: BOTH referrer and friend get +7 days Premium\n- Make sharing feel natural, not spammy\n- Keep it under 600 chars`;\n    break;\n}\n\nconst prompt = `Write a personalized Telegram DM for user \"${username}\" as part of the onboarding sequence.\n\n${stageInstructions}\n\nRules:\n- Use HTML formatting (<b>, <i>, <code>) — NOT Markdown\n- Make it conversational and personal\n- Never give financial advice\n- Vary your opening — don't always start the same way`;\n\nreturn [{ json: { prompt, userId: $json.userId, stage } }];"
+      },
+      "id": "onb-build-prompt",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, -60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 800, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "onb-claude-api",
+      "name": "Claude Generate Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1160, -60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst stage = $('Build Claude Prompt').first().json.stage;\nlet text = '';\n\nif (response.content && response.content.length > 0) {\n  text = response.content[0].text;\n} else {\n  const fallbacks = {\n    welcome: '<b>Welcome to BTC Seer!</b>\\n\\nTry /predict to get your first AI-powered Bitcoin prediction!',\n    signals: 'Try /signal to receive real-time trading signals from our AI.',\n    accuracy: 'Curious about our track record? Try /accuracy to see our transparent results.',\n    referral: 'Love BTC Seer? Use /referral to share with friends — you both get +7 days Premium!'\n  };\n  text = fallbacks[stage] || fallbacks.welcome;\n}\n\nreturn [{ json: { text, userId: $('Build Claude Prompt').first().json.userId } }];"
+      },
+      "id": "onb-extract-text",
+      "name": "Extract Message Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, -60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.userId, text: $json.text, parse_mode: 'HTML' }) }}",
+        "options": {}
+      },
+      "id": "onb-telegram-send",
+      "name": "Send Telegram DM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1600, -60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\nconst userId = $('Extract Message Text').first().json.userId;\nconst success = result.ok === true;\n\nconsole.log(`[Onboarding] Sent to user ${userId}: ${success ? 'OK' : 'FAILED'}`);\n\nreturn [{ json: { userId, success, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "onb-log-result",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1820, -60]
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [
+        [
+          { "node": "Fetch New Users (6h)", "type": "main", "index": 0 },
+          { "node": "Fetch Users at 24h", "type": "main", "index": 0 },
+          { "node": "Fetch Users at 48h", "type": "main", "index": 0 },
+          { "node": "Fetch Users at 72h", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch New Users (6h)": {
+      "main": [
+        [
+          { "node": "Merge & Tag Stage", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Users at 24h": {
+      "main": [
+        [
+          { "node": "Merge & Tag Stage", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Users at 48h": {
+      "main": [
+        [
+          { "node": "Merge & Tag Stage", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Users at 72h": {
+      "main": [
+        [
+          { "node": "Merge & Tag Stage", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Merge & Tag Stage": {
+      "main": [
+        [
+          { "node": "Filter Active", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Filter Active": {
+      "main": [
+        [
+          { "node": "Build Claude Prompt", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [
+          { "node": "Claude Generate Message", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Generate Message": {
+      "main": [
+        [
+          { "node": "Extract Message Text", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Message Text": {
+      "main": [
+        [
+          { "node": "Send Telegram DM", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Telegram DM": {
+      "main": [
+        [
+          { "node": "Log Result", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "sales" }
+  ]
+}

@@ -13,7 +13,8 @@ from app.database import (
     FundingRate, BtcDominance, IndicatorSnapshot, AlertLog, ModelVersion,
     PortfolioState, TradeAdvice, TradeResult, BotUser,
     PredictionContext, ModelPerformanceLog, WhaleTransaction,
-    PredictionAnalysis,
+    PredictionAnalysis, MarketingMetrics, SupportTicket,
+    PaymentHistory, ApiUsageLog, Referral,
     timestamp_diff_order,
 )
 from app.collectors import (
@@ -2658,3 +2659,133 @@ async def deduplicate_predictions():
 
     except Exception as e:
         logger.error(f"Deduplication error: {e}", exc_info=True)
+
+
+async def snapshot_daily_metrics():
+    """Capture daily KPIs into MarketingMetrics table (runs at 23:55 UTC)."""
+    try:
+        now = datetime.utcnow()
+        today = now.strftime("%Y-%m-%d")
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_ago = now - timedelta(hours=24)
+
+        async with async_session() as session:
+            # Check if already snapshotted today
+            existing = await session.execute(
+                select(MarketingMetrics).where(MarketingMetrics.date == today)
+            )
+            if existing.scalar_one_or_none():
+                logger.info(f"Metrics already snapshotted for {today}")
+                return
+
+            # Users
+            total_users = (await session.execute(
+                select(func.count(BotUser.id))
+            )).scalar() or 0
+
+            premium_users = (await session.execute(
+                select(func.count(BotUser.id)).where(
+                    BotUser.subscription_end.isnot(None),
+                    BotUser.subscription_end > now,
+                )
+            )).scalar() or 0
+
+            trial_users = (await session.execute(
+                select(func.count(BotUser.id)).where(
+                    BotUser.trial_end.isnot(None),
+                    BotUser.trial_end > now,
+                    BotUser.subscription_tier == "free",
+                )
+            )).scalar() or 0
+
+            new_users_today = (await session.execute(
+                select(func.count(BotUser.id)).where(BotUser.joined_at >= today_start)
+            )).scalar() or 0
+
+            # Revenue
+            stars_today = (await session.execute(
+                select(func.sum(PaymentHistory.stars_amount))
+                .where(PaymentHistory.created_at >= today_start)
+            )).scalar() or 0
+
+            # Predictions
+            preds_made = (await session.execute(
+                select(func.count(Prediction.id))
+                .where(Prediction.timestamp >= today_start)
+            )).scalar() or 0
+
+            preds_correct = (await session.execute(
+                select(func.count(Prediction.id))
+                .where(Prediction.timestamp >= today_start)
+                .where(Prediction.was_correct == True)
+            )).scalar() or 0
+
+            accuracy = round(preds_correct / preds_made * 100, 1) if preds_made > 0 else 0.0
+
+            # Signals
+            signals_gen = (await session.execute(
+                select(func.count(Signal.id))
+                .where(Signal.timestamp >= today_start)
+            )).scalar() or 0
+
+            # Support
+            tickets_opened = (await session.execute(
+                select(func.count(SupportTicket.id))
+                .where(SupportTicket.created_at >= today_start)
+            )).scalar() or 0
+
+            tickets_resolved = (await session.execute(
+                select(func.count(SupportTicket.id))
+                .where(SupportTicket.resolved_at >= today_start)
+            )).scalar() or 0
+
+            # Referrals
+            referrals_today = (await session.execute(
+                select(func.count(Referral.id))
+                .where(Referral.created_at >= today_start)
+            )).scalar() or 0
+
+            total_referrals = (await session.execute(
+                select(func.count(Referral.id))
+            )).scalar() or 0
+
+            # API usage
+            api_requests = (await session.execute(
+                select(func.count(ApiUsageLog.id))
+                .where(ApiUsageLog.timestamp >= today_start)
+            )).scalar() or 0
+
+            api_errors = (await session.execute(
+                select(func.count(ApiUsageLog.id))
+                .where(ApiUsageLog.timestamp >= today_start)
+                .where(ApiUsageLog.status_code >= 500)
+            )).scalar() or 0
+
+            # Save snapshot
+            metrics = MarketingMetrics(
+                date=today,
+                total_users=total_users,
+                premium_users=premium_users,
+                trial_users=trial_users,
+                new_users_today=new_users_today,
+                active_users_24h=0,  # Would need activity tracking
+                stars_revenue_today=stars_today,
+                trial_conversions_today=0,
+                predictions_made=preds_made,
+                predictions_correct=preds_correct,
+                accuracy_pct=accuracy,
+                signals_generated=signals_gen,
+                signals_profitable=0,
+                tickets_opened=tickets_opened,
+                tickets_resolved=tickets_resolved,
+                referrals_today=referrals_today,
+                total_referrals=total_referrals,
+                api_requests=api_requests,
+                api_errors=api_errors,
+            )
+            session.add(metrics)
+            await session.commit()
+            logger.info(f"Daily metrics snapshot saved for {today}: {total_users} users, {premium_users} premium, {preds_made} predictions ({accuracy}%)")
+
+    except Exception as e:
+        logger.error(f"Metrics snapshot error: {e}", exc_info=True)

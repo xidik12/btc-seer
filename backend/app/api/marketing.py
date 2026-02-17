@@ -13,7 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import (
     get_session, Price, Prediction, QuantPrediction,
     Signal, MacroData, OnChainData, News, InfluencerTweet,
-    WhaleTransaction,
+    WhaleTransaction, BotUser, PaymentHistory, Referral,
+    TradeResult, SupportTicket, PortfolioState,
 )
 
 logger = logging.getLogger(__name__)
@@ -410,4 +411,283 @@ async def trending_analysis(session: AsyncSession = Depends(get_session)):
         "event_count": len(events),
         "events": events,
         "current_price": price_now.close if price_now else None,
+    }
+
+
+# ────────────────────────────────────────────────────────────────
+#  EXTENDED MARKETING API — Sales, Reports, Growth
+# ────────────────────────────────────────────────────────────────
+
+
+@router.get("/user-metrics")
+async def user_metrics(session: AsyncSession = Depends(get_session)):
+    """Total users, premium, trial, new today, active 24h."""
+    now = datetime.utcnow()
+    day_ago = now - timedelta(hours=24)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    total = (await session.execute(select(func.count(BotUser.id)))).scalar() or 0
+    premium = (await session.execute(
+        select(func.count(BotUser.id)).where(
+            BotUser.subscription_end.isnot(None),
+            BotUser.subscription_end > now,
+        )
+    )).scalar() or 0
+    trial = (await session.execute(
+        select(func.count(BotUser.id)).where(
+            BotUser.trial_end.isnot(None),
+            BotUser.trial_end > now,
+            BotUser.subscription_tier == "free",
+        )
+    )).scalar() or 0
+    new_today = (await session.execute(
+        select(func.count(BotUser.id)).where(BotUser.joined_at >= today_start)
+    )).scalar() or 0
+
+    return {
+        "timestamp": now.isoformat(),
+        "total_users": total,
+        "premium_users": premium,
+        "trial_users": trial,
+        "free_users": total - premium - trial,
+        "new_today": new_today,
+    }
+
+
+@router.get("/revenue-metrics")
+async def revenue_metrics(
+    days: int = Query(30, ge=1, le=365),
+    session: AsyncSession = Depends(get_session),
+):
+    """Stars revenue, conversions, churn rate."""
+    now = datetime.utcnow()
+    since = now - timedelta(days=days)
+
+    # Total stars revenue
+    result = await session.execute(
+        select(func.sum(PaymentHistory.stars_amount))
+        .where(PaymentHistory.created_at >= since)
+    )
+    total_stars = result.scalar() or 0
+
+    # Payment count
+    payment_count = (await session.execute(
+        select(func.count(PaymentHistory.id))
+        .where(PaymentHistory.created_at >= since)
+    )).scalar() or 0
+
+    # Unique payers
+    unique_payers = (await session.execute(
+        select(func.count(func.distinct(PaymentHistory.telegram_id)))
+        .where(PaymentHistory.created_at >= since)
+    )).scalar() or 0
+
+    # Trial conversions (users who had trial and then paid)
+    trial_conversions = (await session.execute(
+        select(func.count(func.distinct(PaymentHistory.telegram_id)))
+        .where(PaymentHistory.created_at >= since)
+    )).scalar() or 0
+
+    # Churned (had premium, now expired)
+    churned = (await session.execute(
+        select(func.count(BotUser.id)).where(
+            BotUser.subscription_end.isnot(None),
+            BotUser.subscription_end < now,
+            BotUser.subscription_end >= since,
+        )
+    )).scalar() or 0
+
+    return {
+        "days": days,
+        "total_stars": total_stars,
+        "estimated_usd": round(total_stars * 0.02, 2),  # ~$0.02 per star
+        "payment_count": payment_count,
+        "unique_payers": unique_payers,
+        "trial_conversions": trial_conversions,
+        "churned_users": churned,
+    }
+
+
+@router.get("/trial-expiring-users")
+async def trial_expiring_users(
+    days_remaining: int = Query(2, ge=0, le=7),
+    session: AsyncSession = Depends(get_session),
+):
+    """Users whose trial ends within N days."""
+    now = datetime.utcnow()
+    cutoff = now + timedelta(days=days_remaining)
+
+    result = await session.execute(
+        select(BotUser).where(
+            BotUser.trial_end.isnot(None),
+            BotUser.trial_end > now,
+            BotUser.trial_end <= cutoff,
+            BotUser.subscription_tier == "free",
+        )
+    )
+    users = result.scalars().all()
+
+    return {
+        "days_remaining": days_remaining,
+        "count": len(users),
+        "users": [
+            {
+                "telegram_id": u.telegram_id,
+                "username": u.username,
+                "trial_end": u.trial_end.isoformat() if u.trial_end else None,
+                "joined_at": u.joined_at.isoformat() if u.joined_at else None,
+            }
+            for u in users
+        ],
+    }
+
+
+@router.get("/churned-users")
+async def churned_users(
+    days_since: int = Query(3, ge=1, le=30),
+    session: AsyncSession = Depends(get_session),
+):
+    """Premium users who lapsed N days ago."""
+    now = datetime.utcnow()
+    target_date = now - timedelta(days=days_since)
+    window_start = target_date - timedelta(hours=12)
+    window_end = target_date + timedelta(hours=12)
+
+    result = await session.execute(
+        select(BotUser).where(
+            BotUser.subscription_end.isnot(None),
+            BotUser.subscription_end >= window_start,
+            BotUser.subscription_end <= window_end,
+        )
+    )
+    users = result.scalars().all()
+
+    return {
+        "days_since": days_since,
+        "count": len(users),
+        "users": [
+            {
+                "telegram_id": u.telegram_id,
+                "username": u.username,
+                "subscription_end": u.subscription_end.isoformat() if u.subscription_end else None,
+            }
+            for u in users
+        ],
+    }
+
+
+@router.get("/new-users")
+async def new_users(
+    hours: int = Query(6, ge=1, le=48),
+    session: AsyncSession = Depends(get_session),
+):
+    """Users who joined in last N hours."""
+    since = datetime.utcnow() - timedelta(hours=hours)
+
+    result = await session.execute(
+        select(BotUser)
+        .where(BotUser.joined_at >= since)
+        .order_by(desc(BotUser.joined_at))
+    )
+    users = result.scalars().all()
+
+    return {
+        "hours": hours,
+        "count": len(users),
+        "users": [
+            {
+                "telegram_id": u.telegram_id,
+                "username": u.username,
+                "joined_at": u.joined_at.isoformat() if u.joined_at else None,
+                "referral_code": u.referral_code,
+            }
+            for u in users
+        ],
+    }
+
+
+@router.get("/upsell-candidates")
+async def upsell_candidates(session: AsyncSession = Depends(get_session)):
+    """Monthly subscribers with 60+ days tenure (upsell to yearly)."""
+    now = datetime.utcnow()
+    cutoff = now - timedelta(days=60)
+
+    result = await session.execute(
+        select(BotUser).where(
+            BotUser.subscription_end.isnot(None),
+            BotUser.subscription_end > now,
+            BotUser.joined_at <= cutoff,
+        )
+    )
+    users = result.scalars().all()
+
+    return {
+        "count": len(users),
+        "users": [
+            {
+                "telegram_id": u.telegram_id,
+                "username": u.username,
+                "joined_at": u.joined_at.isoformat() if u.joined_at else None,
+                "subscription_end": u.subscription_end.isoformat() if u.subscription_end else None,
+                "tenure_days": (now - u.joined_at).days if u.joined_at else 0,
+            }
+            for u in users
+        ],
+    }
+
+
+@router.get("/user-milestones")
+async def user_milestones(session: AsyncSession = Depends(get_session)):
+    """Users who hit 10/50/100 trades today."""
+    milestones = [10, 50, 100, 250, 500]
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    result = await session.execute(
+        select(PortfolioState).where(PortfolioState.total_trades > 0)
+    )
+    portfolios = result.scalars().all()
+
+    milestone_users = []
+    for p in portfolios:
+        for m in milestones:
+            if p.total_trades == m:
+                milestone_users.append({
+                    "telegram_id": p.telegram_id,
+                    "milestone": m,
+                    "total_trades": p.total_trades,
+                    "winning_trades": p.winning_trades,
+                    "win_rate": round(p.winning_trades / p.total_trades * 100, 1) if p.total_trades > 0 else 0,
+                })
+
+    return {
+        "count": len(milestone_users),
+        "users": milestone_users,
+    }
+
+
+@router.get("/referral-leaderboard")
+async def referral_leaderboard(
+    limit: int = Query(10, ge=1, le=50),
+    session: AsyncSession = Depends(get_session),
+):
+    """Top referrers by count."""
+    result = await session.execute(
+        select(BotUser)
+        .where(BotUser.referral_count > 0)
+        .order_by(desc(BotUser.referral_count))
+        .limit(limit)
+    )
+    users = result.scalars().all()
+
+    return {
+        "leaderboard": [
+            {
+                "rank": i + 1,
+                "username": u.username,
+                "referral_count": u.referral_count,
+                "referral_code": u.referral_code,
+            }
+            for i, u in enumerate(users)
+        ],
     }

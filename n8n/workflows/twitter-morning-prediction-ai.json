@@ -30,7 +30,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const summary = $('Get Daily Summary').first().json;\n\nconst prompt = `Write a morning Bitcoin prediction tweet. Here's the live data from BTC Seer AI:\n\n${JSON.stringify(summary, null, 2)}\n\nMake it engaging, vary the format (bullet points, narrative, question-style, data table). Max 270 chars. Include #Bitcoin #BTC. End with 'Try @BTC_Seer_Bot'`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const summary = $('Get Daily Summary').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=twitter';\n\nconst prompt = `Write a morning Bitcoin prediction tweet. Here's the live data from BTC Seer AI:\n\n${JSON.stringify(summary, null, 2)}\n\nA prediction chart image is available at: ${chartUrl}\nInclude this URL at the end of your tweet so it shows as a preview image.\n\nMake it engaging, vary the format (bullet points, narrative, question-style, data table). Max 270 chars (not counting the URL). Include #Bitcoin #BTC. End with 'Try @BTC_Seer_Bot'`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "mp-build-prompt",
       "name": "Build Claude Prompt",

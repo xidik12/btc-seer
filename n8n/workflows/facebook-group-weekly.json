@@ -44,7 +44,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const performanceCard = $('Get Performance Card').first().json;\nconst dailySummary = $('Get Daily Summary').first().json;\n\nconst prompt = `Write a discussion-focused post for a crypto Facebook group. Data:\\n\\nPerformance Card (7 days): ${JSON.stringify(performanceCard)}\\n\\nDaily Summary: ${JSON.stringify(dailySummary)}\\n\\nStart with a thought-provoking question about Bitcoin's direction. Share some data from BTC Seer's weekly performance. Invite discussion. Don't be overly promotional. Max 600 chars.`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const performanceCard = $('Get Performance Card').first().json;\nconst dailySummary = $('Get Daily Summary').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/weekly-summary.png?size=default';\n\nconst prompt = `Write a discussion-focused post for a crypto Facebook group. Data:\\n\\nPerformance Card (7 days): ${JSON.stringify(performanceCard)}\\n\\nDaily Summary: ${JSON.stringify(dailySummary)}\\n\\nA chart image is available at: ${chartUrl} — include this URL in your post so it shows as a preview image.\\n\\nStart with a thought-provoking question about Bitcoin's direction. Share some data from BTC Seer's weekly performance. Invite discussion. Don't be overly promotional. Max 600 chars.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "build-prompt",
       "name": "Build Prompt",

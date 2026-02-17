@@ -31,7 +31,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const dailySummary = $input.first().json;\n\nconst prompt = `Write a Facebook post about today's Bitcoin prediction. Data:\\n\\n${JSON.stringify(dailySummary)}\\n\\nConversational tone, use line breaks, include relevant emojis. Ask a question to drive engagement. Max 500 chars. Include hashtags: #Bitcoin #BTC #CryptoPrediction. Mention trying @BTC_Seer_Bot on Telegram.`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const dailySummary = $input.first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=default';\n\nconst prompt = `Write a Facebook post about today's Bitcoin prediction. Data:\\n\\n${JSON.stringify(dailySummary)}\\n\\nA chart image is available at: ${chartUrl} — include this URL in your post so it shows as a preview image.\\n\\nConversational tone, use line breaks, include relevant emojis. Ask a question to drive engagement. Max 500 chars. Include hashtags: #Bitcoin #BTC #CryptoPrediction. Mention trying @BTC_Seer_Bot on Telegram.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "build-prompt",
       "name": "Build Prompt",

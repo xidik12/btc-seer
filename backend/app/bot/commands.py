@@ -11,6 +11,7 @@ from app.config import settings
 from app.database import (
     async_session, BotUser, Prediction, Signal, News,
     PortfolioState, TradeAdvice, TradeResult, Price, ApiKey, ApiUsageLog,
+    SupportTicket,
 )
 from app.bot.keyboards import main_keyboard, settings_keyboard, back_keyboard, advisor_keyboard, trade_close_keyboard, subscribe_keyboard
 from app.bot.subscription import require_premium, is_premium, get_status_text, grant_trial
@@ -681,3 +682,129 @@ async def cmd_close(message: Message):
     )
 
     await message.answer(text, parse_mode="HTML", reply_markup=advisor_keyboard())
+
+
+# ────────────────────────────────────────────────────────────────
+#  FAQ & SUPPORT COMMANDS
+# ────────────────────────────────────────────────────────────────
+
+FAQ_ANSWERS = {
+    "what_is": (
+        "<b>What is BTC Seer?</b>\n\n"
+        "BTC Seer is an AI-powered Bitcoin analysis platform. We analyze 60+ market signals "
+        "every hour — news sentiment, on-chain flows, whale movements, technical indicators, "
+        "and macro data — to generate price predictions and trading signals.\n\n"
+        "Try /predict to see our latest prediction."
+    ),
+    "accuracy": (
+        "<b>How accurate is BTC Seer?</b>\n\n"
+        "Our AI tracks its own accuracy transparently. Use /accuracy to see our real-time "
+        "track record broken down by timeframe (1h, 4h, 24h).\n\n"
+        "We're honest about both wins and misses — that's what sets us apart."
+    ),
+    "subscribe": (
+        "<b>How to subscribe?</b>\n\n"
+        "Use /subscribe to see our Premium plans. We accept Telegram Stars.\n\n"
+        "Plans: Monthly, 3 Months (save 17%), or Yearly (save 25%).\n"
+        "All plans include: AI predictions, trading signals, advisor, alerts, and priority support."
+    ),
+    "trial": (
+        "<b>Free trial</b>\n\n"
+        "Every new user gets a 7-day free trial of Premium features. "
+        "No payment required — just /start the bot and you're in.\n\n"
+        "After the trial, you can subscribe or continue with limited free features."
+    ),
+    "advisor": (
+        "<b>AI Trading Advisor</b>\n\n"
+        "The advisor generates trade plans with entry, target, and stop-loss levels. "
+        "It manages risk automatically (position sizing, leverage, daily loss limits).\n\n"
+        "Start with /advisor to see your portfolio and open trades."
+    ),
+    "data": (
+        "<b>Data sources</b>\n\n"
+        "BTC Seer processes data from:\n"
+        "\u2022 Binance (price, volume, funding rates)\n"
+        "\u2022 CoinGecko (market cap, dominance)\n"
+        "\u2022 News APIs (CryptoPanic, RSS feeds)\n"
+        "\u2022 On-chain data (hash rate, mempool, whale txs)\n"
+        "\u2022 Social sentiment (Twitter influencers, Reddit)\n"
+        "\u2022 Macro indicators (DXY, Gold, S&P 500, Fear & Greed)"
+    ),
+    "referral": (
+        "<b>Referral program</b>\n\n"
+        "Share your referral link and both you and your friend get +7 days of Premium!\n\n"
+        "Use /referral to get your unique link. No limit on referrals."
+    ),
+    "disclaimer": (
+        "<b>Not financial advice</b>\n\n"
+        "BTC Seer is for educational and informational purposes only. "
+        "Our predictions and signals are not financial advice. "
+        "Always do your own research and never invest more than you can afford to lose.\n\n"
+        "Past performance does not guarantee future results."
+    ),
+}
+
+
+@router.message(Command("faq"))
+async def cmd_faq(message: Message):
+    """Show FAQ topics."""
+    from app.bot.keyboards import faq_keyboard
+    await message.answer(
+        "<b>Frequently Asked Questions</b>\n\n"
+        "Tap a topic below to learn more:",
+        parse_mode="HTML",
+        reply_markup=faq_keyboard(),
+    )
+
+
+@router.message(Command("report"))
+async def cmd_report(message: Message):
+    """Create a support ticket: /report <description>"""
+    text = message.text or ""
+    parts = text.split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].strip():
+        await message.answer(
+            "Usage: /report <description>\n\n"
+            "Example: /report Predictions not loading after update\n\n"
+            "Our team will review your report and follow up.",
+        )
+        return
+
+    description = parts[1].strip()
+
+    async with async_session() as session:
+        from app.database import SupportTicket
+        ticket = SupportTicket(
+            telegram_id=message.from_user.id,
+            username=message.from_user.username,
+            category="bug",
+            description=description,
+        )
+        session.add(ticket)
+        await session.flush()
+        ticket_id = ticket.id
+        await session.commit()
+
+    # Notify admin
+    if settings.admin_telegram_id:
+        try:
+            from aiogram import Bot
+            bot = Bot(token=settings.telegram_bot_token)
+            await bot.send_message(
+                settings.admin_telegram_id,
+                f"\U0001f3ab <b>New Support Ticket #{ticket_id}</b>\n\n"
+                f"From: @{message.from_user.username or 'unknown'} ({message.from_user.id})\n"
+                f"Description: {description[:500]}",
+                parse_mode="HTML",
+            )
+            await bot.session.close()
+        except Exception as e:
+            logger.error(f"Failed to notify admin about ticket: {e}")
+
+    await message.answer(
+        f"\u2705 <b>Ticket #{ticket_id} created</b>\n\n"
+        f"We've received your report and will look into it.\n"
+        f"You'll be notified when there's an update.",
+        parse_mode="HTML",
+        reply_markup=main_keyboard(),
+    )

@@ -44,7 +44,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const weeklyPerformance = $('Fetch Weekly Performance').first().json;\nconst dailySummary = $('Fetch Daily Summary').first().json;\n\nconst prompt = `Generate a detailed weekly performance report for Telegram. Data:\n\nWeekly Performance (7 days): ${JSON.stringify(weeklyPerformance)}\n\nLatest Daily Summary: ${JSON.stringify(dailySummary)}\n\nInclude: overall accuracy this week, accuracy by timeframe (1h/4h/24h), best call of the week, worst miss, current winning streak, market context, outlook for next week. Use Telegram Markdown with sections. Max 2000 chars.`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const weeklyPerformance = $('Fetch Weekly Performance').first().json;\nconst dailySummary = $('Fetch Daily Summary').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/weekly-summary.png?size=telegram';\n\nconst prompt = `Generate a detailed weekly performance report for Telegram. Data:\n\nWeekly Performance (7 days): ${JSON.stringify(weeklyPerformance)}\n\nLatest Daily Summary: ${JSON.stringify(dailySummary)}\n\nA weekly summary chart image is available at: ${chartUrl}\nInclude this chart URL in the message so Telegram shows it as a preview.\n\nInclude: overall accuracy this week, accuracy by timeframe (1h/4h/24h), best call of the week, worst miss, current winning streak, market context, outlook for next week. Use Telegram Markdown with sections. Max 2000 chars.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "build-prompt",
       "name": "Build Prompt",

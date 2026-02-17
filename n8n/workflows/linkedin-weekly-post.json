@@ -42,7 +42,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const performance = $('Get Performance Card').first().json;\nconst summary = $('Get Daily Summary').first().json;\n\nconst prompt = `Write a LinkedIn thought-leadership post about AI in Bitcoin trading. Data:\n\nPerformance (7d): ${JSON.stringify(performance, null, 2)}\n\nDaily Summary: ${JSON.stringify(summary, null, 2)}\n\nProfessional tone, use data to back claims. Structure: hook paragraph, 2-3 insight paragraphs, key takeaway, soft CTA. Mention BTC Seer naturally. 800-1200 chars.`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const performance = $('Get Performance Card').first().json;\nconst summary = $('Get Daily Summary').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/weekly-summary.png?size=default';\n\nconst prompt = `Write a LinkedIn thought-leadership post about AI in Bitcoin trading. Data:\n\nPerformance (7d): ${JSON.stringify(performance, null, 2)}\n\nDaily Summary: ${JSON.stringify(summary, null, 2)}\n\nA chart image is available at: ${chartUrl} — include this URL in your post so it shows as a preview image.\n\nProfessional tone, use data to back claims. Structure: hook paragraph, 2-3 insight paragraphs, key takeaway, soft CTA. Mention BTC Seer naturally. 800-1200 chars.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "li-build-prompt",
       "name": "Build Claude Prompt",

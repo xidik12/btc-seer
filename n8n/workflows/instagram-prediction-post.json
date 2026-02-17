@@ -32,7 +32,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const dailySummary = $input.first().json;\n\nconst prompt = `Write an Instagram caption for a Bitcoin prediction card. Data:\\n\\n${JSON.stringify(dailySummary)}\\n\\nInstagram-optimized: hook in first line, use line breaks, 5-10 relevant hashtags at the end (#Bitcoin #BTC #CryptoAI #Trading #BitcoinPrediction etc). Mention 'link in bio' for @BTC_Seer_Bot. Max 400 chars before hashtags.`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const dailySummary = $input.first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=instagram';\n\nconst prompt = `Write an Instagram caption for a Bitcoin prediction card. Data:\\n\\n${JSON.stringify(dailySummary)}\\n\\nA chart image is available at: ${chartUrl} — include this URL in your post so it shows as a preview image.\\n\\nInstagram-optimized: hook in first line, use line breaks, 5-10 relevant hashtags at the end (#Bitcoin #BTC #CryptoAI #Trading #BitcoinPrediction etc). Mention 'link in bio' for @BTC_Seer_Bot. Max 400 chars before hashtags.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "build-prompt",
       "name": "Build Prompt",
@@ -65,7 +65,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst caption = response.content[0].text;\n\n// NOTE: Instagram requires an image_url for media creation.\n// In production, generate a prediction card image and host it,\n// or use a pre-generated image URL from the BTC Seer API.\n// The placeholder image_url below should be replaced with an\n// actual image endpoint that returns a valid public image.\nconst imageUrl = 'https://btc-oracle-production.up.railway.app/api/market/price';\n\nreturn [{ json: { caption, imageUrl } }];"
+        "jsCode": "const response = $input.first().json;\nconst caption = response.content[0].text;\n\n// Use the chart API for the Instagram image\nconst imageUrl = 'https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=instagram';\n\nreturn [{ json: { caption, imageUrl } }];"
       },
       "id": "extract-format",
       "name": "Extract & Format for IG",

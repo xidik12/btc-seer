@@ -1,0 +1,255 @@
+{
+  "name": "Sales — Trial Expiry Drip",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * *"
+            }
+          ]
+        }
+      },
+      "id": "ted-schedule",
+      "name": "Daily 10:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/trial-expiring-users?days_remaining=2",
+        "options": {}
+      },
+      "id": "ted-fetch-2days",
+      "name": "Fetch 2 Days Remaining",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, -180]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/trial-expiring-users?days_remaining=1",
+        "options": {}
+      },
+      "id": "ted-fetch-1day",
+      "name": "Fetch 1 Day Remaining",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/trial-expiring-users?days_remaining=0",
+        "options": {}
+      },
+      "id": "ted-fetch-0days",
+      "name": "Fetch 0 Days Remaining",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 180]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "ted-fetch-accuracy",
+      "name": "Fetch 7-Day Accuracy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 360]
+    },
+    {
+      "parameters": {
+        "jsCode": "const users2 = $('Fetch 2 Days Remaining').first().json;\nconst users1 = $('Fetch 1 Day Remaining').first().json;\nconst users0 = $('Fetch 0 Days Remaining').first().json;\nconst accuracy = $('Fetch 7-Day Accuracy').first().json;\n\nconst allUsers = [];\n\nconst addUsers = (data, tier) => {\n  const list = Array.isArray(data) ? data : (data.users || []);\n  list.forEach(u => allUsers.push({ ...u, tier, daysRemaining: tier === 'gentle' ? 2 : tier === 'urgent' ? 1 : 0 }));\n};\n\naddUsers(users2, 'gentle');\naddUsers(users1, 'urgent');\naddUsers(users0, 'final');\n\nif (allUsers.length === 0) {\n  return [{ json: { skip: true, message: 'No trial-expiring users found' } }];\n}\n\nreturn allUsers.map(user => ({\n  json: {\n    skip: false,\n    userId: user.telegram_id || user.chat_id || user.id,\n    username: user.username || user.first_name || 'there',\n    tier: user.tier,\n    daysRemaining: user.daysRemaining,\n    accuracy: JSON.stringify(accuracy)\n  }\n}));"
+      },
+      "id": "ted-merge-users",
+      "name": "Merge & Categorize Users",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.skip }}",
+              "value2": true,
+              "operation": "notEqual"
+            }
+          ]
+        }
+      },
+      "id": "ted-filter-skip",
+      "name": "Filter Active",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { tier, username, daysRemaining, accuracy } = $json;\n\nlet tierInstructions = '';\nif (tier === 'gentle') {\n  tierInstructions = `This is a GENTLE reminder (2 days left). Tone: friendly, informative. Mention the accuracy stats to show value. Suggest they explore features they might have missed. Do NOT be pushy.`;\n} else if (tier === 'urgent') {\n  tierInstructions = `This is an URGENT reminder (last full day). Tone: warm but with clear urgency. Emphasize what they'll lose access to tomorrow. Highlight the best recent prediction wins.`;\n} else {\n  tierInstructions = `This is the FINAL notice (trial ends tonight). Tone: direct, honest, respectful. Tell them exactly what happens when the trial ends. Make the upgrade path crystal clear. One strong CTA.`;\n}\n\nconst prompt = `Write a personalized Telegram DM for a trial user named \"${username}\" whose Premium trial has ${daysRemaining} day(s) remaining.\n\n${tierInstructions}\n\n7-Day Performance Data: ${accuracy}\n\nRules:\n- Use HTML formatting (<b>, <i>, <code>) — NOT Markdown\n- Keep it under 800 characters\n- Include the user's name naturally\n- Reference specific accuracy numbers from the data\n- End with a clear call-to-action\n- Never give financial advice\n- Make it feel personal, not templated\n- Vary your opening line — do NOT start with \"Hey\" every time`;\n\nreturn [{ json: { prompt, userId: $json.userId } }];"
+      },
+      "id": "ted-build-prompt",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, -60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 1024, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "ted-claude-api",
+      "name": "Claude Generate Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1160, -60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet text = '';\n\nif (response.content && response.content.length > 0) {\n  text = response.content[0].text;\n} else {\n  text = '<b>Your BTC Seer Premium trial is ending soon!</b>\\n\\nDon\\'t miss out on AI-powered Bitcoin predictions. Tap /premium to keep your access.';\n}\n\nreturn [{ json: { text, userId: $('Build Claude Prompt').first().json.userId } }];"
+      },
+      "id": "ted-extract-text",
+      "name": "Extract Message Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, -60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $json.userId, text: $json.text, parse_mode: 'HTML' }) }}",
+        "options": {}
+      },
+      "id": "ted-telegram-send",
+      "name": "Send Telegram DM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1600, -60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\nconst userId = $('Extract Message Text').first().json.userId;\nconst success = result.ok === true;\n\nconsole.log(`[Trial Drip] Sent to user ${userId}: ${success ? 'OK' : 'FAILED'}`);\n\nreturn [{ json: { userId, success, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "ted-log-result",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1820, -60]
+    }
+  ],
+  "connections": {
+    "Daily 10:00 UTC": {
+      "main": [
+        [
+          { "node": "Fetch 2 Days Remaining", "type": "main", "index": 0 },
+          { "node": "Fetch 1 Day Remaining", "type": "main", "index": 0 },
+          { "node": "Fetch 0 Days Remaining", "type": "main", "index": 0 },
+          { "node": "Fetch 7-Day Accuracy", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch 2 Days Remaining": {
+      "main": [
+        [
+          { "node": "Merge & Categorize Users", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch 1 Day Remaining": {
+      "main": [
+        [
+          { "node": "Merge & Categorize Users", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch 0 Days Remaining": {
+      "main": [
+        [
+          { "node": "Merge & Categorize Users", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch 7-Day Accuracy": {
+      "main": [
+        [
+          { "node": "Merge & Categorize Users", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Merge & Categorize Users": {
+      "main": [
+        [
+          { "node": "Filter Active", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Filter Active": {
+      "main": [
+        [
+          { "node": "Build Claude Prompt", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [
+          { "node": "Claude Generate Message", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Claude Generate Message": {
+      "main": [
+        [
+          { "node": "Extract Message Text", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Message Text": {
+      "main": [
+        [
+          { "node": "Send Telegram DM", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Telegram DM": {
+      "main": [
+        [
+          { "node": "Log Result", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "sales" }
+  ]
+}

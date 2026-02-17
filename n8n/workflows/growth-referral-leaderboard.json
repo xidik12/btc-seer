@@ -1,0 +1,165 @@
+{
+  "name": "Growth: Referral Leaderboard (Friday 16:00)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 16 * * 5"
+            }
+          ]
+        }
+      },
+      "id": "rl-schedule",
+      "name": "Friday 16:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/referral-leaderboard?limit=10",
+        "options": {}
+      },
+      "id": "rl-get-leaderboard",
+      "name": "Get Referral Leaderboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Get Referral Leaderboard').first().json;\n\nconst prompt = `Write a referral leaderboard post for Twitter and Telegram. Here's the top 10 referrers:\n\n${JSON.stringify(data, null, 2)}\n\nMake it fun and competitive. Include #Bitcoin #BTC. Encourage others to share their link via /referral. Max 270 chars for tweet. Also generate a longer Telegram version (max 1000 chars) with Markdown formatting.\n\nReturn JSON: {\"tweet\": \"...\", \"telegram\": \"...\"}`;\n\nreturn [{ json: { prompt, data } }];"
+      },
+      "id": "rl-build-prompt",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 1000, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {}
+      },
+      "id": "rl-claude-api",
+      "name": "Claude Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $('Claude Generate').first().json;\nconst raw = response.content[0].text.trim();\n\n// Try to parse JSON response for separate tweet/telegram text\nlet tweet, telegram;\ntry {\n  const parsed = JSON.parse(raw);\n  tweet = parsed.tweet;\n  telegram = parsed.telegram;\n} catch (e) {\n  // If not JSON, use raw text for both\n  tweet = raw.substring(0, 270);\n  telegram = raw;\n}\n\nreturn [{ json: { tweet, telegram } }];"
+      },
+      "id": "rl-extract-text",
+      "name": "Extract Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.tweet }}",
+        "additionalFields": {}
+      },
+      "id": "rl-tweet",
+      "name": "Post Tweet",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [1100, -100],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.TELEGRAM_CHANNEL_ID, text: $json.telegram, parse_mode: 'Markdown' }) }}",
+        "options": {}
+      },
+      "id": "rl-telegram",
+      "name": "Send to Telegram Channel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const tweet = $('Extract Text').first().json.tweet;\nconst now = new Date().toISOString();\nconsole.log(`[${now}] Referral leaderboard posted: ${tweet.substring(0, 80)}...`);\nreturn [{ json: { status: 'posted', timestamp: now, channel: 'twitter+telegram' } }];"
+      },
+      "id": "rl-log",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    }
+  ],
+  "connections": {
+    "Friday 16:00 UTC": {
+      "main": [
+        [{ "node": "Get Referral Leaderboard", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Referral Leaderboard": {
+      "main": [
+        [{ "node": "Build Claude Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [{ "node": "Claude Generate", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude Generate": {
+      "main": [
+        [{ "node": "Extract Text", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Text": {
+      "main": [
+        [
+          { "node": "Post Tweet", "type": "main", "index": 0 },
+          { "node": "Send to Telegram Channel", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Post Tweet": {
+      "main": [
+        [{ "node": "Log Result", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send to Telegram Channel": {
+      "main": [
+        [{ "node": "Log Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "growth" }
+  ]
+}

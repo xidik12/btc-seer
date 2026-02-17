@@ -137,3 +137,36 @@ def subscribe_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="View Plans", callback_data="subscribe")],
         [InlineKeyboardButton(text="Back", callback_data="back_to_main")],
     ])
+
+
+def faq_keyboard() -> InlineKeyboardMarkup:
+    """FAQ topic selection keyboard."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="What is BTC Seer?", callback_data="faq:what_is"),
+            InlineKeyboardButton(text="How accurate?", callback_data="faq:accuracy"),
+        ],
+        [
+            InlineKeyboardButton(text="How to subscribe?", callback_data="faq:subscribe"),
+            InlineKeyboardButton(text="Free trial?", callback_data="faq:trial"),
+        ],
+        [
+            InlineKeyboardButton(text="Trading advisor?", callback_data="faq:advisor"),
+            InlineKeyboardButton(text="Data sources?", callback_data="faq:data"),
+        ],
+        [
+            InlineKeyboardButton(text="Referral program?", callback_data="faq:referral"),
+            InlineKeyboardButton(text="Not financial advice", callback_data="faq:disclaimer"),
+        ],
+        [InlineKeyboardButton(text="« Back", callback_data="back_to_main")],
+    ])
+
+
+def feedback_keyboard(feedback_type: str, reference_id: int) -> InlineKeyboardMarkup:
+    """Thumbs up/down feedback keyboard."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="\ud83d\udc4d", callback_data=f"feedback:up:{feedback_type}:{reference_id}"),
+            InlineKeyboardButton(text="\ud83d\udc4e", callback_data=f"feedback:down:{feedback_type}:{reference_id}"),
+        ],
+    ])

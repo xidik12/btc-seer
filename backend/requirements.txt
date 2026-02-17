@@ -47,6 +47,7 @@ apscheduler==3.10.4
 
 # Charting (backend)
 matplotlib==3.10.0
+Pillow==11.1.0
 
 # Utilities
 python-dotenv==1.0.1

@@ -16,6 +16,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.config import settings
 from app.database import init_db
 from app.api import predictions, signals, news, market, history, influencers, events, quant, coins, whales, marketing
+from app.api import charts as charts_api
+from app.api import support as support_api
 from app.api import advisor as advisor_api
 from app.api import admin as admin_api
 from app.api import powerlaw, public_api, liquidations, elliott_wave, subscription, auth as auth_api, referral as referral_api
@@ -52,6 +54,7 @@ from app.scheduler.jobs import (
     evaluate_whale_impacts,
     backfill_whale_transactions,
     resolve_unknown_whale_addresses,
+    snapshot_daily_metrics,
 )
 from app.advisor.feedback import run_training_feedback, run_adaptive_weight_learning
 from app.collectors.coins import collect_coin_prices, seed_tracked_coins
@@ -190,6 +193,9 @@ async def lifespan(app: FastAPI):
         # Subscription expiry check (daily)
         scheduler.add_job(check_subscription_expiry, "interval", hours=24, id="check_subs")
 
+        # Daily metrics snapshot at 23:55 UTC
+        scheduler.add_job(snapshot_daily_metrics, "cron", hour=23, minute=55, id="snapshot_metrics")
+
         # Database backup
         scheduler.add_job(run_database_backup, "interval", hours=settings.backup_interval_hours, id="database_backup")
 
@@ -233,6 +239,8 @@ async def lifespan(app: FastAPI):
                     BotCommand(command="advisor", description="AI trading advisor & portfolio"),
                     BotCommand(command="news", description="Real-time crypto news & sentiment"),
                     BotCommand(command="accuracy", description="Prediction track record"),
+                    BotCommand(command="faq", description="Frequently asked questions"),
+                    BotCommand(command="report", description="Report a bug or issue"),
                     BotCommand(command="settings", description="Alert frequency preferences"),
                     BotCommand(command="subscribe", description="View subscription plans"),
                 ])
@@ -378,6 +386,8 @@ app.include_router(auth_api.router)
 app.include_router(referral_api.router)
 app.include_router(whales.router)
 app.include_router(marketing.router)
+app.include_router(charts_api.router)
+app.include_router(support_api.router)
 app.include_router(public_api.router)
 
 

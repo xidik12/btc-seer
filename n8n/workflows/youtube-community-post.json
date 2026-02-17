@@ -31,7 +31,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const performance = $('Get Performance Card').first().json;\n\nconst prompt = `Write a YouTube community post summarizing this week's Bitcoin AI predictions. Data:\n\n${JSON.stringify(performance, null, 2)}\n\nCasual, visual-friendly (use emojis for data points). Ask viewers to comment their prediction. Mention @BTC_Seer_Bot on Telegram. Max 500 chars.`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const performance = $('Get Performance Card').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=default';\n\nconst prompt = `Write a YouTube community post summarizing this week's Bitcoin AI predictions. Data:\n\n${JSON.stringify(performance, null, 2)}\n\nA chart image is available at: ${chartUrl} — include this URL in your post so it shows as a preview image.\n\nCasual, visual-friendly (use emojis for data points). Ask viewers to comment their prediction. Mention @BTC_Seer_Bot on Telegram. Max 500 chars.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "yt-build-prompt",
       "name": "Build Claude Prompt",

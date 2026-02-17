@@ -44,7 +44,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const dailySummary = $('Fetch Daily Summary').first().json;\nconst currentSignal = $('Fetch Current Signal').first().json;\n\nconst prompt = `Generate a Telegram prediction signal post. Data:\n\nDaily Summary: ${JSON.stringify(dailySummary)}\n\nCurrent Signal: ${JSON.stringify(currentSignal)}\n\nFormat with Telegram Markdown. Include: current price, AI prediction direction + confidence, entry/target/stop-loss if available, a 'Why?' reasoning section explaining the key factors. Vary the structure — sometimes lead with the signal, sometimes with the reasoning. Max 800 chars.`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const dailySummary = $('Fetch Daily Summary').first().json;\nconst currentSignal = $('Fetch Current Signal').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/signal.png?size=telegram';\n\nconst prompt = `Generate a Telegram prediction signal post. Data:\n\nDaily Summary: ${JSON.stringify(dailySummary)}\n\nCurrent Signal: ${JSON.stringify(currentSignal)}\n\nA signal chart image is available at: ${chartUrl}\nInclude this chart URL in the message so Telegram shows it as a preview.\n\nFormat with Telegram Markdown. Include: current price, AI prediction direction + confidence, entry/target/stop-loss if available, a 'Why?' reasoning section explaining the key factors. Vary the structure — sometimes lead with the signal, sometimes with the reasoning. Max 800 chars.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "build-prompt",
       "name": "Build Prompt",

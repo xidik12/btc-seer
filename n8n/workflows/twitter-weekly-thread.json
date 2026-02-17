@@ -31,7 +31,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const perfData = $('Get Performance Card').first().json;\n\nconst prompt = `Generate a Twitter thread (4-6 tweets) reviewing this week's BTC Seer performance. Here's the data:\n\n${JSON.stringify(perfData, null, 2)}\n\nTweet 1: hook/headline that grabs attention.\nTweet 2-3: specific data points and stats.\nTweet 4: insight or lesson learned this week.\nLast tweet: CTA to try @BTC_Seer_Bot on Telegram.\n\nEach tweet max 270 chars. Include #Bitcoin #BTC in at least the first and last tweets.\nReturn ONLY a JSON array of strings, e.g. [\"tweet1\", \"tweet2\", ...]. No other text.`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const perfData = $('Get Performance Card').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/weekly-summary.png?size=twitter';\n\nconst prompt = `Generate a Twitter thread (4-6 tweets) reviewing this week's BTC Seer performance. Here's the data:\n\n${JSON.stringify(perfData, null, 2)}\n\nA weekly summary chart image is available at: ${chartUrl}\nInclude this URL at the end of the FIRST tweet so it shows as a preview image.\n\nTweet 1: hook/headline that grabs attention + the chart URL at the end.\nTweet 2-3: specific data points and stats.\nTweet 4: insight or lesson learned this week.\nLast tweet: CTA to try @BTC_Seer_Bot on Telegram.\n\nEach tweet max 270 chars (not counting the URL in tweet 1). Include #Bitcoin #BTC in at least the first and last tweets.\nReturn ONLY a JSON array of strings, e.g. [\"tweet1\", \"tweet2\", ...]. No other text.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "wt-build-prompt",
       "name": "Build Claude Prompt",

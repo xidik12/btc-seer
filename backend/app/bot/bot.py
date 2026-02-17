@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.database import async_session, BotUser, TradeAdvice, Price, PaymentHistory
 from app.bot.commands import router as commands_router
-from app.bot.keyboards import main_keyboard, settings_keyboard, advisor_keyboard, trade_close_keyboard
+from app.bot.keyboards import main_keyboard, settings_keyboard, advisor_keyboard, trade_close_keyboard, feedback_keyboard
 from app.bot.subscription import require_premium, activate_premium, get_status_text
 
 logger = logging.getLogger(__name__)
@@ -351,6 +351,58 @@ async def on_payment_success(message: Message):
         parse_mode="HTML",
         reply_markup=main_keyboard(),
     )
+
+
+# ────────────────────────────────────────────────────────────────
+#  FAQ CALLBACKS
+# ────────────────────────────────────────────────────────────────
+
+@callback_router.callback_query(lambda c: c.data and c.data.startswith("faq:"))
+async def cb_faq_answer(callback: CallbackQuery):
+    """Show FAQ answer for selected topic."""
+    from app.bot.commands import FAQ_ANSWERS
+    from app.bot.keyboards import faq_keyboard
+    topic = callback.data.split(":")[1]
+    answer = FAQ_ANSWERS.get(topic, "Topic not found. Please try again.")
+    await callback.answer()
+    await callback.message.edit_text(
+        answer,
+        parse_mode="HTML",
+        reply_markup=faq_keyboard(),
+    )
+
+
+# ────────────────────────────────────────────────────────────────
+#  FEEDBACK CALLBACKS
+# ────────────────────────────────────────────────────────────────
+
+@callback_router.callback_query(lambda c: c.data and c.data.startswith("feedback:"))
+async def cb_feedback(callback: CallbackQuery):
+    """Handle thumbs up/down feedback."""
+    parts = callback.data.split(":")
+    if len(parts) < 4:
+        await callback.answer("Invalid feedback")
+        return
+
+    direction = parts[1]  # up or down
+    feedback_type = parts[2]  # trade, prediction, signal
+    reference_id = int(parts[3])
+    is_positive = direction == "up"
+
+    from app.database import UserFeedback
+    async with async_session() as session:
+        fb = UserFeedback(
+            telegram_id=callback.from_user.id,
+            feedback_type=feedback_type,
+            reference_id=reference_id,
+            is_positive=is_positive,
+        )
+        session.add(fb)
+        await session.commit()
+
+    emoji = "\ud83d\udc4d" if is_positive else "\ud83d\udc4e"
+    await callback.answer(f"{emoji} Thanks for your feedback!")
+    await callback.message.edit_reply_markup(reply_markup=None)
 
 
 def create_bot() -> tuple[Bot, Dispatcher]:

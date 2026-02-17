@@ -41,7 +41,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const summary = $('Get Daily Summary').first().json;\nconst accuracy = $('Get Today Accuracy').first().json;\n\nconst prompt = `Write an evening results tweet comparing what BTC Seer predicted vs what happened today. Here's the data:\n\nDaily Summary: ${JSON.stringify(summary, null, 2)}\n\nToday's Accuracy: ${JSON.stringify(accuracy, null, 2)}\n\nBe transparent about misses — our credibility comes from honesty. Max 270 chars. Include #Bitcoin #BTC. End with CTA to @BTC_Seer_Bot.`;\n\nreturn [{ json: { prompt } }];"
+        "jsCode": "const summary = $('Get Daily Summary').first().json;\nconst accuracy = $('Get Today Accuracy').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/accuracy.png?days=1&size=twitter';\n\nconst prompt = `Write an evening results tweet comparing what BTC Seer predicted vs what happened today. Here's the data:\n\nDaily Summary: ${JSON.stringify(summary, null, 2)}\n\nToday's Accuracy: ${JSON.stringify(accuracy, null, 2)}\n\nAn accuracy chart image is available at: ${chartUrl}\nInclude this URL at the end of your tweet so it shows as a preview image.\n\nBe transparent about misses — our credibility comes from honesty. Max 270 chars (not counting the URL). Include #Bitcoin #BTC. End with CTA to @BTC_Seer_Bot.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
       },
       "id": "er-build-prompt",
       "name": "Build Claude Prompt",

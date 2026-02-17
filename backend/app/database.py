@@ -761,6 +761,88 @@ class PredictionAnalysis(Base):
     dissenting_models: Mapped[str] = mapped_column(Text, nullable=True)  # comma-separated
 
 
+class SupportTicket(Base):
+    """User bug reports and questions."""
+    __tablename__ = "support_tickets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    username: Mapped[str] = mapped_column(String(100), nullable=True)
+    category: Mapped[str] = mapped_column(String(50), default="general")  # bug, question, feature, billing, general
+    description: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="open")  # open, in_progress, resolved, closed
+    priority: Mapped[str] = mapped_column(String(20), default="normal")  # low, normal, high, urgent
+    admin_notes: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    resolved_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+
+
+class UserFeedback(Base):
+    """Thumbs up/down on trades and predictions."""
+    __tablename__ = "user_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    feedback_type: Mapped[str] = mapped_column(String(30))  # trade, prediction, signal, general
+    reference_id: Mapped[int] = mapped_column(Integer, nullable=True)  # trade_id, prediction_id, etc.
+    is_positive: Mapped[bool] = mapped_column(Boolean)
+    comment: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+
+
+class MarketingMetrics(Base):
+    """Daily snapshot of all business KPIs."""
+    __tablename__ = "marketing_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    date: Mapped[str] = mapped_column(String(10), unique=True, index=True)  # YYYY-MM-DD
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+    # Users
+    total_users: Mapped[int] = mapped_column(Integer, default=0)
+    premium_users: Mapped[int] = mapped_column(Integer, default=0)
+    trial_users: Mapped[int] = mapped_column(Integer, default=0)
+    new_users_today: Mapped[int] = mapped_column(Integer, default=0)
+    active_users_24h: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Revenue
+    stars_revenue_today: Mapped[int] = mapped_column(Integer, default=0)
+    trial_conversions_today: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Predictions
+    predictions_made: Mapped[int] = mapped_column(Integer, default=0)
+    predictions_correct: Mapped[int] = mapped_column(Integer, default=0)
+    accuracy_pct: Mapped[float] = mapped_column(Float, default=0.0)
+
+    # Signals
+    signals_generated: Mapped[int] = mapped_column(Integer, default=0)
+    signals_profitable: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Support
+    tickets_opened: Mapped[int] = mapped_column(Integer, default=0)
+    tickets_resolved: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Referrals
+    referrals_today: Mapped[int] = mapped_column(Integer, default=0)
+    total_referrals: Mapped[int] = mapped_column(Integer, default=0)
+
+    # System
+    api_requests: Mapped[int] = mapped_column(Integer, default=0)
+    api_errors: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class GeneratedImage(Base):
+    """PNG cache to avoid regenerating charts every request."""
+    __tablename__ = "generated_images"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    chart_type: Mapped[str] = mapped_column(String(50), index=True)  # prediction_card, price_chart, etc.
+    params_hash: Mapped[str] = mapped_column(String(64), index=True)  # hash of generation params
+    image_data: Mapped[bytes] = mapped_column(Text, nullable=True)  # base64 or path
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+
+
 class LearnedPattern(Base):
     """Patterns discovered from error analysis for self-learning."""
     __tablename__ = "learned_patterns"
