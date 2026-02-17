@@ -21,6 +21,7 @@ from app.api import support as support_api
 from app.api import advisor as advisor_api
 from app.api import admin as admin_api
 from app.api import powerlaw, public_api, liquidations, elliott_wave, subscription, auth as auth_api, referral as referral_api
+from app.api import arbitrage as arbitrage_api, listings as listings_api, memecoins as memecoins_api
 from app.scheduler.jobs import (
     backfill_historical_prices,
     collect_price_data,
@@ -55,9 +56,25 @@ from app.scheduler.jobs import (
     backfill_whale_transactions,
     resolve_unknown_whale_addresses,
     snapshot_daily_metrics,
+    aggregate_coin_sentiments,
 )
 from app.advisor.feedback import run_training_feedback, run_adaptive_weight_learning
 from app.collectors.coins import collect_coin_prices, seed_tracked_coins
+from app.collectors.coin_ohlcv import collect_coin_ohlcv, backfill_coin_ohlcv
+from app.scheduler.coin_prediction_jobs import (
+    generate_coin_predictions_1h,
+    generate_coin_predictions_4h,
+    generate_coin_predictions_24h,
+    evaluate_coin_predictions,
+)
+from app.collectors.arbitrage import scan_arbitrage
+from app.collectors.new_listings import check_new_listings, check_listing_announcements, evaluate_listing_performance
+from app.collectors.dex_scanner import scan_dex_tokens, check_dex_to_cex_migrations
+from app.collectors.memecoin import discover_memecoins, update_memecoin_risk_scores, cleanup_dead_memecoins
+from app.collectors.eth_whale import collect_eth_whale_transactions
+from app.collectors.sol_whale import collect_sol_whale_transactions
+from app.collectors.eth_onchain import collect_multichain_onchain
+from app.collectors.cryptopanic_v2 import collect_cryptopanic_v2
 from app.models.phrase_analyzer import analyze_news_phrases
 from app.models.continuous_learner import run_continuous_learning
 from app.models.ab_tester import evaluate_candidates
@@ -131,6 +148,43 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(collect_dominance_data, "interval", hours=1, id="collect_dominance")
         scheduler.add_job(save_indicator_snapshot, "interval", hours=1, id="save_indicators")
         scheduler.add_job(collect_coin_prices, "interval", minutes=2, id="collect_coins")
+        scheduler.add_job(collect_coin_ohlcv, "interval", minutes=2, id="collect_ohlcv")
+        scheduler.add_job(aggregate_coin_sentiments, "interval", minutes=5, id="aggregate_sentiments")
+
+        # Multi-coin predictions (offset from BTC predictions)
+        scheduler.add_job(generate_coin_predictions_1h, "cron", minute=10, id="coin_predict_1h")
+        scheduler.add_job(generate_coin_predictions_4h, "cron", hour="0,4,8,12,16,20", minute=12, id="coin_predict_4h")
+        scheduler.add_job(generate_coin_predictions_24h, "cron", hour=0, minute=14, id="coin_predict_24h")
+        scheduler.add_job(evaluate_coin_predictions, "cron", minute=15, id="coin_eval")
+
+        # Arbitrage scanning (every 30 seconds)
+        scheduler.add_job(scan_arbitrage, "interval", seconds=30, id="scan_arbitrage")
+
+        # New listing detection
+        scheduler.add_job(check_new_listings, "interval", seconds=30, id="check_listings")
+        scheduler.add_job(check_listing_announcements, "interval", minutes=2, id="check_announcements")
+        scheduler.add_job(evaluate_listing_performance, "interval", hours=1, id="eval_listings")
+
+        # DEX scanner
+        scheduler.add_job(scan_dex_tokens, "interval", minutes=5, id="scan_dex")
+        scheduler.add_job(check_dex_to_cex_migrations, "interval", minutes=30, id="dex_to_cex")
+
+        # Memecoin discovery
+        scheduler.add_job(discover_memecoins, "interval", minutes=10, id="discover_memes")
+        scheduler.add_job(update_memecoin_risk_scores, "interval", minutes=30, id="update_meme_risk")
+        scheduler.add_job(cleanup_dead_memecoins, "interval", hours=24, id="cleanup_dead_memes")
+
+        # Multi-chain whale tracking
+        scheduler.add_job(collect_eth_whale_transactions, "interval", minutes=5, id="collect_eth_whales")
+        scheduler.add_job(collect_sol_whale_transactions, "interval", minutes=5, id="collect_sol_whales",
+                          next_run_time=datetime.utcnow() + timedelta(minutes=2))
+
+        # Multi-chain on-chain analytics
+        scheduler.add_job(collect_multichain_onchain, "interval", hours=1, id="collect_multichain")
+
+        # CryptoPanic V2 (multi-coin news)
+        scheduler.add_job(collect_cryptopanic_v2, "interval", minutes=5, id="cryptopanic_v2")
+
         scheduler.add_job(collect_whale_transactions, "interval", minutes=10, id="collect_whales")
         scheduler.add_job(monitor_entity_wallets, "interval", minutes=10, id="monitor_entities",
                           next_run_time=datetime.utcnow() + timedelta(minutes=5))  # offset by 5 min
@@ -297,6 +351,7 @@ async def lifespan(app: FastAPI):
             await _safe_run(collect_funding_data(), "collect_funding_data")
             await _safe_run(collect_dominance_data(), "collect_dominance_data")
             await _safe_run(collect_coin_prices(), "collect_coin_prices")
+            await _safe_run(backfill_coin_ohlcv(), "backfill_coin_ohlcv")
             await _safe_run(backfill_whale_transactions(), "backfill_whale_transactions")
 
             # Step 3: Clean up duplicate predictions from old 30-min scheduler
@@ -389,6 +444,9 @@ app.include_router(marketing.router)
 app.include_router(charts_api.router)
 app.include_router(support_api.router)
 app.include_router(public_api.router)
+app.include_router(arbitrage_api.router)
+app.include_router(listings_api.router)
+app.include_router(memecoins_api.router)
 
 
 @app.get("/health")

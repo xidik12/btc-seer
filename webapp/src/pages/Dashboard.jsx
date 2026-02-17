@@ -154,6 +154,26 @@ const quickIcons = {
       <path d="M21 12c1 1 2 2 2 3" />
     </svg>
   ),
+  arbitrage: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 16V4m0 0L3 8m4-4l4 4" />
+      <path d="M17 8v12m0 0l4-4m-4 4l-4-4" />
+    </svg>
+  ),
+  listings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 5v14M5 12h14" />
+      <circle cx="12" cy="12" r="10" />
+    </svg>
+  ),
+  memecoins: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+      <line x1="9" y1="9" x2="9.01" y2="9" strokeWidth="2.5" />
+      <line x1="15" y1="9" x2="15.01" y2="9" strokeWidth="2.5" />
+    </svg>
+  ),
 }
 
 const CATEGORIES = [
@@ -178,6 +198,9 @@ const CATEGORIES = [
     titleKey: 'category.market',
     links: [
       { path: '/coins', labelKey: 'link.coins', icon: 'coins' },
+      { path: '/arbitrage', labelKey: 'link.arbitrage', icon: 'arbitrage' },
+      { path: '/new-listings', labelKey: 'link.listings', icon: 'listings' },
+      { path: '/memecoins', labelKey: 'link.memecoins', icon: 'memecoins' },
       { path: '/whales', labelKey: 'link.whales', icon: 'whales' },
       { path: '/news', labelKey: 'link.news', icon: 'news' },
       { path: '/events', labelKey: 'link.events', icon: 'events' },

@@ -310,6 +310,7 @@ export default function Whales() {
   const [stats, setStats] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [filter, setFilter] = useState('all')
+  const [chainFilter, setChainFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [selectedAddress, setSelectedAddress] = useState(null)
 
@@ -358,6 +359,10 @@ export default function Whales() {
   const s7d = stats?.stats_7d || {}
   const s = s24.count > 0 ? s24 : s7d
   const periodLabel = s24.count > 0 ? '24h' : '7d'
+
+  const filteredTransactions = transactions.filter(tx =>
+    chainFilter === 'all' || tx.chain === chainFilter || (!tx.chain && chainFilter === 'bitcoin')
+  )
 
   return (
     <div className="px-4 pt-2 pb-20">
@@ -425,6 +430,23 @@ export default function Whales() {
         </div>
       )}
 
+      {/* Chain Filter */}
+      <div className="flex gap-2 mb-3">
+        {['all', 'bitcoin', 'ethereum', 'solana'].map(c => (
+          <button
+            key={c}
+            onClick={() => setChainFilter(c)}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              chainFilter === c
+                ? 'bg-accent-blue/20 border-accent-blue text-accent-blue'
+                : 'bg-bg-card border-white/5 text-text-muted'
+            }`}
+          >
+            {c === 'all' ? 'All' : c === 'bitcoin' ? 'BTC' : c === 'ethereum' ? 'ETH' : 'SOL'}
+          </button>
+        ))}
+      </div>
+
       {/* Filter Buttons */}
       <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
         {FILTER_OPTIONS.map(f => (
@@ -456,13 +478,13 @@ export default function Whales() {
         <div className="flex justify-center py-12">
           <div className="w-6 h-6 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : transactions.length === 0 ? (
+      ) : filteredTransactions.length === 0 ? (
         <div className="text-center text-text-muted text-sm py-12">
           {t('market:whales.noWhales')}
         </div>
       ) : (
         <div className="space-y-2">
-          {transactions.map(tx => (
+          {filteredTransactions.map(tx => (
             <WhaleCard key={tx.tx_hash || tx.id} tx={tx} t={t} onAddressClick={handleAddressClick} />
           ))}
         </div>

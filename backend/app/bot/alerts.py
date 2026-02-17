@@ -7,6 +7,7 @@ from sqlalchemy import select, or_, and_, desc
 from app.database import async_session, BotUser, Price, Prediction, Signal, AlertLog
 from app.config import settings
 from app.signals.generator import DISCLAIMER
+from app.bot.subscription import is_premium
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +165,62 @@ class AlertSender:
             except Exception as e:
                 logger.error(f"Failed to send breaking alert to {user.telegram_id}: {e}")
                 await self._log_alert(user.telegram_id, "breaking", "failed", str(e))
+
+    async def send_arbitrage_alert(self, coin_id: str, buy_exchange: str, sell_exchange: str, net_profit_pct: float, buy_price: float, sell_price: float):
+        """Send alert when a significant arbitrage opportunity is detected (>0.5% net profit)."""
+        if net_profit_pct < 0.5:
+            return
+
+        symbol = coin_id.upper()[:6]
+        message = (
+            f"💱 <b>Arbitrage Alert: {symbol}</b>\n\n"
+            f"Buy on <b>{buy_exchange}</b>: ${buy_price:,.2f}\n"
+            f"Sell on <b>{sell_exchange}</b>: ${sell_price:,.2f}\n"
+            f"Net Profit: <b>{net_profit_pct:.2f}%</b>\n\n"
+            f"<i>{DISCLAIMER}</i>"
+        )
+
+        async with async_session() as session:
+            result = await session.execute(
+                select(BotUser).where(BotUser.subscribed == True)
+            )
+            users = result.scalars().all()
+
+        users = [u for u in users if is_premium(u)]
+
+        for user in users:
+            try:
+                await self.bot.send_message(user.telegram_id, message, parse_mode="HTML")
+                await self._log_alert(user.telegram_id, "arbitrage", "sent")
+            except Exception as e:
+                logger.error(f"Failed to send arbitrage alert to {user.telegram_id}: {e}")
+                await self._log_alert(user.telegram_id, "arbitrage", "failed", str(e))
+
+    async def send_new_listing_alert(self, exchange: str, symbol: str, listing_type: str = "spot"):
+        """Send alert when a new coin is listed on a major exchange."""
+        message = (
+            f"🆕 <b>New Listing: {symbol}</b>\n\n"
+            f"Exchange: <b>{exchange}</b>\n"
+            f"Type: {listing_type}\n\n"
+            f"<i>New listings can be volatile. DYOR.</i>\n"
+            f"<i>{DISCLAIMER}</i>"
+        )
+
+        async with async_session() as session:
+            result = await session.execute(
+                select(BotUser).where(BotUser.subscribed == True)
+            )
+            users = result.scalars().all()
+
+        users = [u for u in users if is_premium(u)]
+
+        for user in users:
+            try:
+                await self.bot.send_message(user.telegram_id, message, parse_mode="HTML")
+                await self._log_alert(user.telegram_id, "new_listing", "sent")
+            except Exception as e:
+                logger.error(f"Failed to send listing alert to {user.telegram_id}: {e}")
+                await self._log_alert(user.telegram_id, "new_listing", "failed", str(e))
 
     def _format_alert(self, predictions: list, signal, current_price: float = None) -> str:
         """Format prediction alert message."""

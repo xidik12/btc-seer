@@ -808,3 +808,122 @@ async def cmd_report(message: Message):
         parse_mode="HTML",
         reply_markup=main_keyboard(),
     )
+
+
+# ────────────────────────────────────────────────────────────────
+#  MULTI-COIN EXPANSION COMMANDS
+# ────────────────────────────────────────────────────────────────
+
+@router.message(Command("arb"))
+@require_premium
+async def cmd_arb(message: Message):
+    """Show top 3 current arbitrage opportunities."""
+    from app.database import ArbitrageOpportunity
+    from datetime import timedelta
+
+    async with async_session() as session:
+        cutoff = datetime.utcnow() - timedelta(minutes=5)
+        result = await session.execute(
+            select(ArbitrageOpportunity)
+            .where(ArbitrageOpportunity.timestamp >= cutoff)
+            .where(ArbitrageOpportunity.is_actionable == True)
+            .order_by(desc(ArbitrageOpportunity.net_profit_pct))
+            .limit(3)
+        )
+        opps = result.scalars().all()
+
+    if not opps:
+        await message.answer(
+            "💱 <b>Arbitrage Scanner</b>\n\nNo actionable opportunities right now. Scanning every 30s...",
+            parse_mode="HTML",
+            reply_markup=back_keyboard(),
+        )
+        return
+
+    lines = ["💱 <b>Top Arbitrage Opportunities</b>\n"]
+    for i, opp in enumerate(opps, 1):
+        lines.append(
+            f"<b>#{i} {opp.coin_id.upper()[:6]}</b>\n"
+            f"   Buy: {opp.buy_exchange} @ ${opp.buy_price:,.2f}\n"
+            f"   Sell: {opp.sell_exchange} @ ${opp.sell_price:,.2f}\n"
+            f"   Net profit: <b>{opp.net_profit_pct:.2f}%</b>\n"
+        )
+
+    lines.append(f"\n<i>{DISCLAIMER}</i>")
+    await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=back_keyboard())
+
+
+@router.message(Command("listings"))
+@require_premium
+async def cmd_listings(message: Message):
+    """Show recent new exchange listings."""
+    from app.database import NewListing
+    from datetime import timedelta
+
+    async with async_session() as session:
+        cutoff = datetime.utcnow() - timedelta(hours=48)
+        result = await session.execute(
+            select(NewListing)
+            .where(NewListing.timestamp >= cutoff)
+            .order_by(desc(NewListing.timestamp))
+            .limit(5)
+        )
+        listings = result.scalars().all()
+
+    if not listings:
+        await message.answer(
+            "🆕 <b>New Listings</b>\n\nNo new listings detected in the last 48h.",
+            parse_mode="HTML",
+            reply_markup=back_keyboard(),
+        )
+        return
+
+    lines = ["🆕 <b>Recent Listings (48h)</b>\n"]
+    for lst in listings:
+        change = ""
+        if lst.change_pct_1h is not None:
+            emoji = "🟢" if lst.change_pct_1h > 0 else "🔴"
+            change = f" | 1h: {emoji} {lst.change_pct_1h:+.1f}%"
+        lines.append(
+            f"<b>{lst.symbol}</b> on {lst.exchange}{change}\n"
+        )
+
+    lines.append(f"\n<i>{DISCLAIMER}</i>")
+    await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=back_keyboard())
+
+
+@router.message(Command("meme"))
+@require_premium
+async def cmd_meme(message: Message):
+    """Show trending memecoins with risk scores."""
+    from app.database import MemeToken
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(MemeToken)
+            .where(MemeToken.status == "active")
+            .order_by(desc(MemeToken.volume_24h))
+            .limit(5)
+        )
+        tokens = result.scalars().all()
+
+    if not tokens:
+        await message.answer(
+            "🐸 <b>Memecoin Scanner</b>\n\nNo memecoins discovered yet. Scanner runs every 10 min...",
+            parse_mode="HTML",
+            reply_markup=back_keyboard(),
+        )
+        return
+
+    lines = ["🐸 <b>Trending Memecoins</b>\n"]
+    for t in tokens:
+        risk_emoji = "🟢" if t.rug_pull_score < 25 else "🟡" if t.rug_pull_score < 50 else "🔴"
+        vol = f"${t.volume_24h / 1000:.0f}K" if t.volume_24h else "N/A"
+        lines.append(
+            f"{risk_emoji} <b>{t.symbol or '???'}</b> ({t.chain})\n"
+            f"   Risk: {t.rug_pull_score}/100 | Vol: {vol}\n"
+        )
+
+    lines.append(f"\n<i>Risk scores are algorithmic estimates. DYOR.</i>")
+    lines.append(f"<i>{DISCLAIMER}</i>")
+    await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=back_keyboard())

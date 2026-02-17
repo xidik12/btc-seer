@@ -1,0 +1,362 @@
+"""Memecoin Collector — discovers early-stage memecoins from DexScreener,
+assigns rug-pull risk scores, and marks dead tokens.
+
+Reuses DexScreener trending + boosted token endpoints.
+
+Risk scoring (0-100):
+  - top_holder_pct > 50%       -> +30
+  - contract not verified       -> +20
+  - no liquidity lock           -> +15
+  - volume acceleration > 10x   -> +10
+  - (not all data available initially; score what is available)
+
+Scheduled jobs:
+  - discover_memecoins()             every 10 min
+  - update_memecoin_risk_scores()    every 30 min
+  - cleanup_dead_memecoins()         daily
+"""
+
+import logging
+from datetime import datetime, timedelta
+
+from sqlalchemy import select
+
+from app.collectors.base import BaseCollector
+from app.database import async_session, MemeToken
+
+logger = logging.getLogger(__name__)
+
+# ── DexScreener Endpoints ────────────────────────────────────────────────────
+DEXSCREENER_BOOSTS_LATEST = "https://api.dexscreener.com/token-boosts/latest/v1"
+DEXSCREENER_BOOSTS_TOP = "https://api.dexscreener.com/token-boosts/top/v1"
+DEXSCREENER_PROFILES_LATEST = "https://api.dexscreener.com/token-profiles/latest/v1"
+
+# Minimum thresholds for memecoins
+MIN_VOLUME_24H = 10_000    # $10K
+MIN_LIQUIDITY = 5_000      # $5K
+MAX_AGE_DAYS = 7           # only tokens < 7 days old
+
+# Dead token criteria
+DEAD_VOLUME_THRESHOLD = 0  # $0 volume
+
+
+class MemecoinCollector(BaseCollector):
+    """Discovers early-stage memecoins and tracks their risk profiles."""
+
+    def __init__(self):
+        super().__init__()
+
+    async def collect(self) -> dict:
+        """Primary collect — delegates to discover_memecoins."""
+        return await self.discover_memecoins()
+
+    # ── Job 1: Discover memecoins (every 10 min) ─────────────────────────────
+
+    async def discover_memecoins(self) -> dict:
+        """Fetch trending/boosted tokens from DexScreener, filter for young memecoins."""
+        all_tokens: list[dict] = []
+
+        boosts_latest = await self.fetch_json(DEXSCREENER_BOOSTS_LATEST)
+        boosts_top = await self.fetch_json(DEXSCREENER_BOOSTS_TOP)
+        profiles_latest = await self.fetch_json(DEXSCREENER_PROFILES_LATEST)
+
+        for source_name, raw_data in [
+            ("boosts_latest", boosts_latest),
+            ("boosts_top", boosts_top),
+            ("profiles_latest", profiles_latest),
+        ]:
+            tokens = self._parse_tokens(raw_data)
+            all_tokens.extend(tokens)
+
+        # Deduplicate by address + chain
+        seen: set[tuple[str, str]] = set()
+        unique: list[dict] = []
+        for t in all_tokens:
+            key = (t["address"].lower(), t["chain"])
+            if key not in seen:
+                seen.add(key)
+                unique.append(t)
+
+        # Filter: volume >= $10K, liquidity >= $5K
+        qualified = [
+            t for t in unique
+            if (t.get("volume_24h") or 0) >= MIN_VOLUME_24H
+            and (t.get("liquidity") or 0) >= MIN_LIQUIDITY
+        ]
+
+        stored_count = 0
+        async with async_session() as session:
+            for token in qualified:
+                created = await self._upsert_meme_token(session, token)
+                if created:
+                    stored_count += 1
+            await session.commit()
+
+        if stored_count:
+            logger.info(
+                f"MemecoinCollector: discovered {stored_count} new memecoins "
+                f"(from {len(unique)} unique tokens)"
+            )
+        return {
+            "scanned": len(all_tokens),
+            "unique": len(unique),
+            "qualified": len(qualified),
+            "new": stored_count,
+        }
+
+    # ── Job 2: Update risk scores (every 30 min) ─────────────────────────────
+
+    async def update_memecoin_risk_scores(self) -> dict:
+        """Recalculate rug-pull risk scores for all active meme tokens."""
+        updated = 0
+
+        async with async_session() as session:
+            result = await session.execute(
+                select(MemeToken).where(MemeToken.status == "active")
+            )
+            tokens = result.scalars().all()
+
+            for token in tokens:
+                old_score = token.rug_pull_score
+                new_score = self._calculate_risk_score(token)
+                token.rug_pull_score = new_score
+                token.updated_at = datetime.utcnow()
+
+                # Graduate tokens that have been around for a while with low risk
+                age_days = (datetime.utcnow() - (token.first_seen or datetime.utcnow())).days
+                if age_days > MAX_AGE_DAYS and new_score < 30:
+                    token.status = "graduated"
+                    logger.info(
+                        f"MemecoinCollector: {token.symbol} graduated "
+                        f"(age={age_days}d, risk={new_score})"
+                    )
+
+                if new_score != old_score:
+                    updated += 1
+
+            await session.commit()
+
+        if updated:
+            logger.info(f"MemecoinCollector: updated risk scores for {updated} tokens")
+        return {"updated": updated, "total_active": len(tokens)}
+
+    # ── Job 3: Cleanup dead memecoins (daily) ─────────────────────────────────
+
+    async def cleanup_dead_memecoins(self) -> dict:
+        """Mark tokens with 0 volume for >24h as 'dead'."""
+        cutoff = datetime.utcnow() - timedelta(hours=24)
+        marked_dead = 0
+
+        async with async_session() as session:
+            result = await session.execute(
+                select(MemeToken).where(
+                    MemeToken.status == "active",
+                    MemeToken.updated_at < cutoff,
+                )
+            )
+            tokens = result.scalars().all()
+
+            for token in tokens:
+                # If volume is 0 or negligible and last update was > 24h ago
+                if (token.volume_24h or 0) <= DEAD_VOLUME_THRESHOLD:
+                    token.status = "dead"
+                    token.updated_at = datetime.utcnow()
+                    marked_dead += 1
+
+            await session.commit()
+
+        if marked_dead:
+            logger.info(f"MemecoinCollector: marked {marked_dead} tokens as dead")
+        return {"marked_dead": marked_dead}
+
+    # ── Risk scoring ──────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _calculate_risk_score(token: MemeToken) -> int:
+        """Calculate rug-pull risk score (0-100). Higher = riskier.
+
+        Scores what data is available; missing data does not add risk.
+        """
+        score = 0
+
+        # Top holder concentration > 50% -> +30
+        if token.top_holder_pct is not None and token.top_holder_pct > 50:
+            score += 30
+
+        # Contract not verified -> +20
+        if token.contract_verified is not None and not token.contract_verified:
+            score += 20
+
+        # No liquidity lock -> +15
+        if token.liquidity_locked is not None and not token.liquidity_locked:
+            score += 15
+
+        # Volume acceleration > 10x -> +10 (suspicious pump)
+        if token.volume_acceleration is not None and token.volume_acceleration > 10:
+            score += 10
+
+        # Honeypot risk flag -> +25
+        if token.honeypot_risk is not None and token.honeypot_risk:
+            score += 25
+
+        return min(score, 100)
+
+    # ── Parsing helpers ───────────────────────────────────────────────────────
+
+    def _parse_tokens(self, data: dict | list | None) -> list[dict]:
+        """Parse a DexScreener response into a flat token list."""
+        if data is None:
+            return []
+
+        items = data if isinstance(data, list) else data.get("data", data.get("tokens", []))
+        if not isinstance(items, list):
+            return []
+
+        tokens = []
+        for item in items:
+            token = self._normalize_item(item)
+            if token:
+                tokens.append(token)
+        return tokens
+
+    @staticmethod
+    def _normalize_item(item: dict) -> dict | None:
+        """Normalize a DexScreener item into a standard dict."""
+        address = item.get("tokenAddress") or item.get("address") or ""
+        if not address:
+            return None
+
+        chain = item.get("chainId") or item.get("chain") or "unknown"
+
+        symbol = (
+            item.get("symbol")
+            or item.get("tokenSymbol")
+            or item.get("header", {}).get("symbol")
+        )
+        name = (
+            item.get("name")
+            or item.get("tokenName")
+            or item.get("description")
+        )
+
+        def safe_float(v):
+            if v is None:
+                return None
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                return None
+
+        price_usd = safe_float(item.get("priceUsd") or item.get("price"))
+
+        volume_raw = item.get("volume")
+        if isinstance(volume_raw, dict):
+            volume_24h = safe_float(volume_raw.get("h24"))
+        else:
+            volume_24h = safe_float(item.get("volume24h") or volume_raw)
+
+        liq_raw = item.get("liquidity")
+        if isinstance(liq_raw, dict):
+            liquidity = safe_float(liq_raw.get("usd"))
+        else:
+            liquidity = safe_float(liq_raw)
+
+        return {
+            "address": address,
+            "chain": chain,
+            "symbol": symbol,
+            "name": name,
+            "price_usd": price_usd,
+            "volume_24h": volume_24h,
+            "liquidity": liquidity,
+        }
+
+    @staticmethod
+    async def _upsert_meme_token(session, token: dict) -> bool:
+        """Insert or update a MemeToken. Returns True if newly created."""
+        address = token["address"].lower()
+        chain = token["chain"]
+
+        result = await session.execute(
+            select(MemeToken).where(
+                MemeToken.address == address,
+                MemeToken.chain == chain,
+            )
+        )
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            # Only update if token is still active
+            if existing.status != "active":
+                return False
+            if token.get("price_usd") is not None:
+                existing.price_usd = token["price_usd"]
+            if token.get("volume_24h") is not None:
+                # Calculate volume acceleration before overwriting
+                old_vol = existing.volume_24h or 0
+                new_vol = token["volume_24h"]
+                if old_vol > 0:
+                    existing.volume_acceleration = new_vol / old_vol
+                existing.volume_24h = new_vol
+            if token.get("liquidity") is not None:
+                existing.liquidity = token["liquidity"]
+            if token.get("symbol") and not existing.symbol:
+                existing.symbol = token["symbol"]
+            if token.get("name") and not existing.name:
+                existing.name = token["name"]
+            existing.updated_at = datetime.utcnow()
+            return False
+
+        session.add(MemeToken(
+            address=address,
+            chain=chain,
+            symbol=token.get("symbol"),
+            name=token.get("name"),
+            price_usd=token.get("price_usd"),
+            volume_24h=token.get("volume_24h"),
+            liquidity=token.get("liquidity"),
+            status="active",
+            rug_pull_score=0,
+            first_seen=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        ))
+        return True
+
+
+# ── Scheduled job entry points ────────────────────────────────────────────────
+
+_collector: MemecoinCollector | None = None
+
+
+def _get_collector() -> MemecoinCollector:
+    global _collector
+    if _collector is None:
+        _collector = MemecoinCollector()
+    return _collector
+
+
+async def discover_memecoins():
+    """Scheduled: every 10 min — discover new memecoins from DexScreener."""
+    collector = _get_collector()
+    try:
+        await collector.discover_memecoins()
+    except Exception as e:
+        logger.error(f"discover_memecoins error: {e}", exc_info=True)
+
+
+async def update_memecoin_risk_scores():
+    """Scheduled: every 30 min — recalculate risk scores for active memecoins."""
+    collector = _get_collector()
+    try:
+        await collector.update_memecoin_risk_scores()
+    except Exception as e:
+        logger.error(f"update_memecoin_risk_scores error: {e}", exc_info=True)
+
+
+async def cleanup_dead_memecoins():
+    """Scheduled: daily — mark 0-volume tokens as dead."""
+    collector = _get_collector()
+    try:
+        await collector.cleanup_dead_memecoins()
+    except Exception as e:
+        logger.error(f"cleanup_dead_memecoins error: {e}", exc_info=True)

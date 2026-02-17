@@ -22,6 +22,9 @@ export default function CoinDetail() {
   const [period, setPeriod] = useState(7)
   const [loading, setLoading] = useState(true)
   const [chartLoading, setChartLoading] = useState(false)
+  const [prediction, setPrediction] = useState(null)
+  const [signal, setSignal] = useState(null)
+  const [sentiment, setSentiment] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -38,6 +41,13 @@ export default function CoinDetail() {
       setChartLoading(false)
     }).catch(() => setChartLoading(false))
   }, [coinId, period])
+
+  useEffect(() => {
+    if (!coinId) return
+    api.getCoinPrediction(coinId).then(setPrediction).catch(() => {})
+    api.getCoinSignal(coinId).then(setSignal).catch(() => {})
+    api.getCoinSentiment(coinId).then(setSentiment).catch(() => {})
+  }, [coinId])
 
   if (loading) {
     return (
@@ -101,6 +111,90 @@ export default function CoinDetail() {
       {/* Chart */}
       <ChartSection chart={chart} chartLoading={chartLoading} chartColor={chartColor} period={period} setPeriod={setPeriod} t={t} />
 
+      {/* AI Prediction */}
+      {prediction?.direction && (
+        <div className="bg-bg-card rounded-xl p-3 border border-white/5 slide-up">
+          <h3 className="text-xs font-bold text-text-muted mb-2">AI Prediction</h3>
+          <div className="flex items-center justify-between">
+            <span className={`text-sm font-bold ${
+              prediction.direction === 'bullish' ? 'text-accent-green' :
+              prediction.direction === 'bearish' ? 'text-accent-red' : 'text-text-muted'
+            }`}>
+              {prediction.direction === 'bullish' ? '▲ Bullish' : prediction.direction === 'bearish' ? '▼ Bearish' : '◄► Neutral'}
+            </span>
+            <span className="text-xs text-text-muted">
+              {prediction.confidence != null ? `${(prediction.confidence * 100).toFixed(0)}% conf` : ''}
+            </span>
+          </div>
+          {prediction.predicted_change_pct != null && (
+            <p className="text-[10px] text-text-muted mt-1">
+              Expected: {prediction.predicted_change_pct > 0 ? '+' : ''}{prediction.predicted_change_pct.toFixed(2)}%
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Trading Signal */}
+      {signal?.action && (
+        <div className="bg-bg-card rounded-xl p-3 border border-white/5 slide-up">
+          <h3 className="text-xs font-bold text-text-muted mb-2">Signal</h3>
+          <div className="flex items-center justify-between">
+            <span className={`text-sm font-bold uppercase ${
+              signal.action.includes('buy') ? 'text-accent-green' :
+              signal.action.includes('sell') ? 'text-accent-red' : 'text-text-muted'
+            }`}>
+              {signal.action.replace('_', ' ')}
+            </span>
+            {signal.risk_rating != null && (
+              <span className="text-[10px] text-text-muted">Risk: {signal.risk_rating}/10</span>
+            )}
+          </div>
+          {signal.entry_price && (
+            <div className="flex gap-4 text-[10px] text-text-muted mt-1">
+              <span>Entry: ${signal.entry_price.toLocaleString()}</span>
+              {signal.target_price && <span>Target: ${signal.target_price.toLocaleString()}</span>}
+              {signal.stop_loss && <span>SL: ${signal.stop_loss.toLocaleString()}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sentiment */}
+      {sentiment && (sentiment.news_sentiment_24h != null || sentiment.social_sentiment != null) && (
+        <div className="bg-bg-card rounded-xl p-3 border border-white/5 slide-up">
+          <h3 className="text-xs font-bold text-text-muted mb-2">Sentiment</h3>
+          <div className="flex gap-4">
+            {sentiment.news_sentiment_24h != null && (
+              <div>
+                <p className="text-[10px] text-text-muted">News (24h)</p>
+                <p className={`text-sm font-bold ${
+                  sentiment.news_sentiment_24h > 0.1 ? 'text-accent-green' :
+                  sentiment.news_sentiment_24h < -0.1 ? 'text-accent-red' : 'text-text-muted'
+                }`}>
+                  {sentiment.news_sentiment_24h > 0 ? '+' : ''}{(sentiment.news_sentiment_24h * 100).toFixed(0)}%
+                </p>
+              </div>
+            )}
+            {sentiment.social_sentiment != null && (
+              <div>
+                <p className="text-[10px] text-text-muted">Social</p>
+                <p className={`text-sm font-bold ${
+                  sentiment.social_sentiment > 0.1 ? 'text-accent-green' :
+                  sentiment.social_sentiment < -0.1 ? 'text-accent-red' : 'text-text-muted'
+                }`}>
+                  {sentiment.social_sentiment > 0 ? '+' : ''}{(sentiment.social_sentiment * 100).toFixed(0)}%
+                </p>
+              </div>
+            )}
+            {sentiment.news_volume != null && (
+              <div>
+                <p className="text-[10px] text-text-muted">News Vol</p>
+                <p className="text-sm font-bold text-text-primary">{sentiment.news_volume}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3">

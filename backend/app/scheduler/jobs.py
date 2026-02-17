@@ -334,6 +334,10 @@ async def collect_news_data():
                 sentiment = analyzer.analyze_text(title, language=language)
                 score = sentiment["combined_score"]
 
+                # Tag with coin_id
+                from app.features.coin_tagger import CoinTagger
+                primary_coin = CoinTagger.tag_primary(title)
+
                 news = News(
                     timestamp=datetime.utcnow(),
                     source=item.get("source", "unknown"),
@@ -342,6 +346,7 @@ async def collect_news_data():
                     sentiment_score=score,
                     raw_sentiment=item.get("raw_sentiment"),
                     language=language,
+                    coin_id=primary_coin,
                 )
                 session.add(news)
                 new_count += 1
@@ -2789,3 +2794,85 @@ async def snapshot_daily_metrics():
 
     except Exception as e:
         logger.error(f"Metrics snapshot error: {e}", exc_info=True)
+
+
+async def aggregate_coin_sentiments():
+    """Aggregate per-coin sentiment from tagged news and Reddit posts.
+
+    Runs every 5 minutes. For each tracked coin, queries tagged news + Reddit posts
+    from the last hour and computes average sentiment/volume.
+    """
+    from app.collectors.coins import TRACKED_COINS
+    from app.database import CoinSentiment
+
+    try:
+        since_1h = datetime.utcnow() - timedelta(hours=1)
+        since_24h = datetime.utcnow() - timedelta(hours=24)
+
+        async with async_session() as session:
+            for coin in TRACKED_COINS:
+                coin_id = coin["coin_id"]
+
+                # Get news tagged with this coin in last 1h
+                result_1h = await session.execute(
+                    select(News.sentiment_score).where(
+                        News.coin_id == coin_id,
+                        News.timestamp >= since_1h,
+                        News.sentiment_score.isnot(None),
+                    )
+                )
+                scores_1h = [row[0] for row in result_1h.all()]
+
+                # Get news tagged with this coin in last 24h
+                result_24h = await session.execute(
+                    select(News.sentiment_score).where(
+                        News.coin_id == coin_id,
+                        News.timestamp >= since_24h,
+                        News.sentiment_score.isnot(None),
+                    )
+                )
+                scores_24h = [row[0] for row in result_24h.all()]
+
+                # Compute averages
+                news_avg = sum(scores_1h) / len(scores_1h) if scores_1h else None
+                news_vol = len(scores_24h)
+
+                # Reddit posts mentioning this coin (from news table with reddit_ source)
+                reddit_result = await session.execute(
+                    select(News.sentiment_score).where(
+                        News.coin_id == coin_id,
+                        News.source.like("reddit_%"),
+                        News.timestamp >= since_24h,
+                        News.sentiment_score.isnot(None),
+                    )
+                )
+                reddit_scores = [row[0] for row in reddit_result.all()]
+                reddit_avg = sum(reddit_scores) / len(reddit_scores) if reddit_scores else None
+
+                # Overall sentiment: weighted average of available sources
+                components = []
+                if news_avg is not None:
+                    components.append(news_avg)
+                if reddit_avg is not None:
+                    components.append(reddit_avg)
+                overall = sum(components) / len(components) if components else None
+
+                # Only store if we have any data
+                if overall is not None or news_vol > 0:
+                    session.add(CoinSentiment(
+                        coin_id=coin_id,
+                        timestamp=datetime.utcnow(),
+                        news_sentiment_avg=news_avg,
+                        news_volume=news_vol,
+                        social_sentiment_avg=None,
+                        social_volume=0,
+                        reddit_sentiment_avg=reddit_avg,
+                        reddit_volume=len(reddit_scores),
+                        overall_sentiment=overall,
+                    ))
+
+            await session.commit()
+            logger.info(f"Aggregated sentiment for {len(TRACKED_COINS)} coins")
+
+    except Exception as e:
+        logger.error(f"Sentiment aggregation error: {e}", exc_info=True)

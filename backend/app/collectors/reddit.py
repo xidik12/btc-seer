@@ -9,7 +9,11 @@ logger = logging.getLogger(__name__)
 class RedditCollector(BaseCollector):
     """Collects posts from Bitcoin/crypto subreddits via Reddit's public JSON API."""
 
-    SUBREDDITS = ["bitcoin", "cryptocurrency"]
+    SUBREDDITS = [
+        "bitcoin", "cryptocurrency", "ethereum", "solana",
+        "cardano", "ripple", "dogecoin", "chainlink",
+        "polkadot", "CryptoMoonShots",
+    ]
     REDDIT_JSON_URL = "https://www.reddit.com/r/{subreddit}/hot.json"
 
     async def collect(self) -> dict:

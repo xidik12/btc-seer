@@ -259,4 +259,29 @@ export const api = {
   // Referral
   getReferralInfo: (initData) => fetchAPI('/referral/info', { headers: { 'X-Telegram-Init-Data': initData } }),
   getReferralLeaderboard: () => cachedFetch('/referral/leaderboard', T120),
+
+  // Coin Predictions, Signals, Sentiment, Features
+  getCoinPrediction: (coinId) => cachedFetch(`/coins/${coinId}/prediction`, T30),
+  getCoinSignal: (coinId) => cachedFetch(`/coins/${coinId}/signal`, T30),
+  getCoinSentiment: (coinId, hours = 24) => cachedFetch(`/coins/${coinId}/sentiment?hours=${hours}`, T60),
+  getCoinFeatures: (coinId) => cachedFetch(`/coins/${coinId}/features`, T60),
+
+  // Arbitrage
+  getArbitrageOpportunities: () => cachedFetch('/arbitrage/current', T15),
+  getArbitrageHistory: (coinId, hours = 24) => {
+    let url = `/arbitrage/history?hours=${hours}`
+    if (coinId) url += `&coin_id=${coinId}`
+    return cachedFetch(url, T60)
+  },
+  getCoinArbitrage: (coinId) => cachedFetch(`/arbitrage/${coinId}`, T15),
+
+  // New Listings
+  getNewListings: (hours = 168) => cachedFetch(`/listings/recent?hours=${hours}`, T60),
+  getDexTrending: () => cachedFetch('/listings/dex-trending', T60),
+  getDexToCex: () => cachedFetch('/listings/dex-to-cex', T60),
+
+  // Memecoins
+  getTrendingMemecoins: () => cachedFetch('/memecoins/trending', T60),
+  getMemecoinRisk: (address) => cachedFetch(`/memecoins/${address}/risk`, T120),
+  getMemecoinLeaderboard: () => cachedFetch('/memecoins/leaderboard', T120),
 }

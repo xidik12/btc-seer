@@ -30,6 +30,9 @@ const Tools = lazy(() => import('./pages/Tools'))
 const Resources = lazy(() => import('./pages/Resources'))
 const Learn = lazy(() => import('./pages/Learn'))
 const Whales = lazy(() => import('./pages/Whales'))
+const Arbitrage = lazy(() => import('./pages/Arbitrage'))
+const NewListings = lazy(() => import('./pages/NewListings'))
+const Memecoins = lazy(() => import('./pages/Memecoins'))
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -113,6 +116,9 @@ export default function App() {
           <Route path="/powerlaw" element={<PowerLaw />} />
           <Route path="/events" element={<EventMemory />} />
           <Route path="/whales" element={<Whales />} />
+          <Route path="/arbitrage" element={<Arbitrage />} />
+          <Route path="/new-listings" element={<NewListings />} />
+          <Route path="/memecoins" element={<Memecoins />} />
           <Route path="/elliott-wave" element={<ElliottWave />} />
           <Route path="/tools" element={<Tools />} />
           <Route path="/resources" element={<Resources />} />

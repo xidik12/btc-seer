@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_session, CoinInfo, CoinPrice
+from app.database import get_session, CoinInfo, CoinPrice, CoinSentiment, CoinPrediction, CoinSignal, CoinFeature
 from app.collectors.coin_search import CoinSearchService
 
 logger = logging.getLogger(__name__)
@@ -154,6 +154,146 @@ async def get_coin_chart(
     except Exception as e:
         logger.error(f"Chart DB fallback failed for {coin_id}: {e}")
         return {"coin_id": coin_id, "days": days, "prices": []}
+
+
+@router.get("/{coin_id}/sentiment")
+async def get_coin_sentiment(
+    coin_id: str,
+    hours: int = Query(24, ge=1, le=168),
+    session: AsyncSession = Depends(get_session),
+):
+    """Get aggregated sentiment for a coin."""
+    since = datetime.utcnow() - timedelta(hours=hours)
+    result = await session.execute(
+        select(CoinSentiment)
+        .where(CoinSentiment.coin_id == coin_id)
+        .where(CoinSentiment.timestamp >= since)
+        .order_by(desc(CoinSentiment.timestamp))
+        .limit(50)
+    )
+    sentiments = result.scalars().all()
+
+    if not sentiments:
+        return {"coin_id": coin_id, "sentiment": None, "history": []}
+
+    latest = sentiments[0]
+    return {
+        "coin_id": coin_id,
+        "sentiment": {
+            "overall": latest.overall_sentiment,
+            "news_avg": latest.news_sentiment_avg,
+            "news_volume": latest.news_volume,
+            "social_avg": latest.social_sentiment_avg,
+            "social_volume": latest.social_volume,
+            "reddit_avg": latest.reddit_sentiment_avg,
+            "reddit_volume": latest.reddit_volume,
+            "timestamp": latest.timestamp.isoformat(),
+        },
+        "history": [
+            {
+                "timestamp": s.timestamp.isoformat(),
+                "overall": s.overall_sentiment,
+                "news_avg": s.news_sentiment_avg,
+                "news_volume": s.news_volume,
+            }
+            for s in sentiments
+        ],
+    }
+
+
+@router.get("/{coin_id}/prediction")
+async def get_coin_prediction(
+    coin_id: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Get latest predictions for a coin."""
+    result = await session.execute(
+        select(CoinPrediction)
+        .where(CoinPrediction.coin_id == coin_id)
+        .order_by(desc(CoinPrediction.timestamp))
+        .limit(3)
+    )
+    predictions = result.scalars().all()
+
+    if not predictions:
+        return {"coin_id": coin_id, "predictions": []}
+
+    return {
+        "coin_id": coin_id,
+        "predictions": [
+            {
+                "timeframe": p.timeframe,
+                "direction": p.direction,
+                "confidence": p.confidence,
+                "predicted_price": p.predicted_price,
+                "predicted_change_pct": p.predicted_change_pct,
+                "current_price": p.current_price,
+                "actual_price": p.actual_price,
+                "was_correct": p.was_correct,
+                "model_outputs": p.model_outputs,
+                "timestamp": p.timestamp.isoformat(),
+            }
+            for p in predictions
+        ],
+    }
+
+
+@router.get("/{coin_id}/signal")
+async def get_coin_signal(
+    coin_id: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Get latest trading signal for a coin."""
+    result = await session.execute(
+        select(CoinSignal)
+        .where(CoinSignal.coin_id == coin_id)
+        .order_by(desc(CoinSignal.timestamp))
+        .limit(1)
+    )
+    signal = result.scalar_one_or_none()
+
+    if not signal:
+        return {"coin_id": coin_id, "signal": None}
+
+    return {
+        "coin_id": coin_id,
+        "signal": {
+            "action": signal.action,
+            "direction": signal.direction,
+            "confidence": signal.confidence,
+            "entry_price": signal.entry_price,
+            "target_price": signal.target_price,
+            "stop_loss": signal.stop_loss,
+            "risk_rating": signal.risk_rating,
+            "timeframe": signal.timeframe,
+            "reasoning": signal.reasoning,
+            "timestamp": signal.timestamp.isoformat(),
+        },
+    }
+
+
+@router.get("/{coin_id}/features")
+async def get_coin_features(
+    coin_id: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Get latest feature snapshot for a coin."""
+    result = await session.execute(
+        select(CoinFeature)
+        .where(CoinFeature.coin_id == coin_id)
+        .order_by(desc(CoinFeature.timestamp))
+        .limit(1)
+    )
+    feature = result.scalar_one_or_none()
+
+    if not feature:
+        return {"coin_id": coin_id, "features": None}
+
+    return {
+        "coin_id": coin_id,
+        "features": feature.feature_data,
+        "timestamp": feature.timestamp.isoformat(),
+    }
 
 
 @router.get("/search")

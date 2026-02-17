@@ -17,6 +17,8 @@ class Settings(BaseSettings):
 
     # External data APIs
     fred_api_key: str = ""  # FRED API for M2 money supply (free from https://fred.stlouisfed.org/docs/api/api_key.html)
+    etherscan_api_key: str = ""  # Etherscan V2 API (free from https://etherscan.io/apis)
+    solscan_api_key: str = ""  # Solscan Pro API (free tier: 10M CU from https://pro-api.solscan.io)
 
     # Database — /data/ path is a Railway persistent volume
     # Set DATABASE_URL to a postgresql:// URL to use PostgreSQL (e.g. Railway PG plugin)

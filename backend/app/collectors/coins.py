@@ -8,12 +8,28 @@ from app.database import async_session, CoinInfo, CoinPrice
 
 logger = logging.getLogger(__name__)
 
-# Permanently tracked coins
+# Permanently tracked coins — top 20 by market cap
 TRACKED_COINS = [
-    {"coin_id": "bitcoin", "symbol": "BTC", "name": "Bitcoin", "coingecko_id": "bitcoin"},
-    {"coin_id": "ethereum", "symbol": "ETH", "name": "Ethereum", "coingecko_id": "ethereum"},
-    {"coin_id": "solana", "symbol": "SOL", "name": "Solana", "coingecko_id": "solana"},
-    {"coin_id": "ripple", "symbol": "XRP", "name": "XRP", "coingecko_id": "ripple"},
+    {"coin_id": "bitcoin", "symbol": "BTC", "name": "Bitcoin", "coingecko_id": "bitcoin", "binance_symbol": "BTCUSDT"},
+    {"coin_id": "ethereum", "symbol": "ETH", "name": "Ethereum", "coingecko_id": "ethereum", "binance_symbol": "ETHUSDT"},
+    {"coin_id": "ripple", "symbol": "XRP", "name": "XRP", "coingecko_id": "ripple", "binance_symbol": "XRPUSDT"},
+    {"coin_id": "solana", "symbol": "SOL", "name": "Solana", "coingecko_id": "solana", "binance_symbol": "SOLUSDT"},
+    {"coin_id": "binancecoin", "symbol": "BNB", "name": "BNB", "coingecko_id": "binancecoin", "binance_symbol": "BNBUSDT"},
+    {"coin_id": "cardano", "symbol": "ADA", "name": "Cardano", "coingecko_id": "cardano", "binance_symbol": "ADAUSDT"},
+    {"coin_id": "dogecoin", "symbol": "DOGE", "name": "Dogecoin", "coingecko_id": "dogecoin", "binance_symbol": "DOGEUSDT"},
+    {"coin_id": "avalanche-2", "symbol": "AVAX", "name": "Avalanche", "coingecko_id": "avalanche-2", "binance_symbol": "AVAXUSDT"},
+    {"coin_id": "polkadot", "symbol": "DOT", "name": "Polkadot", "coingecko_id": "polkadot", "binance_symbol": "DOTUSDT"},
+    {"coin_id": "chainlink", "symbol": "LINK", "name": "Chainlink", "coingecko_id": "chainlink", "binance_symbol": "LINKUSDT"},
+    {"coin_id": "matic-network", "symbol": "MATIC", "name": "Polygon", "coingecko_id": "matic-network", "binance_symbol": "MATICUSDT"},
+    {"coin_id": "shiba-inu", "symbol": "SHIB", "name": "Shiba Inu", "coingecko_id": "shiba-inu", "binance_symbol": "SHIBUSDT"},
+    {"coin_id": "uniswap", "symbol": "UNI", "name": "Uniswap", "coingecko_id": "uniswap", "binance_symbol": "UNIUSDT"},
+    {"coin_id": "litecoin", "symbol": "LTC", "name": "Litecoin", "coingecko_id": "litecoin", "binance_symbol": "LTCUSDT"},
+    {"coin_id": "cosmos", "symbol": "ATOM", "name": "Cosmos", "coingecko_id": "cosmos", "binance_symbol": "ATOMUSDT"},
+    {"coin_id": "near", "symbol": "NEAR", "name": "NEAR Protocol", "coingecko_id": "near", "binance_symbol": "NEARUSDT"},
+    {"coin_id": "aptos", "symbol": "APT", "name": "Aptos", "coingecko_id": "aptos", "binance_symbol": "APTUSDT"},
+    {"coin_id": "arbitrum", "symbol": "ARB", "name": "Arbitrum", "coingecko_id": "arbitrum", "binance_symbol": "ARBUSDT"},
+    {"coin_id": "optimism", "symbol": "OP", "name": "Optimism", "coingecko_id": "optimism", "binance_symbol": "OPUSDT"},
+    {"coin_id": "sui", "symbol": "SUI", "name": "Sui", "coingecko_id": "sui", "binance_symbol": "SUIUSDT"},
 ]
 
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"

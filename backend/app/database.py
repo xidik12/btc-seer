@@ -76,6 +76,7 @@ class News(Base):
     sentiment_score: Mapped[float] = mapped_column(Float, nullable=True)
     raw_sentiment: Mapped[str] = mapped_column(String(20), nullable=True)
     language: Mapped[str] = mapped_column(String(10), nullable=True, default="en")
+    coin_id: Mapped[str] = mapped_column(String(100), nullable=True, index=True)
 
 
 class Feature(Base):
@@ -666,6 +667,8 @@ class WhaleTransaction(Base):
 
     source: Mapped[str] = mapped_column(String(50), default="blockchair")
     raw_data: Mapped[dict] = mapped_column(JSON, nullable=True)
+    chain: Mapped[str] = mapped_column(String(20), nullable=True, default="bitcoin")
+    token_symbol: Mapped[str] = mapped_column(String(20), nullable=True)
 
 
 class AddressLabel(Base):
@@ -841,6 +844,215 @@ class GeneratedImage(Base):
     image_data: Mapped[bytes] = mapped_column(Text, nullable=True)  # base64 or path
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+
+
+class CoinOHLCV(Base):
+    """OHLCV candlesticks per coin from Binance."""
+    __tablename__ = "coin_ohlcv"
+    __table_args__ = (
+        Index("ix_coin_ohlcv_symbol_interval_ts", "symbol", "interval", "timestamp"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    coin_id: Mapped[str] = mapped_column(String(100), index=True)
+    symbol: Mapped[str] = mapped_column(String(20))  # BTCUSDT, ETHUSDT
+    interval: Mapped[str] = mapped_column(String(10), default="1h")  # 1m, 5m, 1h, 4h, 1d
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True)
+    open: Mapped[float] = mapped_column(Float)
+    high: Mapped[float] = mapped_column(Float)
+    low: Mapped[float] = mapped_column(Float)
+    close: Mapped[float] = mapped_column(Float)
+    volume: Mapped[float] = mapped_column(Float)
+    source: Mapped[str] = mapped_column(String(50), default="binance")
+
+
+class CoinPrediction(Base):
+    """ML predictions per coin."""
+    __tablename__ = "coin_predictions"
+    __table_args__ = (
+        Index("ix_coin_pred_coin_tf_ts", "coin_id", "timeframe", "timestamp"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    coin_id: Mapped[str] = mapped_column(String(100), index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    timeframe: Mapped[str] = mapped_column(String(10))  # 1h, 4h, 24h
+    direction: Mapped[str] = mapped_column(String(20))  # bullish, bearish, neutral
+    confidence: Mapped[float] = mapped_column(Float)
+    predicted_price: Mapped[float] = mapped_column(Float, nullable=True)
+    predicted_change_pct: Mapped[float] = mapped_column(Float, nullable=True)
+    current_price: Mapped[float] = mapped_column(Float)
+    actual_price: Mapped[float] = mapped_column(Float, nullable=True)
+    actual_direction: Mapped[str] = mapped_column(String(20), nullable=True)
+    was_correct: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    model_outputs: Mapped[dict] = mapped_column(JSON, nullable=True)
+    error_pct: Mapped[float] = mapped_column(Float, nullable=True)
+
+
+class CoinSignal(Base):
+    """Trading signals per coin."""
+    __tablename__ = "coin_signals"
+    __table_args__ = (
+        Index("ix_coin_sig_coin_tf_ts", "coin_id", "timeframe", "timestamp"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    coin_id: Mapped[str] = mapped_column(String(100), index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    action: Mapped[str] = mapped_column(String(20))  # strong_buy, buy, hold, sell, strong_sell
+    direction: Mapped[str] = mapped_column(String(20))
+    confidence: Mapped[float] = mapped_column(Float)
+    entry_price: Mapped[float] = mapped_column(Float)
+    target_price: Mapped[float] = mapped_column(Float)
+    stop_loss: Mapped[float] = mapped_column(Float)
+    risk_rating: Mapped[int] = mapped_column(Integer)
+    timeframe: Mapped[str] = mapped_column(String(10))
+    reasoning: Mapped[str] = mapped_column(Text, nullable=True)
+
+
+class CoinFeature(Base):
+    """Feature vectors per coin."""
+    __tablename__ = "coin_features"
+    __table_args__ = (
+        Index("ix_coin_feat_coin_ts", "coin_id", "timestamp"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    coin_id: Mapped[str] = mapped_column(String(100), index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    feature_data: Mapped[dict] = mapped_column(JSON)
+
+
+class CoinSentiment(Base):
+    """Aggregated sentiment per coin."""
+    __tablename__ = "coin_sentiments"
+    __table_args__ = (
+        Index("ix_coin_sent_coin_ts", "coin_id", "timestamp"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    coin_id: Mapped[str] = mapped_column(String(100), index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    news_sentiment_avg: Mapped[float] = mapped_column(Float, nullable=True)
+    news_volume: Mapped[int] = mapped_column(Integer, default=0)
+    social_sentiment_avg: Mapped[float] = mapped_column(Float, nullable=True)
+    social_volume: Mapped[int] = mapped_column(Integer, default=0)
+    reddit_sentiment_avg: Mapped[float] = mapped_column(Float, nullable=True)
+    reddit_volume: Mapped[int] = mapped_column(Integer, default=0)
+    overall_sentiment: Mapped[float] = mapped_column(Float, nullable=True)
+
+
+class ExchangeTicker(Base):
+    """Cached bid/ask/last per coin per exchange for arbitrage."""
+    __tablename__ = "exchange_tickers"
+    __table_args__ = (
+        Index("ix_exchange_ticker_coin_ex_ts", "coin_id", "exchange", "timestamp"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    coin_id: Mapped[str] = mapped_column(String(100), index=True)
+    exchange: Mapped[str] = mapped_column(String(50))
+    bid: Mapped[float] = mapped_column(Float, nullable=True)
+    ask: Mapped[float] = mapped_column(Float, nullable=True)
+    last: Mapped[float] = mapped_column(Float, nullable=True)
+    volume_24h: Mapped[float] = mapped_column(Float, nullable=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+
+
+class ArbitrageOpportunity(Base):
+    """Detected arbitrage opportunities across exchanges."""
+    __tablename__ = "arbitrage_opportunities"
+    __table_args__ = (
+        Index("ix_arb_coin_ts", "coin_id", "timestamp"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    coin_id: Mapped[str] = mapped_column(String(100), index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    buy_exchange: Mapped[str] = mapped_column(String(50))
+    buy_price: Mapped[float] = mapped_column(Float)
+    sell_exchange: Mapped[str] = mapped_column(String(50))
+    sell_price: Mapped[float] = mapped_column(Float)
+    spread_pct: Mapped[float] = mapped_column(Float)
+    net_profit_pct: Mapped[float] = mapped_column(Float)
+    estimated_fees_pct: Mapped[float] = mapped_column(Float, nullable=True)
+    is_actionable: Mapped[bool] = mapped_column(Boolean, default=False)
+    exchange_prices: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+
+class NewListing(Base):
+    """Detected new coin listings on exchanges."""
+    __tablename__ = "new_listings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    exchange: Mapped[str] = mapped_column(String(50))
+    symbol: Mapped[str] = mapped_column(String(20), index=True)
+    listing_type: Mapped[str] = mapped_column(String(30), default="spot")  # spot, futures, innovation
+    announcement_url: Mapped[str] = mapped_column(Text, nullable=True)
+    price_at_listing: Mapped[float] = mapped_column(Float, nullable=True)
+    price_1h_after: Mapped[float] = mapped_column(Float, nullable=True)
+    price_24h_after: Mapped[float] = mapped_column(Float, nullable=True)
+    change_pct_1h: Mapped[float] = mapped_column(Float, nullable=True)
+    change_pct_24h: Mapped[float] = mapped_column(Float, nullable=True)
+    was_on_dex_first: Mapped[bool] = mapped_column(Boolean, nullable=True)
+
+
+class DexToken(Base):
+    """DEX tokens tracked for potential CEX listing."""
+    __tablename__ = "dex_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    address: Mapped[str] = mapped_column(String(200), index=True)
+    chain: Mapped[str] = mapped_column(String(50))  # ethereum, solana, bsc
+    symbol: Mapped[str] = mapped_column(String(30), nullable=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=True)
+    price_usd: Mapped[float] = mapped_column(Float, nullable=True)
+    volume_24h: Mapped[float] = mapped_column(Float, nullable=True)
+    liquidity: Mapped[float] = mapped_column(Float, nullable=True)
+    holder_count: Mapped[int] = mapped_column(Integer, nullable=True)
+    is_on_cex: Mapped[bool] = mapped_column(Boolean, default=False)
+    boosts: Mapped[int] = mapped_column(Integer, default=0)
+    first_seen: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class MemeToken(Base):
+    """Memecoins with risk scoring."""
+    __tablename__ = "meme_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    address: Mapped[str] = mapped_column(String(200), index=True)
+    chain: Mapped[str] = mapped_column(String(50))
+    symbol: Mapped[str] = mapped_column(String(30), nullable=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=True)
+    price_usd: Mapped[float] = mapped_column(Float, nullable=True)
+    volume_24h: Mapped[float] = mapped_column(Float, nullable=True)
+    liquidity: Mapped[float] = mapped_column(Float, nullable=True)
+    volume_acceleration: Mapped[float] = mapped_column(Float, nullable=True)
+    rug_pull_score: Mapped[int] = mapped_column(Integer, default=0)  # 0-100
+    top_holder_pct: Mapped[float] = mapped_column(Float, nullable=True)
+    liquidity_locked: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    contract_verified: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    honeypot_risk: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="active")  # active, dead, graduated
+    first_seen: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class MultichainOnchain(Base):
+    """Per-chain on-chain metrics."""
+    __tablename__ = "multichain_onchain"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    chain: Mapped[str] = mapped_column(String(50), index=True)  # ethereum, solana, bsc
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    active_addresses: Mapped[int] = mapped_column(Integer, nullable=True)
+    tx_count_24h: Mapped[int] = mapped_column(Integer, nullable=True)
+    avg_gas_price: Mapped[float] = mapped_column(Float, nullable=True)
+    defi_tvl: Mapped[float] = mapped_column(Float, nullable=True)
+    stablecoin_volume: Mapped[float] = mapped_column(Float, nullable=True)
+    new_contracts_24h: Mapped[int] = mapped_column(Integer, nullable=True)
 
 
 class LearnedPattern(Base):

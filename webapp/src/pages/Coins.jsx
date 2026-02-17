@@ -29,6 +29,7 @@ export default function Coins() {
   const [search, setSearch] = useState('')
   const [searchResults, setSearchResults] = useState(null)
   const [searching, setSearching] = useState(false)
+  const [predictions, setPredictions] = useState({})
 
   useEffect(() => {
     api.getTrackedCoins().then(data => {
@@ -36,6 +37,21 @@ export default function Coins() {
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (!coins.length) return
+    const fetchPredictions = async () => {
+      const preds = {}
+      for (const coin of coins.slice(0, 20)) {
+        try {
+          const data = await api.getCoinPrediction(coin.coin_id || coin.id)
+          if (data) preds[coin.coin_id || coin.id] = data
+        } catch {}
+      }
+      setPredictions(preds)
+    }
+    fetchPredictions()
+  }, [coins])
 
   // Debounced search
   useEffect(() => {
@@ -107,6 +123,17 @@ export default function Coins() {
                   <span className={`text-[10px] font-medium ${changeColor}`}>
                     {formatPercent(coin.change_24h)}
                   </span>
+                  {predictions[coin.coin_id || coin.id]?.direction && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ml-1 ${
+                      predictions[coin.coin_id || coin.id].direction === 'bullish'
+                        ? 'bg-accent-green/20 text-accent-green'
+                        : predictions[coin.coin_id || coin.id].direction === 'bearish'
+                        ? 'bg-accent-red/20 text-accent-red'
+                        : 'bg-white/10 text-text-muted'
+                    }`}>
+                      {predictions[coin.coin_id || coin.id].direction === 'bullish' ? '▲' : predictions[coin.coin_id || coin.id].direction === 'bearish' ? '▼' : '◄►'}
+                    </span>
+                  )}
                   <MiniSparkline data={coin.sparkline} color={sparkColor} />
                 </div>
               </button>
