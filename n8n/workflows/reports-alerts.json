@@ -475,11 +475,6 @@
             "node": "Fetch Performance",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Fetch Health",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -488,7 +483,7 @@
       "main": [
         [
           {
-            "node": "Check Anomalies",
+            "node": "Fetch Health",
             "type": "main",
             "index": 0
           }
@@ -535,11 +530,6 @@
             "node": "TG: Anomaly Alert",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Discord: Anomaly Alert",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -548,7 +538,7 @@
       "main": [
         [
           {
-            "node": "Log Anomaly Alert",
+            "node": "Discord: Anomaly Alert",
             "type": "main",
             "index": 0
           }
@@ -573,21 +563,6 @@
             "node": "Fetch User Metrics",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Fetch Revenue Metrics",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Fetch Daily Perf",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Fetch Daily Health",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -596,7 +571,7 @@
       "main": [
         [
           {
-            "node": "Build Daily Report",
+            "node": "Fetch Revenue Metrics",
             "type": "main",
             "index": 0
           }
@@ -607,7 +582,7 @@
       "main": [
         [
           {
-            "node": "Build Daily Report",
+            "node": "Fetch Daily Perf",
             "type": "main",
             "index": 0
           }
@@ -618,7 +593,7 @@
       "main": [
         [
           {
-            "node": "Build Daily Report",
+            "node": "Fetch Daily Health",
             "type": "main",
             "index": 0
           }
@@ -654,26 +629,6 @@
             "node": "Fetch Weekly Users",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Fetch Weekly Revenue",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Fetch Weekly Perf",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Fetch Weekly Health",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Fetch Weekly Accuracy",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -682,7 +637,7 @@
       "main": [
         [
           {
-            "node": "Merge Weekly Data",
+            "node": "Fetch Weekly Revenue",
             "type": "main",
             "index": 0
           }
@@ -693,7 +648,7 @@
       "main": [
         [
           {
-            "node": "Merge Weekly Data",
+            "node": "Fetch Weekly Perf",
             "type": "main",
             "index": 0
           }
@@ -704,7 +659,7 @@
       "main": [
         [
           {
-            "node": "Merge Weekly Data",
+            "node": "Fetch Weekly Health",
             "type": "main",
             "index": 0
           }
@@ -715,7 +670,7 @@
       "main": [
         [
           {
-            "node": "Merge Weekly Data",
+            "node": "Fetch Weekly Accuracy",
             "type": "main",
             "index": 0
           }
@@ -762,11 +717,6 @@
             "node": "TG: Weekly Report",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Discord: Weekly Report",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -775,7 +725,7 @@
       "main": [
         [
           {
-            "node": "Log Weekly Report",
+            "node": "Discord: Weekly Report",
             "type": "main",
             "index": 0
           }

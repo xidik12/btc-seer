@@ -587,11 +587,6 @@
             "node": "Fetch Daily Summary (Signal)",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Fetch Current Signal",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -600,7 +595,7 @@
       "main": [
         [
           {
-            "node": "Merge Signal Data",
+            "node": "Fetch Current Signal",
             "type": "main",
             "index": 0
           }
@@ -658,11 +653,6 @@
             "node": "Fetch Daily Summary",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Fetch Daily Performance",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -671,7 +661,7 @@
       "main": [
         [
           {
-            "node": "Merge Daily Data",
+            "node": "Fetch Daily Performance",
             "type": "main",
             "index": 0
           }

@@ -973,21 +973,6 @@
             "node": "Fetch New Users 6h",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Fetch New Users 24h",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Fetch New Users 48h",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Fetch New Users 72h",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -996,7 +981,7 @@
       "main": [
         [
           {
-            "node": "Merge Onboarding Users",
+            "node": "Fetch New Users 24h",
             "type": "main",
             "index": 0
           }
@@ -1007,7 +992,7 @@
       "main": [
         [
           {
-            "node": "Merge Onboarding Users",
+            "node": "Fetch New Users 48h",
             "type": "main",
             "index": 0
           }
@@ -1018,7 +1003,7 @@
       "main": [
         [
           {
-            "node": "Merge Onboarding Users",
+            "node": "Fetch New Users 72h",
             "type": "main",
             "index": 0
           }
@@ -1110,16 +1095,6 @@
             "node": "Fetch Trial Expiry 24h",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Fetch Trial Expiry 6h",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Fetch Trial Expiry 1h",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -1128,7 +1103,7 @@
       "main": [
         [
           {
-            "node": "Merge Trial Users",
+            "node": "Fetch Trial Expiry 6h",
             "type": "main",
             "index": 0
           }
@@ -1139,7 +1114,7 @@
       "main": [
         [
           {
-            "node": "Merge Trial Users",
+            "node": "Fetch Trial Expiry 1h",
             "type": "main",
             "index": 0
           }
@@ -1231,11 +1206,6 @@
             "node": "Fetch Upsell Candidates",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Fetch 30d Performance",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -1244,7 +1214,7 @@
       "main": [
         [
           {
-            "node": "Merge Upsell Data",
+            "node": "Fetch 30d Performance",
             "type": "main",
             "index": 0
           }
@@ -1336,11 +1306,6 @@
             "node": "Fetch Churned Users",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Fetch 7d Performance",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -1349,7 +1314,7 @@
       "main": [
         [
           {
-            "node": "Merge Winback Data",
+            "node": "Fetch 7d Performance",
             "type": "main",
             "index": 0
           }

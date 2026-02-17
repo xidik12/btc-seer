@@ -490,11 +490,6 @@
             "node": "Tweet: Referral Leaderboard",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "TG: Referral Leaderboard",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -503,7 +498,7 @@
       "main": [
         [
           {
-            "node": "Log: Referral Leaderboard",
+            "node": "TG: Referral Leaderboard",
             "type": "main",
             "index": 0
           }
@@ -572,11 +567,6 @@
             "node": "Tweet: Social Proof",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "TG: Social Proof",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -585,7 +575,7 @@
       "main": [
         [
           {
-            "node": "Log: Social Proof",
+            "node": "TG: Social Proof",
             "type": "main",
             "index": 0
           }
