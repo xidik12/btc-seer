@@ -132,16 +132,16 @@ async def get_event_memory_status(
     num_categories = len(cat_rows)
     most_impactful = cat_rows[0].category if cat_rows else None
 
-    # Compute avg_per_day
-    first_event = await session.execute(
-        select(EventImpact.timestamp).order_by(EventImpact.timestamp).limit(1)
+    # Compute avg_per_day using rolling 7-day window (not lifetime,
+    # which gets skewed by RSS feeds with old published dates)
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    recent_count_result = await session.execute(
+        select(func.count(EventImpact.id)).where(
+            EventImpact.timestamp >= seven_days_ago
+        )
     )
-    first_ts = first_event.scalar()
-    if first_ts and total_count:
-        days_span = max((datetime.utcnow() - first_ts).total_seconds() / 86400, 0.1)
-        avg_per_day = round(total_count / days_span, 2)
-    else:
-        avg_per_day = 0.0
+    recent_count = recent_count_result.scalar() or 0
+    avg_per_day = round(recent_count / 7, 1)
 
     return {
         "total_events": total_count,
