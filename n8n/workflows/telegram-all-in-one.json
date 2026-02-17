@@ -16,7 +16,10 @@
       "name": "Breaking News Check",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
@@ -27,7 +30,10 @@
       "name": "Fetch Trending Analysis",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 0]
+      "position": [
+        220,
+        0
+      ]
     },
     {
       "parameters": {
@@ -65,7 +71,10 @@
       "name": "Has Breaking Events?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [440, 0]
+      "position": [
+        440,
+        0
+      ]
     },
     {
       "parameters": {
@@ -90,14 +99,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 600,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram — an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a BREAKING NEWS alert for our Telegram channel based on this trending analysis data. Use urgent tone. Max 500 characters. Use Telegram markdown formatting.\\n\\nData:\\n{{ JSON.stringify($input.first().json) }}\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 600,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram \u2014 an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a BREAKING NEWS alert for our Telegram channel based on this trending analysis data. Use urgent tone. Max 500 characters. Use Telegram markdown formatting.\\n\\nData:\\n{{ JSON.stringify($input.first().json) }}\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "claude-breaking-news",
       "name": "Claude: Breaking News",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 0]
+      "position": [
+        660,
+        0
+      ]
     },
     {
       "parameters": {
@@ -107,7 +119,10 @@
       "name": "Parse Breaking Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 0]
+      "position": [
+        880,
+        0
+      ]
     },
     {
       "parameters": {
@@ -122,7 +137,10 @@
       "name": "TG: Breaking News",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1100, 0],
+      "position": [
+        1100,
+        0
+      ],
       "credentials": {
         "telegramApi": {
           "id": "REPLACE_WITH_CREDENTIAL_ID",
@@ -145,7 +163,10 @@
       "name": "Signal Update",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 400]
+      "position": [
+        0,
+        400
+      ]
     },
     {
       "parameters": {
@@ -156,7 +177,10 @@
       "name": "Fetch Daily Summary (Signal)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 340]
+      "position": [
+        220,
+        340
+      ]
     },
     {
       "parameters": {
@@ -167,7 +191,10 @@
       "name": "Fetch Current Signal",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 460]
+      "position": [
+        220,
+        460
+      ]
     },
     {
       "parameters": {
@@ -177,7 +204,10 @@
       "name": "Merge Signal Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 400]
+      "position": [
+        440,
+        400
+      ]
     },
     {
       "parameters": {
@@ -202,14 +232,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 1000,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram — an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a Telegram prediction signal post. Include: current price, predicted direction, confidence level, entry point, target, stop-loss, and reasoning. Max 800 characters. Use Telegram markdown.\\n\\nDaily Summary:\\n{{ JSON.stringify($json.summary) }}\\n\\nCurrent Signal:\\n{{ JSON.stringify($json.signal) }}\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 1000,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram \u2014 an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a Telegram prediction signal post. Include: current price, predicted direction, confidence level, entry point, target, stop-loss, and reasoning. Max 800 characters. Use Telegram markdown.\\n\\nDaily Summary:\\n{{ JSON.stringify($json.summary) }}\\n\\nCurrent Signal:\\n{{ JSON.stringify($json.signal) }}\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "claude-signal",
       "name": "Claude: Signal Post",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 400]
+      "position": [
+        660,
+        400
+      ]
     },
     {
       "parameters": {
@@ -219,7 +252,10 @@
       "name": "Parse Signal Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 400]
+      "position": [
+        880,
+        400
+      ]
     },
     {
       "parameters": {
@@ -234,7 +270,10 @@
       "name": "TG: Signal Post",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1100, 400],
+      "position": [
+        1100,
+        400
+      ],
       "credentials": {
         "telegramApi": {
           "id": "REPLACE_WITH_CREDENTIAL_ID",
@@ -257,7 +296,10 @@
       "name": "Daily Summary 22:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 800]
+      "position": [
+        0,
+        800
+      ]
     },
     {
       "parameters": {
@@ -268,7 +310,10 @@
       "name": "Fetch Daily Summary",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 740]
+      "position": [
+        220,
+        740
+      ]
     },
     {
       "parameters": {
@@ -279,7 +324,10 @@
       "name": "Fetch Daily Performance",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 860]
+      "position": [
+        220,
+        860
+      ]
     },
     {
       "parameters": {
@@ -289,7 +337,10 @@
       "name": "Merge Daily Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 800]
+      "position": [
+        440,
+        800
+      ]
     },
     {
       "parameters": {
@@ -314,14 +365,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 1200,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram — an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate an end-of-day summary for our Telegram channel. Include: accuracy stats, predictions recap, market sentiment. Max 1000 characters. Use Telegram markdown formatting.\\n\\nDaily Summary:\\n{{ JSON.stringify($json.summary) }}\\n\\nPerformance Card (1 day):\\n{{ JSON.stringify($json.performance) }}\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 1200,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram \u2014 an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate an end-of-day summary for our Telegram channel. Include: accuracy stats, predictions recap, market sentiment. Max 1000 characters. Use Telegram markdown formatting.\\n\\nDaily Summary:\\n{{ JSON.stringify($json.summary) }}\\n\\nPerformance Card (1 day):\\n{{ JSON.stringify($json.performance) }}\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "claude-daily",
       "name": "Claude: Daily Summary",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 800]
+      "position": [
+        660,
+        800
+      ]
     },
     {
       "parameters": {
@@ -331,7 +385,10 @@
       "name": "Parse Daily Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 800]
+      "position": [
+        880,
+        800
+      ]
     },
     {
       "parameters": {
@@ -346,7 +403,10 @@
       "name": "TG: Daily Summary",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1100, 800],
+      "position": [
+        1100,
+        800
+      ],
       "credentials": {
         "telegramApi": {
           "id": "REPLACE_WITH_CREDENTIAL_ID",
@@ -361,7 +421,9 @@
             {
               "field": "weeks",
               "triggerAtHour": 20,
-              "triggerAtDay": 0
+              "triggerAtDay": [
+                0
+              ]
             }
           ]
         }
@@ -370,7 +432,10 @@
       "name": "Weekly Report Sun 20:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 1200]
+      "position": [
+        0,
+        1200
+      ]
     },
     {
       "parameters": {
@@ -381,7 +446,10 @@
       "name": "Fetch Weekly Performance",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 1200]
+      "position": [
+        220,
+        1200
+      ]
     },
     {
       "parameters": {
@@ -406,14 +474,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 2000,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram — an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a comprehensive weekly performance report for our Telegram channel. Include: full accuracy breakdown, best and worst predictions of the week, key stats, and outlook for next week. Max 1500 characters. Use Telegram markdown formatting.\\n\\nWeekly Performance (7 days):\\n{{ JSON.stringify($input.first().json) }}\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 2000,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram \u2014 an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a comprehensive weekly performance report for our Telegram channel. Include: full accuracy breakdown, best and worst predictions of the week, key stats, and outlook for next week. Max 1500 characters. Use Telegram markdown formatting.\\n\\nWeekly Performance (7 days):\\n{{ JSON.stringify($input.first().json) }}\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "claude-weekly",
       "name": "Claude: Weekly Report",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [440, 1200]
+      "position": [
+        440,
+        1200
+      ]
     },
     {
       "parameters": {
@@ -423,7 +494,10 @@
       "name": "Parse Weekly Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 1200]
+      "position": [
+        660,
+        1200
+      ]
     },
     {
       "parameters": {
@@ -438,7 +512,10 @@
       "name": "TG: Weekly Report",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [880, 1200],
+      "position": [
+        880,
+        1200
+      ],
       "credentials": {
         "telegramApi": {
           "id": "REPLACE_WITH_CREDENTIAL_ID",

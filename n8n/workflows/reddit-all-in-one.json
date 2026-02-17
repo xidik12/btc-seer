@@ -16,7 +16,10 @@
       "name": "Comment Check Every 6h",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
@@ -37,7 +40,10 @@
       "name": "Fetch Bitcoin Questions",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 0]
+      "position": [
+        220,
+        0
+      ]
     },
     {
       "parameters": {
@@ -47,7 +53,10 @@
       "name": "Filter Genuine Questions",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 0]
+      "position": [
+        440,
+        0
+      ]
     },
     {
       "parameters": {
@@ -77,7 +86,10 @@
       "name": "Has Questions?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [660, 0]
+      "position": [
+        660,
+        0
+      ]
     },
     {
       "parameters": {
@@ -109,7 +121,10 @@
       "name": "Claude Generate Comment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, 0]
+      "position": [
+        880,
+        0
+      ]
     },
     {
       "parameters": {
@@ -144,7 +159,10 @@
       "name": "Post Reddit Comment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 0]
+      "position": [
+        1100,
+        0
+      ]
     },
     {
       "parameters": {
@@ -154,7 +172,10 @@
       "name": "Log Comment Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 0]
+      "position": [
+        1320,
+        0
+      ]
     },
     {
       "parameters": {
@@ -163,7 +184,9 @@
             {
               "field": "weeks",
               "triggerAtHour": 15,
-              "triggerAtDay": 2
+              "triggerAtDay": [
+                2
+              ]
             }
           ]
         }
@@ -172,7 +195,10 @@
       "name": "Weekly Post Tue 15:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 500]
+      "position": [
+        0,
+        500
+      ]
     },
     {
       "parameters": {
@@ -184,7 +210,10 @@
       "name": "Fetch Performance Card",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 500]
+      "position": [
+        220,
+        500
+      ]
     },
     {
       "parameters": {
@@ -196,7 +225,10 @@
       "name": "Fetch Daily Summary",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [440, 500]
+      "position": [
+        440,
+        500
+      ]
     },
     {
       "parameters": {
@@ -228,7 +260,10 @@
       "name": "Claude Generate Weekly Post",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 500]
+      "position": [
+        660,
+        500
+      ]
     },
     {
       "parameters": {
@@ -238,7 +273,10 @@
       "name": "Parse Post JSON",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 500]
+      "position": [
+        880,
+        500
+      ]
     },
     {
       "parameters": {
@@ -281,7 +319,10 @@
       "name": "Submit Weekly Post",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 500]
+      "position": [
+        1100,
+        500
+      ]
     },
     {
       "parameters": {
@@ -291,7 +332,10 @@
       "name": "Log Post Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 500]
+      "position": [
+        1320,
+        500
+      ]
     }
   ],
   "connections": {

@@ -16,7 +16,10 @@
       "name": "Anomaly Check :05",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
@@ -27,7 +30,10 @@
       "name": "Fetch Performance",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, -60]
+      "position": [
+        220,
+        -60
+      ]
     },
     {
       "parameters": {
@@ -38,7 +44,10 @@
       "name": "Fetch Health",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 60]
+      "position": [
+        220,
+        60
+      ]
     },
     {
       "parameters": {
@@ -48,7 +57,10 @@
       "name": "Check Anomalies",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 0]
+      "position": [
+        440,
+        0
+      ]
     },
     {
       "parameters": {
@@ -77,7 +89,10 @@
       "name": "Has Anomaly?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [660, 0]
+      "position": [
+        660,
+        0
+      ]
     },
     {
       "parameters": {
@@ -87,7 +102,10 @@
       "name": "Build Alert Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 0]
+      "position": [
+        880,
+        0
+      ]
     },
     {
       "parameters": {
@@ -102,7 +120,10 @@
       "name": "TG: Anomaly Alert",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, -60]
+      "position": [
+        1100,
+        -60
+      ]
     },
     {
       "parameters": {
@@ -117,7 +138,10 @@
       "name": "Discord: Anomaly Alert",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 60]
+      "position": [
+        1100,
+        60
+      ]
     },
     {
       "parameters": {
@@ -127,7 +151,10 @@
       "name": "Log Anomaly Alert",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 0]
+      "position": [
+        1320,
+        0
+      ]
     },
     {
       "parameters": {
@@ -144,7 +171,10 @@
       "name": "Daily Report 23:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 500]
+      "position": [
+        0,
+        500
+      ]
     },
     {
       "parameters": {
@@ -155,7 +185,10 @@
       "name": "Fetch User Metrics",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 380]
+      "position": [
+        220,
+        380
+      ]
     },
     {
       "parameters": {
@@ -166,7 +199,10 @@
       "name": "Fetch Revenue Metrics",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 480]
+      "position": [
+        220,
+        480
+      ]
     },
     {
       "parameters": {
@@ -177,7 +213,10 @@
       "name": "Fetch Daily Perf",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 580]
+      "position": [
+        220,
+        580
+      ]
     },
     {
       "parameters": {
@@ -188,7 +227,10 @@
       "name": "Fetch Daily Health",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 680]
+      "position": [
+        220,
+        680
+      ]
     },
     {
       "parameters": {
@@ -198,7 +240,10 @@
       "name": "Build Daily Report",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 500]
+      "position": [
+        440,
+        500
+      ]
     },
     {
       "parameters": {
@@ -213,7 +258,10 @@
       "name": "TG: Daily Report",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 500]
+      "position": [
+        660,
+        500
+      ]
     },
     {
       "parameters": {
@@ -222,7 +270,9 @@
             {
               "field": "weeks",
               "triggerAtHour": 20,
-              "triggerAtDay": 0
+              "triggerAtDay": [
+                0
+              ]
             }
           ]
         }
@@ -231,7 +281,10 @@
       "name": "Weekly Biz Sun 20:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 1000]
+      "position": [
+        0,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -242,7 +295,10 @@
       "name": "Fetch Weekly Users",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 840]
+      "position": [
+        220,
+        840
+      ]
     },
     {
       "parameters": {
@@ -253,7 +309,10 @@
       "name": "Fetch Weekly Revenue",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 940]
+      "position": [
+        220,
+        940
+      ]
     },
     {
       "parameters": {
@@ -264,7 +323,10 @@
       "name": "Fetch Weekly Perf",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 1040]
+      "position": [
+        220,
+        1040
+      ]
     },
     {
       "parameters": {
@@ -275,7 +337,10 @@
       "name": "Fetch Weekly Health",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 1140]
+      "position": [
+        220,
+        1140
+      ]
     },
     {
       "parameters": {
@@ -286,7 +351,10 @@
       "name": "Fetch Weekly Accuracy",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 1240]
+      "position": [
+        220,
+        1240
+      ]
     },
     {
       "parameters": {
@@ -296,7 +364,10 @@
       "name": "Merge Weekly Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 1000]
+      "position": [
+        440,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -328,7 +399,10 @@
       "name": "Claude: Weekly Analysis",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 1000]
+      "position": [
+        660,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -338,7 +412,10 @@
       "name": "Build Weekly Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 1000]
+      "position": [
+        880,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -353,7 +430,10 @@
       "name": "TG: Weekly Report",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 940]
+      "position": [
+        1100,
+        940
+      ]
     },
     {
       "parameters": {
@@ -368,7 +448,10 @@
       "name": "Discord: Weekly Report",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 1060]
+      "position": [
+        1100,
+        1060
+      ]
     },
     {
       "parameters": {
@@ -378,7 +461,10 @@
       "name": "Log Weekly Report",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 1000]
+      "position": [
+        1320,
+        1000
+      ]
     }
   ],
   "connections": {

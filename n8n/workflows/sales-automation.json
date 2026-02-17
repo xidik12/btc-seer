@@ -16,7 +16,10 @@
       "name": "Onboarding Every 6h",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
@@ -27,7 +30,10 @@
       "name": "Fetch New Users 6h",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, -150]
+      "position": [
+        220,
+        -150
+      ]
     },
     {
       "parameters": {
@@ -38,7 +44,10 @@
       "name": "Fetch New Users 24h",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, -50]
+      "position": [
+        220,
+        -50
+      ]
     },
     {
       "parameters": {
@@ -49,7 +58,10 @@
       "name": "Fetch New Users 48h",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 50]
+      "position": [
+        220,
+        50
+      ]
     },
     {
       "parameters": {
@@ -60,7 +72,10 @@
       "name": "Fetch New Users 72h",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 150]
+      "position": [
+        220,
+        150
+      ]
     },
     {
       "parameters": {
@@ -70,7 +85,10 @@
       "name": "Merge Onboarding Users",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 0]
+      "position": [
+        440,
+        0
+      ]
     },
     {
       "parameters": {
@@ -98,17 +116,23 @@
       "name": "Has Onboarding Users?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [660, 0]
+      "position": [
+        660,
+        0
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const users = $json.users || [];\nconst items = [];\n\nconst stagePrompts = {\n  welcome: (u) => `Write a warm welcome DM for a new user named ${u.first_name || 'there'}. Introduce BTC Seer — an AI-powered Bitcoin prediction platform. Mention the /predict command to get started and that they have a free trial. Make it feel personal and exciting.`,\n  signals: (u) => `Write a follow-up DM for ${u.first_name || 'there'} who joined ~24h ago. Introduce the /signal command — explain that BTC Seer sends real-time trading signals based on AI analysis. Encourage them to try it and see what the AI recommends.`,\n  accuracy: (u) => `Write a DM for ${u.first_name || 'there'} who has been using BTC Seer for ~2 days. Introduce the /accuracy command — show that BTC Seer is transparent about its prediction track record, including misses. Build trust through honesty.`,\n  referral: (u) => `Write a DM for ${u.first_name || 'there'} who has been with BTC Seer for ~3 days. Introduce the /referral program — when they refer a friend, BOTH get +7 days of Premium access for free. Make it feel like a win-win.`\n};\n\nfor (const user of users) {\n  const promptFn = stagePrompts[user.stage];\n  if (!promptFn) continue;\n  items.push({\n    json: {\n      telegram_id: user.telegram_id,\n      first_name: user.first_name || 'there',\n      stage: user.stage,\n      prompt: promptFn(user)\n    }\n  });\n}\n\nreturn items;"
+        "jsCode": "const users = $json.users || [];\nconst items = [];\n\nconst stagePrompts = {\n  welcome: (u) => `Write a warm welcome DM for a new user named ${u.first_name || 'there'}. Introduce BTC Seer \u2014 an AI-powered Bitcoin prediction platform. Mention the /predict command to get started and that they have a free trial. Make it feel personal and exciting.`,\n  signals: (u) => `Write a follow-up DM for ${u.first_name || 'there'} who joined ~24h ago. Introduce the /signal command \u2014 explain that BTC Seer sends real-time trading signals based on AI analysis. Encourage them to try it and see what the AI recommends.`,\n  accuracy: (u) => `Write a DM for ${u.first_name || 'there'} who has been using BTC Seer for ~2 days. Introduce the /accuracy command \u2014 show that BTC Seer is transparent about its prediction track record, including misses. Build trust through honesty.`,\n  referral: (u) => `Write a DM for ${u.first_name || 'there'} who has been with BTC Seer for ~3 days. Introduce the /referral program \u2014 when they refer a friend, BOTH get +7 days of Premium access for free. Make it feel like a win-win.`\n};\n\nfor (const user of users) {\n  const promptFn = stagePrompts[user.stage];\n  if (!promptFn) continue;\n  items.push({\n    json: {\n      telegram_id: user.telegram_id,\n      first_name: user.first_name || 'there',\n      stage: user.stage,\n      prompt: promptFn(user)\n    }\n  });\n}\n\nreturn items;"
       },
       "id": "onboarding-build-prompt",
       "name": "Build Onboarding Prompts",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 0]
+      "position": [
+        880,
+        0
+      ]
     },
     {
       "parameters": {
@@ -133,14 +157,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 800,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\\n\\nRules:\\n- Use HTML formatting only: <b>, <i>, <code>\\n- Keep it conversational and personal\\n- Max 600 characters\\n- Do NOT use markdown. Only HTML tags.\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 800,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer \u2014 an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording \u2014 never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\\n\\nRules:\\n- Use HTML formatting only: <b>, <i>, <code>\\n- Keep it conversational and personal\\n- Max 600 characters\\n- Do NOT use markdown. Only HTML tags.\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "onboarding-claude",
       "name": "Claude Onboarding MSG",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 0]
+      "position": [
+        1100,
+        0
+      ]
     },
     {
       "parameters": {
@@ -150,7 +177,10 @@
       "name": "Extract Onboarding Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 0]
+      "position": [
+        1320,
+        0
+      ]
     },
     {
       "parameters": {
@@ -165,7 +195,10 @@
       "name": "Send Onboarding DM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1540, 0]
+      "position": [
+        1540,
+        0
+      ]
     },
     {
       "parameters": {
@@ -180,7 +213,10 @@
       "name": "Log Onboarding",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, 0]
+      "position": [
+        1760,
+        0
+      ]
     },
     {
       "parameters": {
@@ -197,7 +233,10 @@
       "name": "Trial Expiry 10:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 500]
+      "position": [
+        0,
+        500
+      ]
     },
     {
       "parameters": {
@@ -208,7 +247,10 @@
       "name": "Fetch Trial Expiry 24h",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 400]
+      "position": [
+        220,
+        400
+      ]
     },
     {
       "parameters": {
@@ -219,7 +261,10 @@
       "name": "Fetch Trial Expiry 6h",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 500]
+      "position": [
+        220,
+        500
+      ]
     },
     {
       "parameters": {
@@ -230,7 +275,10 @@
       "name": "Fetch Trial Expiry 1h",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 600]
+      "position": [
+        220,
+        600
+      ]
     },
     {
       "parameters": {
@@ -240,7 +288,10 @@
       "name": "Merge Trial Users",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 500]
+      "position": [
+        440,
+        500
+      ]
     },
     {
       "parameters": {
@@ -268,17 +319,23 @@
       "name": "Has Trial Users?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [660, 500]
+      "position": [
+        660,
+        500
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const users = $json.users || [];\nconst items = [];\n\nconst tierPrompts = {\n  gentle: (u) => `Write a casual, friendly DM for ${u.first_name || 'there'} whose BTC Seer Premium trial expires tomorrow. Gently remind them of the value they've been getting — AI predictions, signals, accuracy tracking. Don't be pushy. Just highlight what they'll keep with Premium.`,\n  warning: (u) => `Write an urgent but respectful DM for ${u.first_name || 'there'} whose Premium trial expires in 6 hours. Show what they'll lose: real-time signals, advanced predictions, accuracy stats. Mention there may be a discount available for upgrading now.`,\n  lastchance: (u) => `Write a final-chance DM for ${u.first_name || 'there'} whose Premium trial expires in under 1 hour. Create urgency — this is their last chance to lock in Premium before losing access. Mention a limited-time offer. Make them feel they'd miss out.`\n};\n\nfor (const user of users) {\n  const promptFn = tierPrompts[user.tier];\n  if (!promptFn) continue;\n  items.push({\n    json: {\n      telegram_id: user.telegram_id,\n      first_name: user.first_name || 'there',\n      tier: user.tier,\n      prompt: promptFn(user)\n    }\n  });\n}\n\nreturn items;"
+        "jsCode": "const users = $json.users || [];\nconst items = [];\n\nconst tierPrompts = {\n  gentle: (u) => `Write a casual, friendly DM for ${u.first_name || 'there'} whose BTC Seer Premium trial expires tomorrow. Gently remind them of the value they've been getting \u2014 AI predictions, signals, accuracy tracking. Don't be pushy. Just highlight what they'll keep with Premium.`,\n  warning: (u) => `Write an urgent but respectful DM for ${u.first_name || 'there'} whose Premium trial expires in 6 hours. Show what they'll lose: real-time signals, advanced predictions, accuracy stats. Mention there may be a discount available for upgrading now.`,\n  lastchance: (u) => `Write a final-chance DM for ${u.first_name || 'there'} whose Premium trial expires in under 1 hour. Create urgency \u2014 this is their last chance to lock in Premium before losing access. Mention a limited-time offer. Make them feel they'd miss out.`\n};\n\nfor (const user of users) {\n  const promptFn = tierPrompts[user.tier];\n  if (!promptFn) continue;\n  items.push({\n    json: {\n      telegram_id: user.telegram_id,\n      first_name: user.first_name || 'there',\n      tier: user.tier,\n      prompt: promptFn(user)\n    }\n  });\n}\n\nreturn items;"
       },
       "id": "trial-build-prompt",
       "name": "Build Trial Prompts",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 500]
+      "position": [
+        880,
+        500
+      ]
     },
     {
       "parameters": {
@@ -303,14 +360,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 800,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\\n\\nRules:\\n- Use HTML formatting only: <b>, <i>, <code>\\n- Keep it conversational\\n- Max 600 characters\\n- Do NOT use markdown. Only HTML tags.\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 800,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer \u2014 an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording \u2014 never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\\n\\nRules:\\n- Use HTML formatting only: <b>, <i>, <code>\\n- Keep it conversational\\n- Max 600 characters\\n- Do NOT use markdown. Only HTML tags.\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "trial-claude",
       "name": "Claude Trial MSG",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 500]
+      "position": [
+        1100,
+        500
+      ]
     },
     {
       "parameters": {
@@ -320,7 +380,10 @@
       "name": "Extract Trial Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 500]
+      "position": [
+        1320,
+        500
+      ]
     },
     {
       "parameters": {
@@ -335,7 +398,10 @@
       "name": "Send Trial DM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1540, 500]
+      "position": [
+        1540,
+        500
+      ]
     },
     {
       "parameters": {
@@ -350,7 +416,10 @@
       "name": "Log Trial",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, 500]
+      "position": [
+        1760,
+        500
+      ]
     },
     {
       "parameters": {
@@ -359,7 +428,9 @@
             {
               "field": "weeks",
               "triggerAtHour": 14,
-              "triggerAtDay": 1
+              "triggerAtDay": [
+                1
+              ]
             }
           ]
         }
@@ -368,7 +439,10 @@
       "name": "Upsell Mon 14:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 1000]
+      "position": [
+        0,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -379,7 +453,10 @@
       "name": "Fetch Upsell Candidates",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 950]
+      "position": [
+        220,
+        950
+      ]
     },
     {
       "parameters": {
@@ -390,7 +467,10 @@
       "name": "Fetch 30d Performance",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 1050]
+      "position": [
+        220,
+        1050
+      ]
     },
     {
       "parameters": {
@@ -400,7 +480,10 @@
       "name": "Merge Upsell Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 1000]
+      "position": [
+        440,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -428,17 +511,23 @@
       "name": "Has Upsell Candidates?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [660, 1000]
+      "position": [
+        660,
+        1000
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const users = $json.users || [];\nconst performance = $json.performance || {};\nconst items = [];\n\nfor (const user of users) {\n  const stats = [\n    performance.accuracy ? `Platform accuracy: ${performance.accuracy}%` : null,\n    performance.total_predictions ? `${performance.total_predictions} predictions made in 30 days` : null,\n    performance.profitable_signals ? `${performance.profitable_signals} profitable signals` : null,\n    user.predictions_count ? `They made ${user.predictions_count} predictions` : null,\n    user.plan ? `Current plan: ${user.plan}` : null\n  ].filter(Boolean).join(', ');\n\n  items.push({\n    json: {\n      telegram_id: user.telegram_id,\n      first_name: user.first_name || 'there',\n      prompt: `Write a persuasive DM for ${user.first_name || 'there'} to upsell them from monthly to yearly Premium. Show the ROI — yearly saves them money and locks in the price. Personalize with their usage stats: ${stats}. Highlight the value: more predictions, priority signals, and supporting the platform's growth.`\n    }\n  });\n}\n\nreturn items;"
+        "jsCode": "const users = $json.users || [];\nconst performance = $json.performance || {};\nconst items = [];\n\nfor (const user of users) {\n  const stats = [\n    performance.accuracy ? `Platform accuracy: ${performance.accuracy}%` : null,\n    performance.total_predictions ? `${performance.total_predictions} predictions made in 30 days` : null,\n    performance.profitable_signals ? `${performance.profitable_signals} profitable signals` : null,\n    user.predictions_count ? `They made ${user.predictions_count} predictions` : null,\n    user.plan ? `Current plan: ${user.plan}` : null\n  ].filter(Boolean).join(', ');\n\n  items.push({\n    json: {\n      telegram_id: user.telegram_id,\n      first_name: user.first_name || 'there',\n      prompt: `Write a persuasive DM for ${user.first_name || 'there'} to upsell them from monthly to yearly Premium. Show the ROI \u2014 yearly saves them money and locks in the price. Personalize with their usage stats: ${stats}. Highlight the value: more predictions, priority signals, and supporting the platform's growth.`\n    }\n  });\n}\n\nreturn items;"
       },
       "id": "upsell-build-prompt",
       "name": "Build Upsell Prompts",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 1000]
+      "position": [
+        880,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -463,14 +552,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 1000,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\\n\\nRules:\\n- Use HTML formatting only: <b>, <i>, <code>\\n- Max 800 characters\\n- Show clear ROI numbers\\n- Do NOT use markdown. Only HTML tags.\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 1000,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer \u2014 an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording \u2014 never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\\n\\nRules:\\n- Use HTML formatting only: <b>, <i>, <code>\\n- Max 800 characters\\n- Show clear ROI numbers\\n- Do NOT use markdown. Only HTML tags.\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "upsell-claude",
       "name": "Claude Upsell MSG",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 1000]
+      "position": [
+        1100,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -480,7 +572,10 @@
       "name": "Extract Upsell Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 1000]
+      "position": [
+        1320,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -495,7 +590,10 @@
       "name": "Send Upsell DM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1540, 1000]
+      "position": [
+        1540,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -510,7 +608,10 @@
       "name": "Log Upsell",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, 1000]
+      "position": [
+        1760,
+        1000
+      ]
     },
     {
       "parameters": {
@@ -527,7 +628,10 @@
       "name": "Winback 15:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 1500]
+      "position": [
+        0,
+        1500
+      ]
     },
     {
       "parameters": {
@@ -538,7 +642,10 @@
       "name": "Fetch Churned Users",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 1450]
+      "position": [
+        220,
+        1450
+      ]
     },
     {
       "parameters": {
@@ -549,7 +656,10 @@
       "name": "Fetch 7d Performance",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 1550]
+      "position": [
+        220,
+        1550
+      ]
     },
     {
       "parameters": {
@@ -559,7 +669,10 @@
       "name": "Merge Winback Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 1500]
+      "position": [
+        440,
+        1500
+      ]
     },
     {
       "parameters": {
@@ -587,7 +700,10 @@
       "name": "Has Churned Users?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [660, 1500]
+      "position": [
+        660,
+        1500
+      ]
     },
     {
       "parameters": {
@@ -597,7 +713,10 @@
       "name": "Build Winback Prompts",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 1500]
+      "position": [
+        880,
+        1500
+      ]
     },
     {
       "parameters": {
@@ -622,24 +741,30 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 800,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\\n\\nRules:\\n- Use HTML formatting only: <b>, <i>, <code>\\n- Max 600 characters\\n- Make them feel valued, not pressured\\n- Do NOT use markdown. Only HTML tags.\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 800,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer \u2014 an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording \u2014 never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\\n\\nRules:\\n- Use HTML formatting only: <b>, <i>, <code>\\n- Max 600 characters\\n- Make them feel valued, not pressured\\n- Do NOT use markdown. Only HTML tags.\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "winback-claude",
       "name": "Claude Winback MSG",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 1500]
+      "position": [
+        1100,
+        1500
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const response = $json;\nlet text = '';\n\nif (response.content && response.content[0] && response.content[0].text) {\n  text = response.content[0].text;\n} else if (response.text) {\n  text = response.text;\n} else if (typeof response === 'string') {\n  text = response;\n} else {\n  text = '<b>We miss you at BTC Seer!</b> A lot has changed — come back and see what\\'s new. Try /predict to get started again.';\n}\n\nconst prevData = $('Build Winback Prompts').item.json;\n\nreturn [{\n  json: {\n    telegram_id: prevData.telegram_id,\n    first_name: prevData.first_name,\n    text: text\n  }\n}];"
+        "jsCode": "const response = $json;\nlet text = '';\n\nif (response.content && response.content[0] && response.content[0].text) {\n  text = response.content[0].text;\n} else if (response.text) {\n  text = response.text;\n} else if (typeof response === 'string') {\n  text = response;\n} else {\n  text = '<b>We miss you at BTC Seer!</b> A lot has changed \u2014 come back and see what\\'s new. Try /predict to get started again.';\n}\n\nconst prevData = $('Build Winback Prompts').item.json;\n\nreturn [{\n  json: {\n    telegram_id: prevData.telegram_id,\n    first_name: prevData.first_name,\n    text: text\n  }\n}];"
       },
       "id": "winback-extract",
       "name": "Extract Winback Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 1500]
+      "position": [
+        1320,
+        1500
+      ]
     },
     {
       "parameters": {
@@ -654,7 +779,10 @@
       "name": "Send Winback DM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1540, 1500]
+      "position": [
+        1540,
+        1500
+      ]
     },
     {
       "parameters": {
@@ -669,7 +797,10 @@
       "name": "Log Winback",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1760, 1500]
+      "position": [
+        1760,
+        1500
+      ]
     },
     {
       "parameters": {
@@ -686,7 +817,10 @@
       "name": "Milestones 18:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 2000]
+      "position": [
+        0,
+        2000
+      ]
     },
     {
       "parameters": {
@@ -697,7 +831,10 @@
       "name": "Fetch User Milestones",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [220, 2000]
+      "position": [
+        220,
+        2000
+      ]
     },
     {
       "parameters": {
@@ -725,17 +862,23 @@
       "name": "Has Milestones?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [440, 2000]
+      "position": [
+        440,
+        2000
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const milestones = $json.milestones || [];\nconst items = [];\n\nconst categoryEmojis = {\n  predictions_made: '🎯',\n  streak: '🔥',\n  accuracy_record: '🏆',\n  referrals: '🤝',\n  account_age: '🎂'\n};\n\nconst categoryLabels = {\n  predictions_made: 'Predictions Milestone',\n  streak: 'Prediction Streak',\n  accuracy_record: 'Accuracy Record',\n  referrals: 'Referral Achievement',\n  account_age: 'Account Anniversary'\n};\n\nfor (const m of milestones) {\n  const category = m.type || 'predictions_made';\n  const emoji = categoryEmojis[category] || '🎉';\n  const label = categoryLabels[category] || 'Achievement';\n\n  items.push({\n    json: {\n      telegram_id: m.telegram_id,\n      first_name: m.first_name || 'there',\n      category: category,\n      milestone_value: m.value || '',\n      milestone_label: label,\n      prompt: `Write a celebration DM for ${m.first_name || 'there'} who just hit a milestone on BTC Seer! ${emoji} Category: ${label}. Achievement: ${m.description || m.value || 'new milestone'}. Make it feel special and celebratory. Encourage them to keep going and share their achievement.`\n    }\n  });\n}\n\nreturn items;"
+        "jsCode": "const milestones = $json.milestones || [];\nconst items = [];\n\nconst categoryEmojis = {\n  predictions_made: '\ud83c\udfaf',\n  streak: '\ud83d\udd25',\n  accuracy_record: '\ud83c\udfc6',\n  referrals: '\ud83e\udd1d',\n  account_age: '\ud83c\udf82'\n};\n\nconst categoryLabels = {\n  predictions_made: 'Predictions Milestone',\n  streak: 'Prediction Streak',\n  accuracy_record: 'Accuracy Record',\n  referrals: 'Referral Achievement',\n  account_age: 'Account Anniversary'\n};\n\nfor (const m of milestones) {\n  const category = m.type || 'predictions_made';\n  const emoji = categoryEmojis[category] || '\ud83c\udf89';\n  const label = categoryLabels[category] || 'Achievement';\n\n  items.push({\n    json: {\n      telegram_id: m.telegram_id,\n      first_name: m.first_name || 'there',\n      category: category,\n      milestone_value: m.value || '',\n      milestone_label: label,\n      prompt: `Write a celebration DM for ${m.first_name || 'there'} who just hit a milestone on BTC Seer! ${emoji} Category: ${label}. Achievement: ${m.description || m.value || 'new milestone'}. Make it feel special and celebratory. Encourage them to keep going and share their achievement.`\n    }\n  });\n}\n\nreturn items;"
       },
       "id": "milestones-categorize",
       "name": "Categorize Milestones",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 2000]
+      "position": [
+        660,
+        2000
+      ]
     },
     {
       "parameters": {
@@ -760,24 +903,30 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 600,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\\n\\nRules:\\n- Use HTML formatting only: <b>, <i>, <code>\\n- Max 500 characters\\n- Include celebration emojis appropriate to the milestone\\n- Do NOT use markdown. Only HTML tags.\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 600,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer \u2014 an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording \u2014 never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\\n\\nRules:\\n- Use HTML formatting only: <b>, <i>, <code>\\n- Max 500 characters\\n- Include celebration emojis appropriate to the milestone\\n- Do NOT use markdown. Only HTML tags.\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "milestones-claude",
       "name": "Claude Milestone MSG",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, 2000]
+      "position": [
+        880,
+        2000
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const response = $json;\nlet text = '';\n\nif (response.content && response.content[0] && response.content[0].text) {\n  text = response.content[0].text;\n} else if (response.text) {\n  text = response.text;\n} else if (typeof response === 'string') {\n  text = response;\n} else {\n  text = '<b>🎉 Milestone Unlocked!</b> You\\'re making great progress on BTC Seer. Keep it up!';\n}\n\nconst prevData = $('Categorize Milestones').item.json;\n\nreturn [{\n  json: {\n    telegram_id: prevData.telegram_id,\n    first_name: prevData.first_name,\n    category: prevData.category,\n    text: text\n  }\n}];"
+        "jsCode": "const response = $json;\nlet text = '';\n\nif (response.content && response.content[0] && response.content[0].text) {\n  text = response.content[0].text;\n} else if (response.text) {\n  text = response.text;\n} else if (typeof response === 'string') {\n  text = response;\n} else {\n  text = '<b>\ud83c\udf89 Milestone Unlocked!</b> You\\'re making great progress on BTC Seer. Keep it up!';\n}\n\nconst prevData = $('Categorize Milestones').item.json;\n\nreturn [{\n  json: {\n    telegram_id: prevData.telegram_id,\n    first_name: prevData.first_name,\n    category: prevData.category,\n    text: text\n  }\n}];"
       },
       "id": "milestones-extract",
       "name": "Extract Milestone Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 2000]
+      "position": [
+        1100,
+        2000
+      ]
     },
     {
       "parameters": {
@@ -792,7 +941,10 @@
       "name": "Send Milestone DM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 2000]
+      "position": [
+        1320,
+        2000
+      ]
     },
     {
       "parameters": {
@@ -807,59 +959,102 @@
       "name": "Log Milestone",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1540, 2000]
+      "position": [
+        1540,
+        2000
+      ]
     }
   ],
   "connections": {
     "Onboarding Every 6h": {
       "main": [
         [
-          { "node": "Fetch New Users 6h", "type": "main", "index": 0 },
-          { "node": "Fetch New Users 24h", "type": "main", "index": 0 },
-          { "node": "Fetch New Users 48h", "type": "main", "index": 0 },
-          { "node": "Fetch New Users 72h", "type": "main", "index": 0 }
+          {
+            "node": "Fetch New Users 6h",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch New Users 24h",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch New Users 48h",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch New Users 72h",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch New Users 6h": {
       "main": [
         [
-          { "node": "Merge Onboarding Users", "type": "main", "index": 0 }
+          {
+            "node": "Merge Onboarding Users",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch New Users 24h": {
       "main": [
         [
-          { "node": "Merge Onboarding Users", "type": "main", "index": 0 }
+          {
+            "node": "Merge Onboarding Users",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch New Users 48h": {
       "main": [
         [
-          { "node": "Merge Onboarding Users", "type": "main", "index": 0 }
+          {
+            "node": "Merge Onboarding Users",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch New Users 72h": {
       "main": [
         [
-          { "node": "Merge Onboarding Users", "type": "main", "index": 0 }
+          {
+            "node": "Merge Onboarding Users",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Merge Onboarding Users": {
       "main": [
         [
-          { "node": "Has Onboarding Users?", "type": "main", "index": 0 }
+          {
+            "node": "Has Onboarding Users?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Has Onboarding Users?": {
       "main": [
         [
-          { "node": "Build Onboarding Prompts", "type": "main", "index": 0 }
+          {
+            "node": "Build Onboarding Prompts",
+            "type": "main",
+            "index": 0
+          }
         ],
         []
       ]
@@ -867,72 +1062,120 @@
     "Build Onboarding Prompts": {
       "main": [
         [
-          { "node": "Claude Onboarding MSG", "type": "main", "index": 0 }
+          {
+            "node": "Claude Onboarding MSG",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Claude Onboarding MSG": {
       "main": [
         [
-          { "node": "Extract Onboarding Text", "type": "main", "index": 0 }
+          {
+            "node": "Extract Onboarding Text",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Extract Onboarding Text": {
       "main": [
         [
-          { "node": "Send Onboarding DM", "type": "main", "index": 0 }
+          {
+            "node": "Send Onboarding DM",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Send Onboarding DM": {
       "main": [
         [
-          { "node": "Log Onboarding", "type": "main", "index": 0 }
+          {
+            "node": "Log Onboarding",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Trial Expiry 10:00": {
       "main": [
         [
-          { "node": "Fetch Trial Expiry 24h", "type": "main", "index": 0 },
-          { "node": "Fetch Trial Expiry 6h", "type": "main", "index": 0 },
-          { "node": "Fetch Trial Expiry 1h", "type": "main", "index": 0 }
+          {
+            "node": "Fetch Trial Expiry 24h",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Trial Expiry 6h",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Trial Expiry 1h",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch Trial Expiry 24h": {
       "main": [
         [
-          { "node": "Merge Trial Users", "type": "main", "index": 0 }
+          {
+            "node": "Merge Trial Users",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch Trial Expiry 6h": {
       "main": [
         [
-          { "node": "Merge Trial Users", "type": "main", "index": 0 }
+          {
+            "node": "Merge Trial Users",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch Trial Expiry 1h": {
       "main": [
         [
-          { "node": "Merge Trial Users", "type": "main", "index": 0 }
+          {
+            "node": "Merge Trial Users",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Merge Trial Users": {
       "main": [
         [
-          { "node": "Has Trial Users?", "type": "main", "index": 0 }
+          {
+            "node": "Has Trial Users?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Has Trial Users?": {
       "main": [
         [
-          { "node": "Build Trial Prompts", "type": "main", "index": 0 }
+          {
+            "node": "Build Trial Prompts",
+            "type": "main",
+            "index": 0
+          }
         ],
         []
       ]
@@ -940,64 +1183,104 @@
     "Build Trial Prompts": {
       "main": [
         [
-          { "node": "Claude Trial MSG", "type": "main", "index": 0 }
+          {
+            "node": "Claude Trial MSG",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Claude Trial MSG": {
       "main": [
         [
-          { "node": "Extract Trial Text", "type": "main", "index": 0 }
+          {
+            "node": "Extract Trial Text",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Extract Trial Text": {
       "main": [
         [
-          { "node": "Send Trial DM", "type": "main", "index": 0 }
+          {
+            "node": "Send Trial DM",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Send Trial DM": {
       "main": [
         [
-          { "node": "Log Trial", "type": "main", "index": 0 }
+          {
+            "node": "Log Trial",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Upsell Mon 14:00": {
       "main": [
         [
-          { "node": "Fetch Upsell Candidates", "type": "main", "index": 0 },
-          { "node": "Fetch 30d Performance", "type": "main", "index": 0 }
+          {
+            "node": "Fetch Upsell Candidates",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch 30d Performance",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch Upsell Candidates": {
       "main": [
         [
-          { "node": "Merge Upsell Data", "type": "main", "index": 0 }
+          {
+            "node": "Merge Upsell Data",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch 30d Performance": {
       "main": [
         [
-          { "node": "Merge Upsell Data", "type": "main", "index": 0 }
+          {
+            "node": "Merge Upsell Data",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Merge Upsell Data": {
       "main": [
         [
-          { "node": "Has Upsell Candidates?", "type": "main", "index": 0 }
+          {
+            "node": "Has Upsell Candidates?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Has Upsell Candidates?": {
       "main": [
         [
-          { "node": "Build Upsell Prompts", "type": "main", "index": 0 }
+          {
+            "node": "Build Upsell Prompts",
+            "type": "main",
+            "index": 0
+          }
         ],
         []
       ]
@@ -1005,64 +1288,104 @@
     "Build Upsell Prompts": {
       "main": [
         [
-          { "node": "Claude Upsell MSG", "type": "main", "index": 0 }
+          {
+            "node": "Claude Upsell MSG",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Claude Upsell MSG": {
       "main": [
         [
-          { "node": "Extract Upsell Text", "type": "main", "index": 0 }
+          {
+            "node": "Extract Upsell Text",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Extract Upsell Text": {
       "main": [
         [
-          { "node": "Send Upsell DM", "type": "main", "index": 0 }
+          {
+            "node": "Send Upsell DM",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Send Upsell DM": {
       "main": [
         [
-          { "node": "Log Upsell", "type": "main", "index": 0 }
+          {
+            "node": "Log Upsell",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Winback 15:00": {
       "main": [
         [
-          { "node": "Fetch Churned Users", "type": "main", "index": 0 },
-          { "node": "Fetch 7d Performance", "type": "main", "index": 0 }
+          {
+            "node": "Fetch Churned Users",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch 7d Performance",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch Churned Users": {
       "main": [
         [
-          { "node": "Merge Winback Data", "type": "main", "index": 0 }
+          {
+            "node": "Merge Winback Data",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch 7d Performance": {
       "main": [
         [
-          { "node": "Merge Winback Data", "type": "main", "index": 0 }
+          {
+            "node": "Merge Winback Data",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Merge Winback Data": {
       "main": [
         [
-          { "node": "Has Churned Users?", "type": "main", "index": 0 }
+          {
+            "node": "Has Churned Users?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Has Churned Users?": {
       "main": [
         [
-          { "node": "Build Winback Prompts", "type": "main", "index": 0 }
+          {
+            "node": "Build Winback Prompts",
+            "type": "main",
+            "index": 0
+          }
         ],
         []
       ]
@@ -1070,49 +1393,77 @@
     "Build Winback Prompts": {
       "main": [
         [
-          { "node": "Claude Winback MSG", "type": "main", "index": 0 }
+          {
+            "node": "Claude Winback MSG",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Claude Winback MSG": {
       "main": [
         [
-          { "node": "Extract Winback Text", "type": "main", "index": 0 }
+          {
+            "node": "Extract Winback Text",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Extract Winback Text": {
       "main": [
         [
-          { "node": "Send Winback DM", "type": "main", "index": 0 }
+          {
+            "node": "Send Winback DM",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Send Winback DM": {
       "main": [
         [
-          { "node": "Log Winback", "type": "main", "index": 0 }
+          {
+            "node": "Log Winback",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Milestones 18:00": {
       "main": [
         [
-          { "node": "Fetch User Milestones", "type": "main", "index": 0 }
+          {
+            "node": "Fetch User Milestones",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Fetch User Milestones": {
       "main": [
         [
-          { "node": "Has Milestones?", "type": "main", "index": 0 }
+          {
+            "node": "Has Milestones?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Has Milestones?": {
       "main": [
         [
-          { "node": "Categorize Milestones", "type": "main", "index": 0 }
+          {
+            "node": "Categorize Milestones",
+            "type": "main",
+            "index": 0
+          }
         ],
         []
       ]
@@ -1120,28 +1471,44 @@
     "Categorize Milestones": {
       "main": [
         [
-          { "node": "Claude Milestone MSG", "type": "main", "index": 0 }
+          {
+            "node": "Claude Milestone MSG",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Claude Milestone MSG": {
       "main": [
         [
-          { "node": "Extract Milestone Text", "type": "main", "index": 0 }
+          {
+            "node": "Extract Milestone Text",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Extract Milestone Text": {
       "main": [
         [
-          { "node": "Send Milestone DM", "type": "main", "index": 0 }
+          {
+            "node": "Send Milestone DM",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Send Milestone DM": {
       "main": [
         [
-          { "node": "Log Milestone", "type": "main", "index": 0 }
+          {
+            "node": "Log Milestone",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
