@@ -1,0 +1,422 @@
+{
+  "name": "Facebook & Instagram (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "id": "fb-daily-trigger",
+      "name": "FB Daily 10:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "fb-daily-fetch",
+      "name": "FB Fetch Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 800, messages: [{ role: 'user', content: 'Based on this Bitcoin prediction data:\\n' + JSON.stringify($json) + '\\n\\nChart: https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=default\\n\\nWrite a Facebook post about today\\'s Bitcoin prediction. Longer format (600 chars max). Educational, engaging. Include the chart link. Mention @BTC_Seer_Bot on Telegram.' }] }) }}",
+        "options": {}
+      },
+      "id": "fb-daily-claude",
+      "name": "FB Claude Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text;\nreturn [{ json: { message: text } }];"
+      },
+      "id": "fb-daily-extract",
+      "name": "FB Extract Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.META_PAGE_ID }}/feed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: $json.message, access_token: $env.META_PAGE_ACCESS_TOKEN }) }}",
+        "options": {}
+      },
+      "id": "fb-daily-post",
+      "name": "FB Post Daily",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "ig-daily-trigger",
+      "name": "IG Daily 10:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "ig-daily-fetch",
+      "name": "IG Fetch Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 600, messages: [{ role: 'user', content: 'Based on this Bitcoin prediction data:\\n' + JSON.stringify($json) + '\\n\\nChart: https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=instagram\\n\\nWrite an Instagram caption for this prediction post. Include hashtags. Max 500 chars. Use #Bitcoin #BTC #CryptoPrediction #AITrading #BTCSeer.' }] }) }}",
+        "options": {}
+      },
+      "id": "ig-daily-claude",
+      "name": "IG Claude Caption",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=instagram';\nreturn [{ json: { caption: text, chartUrl } }];"
+      },
+      "id": "ig-daily-extract",
+      "name": "IG Extract Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.META_IG_USER_ID }}/media",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ image_url: $json.chartUrl, caption: $json.caption, access_token: $env.META_PAGE_ACCESS_TOKEN }) }}",
+        "options": {}
+      },
+      "id": "ig-daily-create-media",
+      "name": "IG Create Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.META_IG_USER_ID }}/media_publish",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ creation_id: $json.id, access_token: $env.META_PAGE_ACCESS_TOKEN }) }}",
+        "options": {}
+      },
+      "id": "ig-daily-publish",
+      "name": "IG Publish",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 400]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18,
+              "triggerAtDay": 3
+            }
+          ]
+        }
+      },
+      "id": "fb-group-trigger",
+      "name": "FB Group Wed 18:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 800]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "fb-group-fetch",
+      "name": "FB Group Fetch Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 800]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 1000, messages: [{ role: 'user', content: 'Based on this Bitcoin prediction data:\\n' + JSON.stringify($json) + '\\n\\nWrite a Facebook group discussion post. Ask a question to engage the community. Include weekly stats. Max 800 chars.' }] }) }}",
+        "options": {}
+      },
+      "id": "fb-group-claude",
+      "name": "FB Group Claude Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 800]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text;\nreturn [{ json: { message: text } }];"
+      },
+      "id": "fb-group-extract",
+      "name": "FB Group Extract Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 800]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $env.META_PAGE_ID }}/feed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: $json.message, access_token: $env.META_PAGE_ACCESS_TOKEN }) }}",
+        "options": {}
+      },
+      "id": "fb-group-post",
+      "name": "FB Group Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 800]
+    }
+  ],
+  "connections": {
+    "FB Daily 10:00": {
+      "main": [
+        [
+          {
+            "node": "FB Fetch Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Fetch Summary": {
+      "main": [
+        [
+          {
+            "node": "FB Claude Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Claude Post": {
+      "main": [
+        [
+          {
+            "node": "FB Extract Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Extract Text": {
+      "main": [
+        [
+          {
+            "node": "FB Post Daily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG Daily 10:30": {
+      "main": [
+        [
+          {
+            "node": "IG Fetch Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG Fetch Summary": {
+      "main": [
+        [
+          {
+            "node": "IG Claude Caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG Claude Caption": {
+      "main": [
+        [
+          {
+            "node": "IG Extract Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG Extract Text": {
+      "main": [
+        [
+          {
+            "node": "IG Create Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG Create Media": {
+      "main": [
+        [
+          {
+            "node": "IG Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Group Wed 18:00": {
+      "main": [
+        [
+          {
+            "node": "FB Group Fetch Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Group Fetch Summary": {
+      "main": [
+        [
+          {
+            "node": "FB Group Claude Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Group Claude Post": {
+      "main": [
+        [
+          {
+            "node": "FB Group Extract Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Group Extract Text": {
+      "main": [
+        [
+          {
+            "node": "FB Group Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

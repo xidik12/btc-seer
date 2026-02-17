@@ -42,7 +42,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const performance = $('Get Performance Card').first().json;\nconst summary = $('Get Daily Summary').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/weekly-summary.png?size=default';\n\nconst prompt = `Write a LinkedIn thought-leadership post about AI in Bitcoin trading. Data:\n\nPerformance (7d): ${JSON.stringify(performance, null, 2)}\n\nDaily Summary: ${JSON.stringify(summary, null, 2)}\n\nA chart image is available at: ${chartUrl} — include this URL in your post so it shows as a preview image.\n\nProfessional tone, use data to back claims. Structure: hook paragraph, 2-3 insight paragraphs, key takeaway, soft CTA. Mention BTC Seer naturally. 800-1200 chars.`;\n\nreturn [{ json: { prompt, chartUrl } }];"
+        "jsCode": "const performance = $('Get Performance Card').first().json;\nconst summary = $('Get Daily Summary').first().json;\n\nconst prompt = `Write a professional LinkedIn post about AI-powered Bitcoin prediction. Data:\n\nPerformance (7d): ${JSON.stringify(performance, null, 2)}\n\nDaily Summary: ${JSON.stringify(summary, null, 2)}\n\nTone: professional, thought-leadership. Focus on AI/ML methodology and how technology is transforming financial analysis. Include 3-5 relevant hashtags (#Bitcoin #AI #FinTech #MachineLearning). 300-500 words. Mention BTC Seer naturally. End with engagement question.`;\n\nreturn [{ json: { prompt } }];"
       },
       "id": "li-build-prompt",
       "name": "Build Claude Prompt",
@@ -64,7 +64,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 1500, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Data-driven, educational, transparent about accuracy. Never financial advice.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 1500, system: 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Data-driven, educational, transparent about accuracy. Never financial advice. For LinkedIn: professional, thought-leadership tone.', messages: [{ role: 'user', content: $json.prompt }] }) }}",
         "options": {}
       },
       "id": "li-claude-api",
@@ -78,20 +78,10 @@
         "jsCode": "const response = $('Claude Generate').first().json;\nconst text = response.content[0].text.trim();\nreturn [{ json: { text } }];"
       },
       "id": "li-extract",
-      "name": "Extract Response",
+      "name": "Extract Post Text",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [1100, 0]
-    },
-    {
-      "parameters": {
-        "jsCode": "const text = $('Extract Response').first().json.text;\nconst body = {\n  author: `urn:li:person:${$env.LINKEDIN_PERSON_URN}`,\n  lifecycleState: \"PUBLISHED\",\n  specificContent: {\n    \"com.linkedin.ugc.ShareContent\": {\n      shareCommentary: { text: text },\n      shareMediaCategory: \"NONE\"\n    }\n  },\n  visibility: { \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\" }\n};\nreturn [{ json: { linkedinBody: JSON.stringify(body) } }];"
-      },
-      "id": "li-build-body",
-      "name": "Build LinkedIn Body",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1320, 0]
     },
     {
       "parameters": {
@@ -106,25 +96,25 @@
           ]
         },
         "sendBody": true,
-        "specifyBody": "string",
-        "body": "={{ $json.linkedinBody }}",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ author: 'urn:li:person:' + $env.LINKEDIN_PERSON_URN, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text: $json.text }, shareMediaCategory: 'NONE' } }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } }) }}",
         "options": {}
       },
       "id": "li-post",
       "name": "Post to LinkedIn",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1540, 0]
+      "position": [1320, 0]
     },
     {
       "parameters": {
-        "jsCode": "const text = $('Extract Response').first().json.text;\nconst now = new Date().toISOString();\nconsole.log(`[${now}] LinkedIn post published: ${text.substring(0, 80)}...`);\nreturn [{ json: { status: 'posted', platform: 'linkedin', timestamp: now, post_length: text.length } }];"
+        "jsCode": "const text = $('Extract Post Text').first().json.text;\nconst now = new Date().toISOString();\nconsole.log(`[${now}] LinkedIn post published: ${text.substring(0, 80)}...`);\nreturn [{ json: { status: 'posted', platform: 'linkedin', timestamp: now, post_length: text.length } }];"
       },
       "id": "li-log",
       "name": "Log Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1760, 0]
+      "position": [1540, 0]
     }
   ],
   "connections": {
@@ -150,15 +140,10 @@
     },
     "Claude Generate": {
       "main": [
-        [{ "node": "Extract Response", "type": "main", "index": 0 }]
+        [{ "node": "Extract Post Text", "type": "main", "index": 0 }]
       ]
     },
-    "Extract Response": {
-      "main": [
-        [{ "node": "Build LinkedIn Body", "type": "main", "index": 0 }]
-      ]
-    },
-    "Build LinkedIn Body": {
+    "Extract Post Text": {
       "main": [
         [{ "node": "Post to LinkedIn", "type": "main", "index": 0 }]
       ]
@@ -171,10 +156,5 @@
   },
   "settings": {
     "executionOrder": "v1"
-  },
-  "tags": [
-    { "name": "linkedin" },
-    { "name": "marketing" },
-    { "name": "ai" }
-  ]
+  }
 }

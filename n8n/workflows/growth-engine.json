@@ -1,0 +1,608 @@
+{
+  "name": "Growth Engine (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 16,
+              "triggerAtDay": 5
+            }
+          ]
+        }
+      },
+      "id": "trigger-referral-lb",
+      "name": "Referral LB Fri 16:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/referral-leaderboard",
+        "options": {}
+      },
+      "id": "fetch-referral-lb",
+      "name": "Fetch Referral Leaderboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 1000,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Create leaderboard content from this referral data. Generate both: a tweet (max 270 chars) for Twitter and a longer Telegram post (max 600 chars) celebrating top referrers. Return JSON only: {\\\"tweet\\\": \\\"...\\\", \\\"telegram\\\": \\\"...\\\"}\\n\\nReferral Leaderboard Data:\\n{{ JSON.stringify($input.first().json) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-referral-lb",
+      "name": "Claude: Referral Leaderboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content[0].text;\nconst cleaned = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\nconst parsed = JSON.parse(cleaned);\nreturn [{ json: { tweet: parsed.tweet, telegram: parsed.telegram } }];"
+      },
+      "id": "parse-referral-lb",
+      "name": "Parse Referral Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.tweet }}",
+        "additionalFields": {}
+      },
+      "id": "tweet-referral-lb",
+      "name": "Tweet: Referral Leaderboard",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [880, -60],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $env.TELEGRAM_CHANNEL_ID }}\",\n  \"text\": {{ JSON.stringify($json.telegram) }},\n  \"parse_mode\": \"Markdown\"\n}",
+        "options": {}
+      },
+      "id": "tg-referral-lb",
+      "name": "TG: Referral Leaderboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const tweet = $('Tweet: Referral Leaderboard').first().json;\nconst tg = $('TG: Referral Leaderboard').first().json;\nreturn [{ json: { branch: 'referral-leaderboard', tweet_ok: !!tweet, tg_ok: !!tg.ok, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "log-referral-lb",
+      "name": "Log: Referral Leaderboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 */4 * * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-social-proof",
+      "name": "Social Proof 4h :30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "fetch-social-proof",
+      "name": "Fetch Performance Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-accuracy-gte-70",
+              "leftValue": "={{ $json.accuracy_pct ?? $json.accuracyPct ?? $json.accuracy_overall ?? 0 }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "gate-social-proof",
+      "name": "Accuracy >= 70%?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 800,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Create a social proof tweet highlighting our strong prediction accuracy. Max 270 chars for the tweet. Also generate a Telegram version (max 500 chars). Return JSON only: {\\\"tweet\\\": \\\"...\\\", \\\"telegram\\\": \\\"...\\\"}\\n\\n7-Day Performance Data:\\n{{ JSON.stringify($input.first().json) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-social-proof",
+      "name": "Claude: Social Proof",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content[0].text;\nconst cleaned = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\nconst parsed = JSON.parse(cleaned);\nreturn [{ json: { tweet: parsed.tweet, telegram: parsed.telegram } }];"
+      },
+      "id": "parse-social-proof",
+      "name": "Parse Social Proof Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 400]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.tweet }}",
+        "additionalFields": {}
+      },
+      "id": "tweet-social-proof",
+      "name": "Tweet: Social Proof",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [1100, 340],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $env.TELEGRAM_CHANNEL_ID }}\",\n  \"text\": {{ JSON.stringify($json.telegram) }},\n  \"parse_mode\": \"Markdown\"\n}",
+        "options": {}
+      },
+      "id": "tg-social-proof",
+      "name": "TG: Social Proof",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "const tweet = $('Tweet: Social Proof').first().json;\nconst tg = $('TG: Social Proof').first().json;\nreturn [{ json: { branch: 'social-proof', tweet_ok: !!tweet, tg_ok: !!tg.ok, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "log-social-proof",
+      "name": "Log: Social Proof",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 400]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "trigger-trending",
+      "name": "Trending Hijack 2h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 800]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/trending-analysis",
+        "options": {}
+      },
+      "id": "fetch-trending",
+      "name": "Fetch Trending Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 800]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-has-trending",
+              "leftValue": "={{ ($json.trending_topics && $json.trending_topics.length > 0) || $json.has_events === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "gate-trending",
+      "name": "Has Trending Topics?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 800]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 300,\n  \"system\": \"You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Create a tweet that ties BTC Seer into the trending Bitcoin topic. Be natural, not forced. Max 270 chars. Include relevant hashtags.\\n\\nTrending Analysis:\\n{{ JSON.stringify($input.first().json) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-trending",
+      "name": "Claude: Trending Hijack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 800]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst raw = response.content[0].text;\nconst cleaned = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').replace(/^\"|\"$/g, '').trim();\nreturn [{ json: { tweet: cleaned } }];"
+      },
+      "id": "parse-trending",
+      "name": "Parse Trending Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 800]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.tweet }}",
+        "additionalFields": {}
+      },
+      "id": "tweet-trending",
+      "name": "Tweet: Trending Hijack",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [1100, 800],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const tweet = $input.first().json;\nreturn [{ json: { branch: 'trending-hijack', tweet_ok: !!tweet, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "log-trending",
+      "name": "Log: Trending Hijack",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 800]
+    }
+  ],
+  "connections": {
+    "Referral LB Fri 16:00": {
+      "main": [
+        [
+          {
+            "node": "Fetch Referral Leaderboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Referral Leaderboard": {
+      "main": [
+        [
+          {
+            "node": "Claude: Referral Leaderboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Referral Leaderboard": {
+      "main": [
+        [
+          {
+            "node": "Parse Referral Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Referral Response": {
+      "main": [
+        [
+          {
+            "node": "Tweet: Referral Leaderboard",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "TG: Referral Leaderboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tweet: Referral Leaderboard": {
+      "main": [
+        [
+          {
+            "node": "Log: Referral Leaderboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TG: Referral Leaderboard": {
+      "main": [
+        [
+          {
+            "node": "Log: Referral Leaderboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Social Proof 4h :30": {
+      "main": [
+        [
+          {
+            "node": "Fetch Performance Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Performance Card": {
+      "main": [
+        [
+          {
+            "node": "Accuracy >= 70%?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accuracy >= 70%?": {
+      "main": [
+        [
+          {
+            "node": "Claude: Social Proof",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Social Proof": {
+      "main": [
+        [
+          {
+            "node": "Parse Social Proof Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Social Proof Response": {
+      "main": [
+        [
+          {
+            "node": "Tweet: Social Proof",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "TG: Social Proof",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tweet: Social Proof": {
+      "main": [
+        [
+          {
+            "node": "Log: Social Proof",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TG: Social Proof": {
+      "main": [
+        [
+          {
+            "node": "Log: Social Proof",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trending Hijack 2h": {
+      "main": [
+        [
+          {
+            "node": "Fetch Trending Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Trending Analysis": {
+      "main": [
+        [
+          {
+            "node": "Has Trending Topics?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Trending Topics?": {
+      "main": [
+        [
+          {
+            "node": "Claude: Trending Hijack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Trending Hijack": {
+      "main": [
+        [
+          {
+            "node": "Parse Trending Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Trending Response": {
+      "main": [
+        [
+          {
+            "node": "Tweet: Trending Hijack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tweet: Trending Hijack": {
+      "main": [
+        [
+          {
+            "node": "Log: Trending Hijack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

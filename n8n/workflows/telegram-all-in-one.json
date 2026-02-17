@@ -1,0 +1,696 @@
+{
+  "name": "Telegram All-in-One (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "trigger-breaking-news",
+      "name": "Breaking News Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/trending-analysis",
+        "options": {}
+      },
+      "id": "fetch-trending",
+      "name": "Fetch Trending Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-has-events",
+              "leftValue": "={{ $json.has_events }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-severity-high",
+              "leftValue": "={{ $json.events ? $json.events.length : 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "gate-breaking-news",
+      "name": "Has Breaking Events?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 600,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram — an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a BREAKING NEWS alert for our Telegram channel based on this trending analysis data. Use urgent tone. Max 500 characters. Use Telegram markdown formatting.\\n\\nData:\\n{{ JSON.stringify($input.first().json) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-breaking-news",
+      "name": "Claude: Breaking News",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text;\nreturn [{ json: { text } }];"
+      },
+      "id": "parse-breaking-news",
+      "name": "Parse Breaking Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "tg-send-breaking",
+      "name": "TG: Breaking News",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1100, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "trigger-signal",
+      "name": "Signal Update",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "fetch-signal-summary",
+      "name": "Fetch Daily Summary (Signal)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 340]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/signals/current",
+        "options": {}
+      },
+      "id": "fetch-signal-current",
+      "name": "Fetch Current Signal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary = $('Fetch Daily Summary (Signal)').first().json;\nconst signal = $('Fetch Current Signal').first().json;\nreturn [{ json: { summary, signal } }];"
+      },
+      "id": "merge-signal-data",
+      "name": "Merge Signal Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 1000,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram — an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a Telegram prediction signal post. Include: current price, predicted direction, confidence level, entry point, target, stop-loss, and reasoning. Max 800 characters. Use Telegram markdown.\\n\\nDaily Summary:\\n{{ JSON.stringify($json.summary) }}\\n\\nCurrent Signal:\\n{{ JSON.stringify($json.signal) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-signal",
+      "name": "Claude: Signal Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/signal.png?size=telegram';\nreturn [{ json: { text, chartUrl } }];"
+      },
+      "id": "parse-signal-response",
+      "name": "Parse Signal Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 400]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "tg-send-signal",
+      "name": "TG: Signal Post",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1100, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "triggerAtHour": 22
+            }
+          ]
+        }
+      },
+      "id": "trigger-daily-summary",
+      "name": "Daily Summary 22:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 800]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "fetch-daily-summary",
+      "name": "Fetch Daily Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 740]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=1",
+        "options": {}
+      },
+      "id": "fetch-daily-performance",
+      "name": "Fetch Daily Performance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 860]
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary = $('Fetch Daily Summary').first().json;\nconst performance = $('Fetch Daily Performance').first().json;\nreturn [{ json: { summary, performance } }];"
+      },
+      "id": "merge-daily-data",
+      "name": "Merge Daily Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 800]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 1200,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram — an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate an end-of-day summary for our Telegram channel. Include: accuracy stats, predictions recap, market sentiment. Max 1000 characters. Use Telegram markdown formatting.\\n\\nDaily Summary:\\n{{ JSON.stringify($json.summary) }}\\n\\nPerformance Card (1 day):\\n{{ JSON.stringify($json.performance) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-daily",
+      "name": "Claude: Daily Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 800]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text;\nreturn [{ json: { text } }];"
+      },
+      "id": "parse-daily-response",
+      "name": "Parse Daily Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 800]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "tg-send-daily",
+      "name": "TG: Daily Summary",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1100, 800],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 20,
+              "triggerAtDay": 0
+            }
+          ]
+        }
+      },
+      "id": "trigger-weekly",
+      "name": "Weekly Report Sun 20:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 1200]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "fetch-weekly-performance",
+      "name": "Fetch Weekly Performance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 1200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 2000,\n  \"system\": \"You are BTC Seer AI, the voice of BTC Seer on Telegram — an AI-powered Bitcoin prediction platform. Your tone: professional, data-focused, educational. Format: use Telegram markdown (bold with *, code blocks with `, monospace). Vary structure between posts. Never give financial advice. Include reasoning for predictions.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Generate a comprehensive weekly performance report for our Telegram channel. Include: full accuracy breakdown, best and worst predictions of the week, key stats, and outlook for next week. Max 1500 characters. Use Telegram markdown formatting.\\n\\nWeekly Performance (7 days):\\n{{ JSON.stringify($input.first().json) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-weekly",
+      "name": "Claude: Weekly Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 1200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text;\nreturn [{ json: { text } }];"
+      },
+      "id": "parse-weekly-response",
+      "name": "Parse Weekly Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 1200]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "tg-send-weekly",
+      "name": "TG: Weekly Report",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [880, 1200],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Telegram API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Breaking News Check": {
+      "main": [
+        [
+          {
+            "node": "Fetch Trending Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Trending Analysis": {
+      "main": [
+        [
+          {
+            "node": "Has Breaking Events?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Breaking Events?": {
+      "main": [
+        [
+          {
+            "node": "Claude: Breaking News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Breaking News": {
+      "main": [
+        [
+          {
+            "node": "Parse Breaking Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Breaking Response": {
+      "main": [
+        [
+          {
+            "node": "TG: Breaking News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signal Update": {
+      "main": [
+        [
+          {
+            "node": "Fetch Daily Summary (Signal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Current Signal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Daily Summary (Signal)": {
+      "main": [
+        [
+          {
+            "node": "Merge Signal Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Current Signal": {
+      "main": [
+        [
+          {
+            "node": "Merge Signal Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Signal Data": {
+      "main": [
+        [
+          {
+            "node": "Claude: Signal Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Signal Post": {
+      "main": [
+        [
+          {
+            "node": "Parse Signal Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Signal Response": {
+      "main": [
+        [
+          {
+            "node": "TG: Signal Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Summary 22:00": {
+      "main": [
+        [
+          {
+            "node": "Fetch Daily Summary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Daily Performance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Daily Summary": {
+      "main": [
+        [
+          {
+            "node": "Merge Daily Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Daily Performance": {
+      "main": [
+        [
+          {
+            "node": "Merge Daily Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Daily Data": {
+      "main": [
+        [
+          {
+            "node": "Claude: Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Daily Summary": {
+      "main": [
+        [
+          {
+            "node": "Parse Daily Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Daily Response": {
+      "main": [
+        [
+          {
+            "node": "TG: Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly Report Sun 20:00": {
+      "main": [
+        [
+          {
+            "node": "Fetch Weekly Performance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weekly Performance": {
+      "main": [
+        [
+          {
+            "node": "Claude: Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Weekly Report": {
+      "main": [
+        [
+          {
+            "node": "Parse Weekly Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Weekly Response": {
+      "main": [
+        [
+          {
+            "node": "TG: Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

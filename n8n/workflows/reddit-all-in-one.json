@@ -1,0 +1,434 @@
+{
+  "name": "Reddit All-in-One (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "r1-trigger",
+      "name": "Comment Check Every 6h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://oauth.reddit.com/r/Bitcoin/search.json?q=prediction%20OR%20price&sort=new&limit=5&restrict_sr=true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.REDDIT_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "r1-fetch",
+      "name": "Fetch Bitcoin Questions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const posts = $input.first().json?.data?.children || [];\n\nconst questionWords = ['what', 'when', 'why', 'how', 'where', 'will', 'should', 'could', 'would', 'is it', 'do you', 'does anyone', 'can anyone', 'anyone know'];\n\nconst filtered = posts.filter(p => {\n  const title = (p.data.title || '').toLowerCase();\n  const selftext = (p.data.selftext || '').toLowerCase();\n  const combined = title + ' ' + selftext;\n\n  const hasQuestion = combined.includes('?') || questionWords.some(w => combined.includes(w));\n\n  const spamIndicators = ['giveaway', 'airdrop', 'free btc', 'dm me', 'join my', 'click here', 'sign up'];\n  const isSpam = spamIndicators.some(s => combined.includes(s));\n\n  return hasQuestion && !isSpam;\n});\n\nreturn filtered.map(p => ({\n  json: {\n    thing_id: 't3_' + p.data.id,\n    title: p.data.title,\n    selftext: p.data.selftext,\n    author: p.data.author,\n    url: 'https://reddit.com' + p.data.permalink\n  }\n}));"
+      },
+      "id": "r1-filter",
+      "name": "Filter Genuine Questions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-has-questions",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": "0",
+              "operator": {
+                "type": "number",
+                "operation": "gt",
+                "name": "filter.operator.gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "r1-if",
+      "name": "Has Questions?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 600,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a helpful Reddit comment replying to this Bitcoin question. Be genuinely helpful, informative, and conversational. If relevant, naturally mention AI prediction tools like BTC Seer as something worth exploring. Max 500 characters. Use Reddit markdown formatting.\\n\\nTitle: {{ $json.title }}\\nBody: {{ $json.selftext }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "r1-claude",
+      "name": "Claude Generate Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth.reddit.com/api/comment",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.REDDIT_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "form",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "thing_id",
+              "value": "={{ $('Filter Genuine Questions').item.json.thing_id }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.content[0].text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "r1-post",
+      "name": "Post Reddit Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst thingId = $('Filter Genuine Questions').item.json.thing_id;\nconst title = $('Filter Genuine Questions').item.json.title;\n\nconsole.log(`[Reddit Comment] Posted reply to \"${title}\" (${thingId})`);\nconsole.log(`Response status: ${JSON.stringify(item?.jquery ? 'success' : 'check response')}`);\n\nreturn [{ json: { status: 'comment_posted', thing_id: thingId, title: title, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "r1-log",
+      "name": "Log Comment Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 15,
+              "triggerAtDay": 2
+            }
+          ]
+        }
+      },
+      "id": "r2-trigger",
+      "name": "Weekly Post Tue 15:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 500]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "r2-perf",
+      "name": "Fetch Performance Card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 500]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "r2-summary",
+      "name": "Fetch Daily Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 2000,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a 500-1000 word Bitcoin analysis post for r/CryptoCurrency. Structure it with: a catchy title, TLDR section, detailed analysis with real data, methodology explanation, results, and a conclusion. Use Reddit markdown formatting. Return your response as valid JSON with exactly two keys: {\\\"title\\\": \\\"your catchy title here\\\", \\\"body\\\": \\\"your full post body here\\\"}. Do not include anything outside the JSON object.\\n\\nPerformance data (last 7 days):\\n{{ JSON.stringify($('Fetch Performance Card').item.json) }}\\n\\nDaily summary:\\n{{ JSON.stringify($('Fetch Daily Summary').item.json) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "r2-claude",
+      "name": "Claude Generate Weekly Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text;\n\nlet parsed;\ntry {\n  parsed = JSON.parse(text);\n} catch (e) {\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('Could not parse Claude response as JSON: ' + text.substring(0, 200));\n  }\n}\n\nreturn [{ json: { title: parsed.title, body: parsed.body } }];"
+      },
+      "id": "r2-parse",
+      "name": "Parse Post JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth.reddit.com/api/submit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.REDDIT_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "form",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "sr",
+              "value": "CryptoCurrency"
+            },
+            {
+              "name": "kind",
+              "value": "self"
+            },
+            {
+              "name": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.body }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "r2-submit",
+      "name": "Submit Weekly Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst title = $('Parse Post JSON').item.json.title;\n\nconsole.log(`[Reddit Weekly Post] Submitted: \"${title}\"`);\nconsole.log(`Response: ${JSON.stringify(item).substring(0, 500)}`);\n\nreturn [{ json: { status: 'weekly_post_submitted', title: title, subreddit: 'CryptoCurrency', timestamp: new Date().toISOString() } }];"
+      },
+      "id": "r2-log",
+      "name": "Log Post Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 500]
+    }
+  ],
+  "connections": {
+    "Comment Check Every 6h": {
+      "main": [
+        [
+          {
+            "node": "Fetch Bitcoin Questions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Bitcoin Questions": {
+      "main": [
+        [
+          {
+            "node": "Filter Genuine Questions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Genuine Questions": {
+      "main": [
+        [
+          {
+            "node": "Has Questions?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Questions?": {
+      "main": [
+        [
+          {
+            "node": "Claude Generate Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Generate Comment": {
+      "main": [
+        [
+          {
+            "node": "Post Reddit Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Reddit Comment": {
+      "main": [
+        [
+          {
+            "node": "Log Comment Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly Post Tue 15:00": {
+      "main": [
+        [
+          {
+            "node": "Fetch Performance Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Performance Card": {
+      "main": [
+        [
+          {
+            "node": "Fetch Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Daily Summary": {
+      "main": [
+        [
+          {
+            "node": "Claude Generate Weekly Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Generate Weekly Post": {
+      "main": [
+        [
+          {
+            "node": "Parse Post JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Post JSON": {
+      "main": [
+        [
+          {
+            "node": "Submit Weekly Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Weekly Post": {
+      "main": [
+        [
+          {
+            "node": "Log Post Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

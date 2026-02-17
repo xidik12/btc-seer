@@ -96,7 +96,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const text = $('Extract Response').first().json.text;\nconst now = new Date().toISOString();\nconsole.log(`[${now}] YouTube community post: ${text.substring(0, 80)}...`);\nconsole.log('NOTE: YouTube Community Posts API requires YouTube Studio access. This node uses commentThreads as a placeholder. For production, consider using YouTube Studio internal API or manual posting with the generated text.');\nreturn [{ json: { status: 'posted', platform: 'youtube', timestamp: now, post_length: text.length, note: 'Uses commentThreads API as placeholder. YouTube Community Posts require YouTube Studio API access.' } }];"
+        "jsCode": "const text = $('Extract Response').first().json.text;\nconst now = new Date().toISOString();\nconsole.log(`[${now}] YouTube community post: ${text.substring(0, 80)}...`);\nconsole.log('NOTE: YouTube Community Posts API requires YouTube Studio access. This node uses commentThreads as a placeholder.');\nreturn [{ json: { status: 'posted', platform: 'youtube', timestamp: now, post_length: text.length } }];"
       },
       "id": "yt-log",
       "name": "Log Result",
@@ -139,10 +139,5 @@
   },
   "settings": {
     "executionOrder": "v1"
-  },
-  "tags": [
-    { "name": "youtube" },
-    { "name": "marketing" },
-    { "name": "ai" }
-  ]
+  }
 }

@@ -1,0 +1,714 @@
+{
+  "name": "Reports & Alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "5,35 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-anomaly",
+      "name": "Anomaly Check :05",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=1",
+        "options": {}
+      },
+      "id": "fetch-anomaly-perf",
+      "name": "Fetch Performance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, -60]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/health",
+        "options": {}
+      },
+      "id": "fetch-anomaly-health",
+      "name": "Fetch Health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const perf = $('Fetch Performance').first().json;\nconst health = $('Fetch Health').first().json;\nconst alerts = [];\nlet hasAnomaly = false;\nconst predMade = perf.predictions_made ?? perf.predictionsMade ?? 0;\nconst predCorrect = perf.predictions_correct ?? perf.predictionsCorrect ?? 0;\nconst accuracy = predMade > 0 ? (predCorrect / predMade) * 100 : null;\nif (accuracy !== null && accuracy < 50) {\n  alerts.push(`\\u26a0\\ufe0f Prediction accuracy critically low: ${accuracy.toFixed(1)}% (${predCorrect}/${predMade}) in last 24h`);\n  hasAnomaly = true;\n}\nconst healthStatus = (health.status ?? '').toLowerCase();\nif (healthStatus !== 'ok' && healthStatus !== 'healthy') {\n  alerts.push(`\\ud83d\\udea8 Health check failed: status is \"${health.status ?? 'unreachable'}\"`);\n  hasAnomaly = true;\n}\nconst apiErrors = health.api_errors ?? health.apiErrors ?? health.errorCount ?? null;\nconst apiRequests = health.api_requests ?? health.apiRequests ?? health.requestCount ?? null;\nif (apiErrors !== null && apiRequests !== null && apiRequests > 0) {\n  const errorRate = (apiErrors / apiRequests) * 100;\n  if (errorRate > 10) {\n    alerts.push(`\\ud83d\\udd25 High API error rate: ${errorRate.toFixed(1)}% (${apiErrors}/${apiRequests} requests)`);\n    hasAnomaly = true;\n  }\n}\nconst responseTime = health.response_time_ms ?? health.responseTimeMs ?? health.avgResponseTime ?? null;\nif (responseTime !== null && responseTime > 5000) {\n  alerts.push(`\\ud83d\\udc22 Slow API response time: ${responseTime}ms (threshold: 5000ms)`);\n  hasAnomaly = true;\n}\nreturn [{ json: { hasAnomaly, alerts, alertCount: alerts.length, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "check-anomalies",
+      "name": "Check Anomalies",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-has-anomaly",
+              "leftValue": "={{ $json.hasAnomaly }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-anomaly",
+      "name": "Has Anomaly?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst alertLines = data.alerts.join('\\n');\nconst tgText = `<b>\\ud83d\\udea8 BTC Seer Anomaly Alert</b>\\n\\n${alertLines}\\n\\n<i>${data.timestamp}</i>`;\nconst discordText = `**\\ud83d\\udea8 BTC Seer Anomaly Alert**\\n\\n${alertLines}\\n\\n_${data.timestamp}_`;\nreturn [{ json: { tgText, discordText } }];"
+      },
+      "id": "build-anomaly-msg",
+      "name": "Build Alert Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.ADMIN_TELEGRAM_ID, text: $json.tgText, parse_mode: 'HTML' }) }}",
+        "options": {}
+      },
+      "id": "tg-anomaly-alert",
+      "name": "TG: Anomaly Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, -60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.discordText }) }}",
+        "options": {}
+      },
+      "id": "discord-anomaly-alert",
+      "name": "Discord: Anomaly Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Build Alert Message').first().json;\nconsole.log(`[Anomaly Alert] Sent ${$('Check Anomalies').first().json.alertCount} alerts at ${new Date().toISOString()}`);\nreturn [{ json: { logged: true } }];"
+      },
+      "id": "log-anomaly",
+      "name": "Log Anomaly Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "triggerAtHour": 23
+            }
+          ]
+        }
+      },
+      "id": "trigger-daily-report",
+      "name": "Daily Report 23:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 500]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/user-metrics",
+        "options": {}
+      },
+      "id": "fetch-daily-users",
+      "name": "Fetch User Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 380]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/revenue-metrics",
+        "options": {}
+      },
+      "id": "fetch-daily-revenue",
+      "name": "Fetch Revenue Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 480]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=1",
+        "options": {}
+      },
+      "id": "fetch-daily-perf",
+      "name": "Fetch Daily Perf",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 580]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/health",
+        "options": {}
+      },
+      "id": "fetch-daily-health",
+      "name": "Fetch Daily Health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 680]
+    },
+    {
+      "parameters": {
+        "jsCode": "const users = $('Fetch User Metrics').first().json;\nconst revenue = $('Fetch Revenue Metrics').first().json;\nconst perf = $('Fetch Daily Perf').first().json;\nconst health = $('Fetch Daily Health').first().json;\nconst now = new Date().toISOString().split('T')[0];\nconst text = `<b>\\ud83d\\udcca BTC Seer Daily Report \\u2014 ${now}</b>\\n\\n` +\n  `<b>Users</b>\\n` +\n  `\\u2022 Total: ${users.total_users ?? 'N/A'}\\n` +\n  `\\u2022 New today: ${users.new_today ?? 'N/A'}\\n` +\n  `\\u2022 Active (24h): ${users.active_24h ?? 'N/A'}\\n` +\n  `\\u2022 Premium: ${users.premium_users ?? 'N/A'}\\n\\n` +\n  `<b>Revenue</b>\\n` +\n  `\\u2022 Today: $${revenue.today ?? '0'}\\n` +\n  `\\u2022 MTD: $${revenue.mtd ?? '0'}\\n` +\n  `\\u2022 MRR: $${revenue.mrr ?? '0'}\\n\\n` +\n  `<b>Predictions</b>\\n` +\n  `\\u2022 Made: ${perf.predictions_made ?? perf.predictionsMade ?? 'N/A'}\\n` +\n  `\\u2022 Accuracy: ${perf.accuracy_pct ?? perf.accuracyPct ?? 'N/A'}%\\n\\n` +\n  `<b>Health</b>\\n` +\n  `\\u2022 Status: ${health.status ?? 'N/A'}\\n` +\n  `\\u2022 Uptime: ${health.uptime ?? 'N/A'}`;\nreturn [{ json: { text } }];"
+      },
+      "id": "build-daily-report",
+      "name": "Build Daily Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.ADMIN_TELEGRAM_ID, text: $json.text, parse_mode: 'HTML' }) }}",
+        "options": {}
+      },
+      "id": "tg-daily-report",
+      "name": "TG: Daily Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 500]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 20,
+              "triggerAtDay": 0
+            }
+          ]
+        }
+      },
+      "id": "trigger-weekly-biz",
+      "name": "Weekly Biz Sun 20:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 1000]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/user-metrics",
+        "options": {}
+      },
+      "id": "fetch-weekly-users",
+      "name": "Fetch Weekly Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 840]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/revenue-metrics",
+        "options": {}
+      },
+      "id": "fetch-weekly-revenue",
+      "name": "Fetch Weekly Revenue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 940]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "fetch-weekly-perf",
+      "name": "Fetch Weekly Perf",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 1040]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/health",
+        "options": {}
+      },
+      "id": "fetch-weekly-health",
+      "name": "Fetch Weekly Health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 1140]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/history/accuracy?days=7",
+        "options": {}
+      },
+      "id": "fetch-weekly-accuracy",
+      "name": "Fetch Weekly Accuracy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 1240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const users = $('Fetch Weekly Users').first().json;\nconst revenue = $('Fetch Weekly Revenue').first().json;\nconst perf = $('Fetch Weekly Perf').first().json;\nconst health = $('Fetch Weekly Health').first().json;\nconst accuracy = $('Fetch Weekly Accuracy').first().json;\nreturn [{ json: { users, revenue, perf, health, accuracy } }];"
+      },
+      "id": "merge-weekly-data",
+      "name": "Merge Weekly Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 1000]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 2000,\n  \"system\": \"You are a business analyst for BTC Seer, an AI Bitcoin prediction platform.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Provide a comprehensive weekly business analysis for BTC Seer. Include key insights, trends, and actionable recommendations. Analyze user growth, revenue, prediction accuracy, and system health. Be concise but thorough. Max 1500 characters.\\n\\nUser Metrics:\\n{{ JSON.stringify($json.users) }}\\n\\nRevenue Metrics:\\n{{ JSON.stringify($json.revenue) }}\\n\\nPerformance (7 days):\\n{{ JSON.stringify($json.perf) }}\\n\\nHealth:\\n{{ JSON.stringify($json.health) }}\\n\\nAccuracy History (7 days):\\n{{ JSON.stringify($json.accuracy) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-weekly-biz",
+      "name": "Claude: Weekly Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 1000]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst analysis = response.content[0].text;\nconst now = new Date().toISOString().split('T')[0];\nconst tgText = `<b>\\ud83d\\udcc8 BTC Seer Weekly Business Report \\u2014 ${now}</b>\\n\\n${analysis}`;\nconst discordText = `**\\ud83d\\udcc8 BTC Seer Weekly Business Report \\u2014 ${now}**\\n\\n${analysis}`;\nreturn [{ json: { tgText, discordText } }];"
+      },
+      "id": "build-weekly-msg",
+      "name": "Build Weekly Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 1000]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ chat_id: $env.ADMIN_TELEGRAM_ID, text: $json.tgText, parse_mode: 'HTML' }) }}",
+        "options": {}
+      },
+      "id": "tg-weekly-report",
+      "name": "TG: Weekly Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 940]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $json.discordText }) }}",
+        "options": {}
+      },
+      "id": "discord-weekly-report",
+      "name": "Discord: Weekly Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 1060]
+    },
+    {
+      "parameters": {
+        "jsCode": "console.log(`[Weekly Report] Sent at ${new Date().toISOString()}`);\nreturn [{ json: { logged: true } }];"
+      },
+      "id": "log-weekly",
+      "name": "Log Weekly Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 1000]
+    }
+  ],
+  "connections": {
+    "Anomaly Check :05": {
+      "main": [
+        [
+          {
+            "node": "Fetch Performance",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Performance": {
+      "main": [
+        [
+          {
+            "node": "Check Anomalies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Health": {
+      "main": [
+        [
+          {
+            "node": "Check Anomalies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Anomalies": {
+      "main": [
+        [
+          {
+            "node": "Has Anomaly?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Anomaly?": {
+      "main": [
+        [
+          {
+            "node": "Build Alert Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Alert Message": {
+      "main": [
+        [
+          {
+            "node": "TG: Anomaly Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Discord: Anomaly Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TG: Anomaly Alert": {
+      "main": [
+        [
+          {
+            "node": "Log Anomaly Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord: Anomaly Alert": {
+      "main": [
+        [
+          {
+            "node": "Log Anomaly Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Report 23:00": {
+      "main": [
+        [
+          {
+            "node": "Fetch User Metrics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Revenue Metrics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Daily Perf",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Daily Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch User Metrics": {
+      "main": [
+        [
+          {
+            "node": "Build Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Revenue Metrics": {
+      "main": [
+        [
+          {
+            "node": "Build Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Daily Perf": {
+      "main": [
+        [
+          {
+            "node": "Build Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Daily Health": {
+      "main": [
+        [
+          {
+            "node": "Build Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Daily Report": {
+      "main": [
+        [
+          {
+            "node": "TG: Daily Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly Biz Sun 20:00": {
+      "main": [
+        [
+          {
+            "node": "Fetch Weekly Users",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Weekly Revenue",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Weekly Perf",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Weekly Health",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Weekly Accuracy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weekly Users": {
+      "main": [
+        [
+          {
+            "node": "Merge Weekly Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weekly Revenue": {
+      "main": [
+        [
+          {
+            "node": "Merge Weekly Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weekly Perf": {
+      "main": [
+        [
+          {
+            "node": "Merge Weekly Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weekly Health": {
+      "main": [
+        [
+          {
+            "node": "Merge Weekly Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weekly Accuracy": {
+      "main": [
+        [
+          {
+            "node": "Merge Weekly Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Weekly Data": {
+      "main": [
+        [
+          {
+            "node": "Claude: Weekly Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Weekly Analysis": {
+      "main": [
+        [
+          {
+            "node": "Build Weekly Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Weekly Message": {
+      "main": [
+        [
+          {
+            "node": "TG: Weekly Report",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Discord: Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TG: Weekly Report": {
+      "main": [
+        [
+          {
+            "node": "Log Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord: Weekly Report": {
+      "main": [
+        [
+          {
+            "node": "Log Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -112,10 +112,5 @@
   },
   "settings": {
     "executionOrder": "v1"
-  },
-  "tags": [
-    { "name": "discord" },
-    { "name": "marketing" },
-    { "name": "ai" }
-  ]
+  }
 }

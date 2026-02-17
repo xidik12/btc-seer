@@ -86,7 +86,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const response = $('Claude Generate').first().json;\nconst raw = response.content[0].text.trim();\n\n// Parse the JSON response from Claude\nlet parsed;\ntry {\n  // Try direct JSON parse\n  parsed = JSON.parse(raw);\n} catch (e) {\n  // Try extracting JSON from markdown code block\n  const jsonMatch = raw.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[1].trim());\n  } else {\n    // Fallback: use raw text as content\n    parsed = { title: 'Weekly Bitcoin AI Predictions Analysis', content: raw };\n  }\n}\n\nreturn [{ json: { title: parsed.title, content: parsed.content } }];"
+        "jsCode": "const response = $('Claude Generate').first().json;\nconst raw = response.content[0].text.trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  const jsonMatch = raw.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[1].trim());\n  } else {\n    parsed = { title: 'Weekly Bitcoin AI Predictions Analysis', content: raw };\n  }\n}\n\nreturn [{ json: { title: parsed.title, content: parsed.content } }];"
       },
       "id": "md-extract",
       "name": "Extract Article",
@@ -171,10 +171,5 @@
   },
   "settings": {
     "executionOrder": "v1"
-  },
-  "tags": [
-    { "name": "medium" },
-    { "name": "marketing" },
-    { "name": "ai" }
-  ]
+  }
 }

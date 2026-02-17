@@ -1,0 +1,1027 @@
+{
+  "name": "Twitter All-in-One (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-morning",
+      "name": "Trigger: Morning 9AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "fetch-morning",
+      "name": "Fetch Morning Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=twitter';\nconst prompt = `Write a morning Bitcoin prediction tweet based on this data:\\n${JSON.stringify(data)}\\n\\nRules:\\n- Max 270 characters\\n- Include #Bitcoin #BTC hashtags\\n- End with 'Try @BTC_Seer_Bot'\\n- Be data-driven and educational\\n- Never give financial advice\\n- Vary format and wording\\n\\nReturn ONLY the tweet text, nothing else.`;\nconst systemPrompt = 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.';\nreturn [{ json: { prompt, systemPrompt, chartUrl } }];"
+      },
+      "id": "prompt-morning",
+      "name": "Build Morning Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 512,\n  \"system\": {{ JSON.stringify($json.systemPrompt) }},\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.prompt) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-morning",
+      "name": "Claude: Morning Tweet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst tweetText = response.content[0].text.trim();\nconst chartUrl = $('Build Morning Prompt').first().json.chartUrl;\nreturn [{ json: { tweetText, chartUrl } }];"
+      },
+      "id": "parse-morning",
+      "name": "Parse Morning Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.tweetText }}",
+        "additionalFields": {
+          "mediaUrls": "={{ $json.chartUrl }}"
+        }
+      },
+      "id": "tweet-morning",
+      "name": "Post Morning Tweet",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [1100, 0],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 21 * * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-evening",
+      "name": "Trigger: Evening 9PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "fetch-evening-summary",
+      "name": "Fetch Evening Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/history/accuracy?days=1",
+        "options": {}
+      },
+      "id": "fetch-evening-accuracy",
+      "name": "Fetch Evening Accuracy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary = $('Fetch Evening Summary').first().json;\nconst accuracy = $('Fetch Evening Accuracy').first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/accuracy.png?days=1&size=twitter';\nconst prompt = `Write an evening results tweet comparing our Bitcoin prediction vs actual price based on this data:\\nSummary: ${JSON.stringify(summary)}\\nAccuracy: ${JSON.stringify(accuracy)}\\n\\nRules:\\n- Max 270 characters\\n- Be transparent about misses — honesty builds trust\\n- Include #Bitcoin #BTC hashtags\\n- End with CTA to try @BTC_Seer_Bot\\n- Never give financial advice\\n- Vary format and wording\\n\\nReturn ONLY the tweet text, nothing else.`;\nconst systemPrompt = 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.';\nreturn [{ json: { prompt, systemPrompt, chartUrl } }];"
+      },
+      "id": "prompt-evening",
+      "name": "Build Evening Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 512,\n  \"system\": {{ JSON.stringify($json.systemPrompt) }},\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.prompt) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-evening",
+      "name": "Claude: Evening Tweet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst tweetText = response.content[0].text.trim();\nconst chartUrl = $('Build Evening Prompt').first().json.chartUrl;\nreturn [{ json: { tweetText, chartUrl } }];"
+      },
+      "id": "parse-evening",
+      "name": "Parse Evening Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.tweetText }}",
+        "additionalFields": {
+          "mediaUrls": "={{ $json.chartUrl }}"
+        }
+      },
+      "id": "tweet-evening",
+      "name": "Post Evening Tweet",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [1320, 300],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 12 * * 0"
+            }
+          ]
+        }
+      },
+      "id": "trigger-weekly",
+      "name": "Trigger: Weekly Sunday 12PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 600]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/performance-card?days=7",
+        "options": {}
+      },
+      "id": "fetch-weekly",
+      "name": "Fetch Weekly Performance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/weekly-summary.png?size=twitter';\nconst prompt = `Generate a Twitter thread (4-6 tweets) summarizing this week's BTC Seer performance:\\n${JSON.stringify(data)}\\n\\nRules:\\n- Return a JSON array of tweet strings\\n- Tweet 1: Attention-grabbing hook + mention chart will be attached\\n- Tweet 2-3: Key stats and highlights\\n- Tweet 4: Unique insight or lesson learned\\n- Last tweet: CTA to try @BTC_Seer_Bot on Telegram\\n- Each tweet max 270 characters\\n- Include #Bitcoin #BTC in first tweet\\n- Be transparent about misses\\n- Never give financial advice\\n- Vary format and wording\\n\\nReturn ONLY a valid JSON array of strings, nothing else. Example: [\"tweet1\", \"tweet2\", \"tweet3\", \"tweet4\"]`;\nconst systemPrompt = 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.';\nreturn [{ json: { prompt, systemPrompt, chartUrl } }];"
+      },
+      "id": "prompt-weekly",
+      "name": "Build Weekly Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 600]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 1200,\n  \"system\": {{ JSON.stringify($json.systemPrompt) }},\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.prompt) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-weekly",
+      "name": "Claude: Weekly Thread",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.content[0].text.trim();\nconst chartUrl = $('Build Weekly Prompt').first().json.chartUrl;\nconst tweets = JSON.parse(text);\nconst items = tweets.map((tweet, index) => ({\n  json: {\n    tweetText: tweet,\n    index,\n    isFirst: index === 0,\n    chartUrl: index === 0 ? chartUrl : null\n  }\n}));\nreturn items;"
+      },
+      "id": "parse-weekly",
+      "name": "Parse Weekly Thread",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 600]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "batch-weekly",
+      "name": "Thread Batch",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1100, 600]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.tweetText }}",
+        "additionalFields": {
+          "inReplyToStatusId": "={{ $json.isFirst ? '' : $('Post Thread Tweet').first().json.id }}",
+          "mediaUrls": "={{ $json.chartUrl || '' }}"
+        }
+      },
+      "id": "tweet-weekly",
+      "name": "Post Thread Tweet",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [1320, 600],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "trigger-market",
+      "name": "Trigger: Every 4 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 900]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/trending-analysis",
+        "options": {}
+      },
+      "id": "fetch-market",
+      "name": "Fetch Trending Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 900]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.has_events }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "gate-market",
+      "name": "Has Market Events?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 900]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/price.png?hours=4&size=twitter';\nconst prompt = `Write a market commentary tweet about this Bitcoin market event:\\n${JSON.stringify(data)}\\n\\nRules:\\n- Max 270 characters\\n- Focus on the most significant event\\n- Include #Bitcoin #BTC hashtags\\n- End with CTA to try @BTC_Seer_Bot\\n- Be data-driven and educational\\n- Never give financial advice\\n- Vary format and wording\\n\\nReturn ONLY the tweet text, nothing else.`;\nconst systemPrompt = 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.';\nreturn [{ json: { prompt, systemPrompt, chartUrl } }];"
+      },
+      "id": "prompt-market",
+      "name": "Build Market Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 900]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 512,\n  \"system\": {{ JSON.stringify($json.systemPrompt) }},\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.prompt) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-market",
+      "name": "Claude: Market Commentary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 900]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst tweetText = response.content[0].text.trim();\nconst chartUrl = $('Build Market Prompt').first().json.chartUrl;\nreturn [{ json: { tweetText, chartUrl } }];"
+      },
+      "id": "parse-market",
+      "name": "Parse Market Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 900]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.tweetText }}",
+        "additionalFields": {
+          "mediaUrls": "={{ $json.chartUrl }}"
+        }
+      },
+      "id": "tweet-market",
+      "name": "Post Market Tweet",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [1320, 900],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "trigger-news",
+      "name": "Trigger: Every 2 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 1200]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/news",
+        "options": {}
+      },
+      "id": "fetch-news",
+      "name": "Fetch News",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 1200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.articles && $json.articles.length > 0 }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "gate-news",
+      "name": "Has News?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 1200]
+    },
+    {
+      "parameters": {
+        "url": "https://btc-oracle-production.up.railway.app/api/marketing/daily-summary",
+        "options": {}
+      },
+      "id": "fetch-news-summary",
+      "name": "Fetch News Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 1200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const news = $('Fetch News').first().json;\nconst summary = $input.first().json;\nconst topArticle = news.articles[0];\nconst chartUrl = 'https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=1h&size=twitter';\nconst prompt = `Write a quote-tweet style commentary adding AI perspective to this Bitcoin news headline:\\nHeadline: ${topArticle.title}\\nSource: ${topArticle.source || 'Unknown'}\\nOur prediction context: ${JSON.stringify(summary)}\\n\\nRules:\\n- Max 270 characters\\n- Add our AI prediction angle to the news\\n- Include #Bitcoin #BTC hashtags\\n- End with CTA to try @BTC_Seer_Bot\\n- Be data-driven and educational\\n- Never give financial advice\\n- Vary format and wording\\n\\nReturn ONLY the tweet text, nothing else.`;\nconst systemPrompt = 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.';\nreturn [{ json: { prompt, systemPrompt, chartUrl } }];"
+      },
+      "id": "prompt-news",
+      "name": "Build News Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 1200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 512,\n  \"system\": {{ JSON.stringify($json.systemPrompt) }},\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.prompt) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-news",
+      "name": "Claude: News Quote",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 1200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst tweetText = response.content[0].text.trim();\nconst chartUrl = $('Build News Prompt').first().json.chartUrl;\nreturn [{ json: { tweetText, chartUrl } }];"
+      },
+      "id": "parse-news",
+      "name": "Parse News Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 1200]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.tweetText }}",
+        "additionalFields": {
+          "mediaUrls": "={{ $json.chartUrl }}"
+        }
+      },
+      "id": "tweet-news",
+      "name": "Post News Tweet",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [1540, 1200],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "trigger-engage-reply",
+      "name": "Trigger: Engage Every 30min (Replies)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 1500]
+    },
+    {
+      "parameters": {
+        "url": "https://api.twitter.com/2/tweets/search/recent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.TWITTER_BEARER_TOKEN }}" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "query", "value": "@BTCSeerBot -is:retweet" },
+            { "name": "max_results", "value": "10" },
+            { "name": "tweet.fields", "value": "author_id,conversation_id,created_at,text" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "search-mentions",
+      "name": "Search Mentions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 1500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nif (!data.data || data.data.length === 0) {\n  return [];\n}\n// Filter to questions (contains '?' or common question words)\nconst questions = data.data.filter(t => \n  t.text.includes('?') || \n  /\\b(what|how|when|why|will|should|can|is|does|predict)\\b/i.test(t.text)\n);\n// Limit to 3 replies per run\nconst limited = questions.slice(0, 3);\nreturn limited.map(tweet => ({\n  json: {\n    tweetId: tweet.id,\n    tweetText: tweet.text,\n    authorId: tweet.author_id,\n    conversationId: tweet.conversation_id\n  }\n}));"
+      },
+      "id": "filter-mentions",
+      "name": "Filter Mention Questions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 1500]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "batch-replies",
+      "name": "Reply Batch",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [660, 1500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const tweet = $input.first().json;\nconst prompt = `Write a helpful reply to this tweet that mentions our Bitcoin prediction bot:\\nTweet: \"${tweet.tweetText}\"\\n\\nRules:\\n- Max 270 characters\\n- Be helpful and educational\\n- If they ask about predictions, explain what BTC Seer does\\n- Include a natural CTA to try @BTC_Seer_Bot on Telegram\\n- Never give financial advice\\n- Be friendly and conversational\\n- Vary format and wording\\n\\nReturn ONLY the reply text, nothing else.`;\nconst systemPrompt = 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.';\nreturn [{ json: { ...tweet, prompt, systemPrompt } }];"
+      },
+      "id": "prompt-reply",
+      "name": "Build Reply Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 1500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 512,\n  \"system\": {{ JSON.stringify($json.systemPrompt) }},\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.prompt) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-reply",
+      "name": "Claude: Auto Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 1500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst replyText = response.content[0].text.trim();\nconst tweetId = $('Build Reply Prompt').first().json.tweetId;\nreturn [{ json: { replyText, tweetId } }];"
+      },
+      "id": "parse-reply",
+      "name": "Parse Reply Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 1500]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.replyText }}",
+        "additionalFields": {
+          "inReplyToStatusId": "={{ $json.tweetId }}"
+        }
+      },
+      "id": "tweet-reply",
+      "name": "Post Auto Reply",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [1540, 1500],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "trigger-engage-hashtag",
+      "name": "Trigger: Engage Every 30min (Hashtag)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 1800]
+    },
+    {
+      "parameters": {
+        "url": "https://api.twitter.com/2/tweets/search/recent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.TWITTER_BEARER_TOKEN }}" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "query", "value": "#Bitcoin ? -is:retweet" },
+            { "name": "max_results", "value": "10" },
+            { "name": "tweet.fields", "value": "author_id,conversation_id,created_at,text" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "search-hashtag",
+      "name": "Search Bitcoin Hashtag",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 1800]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nif (!data.data || data.data.length === 0) {\n  return [];\n}\n// Filter genuine questions, skip spam/promotions\nconst questions = data.data.filter(t => {\n  const text = t.text.toLowerCase();\n  // Must contain a question mark\n  if (!t.text.includes('?')) return false;\n  // Skip spam patterns\n  if (/\\b(giveaway|airdrop|free|click|link in bio|dm me|send .* to)\\b/i.test(text)) return false;\n  // Must have genuine question words\n  return /\\b(what|how|when|why|will|should|can|is|does|predict|think|price|expect)\\b/i.test(text);\n});\n// Limit to 3 replies per run\nconst limited = questions.slice(0, 3);\nreturn limited.map(tweet => ({\n  json: {\n    tweetId: tweet.id,\n    tweetText: tweet.text,\n    authorId: tweet.author_id,\n    conversationId: tweet.conversation_id\n  }\n}));"
+      },
+      "id": "filter-hashtag",
+      "name": "Filter Hashtag Questions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 1800]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "batch-hashtag",
+      "name": "Hashtag Batch",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [660, 1800]
+    },
+    {
+      "parameters": {
+        "jsCode": "const tweet = $input.first().json;\nconst prompt = `Write a helpful reply to this Bitcoin-related question on Twitter:\\nTweet: \"${tweet.tweetText}\"\\n\\nRules:\\n- Max 270 characters\\n- Answer their question with data-driven insight\\n- Naturally mention @BTC_Seer_Bot on Telegram as a resource\\n- Never give financial advice\\n- Be helpful, not salesy\\n- Be friendly and conversational\\n- Vary format and wording\\n\\nReturn ONLY the reply text, nothing else.`;\nconst systemPrompt = 'You are BTC Seer AI, the social media voice of BTC Seer — an AI-powered Bitcoin prediction platform (@BTC_Seer_Bot on Telegram). Your personality: data-driven, educational, transparent about accuracy (including misses), never gives financial advice, uses clear language. Always include a CTA to try the bot. Vary your format and wording — never post the same structure twice. Use emojis sparingly but effectively.';\nreturn [{ json: { ...tweet, prompt, systemPrompt } }];"
+      },
+      "id": "prompt-hashtag",
+      "name": "Build Hashtag Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 1800]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 512,\n  \"system\": {{ JSON.stringify($json.systemPrompt) }},\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.prompt) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-hashtag",
+      "name": "Claude: Hashtag Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 1800]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst replyText = response.content[0].text.trim();\nconst tweetId = $('Build Hashtag Prompt').first().json.tweetId;\nreturn [{ json: { replyText, tweetId } }];"
+      },
+      "id": "parse-hashtag",
+      "name": "Parse Hashtag Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 1800]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.replyText }}",
+        "additionalFields": {
+          "inReplyToStatusId": "={{ $json.tweetId }}"
+        }
+      },
+      "id": "tweet-hashtag",
+      "name": "Post Hashtag Reply",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [1540, 1800],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twitter OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Trigger: Morning 9AM": {
+      "main": [
+        [{ "node": "Fetch Morning Summary", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Morning Summary": {
+      "main": [
+        [{ "node": "Build Morning Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Morning Prompt": {
+      "main": [
+        [{ "node": "Claude: Morning Tweet", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude: Morning Tweet": {
+      "main": [
+        [{ "node": "Parse Morning Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Morning Response": {
+      "main": [
+        [{ "node": "Post Morning Tweet", "type": "main", "index": 0 }]
+      ]
+    },
+
+    "Trigger: Evening 9PM": {
+      "main": [
+        [{ "node": "Fetch Evening Summary", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Evening Summary": {
+      "main": [
+        [{ "node": "Fetch Evening Accuracy", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Evening Accuracy": {
+      "main": [
+        [{ "node": "Build Evening Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Evening Prompt": {
+      "main": [
+        [{ "node": "Claude: Evening Tweet", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude: Evening Tweet": {
+      "main": [
+        [{ "node": "Parse Evening Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Evening Response": {
+      "main": [
+        [{ "node": "Post Evening Tweet", "type": "main", "index": 0 }]
+      ]
+    },
+
+    "Trigger: Weekly Sunday 12PM": {
+      "main": [
+        [{ "node": "Fetch Weekly Performance", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Weekly Performance": {
+      "main": [
+        [{ "node": "Build Weekly Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Weekly Prompt": {
+      "main": [
+        [{ "node": "Claude: Weekly Thread", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude: Weekly Thread": {
+      "main": [
+        [{ "node": "Parse Weekly Thread", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Weekly Thread": {
+      "main": [
+        [{ "node": "Thread Batch", "type": "main", "index": 0 }]
+      ]
+    },
+    "Thread Batch": {
+      "main": [
+        [{ "node": "Post Thread Tweet", "type": "main", "index": 0 }]
+      ]
+    },
+    "Post Thread Tweet": {
+      "main": [
+        [{ "node": "Thread Batch", "type": "main", "index": 0 }]
+      ]
+    },
+
+    "Trigger: Every 4 Hours": {
+      "main": [
+        [{ "node": "Fetch Trending Analysis", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Trending Analysis": {
+      "main": [
+        [{ "node": "Has Market Events?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Market Events?": {
+      "main": [
+        [{ "node": "Build Market Prompt", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Build Market Prompt": {
+      "main": [
+        [{ "node": "Claude: Market Commentary", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude: Market Commentary": {
+      "main": [
+        [{ "node": "Parse Market Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Market Response": {
+      "main": [
+        [{ "node": "Post Market Tweet", "type": "main", "index": 0 }]
+      ]
+    },
+
+    "Trigger: Every 2 Hours": {
+      "main": [
+        [{ "node": "Fetch News", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch News": {
+      "main": [
+        [{ "node": "Has News?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has News?": {
+      "main": [
+        [{ "node": "Fetch News Context", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Fetch News Context": {
+      "main": [
+        [{ "node": "Build News Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build News Prompt": {
+      "main": [
+        [{ "node": "Claude: News Quote", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude: News Quote": {
+      "main": [
+        [{ "node": "Parse News Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse News Response": {
+      "main": [
+        [{ "node": "Post News Tweet", "type": "main", "index": 0 }]
+      ]
+    },
+
+    "Trigger: Engage Every 30min (Replies)": {
+      "main": [
+        [{ "node": "Search Mentions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Search Mentions": {
+      "main": [
+        [{ "node": "Filter Mention Questions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Filter Mention Questions": {
+      "main": [
+        [{ "node": "Reply Batch", "type": "main", "index": 0 }]
+      ]
+    },
+    "Reply Batch": {
+      "main": [
+        [{ "node": "Build Reply Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Reply Prompt": {
+      "main": [
+        [{ "node": "Claude: Auto Reply", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude: Auto Reply": {
+      "main": [
+        [{ "node": "Parse Reply Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Reply Response": {
+      "main": [
+        [{ "node": "Post Auto Reply", "type": "main", "index": 0 }]
+      ]
+    },
+    "Post Auto Reply": {
+      "main": [
+        [{ "node": "Reply Batch", "type": "main", "index": 0 }]
+      ]
+    },
+
+    "Trigger: Engage Every 30min (Hashtag)": {
+      "main": [
+        [{ "node": "Search Bitcoin Hashtag", "type": "main", "index": 0 }]
+      ]
+    },
+    "Search Bitcoin Hashtag": {
+      "main": [
+        [{ "node": "Filter Hashtag Questions", "type": "main", "index": 0 }]
+      ]
+    },
+    "Filter Hashtag Questions": {
+      "main": [
+        [{ "node": "Hashtag Batch", "type": "main", "index": 0 }]
+      ]
+    },
+    "Hashtag Batch": {
+      "main": [
+        [{ "node": "Build Hashtag Prompt", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Hashtag Prompt": {
+      "main": [
+        [{ "node": "Claude: Hashtag Reply", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude: Hashtag Reply": {
+      "main": [
+        [{ "node": "Parse Hashtag Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Hashtag Response": {
+      "main": [
+        [{ "node": "Post Hashtag Reply", "type": "main", "index": 0 }]
+      ]
+    },
+    "Post Hashtag Reply": {
+      "main": [
+        [{ "node": "Hashtag Batch", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
