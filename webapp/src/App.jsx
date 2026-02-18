@@ -2,8 +2,9 @@ import { Component, lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useTelegram } from './hooks/useTelegram'
 import { useLanguageInit } from './i18n/useLanguage'
-import { api } from './utils/api'
+import { SubscriptionProvider, useSubscription } from './contexts/SubscriptionContext'
 import NavBar from './components/NavBar'
+import PaywallOverlay from './components/PaywallOverlay'
 
 // Lazy-load all pages for code splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -93,75 +94,66 @@ function ScrollToTop() {
   return null
 }
 
+function PremiumRoute({ children }) {
+  const { isPremium, loading } = useSubscription()
+  if (loading) return <PageLoader />
+  if (!isPremium) return <PaywallOverlay />
+  return children
+}
+
 export default function App() {
-  const { tg } = useTelegram()
   const location = useLocation()
   useLanguageInit()
 
-  // Auto-register user when Mini App opens (retry once on failure)
-  useEffect(() => {
-    if (tg?.initData) {
-      api.registerUser(tg.initData).catch((err) => {
-        console.warn('User registration failed, retrying in 3s:', err.message)
-        setTimeout(() => {
-          api.registerUser(tg.initData).catch((e) =>
-            console.warn('User registration retry failed:', e.message)
-          )
-        }, 3000)
-      })
-    }
-  }, [tg])
-
   return (
     <ErrorBoundary>
-      <ScrollToTop />
-      <div className="min-h-screen bg-bg-primary text-text-primary pb-20">
-        <div key={location.pathname} className="page-enter">
-        <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          {/* Analysis group */}
-          <Route path="/technical" element={<Technical />} />
-          <Route path="/signals" element={<Signals />} />
-          {/* Markets group */}
-          <Route path="/liquidations" element={<Liquidations />} />
-          <Route path="/powerlaw" element={<PowerLaw />} />
-          <Route path="/events" element={<EventMemory />} />
-          <Route path="/whales" element={<Whales />} />
-          <Route path="/arbitrage" element={<Arbitrage />} />
-          <Route path="/new-listings" element={<NewListings />} />
-          <Route path="/memecoins" element={<Memecoins />} />
-          <Route path="/elliott-wave" element={<ElliottWave />} />
-          <Route path="/tools" element={<Tools />} />
-          <Route path="/resources" element={<Resources />} />
-          <Route path="/learn" element={<Learn />} />
-          {/* Coins */}
-          <Route path="/coins" element={<Coins />} />
-          <Route path="/coins/search" element={<CoinSearch />} />
-          <Route path="/coins/report/:address" element={<CoinReport />} />
-          <Route path="/coins/:coinId" element={<CoinDetail />} />
-          {/* History */}
-          <Route path="/history" element={<History />} />
-          {/* More group */}
-          <Route path="/more" element={<More />} />
-          <Route path="/news" element={<News />} />
-          <Route path="/advisor" element={<Advisor />} />
-          <Route path="/mock-trading" element={<MockTrading />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/subscription" element={<Subscription />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/partner/:code" element={<PartnerDashboard />} />
-          {/* New features */}
-          <Route path="/alerts" element={<PriceAlerts />} />
-          <Route path="/briefing" element={<Briefing />} />
-          <Route path="/game" element={<PredictionGame />} />
-          <Route path="/smart-money" element={<SmartMoney />} />
-        </Routes>
-        </Suspense>
+      <SubscriptionProvider>
+        <ScrollToTop />
+        <div className="min-h-screen bg-bg-primary text-text-primary pb-20">
+          <div key={location.pathname} className="page-enter">
+          <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Free routes */}
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/more" element={<More />} />
+            <Route path="/subscription" element={<Subscription />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/partner/:code" element={<PartnerDashboard />} />
+
+            {/* Premium routes — gated */}
+            <Route path="/technical" element={<PremiumRoute><Technical /></PremiumRoute>} />
+            <Route path="/signals" element={<PremiumRoute><Signals /></PremiumRoute>} />
+            <Route path="/liquidations" element={<PremiumRoute><Liquidations /></PremiumRoute>} />
+            <Route path="/powerlaw" element={<PremiumRoute><PowerLaw /></PremiumRoute>} />
+            <Route path="/events" element={<PremiumRoute><EventMemory /></PremiumRoute>} />
+            <Route path="/whales" element={<PremiumRoute><Whales /></PremiumRoute>} />
+            <Route path="/arbitrage" element={<PremiumRoute><Arbitrage /></PremiumRoute>} />
+            <Route path="/new-listings" element={<PremiumRoute><NewListings /></PremiumRoute>} />
+            <Route path="/memecoins" element={<PremiumRoute><Memecoins /></PremiumRoute>} />
+            <Route path="/elliott-wave" element={<PremiumRoute><ElliottWave /></PremiumRoute>} />
+            <Route path="/tools" element={<PremiumRoute><Tools /></PremiumRoute>} />
+            <Route path="/resources" element={<PremiumRoute><Resources /></PremiumRoute>} />
+            <Route path="/learn" element={<PremiumRoute><Learn /></PremiumRoute>} />
+            <Route path="/coins" element={<PremiumRoute><Coins /></PremiumRoute>} />
+            <Route path="/coins/search" element={<PremiumRoute><CoinSearch /></PremiumRoute>} />
+            <Route path="/coins/report/:address" element={<PremiumRoute><CoinReport /></PremiumRoute>} />
+            <Route path="/coins/:coinId" element={<PremiumRoute><CoinDetail /></PremiumRoute>} />
+            <Route path="/history" element={<PremiumRoute><History /></PremiumRoute>} />
+            <Route path="/news" element={<PremiumRoute><News /></PremiumRoute>} />
+            <Route path="/advisor" element={<PremiumRoute><Advisor /></PremiumRoute>} />
+            <Route path="/mock-trading" element={<PremiumRoute><MockTrading /></PremiumRoute>} />
+            <Route path="/alerts" element={<PremiumRoute><PriceAlerts /></PremiumRoute>} />
+            <Route path="/briefing" element={<PremiumRoute><Briefing /></PremiumRoute>} />
+            <Route path="/game" element={<PremiumRoute><PredictionGame /></PremiumRoute>} />
+            <Route path="/smart-money" element={<PremiumRoute><SmartMoney /></PremiumRoute>} />
+          </Routes>
+          </Suspense>
+          </div>
+          <NavBar />
         </div>
-        <NavBar />
-      </div>
+      </SubscriptionProvider>
     </ErrorBoundary>
   )
 }

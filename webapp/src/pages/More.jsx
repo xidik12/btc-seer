@@ -2,7 +2,10 @@ import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTelegram } from '../hooks/useTelegram'
+import { useSubscription } from '../contexts/SubscriptionContext'
 import { api } from '../utils/api'
+
+const FREE_PATHS = new Set(['/', '/subscription', '/settings', '/about', '/more', '/admin'])
 
 const menuItems = [
   {
@@ -143,10 +146,18 @@ const menuItems = [
   },
 ]
 
+const LockIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-accent-yellow shrink-0">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0110 0v4" />
+  </svg>
+)
+
 export default function More() {
   const navigate = useNavigate()
   const { tg, hapticFeedback } = useTelegram()
   const { t } = useTranslation('common')
+  const { isPremium } = useSubscription()
   const [partnerCode, setPartnerCode] = useState(null)
 
   useEffect(() => {
@@ -185,21 +196,27 @@ export default function More() {
       )}
 
       <div className="space-y-2">
-        {menuItems.map((item) => (
-          <button
-            key={item.href || item.path}
-            onClick={() => { hapticFeedback?.selectionChanged(); item.external ? window.open(item.href, '_blank') : navigate(item.path) }}
-            className="w-full flex items-center gap-3 bg-bg-card rounded-xl p-4 border border-white/5 hover:bg-bg-hover transition-colors text-left slide-up"
-          >
-            <span className="text-accent-blue shrink-0">{item.icon}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-text-primary text-sm font-medium">{t(item.labelKey)}</p>
-            </div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-text-muted shrink-0">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </button>
-        ))}
+        {menuItems.map((item) => {
+          const isLocked = !isPremium && !item.external && item.path && !FREE_PATHS.has(item.path)
+          return (
+            <button
+              key={item.href || item.path}
+              onClick={() => { hapticFeedback?.selectionChanged(); item.external ? window.open(item.href, '_blank') : navigate(item.path) }}
+              className="w-full flex items-center gap-3 bg-bg-card rounded-xl p-4 border border-white/5 hover:bg-bg-hover transition-colors text-left slide-up"
+            >
+              <span className="text-accent-blue shrink-0">{item.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-text-primary text-sm font-medium flex items-center gap-1.5">
+                  {t(item.labelKey)}
+                  {isLocked && <LockIcon />}
+                </p>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-text-muted shrink-0">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          )
+        })}
       </div>
 
       <p className="text-text-muted text-[10px] text-center pt-4">

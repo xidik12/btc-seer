@@ -2,6 +2,7 @@ import { Component } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTelegram } from '../hooks/useTelegram'
+import { useSubscription } from '../contexts/SubscriptionContext'
 import PriceWidget from '../components/PriceWidget'
 import PriceChart from '../components/PriceChart'
 import PredictionCard from '../components/PredictionCard'
@@ -288,8 +289,119 @@ function QuickAccessGrid() {
   )
 }
 
+function CouncilCTA() {
+  const { t } = useTranslation('common')
+  const tg = window.Telegram?.WebApp
+  const openCommunity = () => {
+    if (tg?.openTelegramLink) {
+      tg.openTelegramLink('https://t.me/+-72wnR04tPUyZmIy')
+    } else {
+      window.open('https://t.me/+-72wnR04tPUyZmIy', '_blank')
+    }
+  }
+
+  return (
+    <button
+      onClick={openCommunity}
+      className="w-full flex items-center gap-3 bg-bg-card rounded-xl border border-accent-blue/15 p-4 hover:border-accent-blue/30 transition-colors text-left"
+    >
+      <div className="w-9 h-9 rounded-full bg-accent-blue/10 flex items-center justify-center shrink-0">
+        <svg className="w-5 h-5 text-accent-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 2L11 13" />
+          <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+        </svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-text-primary text-sm font-medium">{t('paywall.joinCouncil')}</p>
+        <p className="text-text-muted text-[10px]">{t('paywall.councilDesc')}</p>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-text-muted shrink-0">
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    </button>
+  )
+}
+
+function DashboardPaywallCTA() {
+  const navigate = useNavigate()
+  const { t } = useTranslation('common')
+  const { tier } = useSubscription()
+  const hadTrial = tier === 'expired' || tier === 'trial_expired'
+
+  const tg = window.Telegram?.WebApp
+  const openCommunity = () => {
+    if (tg?.openTelegramLink) {
+      tg.openTelegramLink('https://t.me/+-72wnR04tPUyZmIy')
+    } else {
+      window.open('https://t.me/+-72wnR04tPUyZmIy', '_blank')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {hadTrial && (
+        <div className="bg-accent-red/10 border border-accent-red/20 rounded-xl px-4 py-2">
+          <p className="text-accent-red text-xs font-medium">{t('paywall.trialExpired')}</p>
+        </div>
+      )}
+      <div className="bg-bg-card rounded-2xl border border-accent-blue/20 p-5 text-center">
+        <div className="w-12 h-12 rounded-full bg-accent-yellow/10 flex items-center justify-center mx-auto mb-3">
+          <svg className="w-6 h-6 text-accent-yellow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0110 0v4" />
+          </svg>
+        </div>
+        <h3 className="text-text-primary text-sm font-bold mb-1">{t('paywall.unlockPrompt')}</h3>
+        <ul className="text-text-muted text-xs space-y-1 mb-4 text-left max-w-xs mx-auto">
+          {['paywall.features.predictions', 'paywall.features.signals', 'paywall.features.advisor', 'paywall.features.alerts'].map((key) => (
+            <li key={key} className="flex items-center gap-2">
+              <svg className="w-3 h-3 text-accent-green shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              {t(key)}
+            </li>
+          ))}
+        </ul>
+        <button
+          onClick={() => navigate('/settings')}
+          className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-accent-blue active:scale-95 transition-all mb-2"
+        >
+          {hadTrial ? t('paywall.subscribe') : t('paywall.startTrial')}
+        </button>
+        <button
+          onClick={() => navigate('/subscription')}
+          className="text-accent-blue text-xs font-medium"
+        >
+          {t('paywall.viewPlans')}
+        </button>
+      </div>
+
+      {/* Community CTA */}
+      <button
+        onClick={openCommunity}
+        className="w-full flex items-center gap-3 bg-bg-card rounded-xl border border-accent-blue/15 p-4 hover:border-accent-blue/30 transition-colors text-left"
+      >
+        <div className="w-9 h-9 rounded-full bg-accent-blue/10 flex items-center justify-center shrink-0">
+          <svg className="w-5 h-5 text-accent-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 2L11 13" />
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-text-primary text-sm font-medium">{t('paywall.joinCouncil')}</p>
+          <p className="text-text-muted text-[10px]">{t('paywall.councilDesc')}</p>
+        </div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-text-muted shrink-0">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </button>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { t } = useTranslation(['common', 'dashboard'])
+  const { isPremium, loading } = useSubscription()
 
   return (
     <div className="px-4 pt-4 space-y-4 dashboard-stagger">
@@ -310,53 +422,64 @@ export default function Dashboard() {
         <PriceChart />
       </SafeWrap>
 
-      {/* Dual Predictions */}
-      <div className="space-y-3">
-        <SafeWrap name="AI Prediction" t={t}>
-          <PredictionCard />
-        </SafeWrap>
-        <SafeWrap name="Quant Prediction" t={t}>
-          <QuantPredictionCard />
-        </SafeWrap>
-      </div>
+      {/* Paywall CTA for free users — shown below price */}
+      {!loading && !isPremium && <DashboardPaywallCTA />}
 
-      <SafeWrap name="DailyBriefing" t={t}>
-        <DailyBriefingCard />
-      </SafeWrap>
+      {/* Premium content — only shown for premium users */}
+      {(loading || isPremium) && (
+        <>
+          {/* Dual Predictions */}
+          <div className="space-y-3">
+            <SafeWrap name="AI Prediction" t={t}>
+              <PredictionCard />
+            </SafeWrap>
+            <SafeWrap name="Quant Prediction" t={t}>
+              <QuantPredictionCard />
+            </SafeWrap>
+          </div>
 
-      <SafeWrap name="SignalPanel" t={t}>
-        <SignalPanel />
-      </SafeWrap>
+          <SafeWrap name="DailyBriefing" t={t}>
+            <DailyBriefingCard />
+          </SafeWrap>
 
-      <SafeWrap name="FearGreedWidget" t={t}>
-        <FearGreedWidget />
-      </SafeWrap>
+          <SafeWrap name="SignalPanel" t={t}>
+            <SignalPanel />
+          </SafeWrap>
 
-      <SafeWrap name="NewsCarousel" t={t}>
-        <NewsCarousel />
-      </SafeWrap>
+          <SafeWrap name="FearGreedWidget" t={t}>
+            <FearGreedWidget />
+          </SafeWrap>
 
-      <SafeWrap name="InfluencerFeed" t={t}>
-        <InfluencerFeed />
-      </SafeWrap>
+          <SafeWrap name="NewsCarousel" t={t}>
+            <NewsCarousel />
+          </SafeWrap>
 
-      <SafeWrap name="OnChainWidget" t={t}>
-        <OnChainWidget />
-      </SafeWrap>
+          <SafeWrap name="InfluencerFeed" t={t}>
+            <InfluencerFeed />
+          </SafeWrap>
 
-      <SafeWrap name="SupplyWidget" t={t}>
-        <SupplyWidget />
-      </SafeWrap>
+          <SafeWrap name="OnChainWidget" t={t}>
+            <OnChainWidget />
+          </SafeWrap>
 
-      <SafeWrap name="DominanceWidget" t={t}>
-        <DominanceWidget />
-      </SafeWrap>
+          <SafeWrap name="SupplyWidget" t={t}>
+            <SupplyWidget />
+          </SafeWrap>
 
-      <SafeWrap name="MacroDashboard" t={t}>
-        <MacroDashboard />
-      </SafeWrap>
+          <SafeWrap name="DominanceWidget" t={t}>
+            <DominanceWidget />
+          </SafeWrap>
 
-      <DataSourceFooter sources={['binance', 'coingecko', 'cryptopanic', 'rss', 'reddit', 'blockchain', 'mempool', 'feargreed', 'alphavantage', 'coinglass', 'defillama', 'deribit', 'ai']} />
+          <SafeWrap name="MacroDashboard" t={t}>
+            <MacroDashboard />
+          </SafeWrap>
+
+          <DataSourceFooter sources={['binance', 'coingecko', 'cryptopanic', 'rss', 'reddit', 'blockchain', 'mempool', 'feargreed', 'alphavantage', 'coinglass', 'defillama', 'deribit', 'ai']} />
+
+          {/* Community CTA for premium users */}
+          <CouncilCTA />
+        </>
+      )}
 
       <p className="text-text-muted text-[10px] text-center pb-4 leading-relaxed">
         {t('common:app.disclaimer')}

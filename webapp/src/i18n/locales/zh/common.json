@@ -271,6 +271,28 @@
     "severity": "S{{level}}",
     "lastUpdate": "{{seconds}}秒前更新"
   },
+  "paywall": {
+    "title": "BTC Seer 高级版",
+    "subtitle": "解锁AI驱动的比特币分析全部功能",
+    "features": {
+      "predictions": "AI价格预测",
+      "signals": "交易信号",
+      "smartMoney": "聪明资金追踪",
+      "advisor": "AI交易顾问",
+      "alerts": "价格提醒",
+      "whales": "鲸鱼监控"
+    },
+    "startTrial": "开始7天免费试用",
+    "subscribe": "立即订阅",
+    "viewPlans": "查看方案",
+    "monthly": "月付 — 500 Stars/月",
+    "quarterly": "季付 — 1,250 Stars/3月",
+    "yearly": "年付 — 4,500 Stars/年",
+    "trialExpired": "您的免费试用已到期",
+    "unlockPrompt": "订阅以解锁所有功能",
+    "joinCouncil": "加入 BTC Seer 理事会",
+    "councilDesc": "社区聊天 — 信号、洞察与讨论"
+  },
   "dataSources": {
     "title": "数据来源",
     "liveData": "所有统计数据均基于实时数据计算",
