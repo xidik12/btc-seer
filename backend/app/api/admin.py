@@ -191,6 +191,24 @@ async def admin_stats(request: Request):
             )
         ).scalar() or 0
 
+        # Active users (based on last_active timestamp)
+        active_24h = (
+            await session.execute(
+                select(func.count(BotUser.id)).where(
+                    BotUser.last_active.isnot(None),
+                    BotUser.last_active >= day_ago,
+                )
+            )
+        ).scalar() or 0
+        active_7d = (
+            await session.execute(
+                select(func.count(BotUser.id)).where(
+                    BotUser.last_active.isnot(None),
+                    BotUser.last_active >= week_ago,
+                )
+            )
+        ).scalar() or 0
+
     accuracy = (correct_predictions / evaluated_predictions * 100) if evaluated_predictions > 0 else 0
     trade_win_rate = (winning_results / total_results * 100) if total_results > 0 else 0
 
@@ -201,6 +219,8 @@ async def admin_stats(request: Request):
             "banned": banned_users,
             "joined_24h": users_24h,
             "joined_7d": users_7d,
+            "active_24h": active_24h,
+            "active_7d": active_7d,
         },
         "predictions": {
             "total": total_predictions,

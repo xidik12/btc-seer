@@ -1,9 +1,10 @@
 import logging
 import time
+from datetime import datetime
 
 from aiogram import Bot, Dispatcher, F, Router, BaseMiddleware
 from aiogram.types import CallbackQuery, Message, PreCheckoutQuery, LabeledPrice
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, update
 
 from app.config import settings
 from app.database import async_session, BotUser, TradeAdvice, Price, PaymentHistory, Prediction, GameProfile, UserPrediction, PriceAlert
@@ -26,6 +27,19 @@ class ThrottleMiddleware(BaseMiddleware):
             if now - last < self.RATE_LIMIT:
                 return  # silently drop
             self._timestamps[user_id] = now
+
+            # Update last_active timestamp for the user
+            try:
+                async with async_session() as session:
+                    await session.execute(
+                        update(BotUser)
+                        .where(BotUser.telegram_id == user_id)
+                        .values(last_active=datetime.utcnow())
+                    )
+                    await session.commit()
+            except Exception:
+                pass  # Don't break bot flow if activity tracking fails
+
         return await handler(event, data)
 
 

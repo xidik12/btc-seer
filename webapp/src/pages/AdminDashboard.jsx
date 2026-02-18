@@ -29,6 +29,10 @@ function OverviewTab({ stats }) {
         <StatCard label="Joined 24h" value={stats.users.joined_24h} color="text-accent-green" />
         <StatCard label="Joined 7d" value={stats.users.joined_7d} color="text-accent-green" />
       </div>
+      <div className="grid grid-cols-2 gap-2">
+        <StatCard label="Active 24h" value={stats.users.active_24h} color="text-accent-blue" />
+        <StatCard label="Active 7d" value={stats.users.active_7d} color="text-accent-yellow" />
+      </div>
 
       <div className="text-text-secondary text-xs font-semibold mt-4">Predictions</div>
       <div className="grid grid-cols-2 gap-2">
@@ -301,7 +305,7 @@ function BotStatusCard({ initData }) {
           </div>
           <div className="flex justify-between">
             <span className="text-text-muted">DB</span>
-            <span className="text-text-muted font-mono">{status.database_url}</span>
+            <span className="text-text-muted font-mono">{status.database_type}</span>
           </div>
           {status.bot_error && (
             <div className="text-accent-red mt-1">{status.bot_error}</div>

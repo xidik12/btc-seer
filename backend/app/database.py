@@ -383,6 +383,9 @@ class BotUser(Base):
     # Partner referral
     partner_code: Mapped[str] = mapped_column(String(50), nullable=True)
 
+    # Activity tracking
+    last_active: Mapped[datetime] = mapped_column(DateTime, nullable=True, default=None)
+
     # Admin / ban
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
     ban_reason: Mapped[str] = mapped_column(String(500), nullable=True)
