@@ -28,6 +28,33 @@ def parse_partner_code(start_param: str | None) -> str | None:
     return None
 
 
+async def try_link_partner_telegram(
+    partner_code: str,
+    telegram_id: int,
+    session: AsyncSession,
+) -> bool:
+    """Auto-link a partner's telegram_id if not set yet.
+
+    Called when an existing user clicks a partner_ deeplink.
+    If the partner record has no telegram_id, link it to this user.
+    Returns True if linked successfully.
+    """
+    result = await session.execute(
+        select(Partner).where(Partner.code == partner_code, Partner.is_active == True)
+    )
+    partner = result.scalar_one_or_none()
+    if not partner:
+        return False
+
+    if partner.telegram_id is None:
+        partner.telegram_id = telegram_id
+        await session.commit()
+        logger.info(f"Auto-linked partner '{partner.name}' ({partner_code}) to telegram_id {telegram_id}")
+        return True
+
+    return False
+
+
 async def process_partner_referral(
     user: BotUser,
     partner_code: str,
@@ -45,6 +72,16 @@ async def process_partner_referral(
     if not partner:
         logger.debug(f"Partner code '{partner_code}' not found or inactive")
         return None
+
+    # Auto-link partner telegram_id if not set
+    if partner.telegram_id is None:
+        partner.telegram_id = user.telegram_id
+        logger.info(f"Auto-linked partner '{partner.name}' ({partner_code}) to telegram_id {user.telegram_id}")
+
+    # Don't record self-referral (partner clicking their own link)
+    if partner.telegram_id == user.telegram_id:
+        await session.commit()
+        return {"partner_name": partner.name, "partner_code": partner_code}
 
     # Check if user is already referred by a partner
     existing = await session.execute(

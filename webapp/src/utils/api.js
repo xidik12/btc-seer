@@ -195,6 +195,9 @@ export const api = {
   getAdminSystem: (initData) => fetchAPI('/admin/system', { headers: { 'X-Telegram-Init-Data': initData } }),
   getAdminBotStatus: (initData) => fetchAPI('/admin/bot-status', { headers: { 'X-Telegram-Init-Data': initData } }),
 
+  // Public config (long cache — bot username etc.)
+  getPublicConfig: () => cachedFetch('/config/public', T300),
+
   // Auth (no cache)
   registerUser: (initData) => fetchAPI('/auth/register', {
     method: 'POST',

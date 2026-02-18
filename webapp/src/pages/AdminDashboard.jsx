@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { api } from '../utils/api'
 import { useTelegram } from '../hooks/useTelegram'
 import { formatPrice, formatTimeAgo } from '../utils/format'
+import { getBotUsernameSync } from '../utils/botConfig'
 
 function StatCard({ label, value, sub, color = 'text-text-primary' }) {
   return (
@@ -514,7 +515,7 @@ function PartnersTab({ initData }) {
                 {!p.telegram_id && <span className="text-accent-yellow"> | No TG linked</span>}
                 {p.contact_email && ` | ${p.contact_email}`}
               </div>
-              <button onClick={() => { navigator.clipboard.writeText(`https://t.me/BTCSeerBot?start=partner_${p.code}`) }}
+              <button onClick={() => { navigator.clipboard.writeText(`https://t.me/${getBotUsernameSync()}?start=partner_${p.code}`) }}
                 className="text-[8px] mt-1 px-2 py-0.5 rounded bg-accent-blue/10 text-accent-blue hover:bg-accent-blue/20">
                 Copy Referral Link
               </button>

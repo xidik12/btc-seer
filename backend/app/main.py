@@ -114,6 +114,21 @@ async def lifespan(app: FastAPI):
     bot_task = None
 
     try:
+        # Resolve bot username from Telegram API
+        if settings.telegram_bot_token and not settings.bot_username:
+            import aiohttp
+            try:
+                async with aiohttp.ClientSession() as client:
+                    async with client.get(f"https://api.telegram.org/bot{settings.telegram_bot_token}/getMe", timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                        data = await resp.json()
+                        if data.get("ok"):
+                            settings.bot_username = data["result"]["username"]
+                            logger.info(f"Bot username resolved: @{settings.bot_username}")
+                        else:
+                            logger.warning(f"Failed to resolve bot username: {data}")
+            except Exception as e:
+                logger.warning(f"Could not resolve bot username: {e}")
+
         # Initialize database
         await init_db()
         logger.info("Database initialized")
@@ -510,6 +525,12 @@ async def health():
     if not _data_ready:
         return {"status": "warming_up"}
     return {"status": "ok"}
+
+
+@app.get("/api/config/public")
+async def public_config():
+    """Public config for the frontend (bot username, etc.)."""
+    return {"bot_username": settings.bot_username}
 
 
 # Serve Mini App frontend (production build)

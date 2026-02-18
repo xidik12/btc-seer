@@ -16,7 +16,7 @@ from app.database import (
 from app.bot.keyboards import main_keyboard, settings_keyboard, back_keyboard, advisor_keyboard, trade_close_keyboard, subscribe_keyboard
 from app.bot.subscription import require_premium, is_premium, get_status_text, grant_trial
 from app.bot.referral import parse_referral_code, process_referral
-from app.bot.partner_referral import parse_partner_code, process_partner_referral
+from app.bot.partner_referral import parse_partner_code, process_partner_referral, try_link_partner_telegram
 from app.signals.generator import DISCLAIMER
 
 logger = logging.getLogger(__name__)
@@ -63,6 +63,10 @@ async def cmd_start(message: Message, command: CommandObject):
             elif referral_code:
                 referral_info = await process_referral(user, referral_code, session)
         else:
+            # Auto-link partner telegram_id if existing user clicks their own partner link
+            if partner_code:
+                await try_link_partner_telegram(partner_code, message.from_user.id, session)
+
             # Grant trial to existing users who missed it during beta
             if settings.subscription_enabled:
                 await grant_trial(user, session)

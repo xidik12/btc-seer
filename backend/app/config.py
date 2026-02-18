@@ -75,7 +75,7 @@ class Settings(BaseSettings):
     # Referral system
     referral_bonus_days: int = 7
     referral_enabled: bool = True
-    bot_username: str = "BTCSeerBot"
+    bot_username: str = ""  # Auto-resolved from Telegram API at startup
 
     # API Monetization (disabled by default — all free)
     api_key_enabled: bool = False

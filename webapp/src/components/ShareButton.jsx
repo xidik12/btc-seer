@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { getBotUsername } from '../utils/botConfig'
 
 /**
  * Reusable share button with Copy + Telegram Share actions.
@@ -9,6 +10,11 @@ import { useState, useCallback } from 'react'
  */
 export default function ShareButton({ text, botLink, compact = false }) {
   const [copied, setCopied] = useState(false)
+  const [defaultBotLink, setDefaultBotLink] = useState(null)
+
+  useEffect(() => {
+    getBotUsername().then((u) => setDefaultBotLink(`https://t.me/${u}`))
+  }, [])
 
   const handleCopy = useCallback(() => {
     if (!text) return
@@ -20,9 +26,9 @@ export default function ShareButton({ text, botLink, compact = false }) {
 
   const handleTelegramShare = useCallback(() => {
     if (!text) return
-    const url = `https://t.me/share/url?url=${encodeURIComponent(botLink || 'https://t.me/BTCSeerBot')}&text=${encodeURIComponent(text)}`
+    const url = `https://t.me/share/url?url=${encodeURIComponent(botLink || defaultBotLink || 'https://t.me/BTC_Seer_Bot')}&text=${encodeURIComponent(text)}`
     window.open(url, '_blank')
-  }, [text, botLink])
+  }, [text, botLink, defaultBotLink])
 
   if (compact) {
     return (

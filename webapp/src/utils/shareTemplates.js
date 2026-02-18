@@ -3,12 +3,13 @@
  * All include "Powered by BTC Seer" + referral tracking param.
  */
 
-const BOT_USERNAME = 'BTCSeerBot'
+import { getBotUsernameSync } from './botConfig'
 
 function refLink(refCode) {
+  const bot = getBotUsernameSync()
   return refCode
-    ? `https://t.me/${BOT_USERNAME}?start=ref_${refCode}`
-    : `https://t.me/${BOT_USERNAME}`
+    ? `https://t.me/${bot}?start=ref_${refCode}`
+    : `https://t.me/${bot}`
 }
 
 export function predictionShareText(prediction, refCode) {
