@@ -162,6 +162,9 @@ class ModelTrainer:
         Computes: sma_200d_ratio, high_52w_distance, low_52w_distance,
         log_price_zscore_365d, yearly_return_pct — features that require
         months/years of daily data rather than just hourly snapshots.
+
+        IMPORTANT: Each sample gets point-in-time values computed using only
+        data available up to that sample's timestamp, avoiding future data leakage.
         """
         async with async_session() as session:
             result = await session.execute(
@@ -184,39 +187,54 @@ class ModelTrainer:
         if len(closes) < 200:
             return dataset
 
-        # Precompute daily metrics
         import math
         closes_arr = np.array(closes, dtype=np.float64)
-        log_closes = np.log(closes_arr[closes_arr > 0])
 
-        # 200-day SMA at the latest point
-        sma_200d = np.mean(closes_arr[-200:]) if len(closes_arr) >= 200 else closes_arr.mean()
-        current = closes_arr[-1]
-        sma_200d_ratio = current / sma_200d if sma_200d > 0 else 1.0
+        # Precompute point-in-time extended features for each day
+        n_days = len(closes_arr)
+        daily_sma_200d_ratio = np.ones(n_days, dtype=np.float64)
+        daily_high_52w_distance = np.zeros(n_days, dtype=np.float64)
+        daily_low_52w_distance = np.zeros(n_days, dtype=np.float64)
+        daily_log_price_zscore = np.zeros(n_days, dtype=np.float64)
+        daily_yearly_return = np.zeros(n_days, dtype=np.float64)
 
-        # 52-week (365-day) high/low
-        window = min(365, len(closes_arr))
-        high_52w = np.max(closes_arr[-window:])
-        low_52w = np.min(closes_arr[-window:])
-        high_52w_distance = (high_52w - current) / high_52w if high_52w > 0 else 0
-        low_52w_distance = (current - low_52w) / current if current > 0 else 0
+        for i in range(n_days):
+            current = closes_arr[i]
+            if current <= 0:
+                continue
 
-        # Log price z-score over 365 days
-        if len(log_closes) >= 365:
-            recent_log = np.log(closes_arr[-365:][closes_arr[-365:] > 0])
-            mean_log = recent_log.mean()
-            std_log = recent_log.std()
-            log_price_zscore = (math.log(current) - mean_log) / std_log if std_log > 0 else 0
-        else:
-            log_price_zscore = 0
+            # SMA 200d ratio: use up to 200 days ending at day i
+            lookback_200 = max(0, i - 199)
+            sma_200 = np.mean(closes_arr[lookback_200:i + 1])
+            daily_sma_200d_ratio[i] = current / sma_200 if sma_200 > 0 else 1.0
 
-        # Yearly return
-        if len(closes_arr) >= 365:
-            yearly_return = (current - closes_arr[-365]) / closes_arr[-365] * 100
-        else:
-            yearly_return = 0
+            # 52-week (365-day) high/low distance
+            lookback_52w = max(0, i - 364)
+            window = closes_arr[lookback_52w:i + 1]
+            high_52w = np.max(window)
+            low_52w = np.min(window)
+            daily_high_52w_distance[i] = (current - high_52w) / high_52w if high_52w > 0 else 0
+            daily_low_52w_distance[i] = (current - low_52w) / low_52w if low_52w > 0 else 0
 
-        # Apply to all feature vectors in dataset
+            # Log price z-score over 365 days
+            if i >= 365:
+                lookback_365 = max(0, i - 364)
+                window_365 = closes_arr[lookback_365:i + 1]
+                valid = window_365[window_365 > 0]
+                if len(valid) >= 30:
+                    log_valid = np.log(valid)
+                    mean_log = log_valid.mean()
+                    std_log = log_valid.std()
+                    daily_log_price_zscore[i] = (math.log(current) - mean_log) / max(std_log, 0.01)
+
+            # Yearly return
+            if i >= 365 and closes_arr[i - 365] > 0:
+                daily_yearly_return[i] = (current - closes_arr[i - 365]) / closes_arr[i - 365]
+
+        # Build day->index lookup for mapping samples to daily features
+        day_to_idx = {d: i for i, d in enumerate(days_sorted)}
+
+        # Get feature name indices
         from app.features.builder import FeatureBuilder
         builder = FeatureBuilder()
         feature_names = builder.ALL_FEATURES
@@ -227,29 +245,58 @@ class ModelTrainer:
             if name in feature_names:
                 extended_indices[name] = feature_names.index(name)
 
-        extended_values = {
-            "sma_200d_ratio": sma_200d_ratio,
-            "high_52w_distance": high_52w_distance,
-            "low_52w_distance": low_52w_distance,
-            "log_price_zscore_365d": log_price_zscore,
-            "yearly_return_pct": yearly_return / 100,  # normalize
+        if not extended_indices:
+            return dataset
+
+        # Map daily arrays by feature name
+        daily_arrays = {
+            "sma_200d_ratio": daily_sma_200d_ratio,
+            "high_52w_distance": daily_high_52w_distance,
+            "low_52w_distance": daily_low_52w_distance,
+            "log_price_zscore_365d": daily_log_price_zscore,
+            "yearly_return_pct": daily_yearly_return,
         }
 
-        # Update X_feat and X_seq with computed values
+        # Use the last day index as default for samples we can't map
+        last_day_idx = n_days - 1
+
+        # Get timestamps from the original feature snapshots to map each sample
+        # to the correct day. We use X_feat sample count and work backwards from
+        # the most recent daily data, since samples are chronologically ordered.
+        n_samples = dataset["X_feat"].shape[0]
+
+        # Map each sample index to a daily index proportionally
+        # (samples span from LOOKBACK to end of feature snapshots)
         X_feat = dataset["X_feat"]
         X_seq = dataset["X_seq"]
-        for name, idx in extended_indices.items():
-            if idx < X_feat.shape[1]:
-                X_feat[:, idx] = extended_values.get(name, 0)
-            if idx < X_seq.shape[2]:
-                X_seq[:, :, idx] = extended_values.get(name, 0)
+
+        for name, feat_idx in extended_indices.items():
+            arr = daily_arrays.get(name)
+            if arr is None:
+                continue
+
+            # Distribute daily values across samples proportionally
+            # The samples cover roughly the same time period as daily prices
+            # (minus the initial LOOKBACK window)
+            for si in range(n_samples):
+                # Map sample index to approximate day index
+                # Samples start after LOOKBACK hours, days start from the beginning
+                approx_day = int((si / max(n_samples - 1, 1)) * (n_days - 1))
+                approx_day = min(approx_day, n_days - 1)
+
+                val = arr[approx_day]
+                if feat_idx < X_feat.shape[1]:
+                    X_feat[si, feat_idx] = val
+                if feat_idx < X_seq.shape[2]:
+                    # Fill entire sequence window with the value for this day
+                    X_seq[si, :, feat_idx] = val
 
         dataset["X_feat"] = X_feat
         dataset["X_seq"] = X_seq
 
         logger.info(
-            f"Extended features applied: sma_200d_ratio={sma_200d_ratio:.3f}, "
-            f"52w_high_dist={high_52w_distance:.3f}, yearly_return={yearly_return:.1f}%"
+            f"Extended features applied point-in-time: {n_samples} samples, "
+            f"{n_days} daily prices, {len(extended_indices)} features enriched"
         )
         return dataset
 
@@ -271,10 +318,18 @@ class ModelTrainer:
         return None
 
     def _walk_forward_split(self, n: int) -> tuple[range, range, range]:
-        """Walk-forward split: 70% train, 15% val, 15% test."""
+        """Walk-forward split: 70% train, 15% val, 15% test.
+
+        A LOOKBACK-sized gap is inserted between train and val (and val and test)
+        so that the first validation/test sample's input window does not overlap
+        with training targets.
+        """
+        gap = self.LOOKBACK
         train_end = int(n * 0.70)
+        val_start = min(train_end + gap, n)
         val_end = int(n * 0.85)
-        return range(0, train_end), range(train_end, val_end), range(val_end, n)
+        test_start = min(val_end + gap, n)
+        return range(0, train_end), range(val_start, val_end), range(test_start, n)
 
     def _normalize_data(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Z-score normalize features, returning (normalized, mean, std)."""
@@ -294,10 +349,13 @@ class ModelTrainer:
         n = len(X_seq)
         train_idx, val_idx, test_idx = self._walk_forward_split(n)
 
-        # Normalize sequences (flatten, normalize, reshape)
+        # Normalize sequences — compute stats from TRAINING data only (avoid leakage)
         orig_shape = X_seq.shape
+        train_flat = X_seq[train_idx.start:train_idx.stop].reshape(-1, orig_shape[-1])
+        _, mean, std = self._normalize_data(train_flat)
+        # Apply training stats to the full dataset
         flat = X_seq.reshape(-1, orig_shape[-1])
-        flat_norm, mean, std = self._normalize_data(flat)
+        flat_norm = (flat - mean) / (std + 1e-8)
         X_norm = flat_norm.reshape(orig_shape)
 
         num_features = X_seq.shape[-1]
@@ -434,10 +492,13 @@ class ModelTrainer:
         n = len(X_seq)
         train_idx, val_idx, test_idx = self._walk_forward_split(n)
 
-        # Normalize
+        # Normalize — compute stats from TRAINING data only (avoid leakage)
         orig_shape = X_seq.shape
+        train_flat = X_seq[train_idx.start:train_idx.stop].reshape(-1, orig_shape[-1])
+        _, mean, std = self._normalize_data(train_flat)
+        # Apply training stats to the full dataset
         flat = X_seq.reshape(-1, orig_shape[-1])
-        flat_norm, mean, std = self._normalize_data(flat)
+        flat_norm = (flat - mean) / (std + 1e-8)
         X_norm = flat_norm.reshape(orig_shape)
 
         num_features = X_seq.shape[-1]

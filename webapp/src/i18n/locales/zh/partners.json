@@ -1,0 +1,25 @@
+{
+  "title": "合作伙伴",
+  "create": "创建合作伙伴",
+  "name": "合作伙伴名称",
+  "code": "推荐码",
+  "commission": "佣金 %",
+  "email": "联系邮箱",
+  "telegram": "联系Telegram",
+  "notes": "备注",
+  "active": "活跃",
+  "inactive": "未激活",
+  "referrals": "推荐",
+  "conversions": "转化",
+  "conversionRate": "转化率",
+  "totalCommission": "总佣金",
+  "noPartners": "暂无合作伙伴。创建一个开始吧。",
+  "createSuccess": "合作伙伴创建成功",
+  "deactivated": "合作伙伴已停用",
+  "stats": {
+    "totalReferred": "总推荐数",
+    "premiumConversions": "高级版转化",
+    "totalStars": "总星数",
+    "pendingPayout": "待支付"
+  }
+}

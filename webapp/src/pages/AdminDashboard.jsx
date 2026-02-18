@@ -81,34 +81,34 @@ function UsersTab({ initData }) {
   useEffect(() => { fetchUsers() }, [fetchUsers])
 
   const handleBan = async (telegramId) => {
-    const reason = window.prompt('Ban reason:')
+    const reason = prompt('Ban reason:')
     if (!reason) return
     try {
       await api.adminBanUser(initData, telegramId, reason)
       fetchUsers()
     } catch (err) {
-      alert('Failed to ban: ' + err.message)
+      console.error('Failed to ban:', err.message)
     }
   }
 
   const handleUnban = async (telegramId) => {
-    if (!window.confirm('Unban this user?')) return
+    if (!confirm('Unban this user?')) return
     try {
       await api.adminUnbanUser(initData, telegramId)
       fetchUsers()
     } catch (err) {
-      alert('Failed to unban: ' + err.message)
+      console.error('Failed to unban:', err.message)
     }
   }
 
   const handleGrantPremium = async (telegramId) => {
-    const days = window.prompt('Days of premium to grant:', '30')
+    const days = prompt('Days of premium to grant:', '30')
     if (!days) return
     try {
       await api.adminGrantPremium(initData, telegramId, parseInt(days))
       fetchUsers()
     } catch (err) {
-      alert('Failed to grant premium: ' + err.message)
+      console.error('Failed to grant premium:', err.message)
     }
   }
 
@@ -399,7 +399,7 @@ function PartnersTab({ initData }) {
       setForm({ name: '', code: '', telegram_id: '', commission_pct: 20, contact_email: '', contact_telegram: '' })
       fetchPartners()
     } catch (err) {
-      alert('Failed: ' + err.message)
+      console.error('Failed:', err.message)
     }
   }
 
@@ -408,7 +408,7 @@ function PartnersTab({ initData }) {
       await api.updateAdminPartner(initData, id, { is_active: !currentActive })
       fetchPartners()
     } catch (err) {
-      alert('Failed: ' + err.message)
+      console.error('Failed:', err.message)
     }
   }
 

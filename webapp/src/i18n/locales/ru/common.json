@@ -247,7 +247,8 @@
     "correctPredictions": "Правильных",
     "shareWin": "Поделитесь победой!",
     "locked": "Зафиксировано!",
-    "timeLeft": "Осталось"
+    "timeLeft": "Осталось",
+    "yourRank": "Ваш ранг: #{{rank}}"
   },
   "smartMoney": {
     "title": "Умные деньги",

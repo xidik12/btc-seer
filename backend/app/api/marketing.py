@@ -6,7 +6,7 @@ into marketing-ready summaries for AI content generation.
 import logging
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,10 +16,24 @@ from app.database import (
     WhaleTransaction, BotUser, PaymentHistory, Referral,
     TradeResult, SupportTicket, PortfolioState,
 )
+from app.api.admin import _verify_telegram_init_data
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/marketing", tags=["marketing"])
+
+
+def _require_admin(request: Request) -> int:
+    """Verify admin access from Telegram initData."""
+    init_data = request.headers.get("X-Telegram-Init-Data", "")
+    if not init_data:
+        raise HTTPException(401, "Missing initData")
+    user_data = _verify_telegram_init_data(init_data)
+    telegram_id = user_data.get("id")
+    if not telegram_id or telegram_id != settings.admin_telegram_id:
+        raise HTTPException(403, "Admin access required")
+    return telegram_id
 
 
 @router.get("/daily-summary")
@@ -420,8 +434,9 @@ async def trending_analysis(session: AsyncSession = Depends(get_session)):
 
 
 @router.get("/user-metrics")
-async def user_metrics(session: AsyncSession = Depends(get_session)):
+async def user_metrics(request: Request, session: AsyncSession = Depends(get_session)):
     """Total users, premium, trial, new today, active 24h."""
+    _require_admin(request)
     now = datetime.utcnow()
     day_ago = now - timedelta(hours=24)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -456,10 +471,12 @@ async def user_metrics(session: AsyncSession = Depends(get_session)):
 
 @router.get("/revenue-metrics")
 async def revenue_metrics(
+    request: Request,
     days: int = Query(30, ge=1, le=365),
     session: AsyncSession = Depends(get_session),
 ):
     """Stars revenue, conversions, churn rate."""
+    _require_admin(request)
     now = datetime.utcnow()
     since = now - timedelta(days=days)
 
@@ -510,10 +527,12 @@ async def revenue_metrics(
 
 @router.get("/trial-expiring-users")
 async def trial_expiring_users(
+    request: Request,
     days_remaining: int = Query(2, ge=0, le=7),
     session: AsyncSession = Depends(get_session),
 ):
     """Users whose trial ends within N days."""
+    _require_admin(request)
     now = datetime.utcnow()
     cutoff = now + timedelta(days=days_remaining)
 
@@ -544,10 +563,12 @@ async def trial_expiring_users(
 
 @router.get("/churned-users")
 async def churned_users(
+    request: Request,
     days_since: int = Query(3, ge=1, le=30),
     session: AsyncSession = Depends(get_session),
 ):
     """Premium users who lapsed N days ago."""
+    _require_admin(request)
     now = datetime.utcnow()
     target_date = now - timedelta(days=days_since)
     window_start = target_date - timedelta(hours=12)
@@ -578,10 +599,12 @@ async def churned_users(
 
 @router.get("/new-users")
 async def new_users(
+    request: Request,
     hours: int = Query(6, ge=1, le=48),
     session: AsyncSession = Depends(get_session),
 ):
     """Users who joined in last N hours."""
+    _require_admin(request)
     since = datetime.utcnow() - timedelta(hours=hours)
 
     result = await session.execute(
@@ -607,8 +630,9 @@ async def new_users(
 
 
 @router.get("/upsell-candidates")
-async def upsell_candidates(session: AsyncSession = Depends(get_session)):
+async def upsell_candidates(request: Request, session: AsyncSession = Depends(get_session)):
     """Monthly subscribers with 60+ days tenure (upsell to yearly)."""
+    _require_admin(request)
     now = datetime.utcnow()
     cutoff = now - timedelta(days=60)
 
@@ -637,8 +661,9 @@ async def upsell_candidates(session: AsyncSession = Depends(get_session)):
 
 
 @router.get("/user-milestones")
-async def user_milestones(session: AsyncSession = Depends(get_session)):
+async def user_milestones(request: Request, session: AsyncSession = Depends(get_session)):
     """Users who hit 10/50/100 trades today."""
+    _require_admin(request)
     milestones = [10, 50, 100, 250, 500]
     now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -668,10 +693,12 @@ async def user_milestones(session: AsyncSession = Depends(get_session)):
 
 @router.get("/referral-leaderboard")
 async def referral_leaderboard(
+    request: Request,
     limit: int = Query(10, ge=1, le=50),
     session: AsyncSession = Depends(get_session),
 ):
     """Top referrers by count."""
+    _require_admin(request)
     result = await session.execute(
         select(BotUser)
         .where(BotUser.referral_count > 0)

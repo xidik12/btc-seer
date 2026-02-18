@@ -25,7 +25,7 @@ def fractional_kelly(win_rate: float, avg_win_loss_ratio: float) -> float:
     f_star = (p * b - q) / b
 
     if f_star <= 0:
-        return 0.02  # Minimum 2%
+        return 0.0  # No edge — don't trade
 
     f = settings.advisor_kelly_fraction * f_star
 

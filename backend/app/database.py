@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Text, Float, Integer, BigInteger, String, JSON, DateTime, Boolean, Index, func, text, inspect
+from sqlalchemy import Text, Float, Integer, BigInteger, String, JSON, DateTime, Boolean, Index, UniqueConstraint, func, text, inspect
 from sqlalchemy.sql import extract
 from datetime import datetime
 
@@ -22,7 +22,7 @@ def _create_engine():
             max_overflow=20,
             pool_pre_ping=True,
             pool_recycle=1800,
-            connect_args={"timeout": 30},
+            connect_args={"command_timeout": 30},
         )
     _db_logger.info("Using SQLite backend")
     return create_async_engine(url, echo=False)
@@ -49,6 +49,7 @@ class Base(DeclarativeBase):
 class Price(Base):
     __tablename__ = "prices"
     __table_args__ = (
+        UniqueConstraint("timestamp", name="uq_prices_timestamp"),
         Index("ix_prices_timestamp", "timestamp"),
     )
 
@@ -1177,6 +1178,7 @@ class UserPrediction(Base):
     """User predictions for the prediction game."""
     __tablename__ = "user_predictions"
     __table_args__ = (
+        UniqueConstraint("telegram_id", "round_date", "timeframe", name="uq_user_prediction_round"),
         Index("ix_user_pred_user_ts", "telegram_id", "timestamp"),
         Index("ix_user_pred_round", "round_date", "timeframe"),
     )
@@ -1261,4 +1263,8 @@ async def init_db():
 
 async def get_session() -> AsyncSession:
     async with async_session() as session:
-        yield session
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise

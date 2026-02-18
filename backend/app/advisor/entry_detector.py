@@ -42,7 +42,10 @@ def check_entry(
 
     today = datetime.utcnow().strftime("%Y-%m-%d")
     if portfolio.daily_loss_date == today and portfolio.balance_usdt > 0:
-        daily_loss_pct = (portfolio.daily_loss_today / portfolio.balance_usdt) * 100
+        # Use start-of-day balance as denominator (balance + losses accumulated today)
+        # to stay consistent with the close trigger in portfolio.py
+        start_of_day_balance = max(portfolio.balance_usdt + portfolio.daily_loss_today, 0.01)
+        daily_loss_pct = (portfolio.daily_loss_today / start_of_day_balance) * 100
         if daily_loss_pct >= portfolio.daily_max_loss_pct:
             reasons_skipped.append(f"daily loss limit ({daily_loss_pct:.1f}%)")
             logger.info(f"Entry skip: {', '.join(reasons_skipped)}")

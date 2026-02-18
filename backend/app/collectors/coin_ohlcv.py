@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.collectors.base import BaseCollector
 from app.collectors.coins import TRACKED_COINS
@@ -51,7 +51,7 @@ class CoinOHLCVCollector(BaseCollector):
         # Use the second-to-last candle (most recently completed)
         k = data[-2]
         return {
-            "timestamp": datetime.utcfromtimestamp(k[0] / 1000),
+            "timestamp": datetime.fromtimestamp(k[0] / 1000, tz=timezone.utc),
             "open": float(k[1]),
             "high": float(k[2]),
             "low": float(k[3]),
@@ -76,7 +76,7 @@ class CoinOHLCVCollector(BaseCollector):
             candles.append({
                 "coin_id": coin_id,
                 "symbol": symbol,
-                "timestamp": datetime.utcfromtimestamp(k[0] / 1000),
+                "timestamp": datetime.fromtimestamp(k[0] / 1000, tz=timezone.utc),
                 "open": float(k[1]),
                 "high": float(k[2]),
                 "low": float(k[3]),

@@ -32,12 +32,12 @@ class SafeWrap extends Component {
     if (this.state.hasError) {
       return (
         <div className="bg-bg-card rounded-2xl p-4 border border-accent-red/20">
-          <p className="text-accent-red text-xs">{this.props.t('widget.failedToLoad', { name: this.props.name })}</p>
+          <p className="text-accent-red text-xs">{this.props.t('common:widget.failedToLoad', { name: this.props.name })}</p>
           <button
             onClick={() => this.setState({ hasError: false })}
             className="text-accent-blue text-[10px] mt-1 underline"
           >
-            {this.props.t('app.retry')}
+            {this.props.t('common:app.retry')}
           </button>
         </div>
       )

@@ -248,7 +248,8 @@
     "correctPredictions": "Correct",
     "shareWin": "Share your win!",
     "locked": "Locked!",
-    "timeLeft": "Time left"
+    "timeLeft": "Time left",
+    "yourRank": "Your rank: #{{rank}}"
   },
   "smartMoney": {
     "title": "Smart Money",

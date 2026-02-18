@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy import select, func, desc, and_
 
 from app.database import (
@@ -88,8 +88,8 @@ def _arb_event(arb) -> dict:
 @router.get("/feed")
 async def get_smart_money_feed(
     request: Request,
-    hours: int = 24,
-    limit: int = 50,
+    hours: int = Query(24, ge=1, le=720),
+    limit: int = Query(50, ge=1, le=200),
     event_type: str = "all",
     direction: str = "all",
 ):

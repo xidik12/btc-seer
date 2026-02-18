@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select, desc
 
@@ -10,8 +10,21 @@ from app.database import (
     Prediction, Signal, QuantPrediction, IndicatorSnapshot, EventImpact,
     WhaleTransaction,
 )
+from app.api.admin import _verify_telegram_init_data
 
 router = APIRouter(prefix="/api/advisor", tags=["advisor"])
+
+
+def _get_authenticated_user(request: Request) -> int:
+    """Extract and verify telegram_id from initData."""
+    init_data = request.headers.get("X-Telegram-Init-Data", "")
+    if not init_data:
+        raise HTTPException(401, "Authentication required")
+    user_data = _verify_telegram_init_data(init_data)
+    telegram_id = user_data.get("id")
+    if not telegram_id:
+        raise HTTPException(401, "Invalid authentication")
+    return telegram_id
 
 
 class BalanceUpdate(BaseModel):
@@ -80,16 +93,24 @@ async def _get_current_price():
 
 
 @router.get("/portfolio/{telegram_id}")
-async def get_portfolio(telegram_id: int):
+async def get_portfolio(telegram_id: int, request: Request):
     """Get portfolio state for a user."""
+    caller_id = _get_authenticated_user(request)
+    if caller_id != telegram_id:
+        raise HTTPException(403, "Not authorized to access this portfolio")
+
     from app.advisor.portfolio import get_stats
 
     return await get_stats(telegram_id)
 
 
 @router.post("/portfolio/{telegram_id}/balance")
-async def set_balance(telegram_id: int, body: BalanceUpdate):
+async def set_balance(telegram_id: int, body: BalanceUpdate, request: Request):
     """Manually set portfolio balance."""
+    caller_id = _get_authenticated_user(request)
+    if caller_id != telegram_id:
+        raise HTTPException(403, "Not authorized to modify this portfolio")
+
     from app.advisor.portfolio import update_balance
 
     if body.balance < 0:
@@ -100,8 +121,12 @@ async def set_balance(telegram_id: int, body: BalanceUpdate):
 
 
 @router.post("/portfolio/{telegram_id}/setup")
-async def setup_portfolio(telegram_id: int, body: PortfolioSetup):
+async def setup_portfolio(telegram_id: int, body: PortfolioSetup, request: Request):
     """Create or update portfolio with custom settings."""
+    caller_id = _get_authenticated_user(request)
+    if caller_id != telegram_id:
+        raise HTTPException(403, "Not authorized to modify this portfolio")
+
     if body.balance < 0:
         raise HTTPException(400, "Balance must be non-negative")
     if body.max_leverage < 1 or body.max_leverage > 125:
@@ -149,8 +174,12 @@ async def setup_portfolio(telegram_id: int, body: PortfolioSetup):
 
 
 @router.get("/trades/{telegram_id}")
-async def get_trades(telegram_id: int, mock: bool = Query(False)):
+async def get_trades(telegram_id: int, request: Request, mock: bool = Query(False)):
     """Get open/pending trades for a user. Use ?mock=true for paper trades."""
+    caller_id = _get_authenticated_user(request)
+    if caller_id != telegram_id:
+        raise HTTPException(403, "Not authorized to access these trades")
+
     async with async_session() as session:
         result = await session.execute(
             select(TradeAdvice).where(
@@ -170,8 +199,12 @@ async def get_trades(telegram_id: int, mock: bool = Query(False)):
 
 
 @router.get("/trades/{telegram_id}/history")
-async def get_trade_history(telegram_id: int, limit: int = 20, mock: bool = Query(False)):
+async def get_trade_history(telegram_id: int, request: Request, limit: int = 20, mock: bool = Query(False)):
     """Get trade result history."""
+    caller_id = _get_authenticated_user(request)
+    if caller_id != telegram_id:
+        raise HTTPException(403, "Not authorized to access this trade history")
+
     async with async_session() as session:
         # Get trade_advice_ids that match mock filter
         mock_advice_ids_q = select(TradeAdvice.id).where(
@@ -218,8 +251,12 @@ async def get_trade_history(telegram_id: int, limit: int = 20, mock: bool = Quer
 
 
 @router.post("/trades/{telegram_id}/mock")
-async def create_mock_trade(telegram_id: int, body: MockTradeCreate):
+async def create_mock_trade(telegram_id: int, body: MockTradeCreate, request: Request):
     """Create a paper/mock trade."""
+    caller_id = _get_authenticated_user(request)
+    if caller_id != telegram_id:
+        raise HTTPException(403, "Not authorized to create trades for this user")
+
     current_price = await _get_current_price()
 
     # Validate
@@ -265,8 +302,10 @@ async def create_mock_trade(telegram_id: int, body: MockTradeCreate):
 
 
 @router.post("/trades/{trade_id}/opened")
-async def mark_trade_opened(trade_id: int):
+async def mark_trade_opened(trade_id: int, request: Request):
     """Mark a trade as opened by the user."""
+    caller_id = _get_authenticated_user(request)
+
     async with async_session() as session:
         result = await session.execute(
             select(TradeAdvice).where(TradeAdvice.id == trade_id)
@@ -275,6 +314,8 @@ async def mark_trade_opened(trade_id: int):
 
         if not trade:
             raise HTTPException(404, "Trade not found")
+        if trade.telegram_id != caller_id:
+            raise HTTPException(403, "Not authorized to modify this trade")
         if trade.status != "pending":
             raise HTTPException(400, f"Trade is already {trade.status}")
 
@@ -286,8 +327,10 @@ async def mark_trade_opened(trade_id: int):
 
 
 @router.post("/trades/{trade_id}/close")
-async def close_trade(trade_id: int, body: TradeClose):
+async def close_trade(trade_id: int, body: TradeClose, request: Request):
     """Close a trade with exit price."""
+    caller_id = _get_authenticated_user(request)
+
     async with async_session() as session:
         result = await session.execute(
             select(TradeAdvice).where(TradeAdvice.id == trade_id)
@@ -296,6 +339,8 @@ async def close_trade(trade_id: int, body: TradeClose):
 
     if not trade:
         raise HTTPException(404, "Trade not found")
+    if trade.telegram_id != caller_id:
+        raise HTTPException(403, "Not authorized to close this trade")
     if trade.status in ("closed", "cancelled"):
         raise HTTPException(400, f"Trade is already {trade.status}")
 
@@ -368,8 +413,12 @@ async def close_trade(trade_id: int, body: TradeClose):
 
 
 @router.get("/stats/{telegram_id}")
-async def get_stats_endpoint(telegram_id: int):
+async def get_stats_endpoint(telegram_id: int, request: Request):
     """Get comprehensive trading stats."""
+    caller_id = _get_authenticated_user(request)
+    if caller_id != telegram_id:
+        raise HTTPException(403, "Not authorized to access these stats")
+
     from app.advisor.portfolio import get_stats
     return await get_stats(telegram_id)
 
@@ -382,8 +431,12 @@ async def get_feedback(days: int = Query(30, ge=1, le=365)):
 
 
 @router.post("/portfolio/{telegram_id}/update")
-async def update_portfolio(telegram_id: int, body: PortfolioSetup):
+async def update_portfolio(telegram_id: int, body: PortfolioSetup, request: Request):
     """Update portfolio settings without resetting PnL."""
+    caller_id = _get_authenticated_user(request)
+    if caller_id != telegram_id:
+        raise HTTPException(403, "Not authorized to modify this portfolio")
+
     if body.max_leverage < 1 or body.max_leverage > 125:
         raise HTTPException(400, "Max leverage must be 1-125")
     if body.max_open_trades < 1 or body.max_open_trades > 20:
@@ -410,13 +463,17 @@ async def update_portfolio(telegram_id: int, body: PortfolioSetup):
 
 
 @router.post("/suggest/{telegram_id}")
-async def suggest_trade(telegram_id: int):
+async def suggest_trade(telegram_id: int, request: Request):
     """On-demand trade suggestion using full analysis pipeline.
 
     Integrates: ensemble prediction, quant theory (15 signals), Elliott Wave,
     Power Law, technical indicators, news/events — everything collected.
     Returns either a new trade suggestion or a detailed analysis explaining why not.
     """
+    caller_id = _get_authenticated_user(request)
+    if caller_id != telegram_id:
+        raise HTTPException(403, "Not authorized to request suggestions for this user")
+
     from app.advisor.entry_detector import check_entry
     from app.advisor.trade_planner import build_trade_plan
     from app.advisor.portfolio import get_or_create_portfolio

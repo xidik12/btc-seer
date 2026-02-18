@@ -15,7 +15,7 @@ from app.database import (
 )
 from app.bot.keyboards import main_keyboard, settings_keyboard, back_keyboard, advisor_keyboard, trade_close_keyboard, subscribe_keyboard
 from app.bot.subscription import require_premium, is_premium, get_status_text, grant_trial
-from app.bot.referral import parse_referral_code, process_referral
+from app.bot.referral import parse_referral_code, process_referral, get_or_create_referral_code
 from app.bot.partner_referral import parse_partner_code, process_partner_referral, try_link_partner_telegram
 from app.signals.generator import DISCLAIMER
 
@@ -696,6 +696,32 @@ async def cmd_close(message: Message):
     )
 
     await message.answer(text, parse_mode="HTML", reply_markup=advisor_keyboard())
+
+
+# ────────────────────────────────────────────────────────────────
+#  REFERRAL COMMAND
+# ────────────────────────────────────────────────────────────────
+
+@router.message(Command("referral"))
+@require_premium
+async def cmd_referral(message: Message):
+    """Show user's referral link."""
+    async with async_session() as session:
+        result = await session.execute(
+            select(BotUser).where(BotUser.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            await message.answer("Please use /start first.")
+            return
+        code = await get_or_create_referral_code(user, session)
+    link = f"https://t.me/{settings.bot_username}?start=ref_{code}"
+    await message.answer(
+        f"Your referral link:\n<code>{link}</code>\n\n"
+        f"Share it -- you both get +{settings.referral_bonus_days} days Premium!\n"
+        f"Total referrals: {user.referral_count or 0}",
+        parse_mode="HTML",
+    )
 
 
 # ────────────────────────────────────────────────────────────────

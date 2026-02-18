@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs, unquote
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select, desc, func
 
@@ -70,12 +70,12 @@ def _verify_telegram_init_data(init_data: str) -> dict:
         logger.warning("Admin auth: HMAC signature mismatch")
         raise HTTPException(401, "Invalid initData signature")
 
-    # Check auth_date freshness (allow up to 24 hours for Mini App sessions)
+    # Check auth_date freshness (5 minutes for admin operations)
     auth_date = parsed.get("auth_date", [None])[0]
     if auth_date:
         auth_time = datetime.utcfromtimestamp(int(auth_date))
         age_seconds = (datetime.utcnow() - auth_time).total_seconds()
-        if age_seconds > 86400:
+        if age_seconds > 300:  # 5 minutes for admin operations
             logger.warning(f"Admin auth: initData expired (age={age_seconds:.0f}s)")
             raise HTTPException(401, "Session expired — please reopen the app from Telegram")
 
@@ -84,7 +84,10 @@ def _verify_telegram_init_data(init_data: str) -> dict:
     if not user_raw:
         raise HTTPException(401, "No user in initData")
 
-    user_data = json.loads(unquote(user_raw))
+    try:
+        user_data = json.loads(unquote(user_raw))
+    except (json.JSONDecodeError, ValueError):
+        raise HTTPException(400, "Malformed authentication data")
     logger.info(f"Admin auth: verified user id={user_data.get('id')}")
     return user_data
 
@@ -215,7 +218,7 @@ async def admin_stats(request: Request):
 
 
 @router.get("/users")
-async def admin_users(request: Request, page: int = 1, search: str = ""):
+async def admin_users(request: Request, page: int = Query(1, ge=1, le=10000), search: str = ""):
     """List all users with pagination and search."""
     _require_admin(request)
 
@@ -341,7 +344,7 @@ async def admin_grant_premium(request: Request, telegram_id: int, body: GrantPre
 
 
 @router.get("/predictions")
-async def admin_predictions(request: Request, limit: int = 50):
+async def admin_predictions(request: Request, limit: int = Query(50, ge=1, le=500)):
     """Get recent predictions with accuracy info."""
     _require_admin(request)
 
@@ -424,7 +427,7 @@ async def admin_system(request: Request):
             "subscription_enabled": settings.subscription_enabled,
             "advisor_enabled": settings.advisor_enabled,
             "prediction_interval_minutes": settings.prediction_interval_minutes,
-            "admin_telegram_id": settings.admin_telegram_id,
+            "admin_configured": bool(settings.admin_telegram_id),
         },
     }
 
@@ -467,5 +470,5 @@ async def admin_bot_status(request: Request):
         "bot_error": bot_error,
         "bot_users_count": user_count,
         "token_set": bool(settings.telegram_bot_token),
-        "database_url": settings.database_url[:30] + "...",
+        "database_type": "postgresql" if settings.is_postgres else "sqlite",
     }

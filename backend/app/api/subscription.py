@@ -24,8 +24,14 @@ TIER_CONFIG = {
 
 
 @router.get("/create-invoice")
-async def create_invoice(tier: str = Query(..., pattern="^(monthly|quarterly|yearly)$")):
+async def create_invoice(request: Request, tier: str = Query(..., pattern="^(monthly|quarterly|yearly)$")):
     """Create a Telegram Stars invoice link for the WebApp to open via tg.openInvoice()."""
+    # Require Telegram authentication
+    init_data = request.headers.get("X-Telegram-Init-Data", "")
+    if not init_data:
+        raise HTTPException(401, "Missing initData")
+    _verify_telegram_init_data(init_data)
+
     if not settings.telegram_bot_token:
         raise HTTPException(500, "Bot token not configured")
 

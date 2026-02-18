@@ -129,6 +129,9 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 logger.warning(f"Could not resolve bot username: {e}")
 
+        if not settings.admin_telegram_id:
+            logger.warning("ADMIN_TELEGRAM_ID not set — admin endpoints will be inaccessible")
+
         # Initialize database
         await init_db()
         logger.info("Database initialized")
@@ -369,17 +372,22 @@ async def lifespan(app: FastAPI):
             # Brief delay to let previous Railway instance shut down
             await asyncio.sleep(3)
 
-            # Start polling in background with conflict detection
+            # Start polling in background with conflict detection and retry
             async def _run_bot_polling():
-                try:
-                    logger.info("Bot polling starting...")
-                    await dp.start_polling(bot)
-                except Exception as e:
-                    err_str = str(e).lower()
-                    if "conflict" in err_str or "409" in err_str:
-                        logger.warning("Bot polling stopped: another instance is already running (409 Conflict)")
-                    else:
-                        logger.error(f"Bot polling crashed: {e}", exc_info=True)
+                retry_delay = 5
+                while True:
+                    try:
+                        logger.info("Bot polling starting...")
+                        await dp.start_polling(bot)
+                        break
+                    except Exception as e:
+                        err_str = str(e).lower()
+                        if "conflict" in err_str or "409" in err_str:
+                            logger.warning("Bot polling: 409 conflict, stopping")
+                            break
+                        logger.error(f"Bot polling crashed: {e}, retrying in {retry_delay}s")
+                        await asyncio.sleep(retry_delay)
+                        retry_delay = min(retry_delay * 2, 60)
 
             bot_task = asyncio.create_task(_run_bot_polling())
             logger.info("Telegram bot started")
@@ -466,15 +474,17 @@ app = FastAPI(
 )
 
 # CORS for Mini App
+_cors_origins = [
+    "https://web.telegram.org",
+    "https://webk.telegram.org",
+    "https://webz.telegram.org",
+]
+if settings.debug:
+    _cors_origins.extend(["http://localhost:5173", "http://localhost:3000"])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://web.telegram.org",
-        "https://webk.telegram.org",
-        "https://webz.telegram.org",
-        "http://localhost:5173",
-        "http://localhost:3000",
-    ],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

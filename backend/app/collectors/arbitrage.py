@@ -109,7 +109,22 @@ EXCHANGE_FEES: dict[str, float] = {
     "lbank": 0.10,
 }
 DEFAULT_FEE_PCT = 0.15  # fallback
-ACTIONABLE_THRESHOLD_PCT = 0.3  # net profit must exceed this
+ACTIONABLE_THRESHOLD_PCT = 0.5  # net profit must exceed this (accounts for slippage)
+
+# Estimated withdrawal fees per coin (in USD) — used to subtract from net profit
+WITHDRAWAL_FEES_USD: dict[str, float] = {
+    "BTC": 25.0, "ETH": 5.0, "BNB": 1.0, "SOL": 0.5, "XRP": 0.25,
+    "DOGE": 2.0, "ADA": 1.0, "AVAX": 1.0, "DOT": 2.0, "MATIC": 0.5,
+}
+DEFAULT_WITHDRAWAL_FEE_USD = 10.0
+
+# Map coin_id to base symbol for withdrawal fee lookup
+_COIN_BASE_SYMBOL: dict[str, str] = {
+    "bitcoin": "BTC", "ethereum": "ETH", "binancecoin": "BNB",
+    "solana": "SOL", "ripple": "XRP", "dogecoin": "DOGE",
+    "cardano": "ADA", "avalanche-2": "AVAX", "polkadot": "DOT",
+    "matic-network": "MATIC",
+}
 
 
 class ArbitrageCollector(BaseCollector):
@@ -394,6 +409,13 @@ class ArbitrageCollector(BaseCollector):
         buy_fee = EXCHANGE_FEES.get(best_ask_exchange, DEFAULT_FEE_PCT)
         sell_fee = EXCHANGE_FEES.get(best_bid_exchange, DEFAULT_FEE_PCT)
         total_fees = buy_fee + sell_fee
+
+        # Withdrawal fee (need to move coins from buy exchange to sell exchange)
+        base_symbol = _COIN_BASE_SYMBOL.get(coin_id, "")
+        withdrawal_fee_usd = WITHDRAWAL_FEES_USD.get(base_symbol, DEFAULT_WITHDRAWAL_FEE_USD)
+        # Convert withdrawal fee to percentage of trade (assume $1000 notional)
+        withdrawal_fee_pct = (withdrawal_fee_usd / best_ask) * 100 if best_ask > 0 else 0
+        total_fees += withdrawal_fee_pct
 
         spread_pct = (best_bid - best_ask) / best_ask * 100 if best_ask > 0 else 0.0
         net_profit_pct = spread_pct - total_fees

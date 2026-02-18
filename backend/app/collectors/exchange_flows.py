@@ -83,10 +83,17 @@ class ExchangeFlowCollector(BaseCollector):
             result = {}
 
             # Puell Multiple: daily miner revenue / 365-day avg miner revenue
-            # We approximate with current day revenue
-            if miners_rev_usd > 0:
-                # Rough estimate: typical daily miner revenue ~$30-50M
-                avg_daily_revenue = 40_000_000  # Reasonable baseline
+            # Dynamically estimate avg daily revenue from block subsidy + price:
+            #   Current subsidy = 3.125 BTC/block * ~144 blocks/day = ~450 BTC/day
+            #   Plus ~10-15% tx fees historically
+            # This auto-adjusts to price and halving cycles.
+            if miners_rev_usd > 0 and market_price > 0:
+                blocks_per_day = 144
+                current_subsidy_btc = 3.125  # Post-2024 halving
+                estimated_daily_subsidy_btc = current_subsidy_btc * blocks_per_day
+                # Add ~12% for transaction fees
+                estimated_daily_revenue_btc = estimated_daily_subsidy_btc * 1.12
+                avg_daily_revenue = estimated_daily_revenue_btc * market_price
                 result["puell_multiple"] = miners_rev_usd / max(avg_daily_revenue, 1)
 
             return result

@@ -2,24 +2,40 @@
 import logging
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, Request
 from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, SupportTicket, UserFeedback
+from app.api.admin import _verify_telegram_init_data
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/support", tags=["support"])
 
 
+def _require_admin(request: Request) -> int:
+    """Verify admin access from Telegram initData."""
+    init_data = request.headers.get("X-Telegram-Init-Data", "")
+    if not init_data:
+        raise HTTPException(401, "Missing initData")
+    user_data = _verify_telegram_init_data(init_data)
+    telegram_id = user_data.get("id")
+    if not telegram_id or telegram_id != settings.admin_telegram_id:
+        raise HTTPException(403, "Admin access required")
+    return telegram_id
+
+
 @router.get("/tickets")
 async def list_tickets(
+    request: Request,
     status: str | None = Query(None, regex="^(open|in_progress|resolved|closed)$"),
     limit: int = Query(50, ge=1, le=200),
     session: AsyncSession = Depends(get_session),
 ):
     """List support tickets, optionally filtered by status."""
+    _require_admin(request)
     query = select(SupportTicket).order_by(desc(SupportTicket.created_at)).limit(limit)
     if status:
         query = query.where(SupportTicket.status == status)
@@ -43,8 +59,9 @@ async def list_tickets(
 
 
 @router.get("/tickets/{ticket_id}")
-async def get_ticket(ticket_id: int, session: AsyncSession = Depends(get_session)):
+async def get_ticket(ticket_id: int, request: Request, session: AsyncSession = Depends(get_session)):
     """Get a specific support ticket."""
+    _require_admin(request)
     result = await session.execute(
         select(SupportTicket).where(SupportTicket.id == ticket_id)
     )
@@ -69,11 +86,13 @@ async def get_ticket(ticket_id: int, session: AsyncSession = Depends(get_session
 @router.put("/tickets/{ticket_id}/status")
 async def update_ticket_status(
     ticket_id: int,
+    request: Request,
     new_status: str = Query(..., regex="^(open|in_progress|resolved|closed)$"),
     notes: str | None = Query(None),
     session: AsyncSession = Depends(get_session),
 ):
     """Update ticket status."""
+    _require_admin(request)
     result = await session.execute(
         select(SupportTicket).where(SupportTicket.id == ticket_id)
     )

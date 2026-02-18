@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select, func, desc
 
@@ -192,8 +192,11 @@ async def get_game_status(request: Request):
 
 
 @router.get("/leaderboard")
-async def get_leaderboard(period: str = "all_time", limit: int = 20):
+async def get_leaderboard(period: str = "all_time", limit: int = Query(20, ge=1, le=100)):
     """Public leaderboard."""
+    if period not in ("all_time", "weekly", "monthly"):
+        raise HTTPException(400, "Invalid period")
+
     async with async_session() as session:
         if period == "weekly":
             order_col = GameProfile.weekly_points

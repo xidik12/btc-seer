@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta
 
 from sqlalchemy import select, desc
+from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
 from app.database import async_session, PortfolioState, TradeAdvice, TradeResult
@@ -10,22 +11,37 @@ logger = logging.getLogger(__name__)
 
 
 async def get_or_create_portfolio(telegram_id: int) -> PortfolioState:
-    """Get existing portfolio or create with default $10 balance."""
+    """Get existing portfolio or create with default $10 balance.
+
+    Uses with_for_update() to prevent race conditions, and catches
+    IntegrityError in case of concurrent INSERT attempts.
+    """
     async with async_session() as session:
         result = await session.execute(
-            select(PortfolioState).where(PortfolioState.telegram_id == telegram_id)
+            select(PortfolioState)
+            .where(PortfolioState.telegram_id == telegram_id)
+            .with_for_update()
         )
         portfolio = result.scalar_one_or_none()
 
         if not portfolio:
-            portfolio = PortfolioState(
-                telegram_id=telegram_id,
-                balance_usdt=settings.advisor_default_balance,
-                initial_balance=settings.advisor_default_balance,
-            )
-            session.add(portfolio)
-            await session.commit()
-            await session.refresh(portfolio)
+            try:
+                portfolio = PortfolioState(
+                    telegram_id=telegram_id,
+                    balance_usdt=settings.advisor_default_balance,
+                    initial_balance=settings.advisor_default_balance,
+                )
+                session.add(portfolio)
+                await session.commit()
+                await session.refresh(portfolio)
+            except IntegrityError:
+                await session.rollback()
+                # Another request created it concurrently — fetch the existing row
+                result = await session.execute(
+                    select(PortfolioState)
+                    .where(PortfolioState.telegram_id == telegram_id)
+                )
+                portfolio = result.scalar_one_or_none()
 
         return portfolio
 
@@ -61,20 +77,22 @@ async def record_trade_result(
 ) -> TradeResult | None:
     """Record trade close: calculate PnL, update balance, apply cooldown logic."""
     async with async_session() as session:
-        # Get trade advice
+        # Get trade advice (lock row to prevent concurrent close)
         result = await session.execute(
             select(TradeAdvice).where(
                 TradeAdvice.id == trade_id,
                 TradeAdvice.telegram_id == telegram_id,
-            )
+            ).with_for_update()
         )
         trade = result.scalar_one_or_none()
         if not trade or trade.status in ("closed", "cancelled"):
             return None
 
-        # Get portfolio
+        # Get portfolio (lock row to prevent concurrent balance updates)
         result = await session.execute(
-            select(PortfolioState).where(PortfolioState.telegram_id == telegram_id)
+            select(PortfolioState)
+            .where(PortfolioState.telegram_id == telegram_id)
+            .with_for_update()
         )
         portfolio = result.scalar_one_or_none()
         if not portfolio:

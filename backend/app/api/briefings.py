@@ -1,8 +1,9 @@
 """Daily Briefing API — latest and historical briefings."""
 
 import logging
+import re
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import select, desc
 
 from app.database import async_session, DailyBriefing
@@ -67,6 +68,9 @@ async def get_briefing_history(days: int = 7):
 @router.get("/{date}")
 async def get_briefing_by_date(date: str):
     """Get a specific day's briefing."""
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
+        raise HTTPException(400, "Invalid date format. Use YYYY-MM-DD.")
+
     async with async_session() as session:
         result = await session.execute(
             select(DailyBriefing).where(DailyBriefing.date == date)

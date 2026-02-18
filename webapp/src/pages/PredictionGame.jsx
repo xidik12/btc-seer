@@ -228,9 +228,11 @@ export default function PredictionGame() {
       setTimeout(() => setLocked(false), 1500)
       fetchData()
     } catch (err) {
-      alert(err.message || 'Failed')
+      const msg = err.message || 'Failed'
+      if (tg?.showAlert) { tg.showAlert(msg) } else { console.error(msg) }
+    } finally {
+      setPredicting(false)
     }
-    setPredicting(false)
   }
 
   const handleShowHistory = () => {
@@ -412,7 +414,7 @@ export default function PredictionGame() {
         {/* User rank if not in top 20 */}
         {!userInLeaderboard && userRank && (
           <p className="text-text-muted text-[10px] text-center mt-2 border-t border-white/5 pt-2">
-            Your rank: #{userRank}
+            {t('game.yourRank', { rank: userRank })}
           </p>
         )}
       </div>

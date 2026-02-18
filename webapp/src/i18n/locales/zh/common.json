@@ -247,7 +247,8 @@
     "correctPredictions": "正确",
     "shareWin": "分享你的胜利！",
     "locked": "已锁定！",
-    "timeLeft": "剩余时间"
+    "timeLeft": "剩余时间",
+    "yourRank": "你的排名：#{{rank}}"
   },
   "smartMoney": {
     "title": "聪明资金",

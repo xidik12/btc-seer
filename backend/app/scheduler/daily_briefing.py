@@ -212,7 +212,7 @@ async def generate_daily_briefing():
             if onchain:
                 html_parts.append(f"\n<b>⛓️ On-Chain</b>")
                 if onchain.hash_rate:
-                    html_parts.append(f"Hash Rate: {onchain.hash_rate / 1e18:.1f} EH/s")
+                    html_parts.append(f"Hash Rate: {onchain.hash_rate:.1f} EH/s")
                 if onchain.active_addresses:
                     html_parts.append(f"Active Addresses: {onchain.active_addresses:,}")
 

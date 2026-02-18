@@ -589,12 +589,18 @@ export default function Advisor() {
   const handleClose = async (tradeId, price) => {
     const exitPrice = price || currentPrice
     if (!exitPrice) return
-    if (!window.confirm(`Close trade #${tradeId} at $${exitPrice.toLocaleString()}?`)) return
-    try {
-      await api.closeTrade(tradeId, exitPrice, 'manual_close')
-      fetchData()
-    } catch (err) {
-      console.error('Close trade error:', err)
+    const doClose = async () => {
+      try {
+        await api.closeTrade(tradeId, exitPrice, 'manual_close')
+        fetchData()
+      } catch (err) {
+        console.error('Close trade error:', err)
+      }
+    }
+    if (tg?.showConfirm) {
+      tg.showConfirm(`Close trade #${tradeId} at $${exitPrice.toLocaleString()}?`, (ok) => { if (ok) doClose() })
+    } else if (window.confirm(`Close trade #${tradeId} at $${exitPrice.toLocaleString()}?`)) {
+      doClose()
     }
   }
 

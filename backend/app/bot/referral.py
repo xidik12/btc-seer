@@ -1,8 +1,8 @@
 """Referral system — code generation, deep-link parsing, bonus granting."""
 
 import logging
+import secrets
 import string
-import random
 from datetime import datetime, timedelta
 
 from sqlalchemy import select
@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 def generate_referral_code(length: int = 8) -> str:
-    """Generate a random uppercase alphanumeric referral code."""
+    """Generate a cryptographically secure random uppercase alphanumeric referral code."""
     chars = string.ascii_uppercase + string.digits
-    return "".join(random.choices(chars, k=length))
+    return "".join(secrets.choice(chars) for _ in range(length))
 
 
 async def get_or_create_referral_code(user: BotUser, session: AsyncSession) -> str:
@@ -36,8 +36,8 @@ async def get_or_create_referral_code(user: BotUser, session: AsyncSession) -> s
             await session.commit()
             return code
 
-    # Fallback: use telegram_id suffix for uniqueness
-    code = generate_referral_code(5) + str(user.telegram_id)[-3:]
+    # Fallback: generate a longer code for uniqueness
+    code = generate_referral_code(12)
     user.referral_code = code
     await session.commit()
     return code

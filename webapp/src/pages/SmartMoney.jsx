@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, memo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTelegram } from '../hooks/useTelegram'
 import { api } from '../utils/api'
@@ -211,6 +212,7 @@ const EventCard = memo(function EventCard({ event, t }) {
 export default function SmartMoney() {
   const { t } = useTranslation('common')
   const { tg } = useTelegram()
+  const navigate = useNavigate()
   const [score, setScore] = useState(null)
   const [events, setEvents] = useState([])
   const [isPremium, setIsPremium] = useState(false)
@@ -372,7 +374,7 @@ export default function SmartMoney() {
           <p className="text-text-primary text-sm font-semibold mb-1">{t('smartMoney.unlockFeed')}</p>
           <p className="text-text-muted text-xs mb-3">{t('smartMoney.premiumDesc')}</p>
           <button
-            onClick={() => window.location.hash = '/subscription'}
+            onClick={() => navigate('/subscription')}
             className="px-4 py-2 rounded-xl bg-accent-blue text-white text-xs font-semibold"
           >
             {t('smartMoney.upgradePremium')}

@@ -1,16 +1,33 @@
 import logging
+import time
 
-from aiogram import Bot, Dispatcher, F, Router
+from aiogram import Bot, Dispatcher, F, Router, BaseMiddleware
 from aiogram.types import CallbackQuery, Message, PreCheckoutQuery, LabeledPrice
-from sqlalchemy import select
+from sqlalchemy import select, desc
 
 from app.config import settings
-from app.database import async_session, BotUser, TradeAdvice, Price, PaymentHistory
+from app.database import async_session, BotUser, TradeAdvice, Price, PaymentHistory, Prediction, GameProfile, UserPrediction, PriceAlert
 from app.bot.commands import router as commands_router
 from app.bot.keyboards import main_keyboard, settings_keyboard, advisor_keyboard, trade_close_keyboard, feedback_keyboard
 from app.bot.subscription import require_premium, activate_premium, get_status_text
 
 logger = logging.getLogger(__name__)
+
+
+class ThrottleMiddleware(BaseMiddleware):
+    _timestamps: dict[int, float] = {}
+    RATE_LIMIT = 1.0  # seconds between commands
+
+    async def __call__(self, handler, event, data):
+        user_id = getattr(getattr(event, 'from_user', None), 'id', None)
+        if user_id:
+            now = time.time()
+            last = self._timestamps.get(user_id, 0)
+            if now - last < self.RATE_LIMIT:
+                return  # silently drop
+            self._timestamps[user_id] = now
+        return await handler(event, data)
+
 
 # Callback query router
 callback_router = Router()
@@ -68,6 +85,9 @@ async def cb_back(callback: CallbackQuery):
 @callback_router.callback_query(lambda c: c.data and c.data.startswith("set_interval:"))
 async def cb_set_interval(callback: CallbackQuery):
     interval = callback.data.split(":")[1]
+    if interval not in ("1h", "4h", "24h"):
+        await callback.answer("Invalid interval.")
+        return
 
     async with async_session() as session:
         result = await session.execute(
@@ -294,7 +314,12 @@ payment_router = Router()
 
 @payment_router.pre_checkout_query()
 async def on_pre_checkout(query: PreCheckoutQuery):
-    """Approve Telegram Stars pre-checkout."""
+    """Validate and approve Telegram Stars pre-checkout."""
+    payload = query.invoice_payload
+    valid_payloads = {"premium_30d", "premium_90d", "premium_365d"}
+    if payload not in valid_payloads or query.currency != "XTR":
+        await query.answer(ok=False, error_message="Invalid payment request.")
+        return
     await query.answer(ok=True)
 
 
@@ -306,12 +331,8 @@ async def on_payment_success(message: Message):
 
     # Parse days from payload: "premium_30d", "premium_90d", "premium_365d"
     payload = payment.invoice_payload
-    days = 30
-    if payload and "premium_" in payload:
-        try:
-            days = int(payload.replace("premium_", "").replace("d", ""))
-        except ValueError:
-            days = 30
+    VALID_PAYLOADS = {"premium_30d": 30, "premium_90d": 90, "premium_365d": 365}
+    days = VALID_PAYLOADS.get(payload, 30)
 
     async with async_session() as session:
         result = await session.execute(
@@ -414,10 +435,151 @@ async def cb_feedback(callback: CallbackQuery):
     await callback.message.edit_reply_markup(reply_markup=None)
 
 
+# ────────────────────────────────────────────────────────────────
+#  GAME PREDICTION CALLBACKS
+# ────────────────────────────────────────────────────────────────
+
+@callback_router.callback_query(lambda c: c.data and c.data.startswith("game_predict:"))
+async def cb_game_predict(callback: CallbackQuery):
+    direction = callback.data.split(":")[1]
+    telegram_id = callback.from_user.id
+    try:
+        async with async_session() as session:
+            from datetime import datetime, date
+            today = date.today().isoformat()
+            # Check existing prediction
+            existing = await session.execute(
+                select(UserPrediction).where(
+                    UserPrediction.telegram_id == telegram_id,
+                    UserPrediction.round_date == today,
+                    UserPrediction.timeframe == "24h",
+                    UserPrediction.status == "pending",
+                )
+            )
+            if existing.scalar_one_or_none():
+                await callback.answer("Already predicted for today!", show_alert=True)
+                return
+            # Get current price for lock_price
+            price_row = await session.execute(
+                select(Price).order_by(desc(Price.timestamp)).limit(1)
+            )
+            current_price = price_row.scalar_one_or_none()
+            lock_price = current_price.close if current_price else 0.0
+            pred = UserPrediction(
+                telegram_id=telegram_id,
+                direction=direction,
+                round_date=today,
+                timeframe="24h",
+                status="pending",
+                lock_price=lock_price,
+                created_at=datetime.utcnow(),
+            )
+            session.add(pred)
+            await session.commit()
+        emoji = "\U0001f7e2" if direction == "up" else "\U0001f534"
+        await callback.answer(f"{emoji} Predicted {direction.upper()}!", show_alert=True)
+        await callback.message.edit_text(
+            f"\U0001f3ae Prediction Game\n\n{emoji} You predicted BTC will go {direction.upper()} in the next 24h!\n\nResults will be evaluated tomorrow.",
+            reply_markup=None,
+        )
+    except Exception as e:
+        logger.error(f"Game predict error: {e}")
+        await callback.answer("Something went wrong. Try again.", show_alert=True)
+
+
+@callback_router.callback_query(lambda c: c.data == "game_leaderboard")
+async def cb_game_leaderboard(callback: CallbackQuery):
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                select(GameProfile).order_by(desc(GameProfile.total_points)).limit(10)
+            )
+            profiles = result.scalars().all()
+        if not profiles:
+            await callback.answer("No leaderboard data yet!", show_alert=True)
+            return
+        lines = ["\U0001f3c6 Top 10 Players\n"]
+        for i, p in enumerate(profiles, 1):
+            medal = ["\U0001f947", "\U0001f948", "\U0001f949"][i - 1] if i <= 3 else f"{i}."
+            lines.append(f"{medal} {p.username or 'Anonymous'} \u2014 {p.total_points} pts ({p.accuracy_pct:.0f}%)")
+        await callback.message.edit_text("\n".join(lines), reply_markup=None)
+    except Exception as e:
+        logger.error(f"Game leaderboard error: {e}")
+        await callback.answer("Failed to load leaderboard.", show_alert=True)
+
+
+# ────────────────────────────────────────────────────────────────
+#  DELETE ALERT CALLBACK
+# ────────────────────────────────────────────────────────────────
+
+@callback_router.callback_query(lambda c: c.data and c.data.startswith("delete_alert:"))
+async def cb_delete_alert(callback: CallbackQuery):
+    try:
+        alert_id = int(callback.data.split(":")[1])
+        async with async_session() as session:
+            result = await session.execute(
+                select(PriceAlert).where(
+                    PriceAlert.id == alert_id,
+                    PriceAlert.telegram_id == callback.from_user.id,
+                )
+            )
+            alert = result.scalar_one_or_none()
+            if not alert:
+                await callback.answer("Alert not found.", show_alert=True)
+                return
+            alert.is_active = False
+            await session.commit()
+        await callback.answer("Alert deleted!", show_alert=True)
+        await callback.message.edit_text("\u2705 Alert deleted.", reply_markup=None)
+    except Exception as e:
+        logger.error(f"Delete alert error: {e}")
+        await callback.answer("Failed to delete alert.", show_alert=True)
+
+
+# ────────────────────────────────────────────────────────────────
+#  TIMEFRAME CALLBACK
+# ────────────────────────────────────────────────────────────────
+
+@callback_router.callback_query(lambda c: c.data and c.data.startswith("tf:"))
+async def cb_timeframe(callback: CallbackQuery):
+    tf = callback.data.split(":")[1]
+    if tf not in ("1h", "4h", "24h"):
+        await callback.answer("Invalid timeframe.", show_alert=True)
+        return
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                select(Prediction)
+                .where(Prediction.timeframe == tf)
+                .order_by(desc(Prediction.timestamp))
+                .limit(1)
+            )
+            pred = result.scalar_one_or_none()
+        if not pred:
+            await callback.answer(f"No {tf} prediction available yet.", show_alert=True)
+            return
+        direction_emoji = "\U0001f7e2" if pred.direction == "bullish" else "\U0001f534" if pred.direction == "bearish" else "\U0001f7e1"
+        text = (
+            f"\U0001f4ca {tf.upper()} Prediction\n\n"
+            f"{direction_emoji} {pred.direction.upper()}\n"
+            f"Confidence: {pred.confidence:.0f}%\n"
+        )
+        if pred.predicted_price:
+            text += f"Target: ${pred.predicted_price:,.0f}\n"
+        await callback.message.edit_text(text, reply_markup=None)
+    except Exception as e:
+        logger.error(f"Timeframe callback error: {e}")
+        await callback.answer("Failed to load prediction.", show_alert=True)
+
+
 def create_bot() -> tuple[Bot, Dispatcher]:
     """Create and configure the Telegram bot."""
     bot = Bot(token=settings.telegram_bot_token)
     dp = Dispatcher()
+
+    # Register throttle middleware on command and callback routers
+    commands_router.message.middleware(ThrottleMiddleware())
+    callback_router.callback_query.middleware(ThrottleMiddleware())
 
     dp.include_router(payment_router)  # Payment handlers first (pre_checkout must be fast)
     dp.include_router(commands_router)
