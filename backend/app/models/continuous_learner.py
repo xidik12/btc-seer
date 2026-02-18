@@ -86,12 +86,13 @@ async def update_ensemble_weights():
 async def selective_retrain():
     """Retrain only models whose accuracy has degraded below threshold.
 
-    Checks each model's rolling accuracy; if below 50%, triggers
-    retrain for just that model (not the full pipeline).
+    Checks each model's rolling accuracy over the configured window;
+    if below settings.selective_retrain_accuracy, triggers retrain for
+    just that model (not the full pipeline).
     """
     try:
         async with async_session() as session:
-            since = datetime.utcnow() - timedelta(hours=72)
+            since = datetime.utcnow() - timedelta(hours=settings.selective_retrain_window_hours)
             result = await session.execute(
                 select(
                     ModelPerformanceLog.model_name,
@@ -112,7 +113,7 @@ async def selective_retrain():
             if total < 10:
                 continue
             accuracy = (correct or 0) / total
-            if accuracy < 0.50:
+            if accuracy < settings.selective_retrain_accuracy:
                 degraded.append(name)
                 logger.warning(f"Model {name} degraded: {accuracy:.1%} accuracy ({correct}/{total})")
 
@@ -138,6 +139,16 @@ async def selective_retrain():
                 elif model_name == "xgboost":
                     results["xgboost"] = trainer.train_xgboost(dataset["X_feat"], dataset["y"])
                 logger.info(f"Selectively retrained {model_name}")
+
+                # Register retrained model as A/B candidate
+                result = results.get(model_name, {})
+                if result.get("status") == "trained" and result.get("weights_path"):
+                    from app.models.ab_tester import register_candidate
+                    await register_candidate(
+                        model_type=model_name,
+                        weights_path=result["weights_path"],
+                        metrics=result,
+                    )
             except Exception as e:
                 logger.error(f"Selective retrain of {model_name} failed: {e}")
                 results[model_name] = {"status": "failed", "error": str(e)}

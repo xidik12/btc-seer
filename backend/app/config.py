@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     # Kept for backward compatibility with .env files
     prediction_interval_minutes: int = 30
 
+    # ML Retrain thresholds
+    retrain_accuracy_threshold: float = 0.55
+    retrain_interval_hours: int = 12
+    selective_retrain_accuracy: float = 0.50
+    selective_retrain_window_hours: int = 72
+
     # Binance
     binance_base_url: str = "https://api.binance.com"
 

@@ -135,6 +135,12 @@ class EnsemblePredictor:
 
         # Handle shape mismatch (feature count may have changed)
         if sequence.shape[-1] != len(mean):
+            logger.error(
+                f"NORMALIZATION SKIPPED: feature count mismatch — "
+                f"input has {sequence.shape[-1]} features but norm params have {len(mean)}. "
+                f"Predictions will run on UNNORMALIZED inputs and may be unreliable. "
+                f"Retrain models to fix: the saved lstm_norm_params.npz is stale."
+            )
             return sequence
 
         if sequence.ndim == 2:

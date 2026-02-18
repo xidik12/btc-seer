@@ -1,8 +1,8 @@
 {
   "title": "About BTC Seer",
   "version": "Version",
-  "description": "AI-powered Bitcoin analysis and trading platform with self-learning predictions",
-  "heroSubtitle": "Real-time predictions, trading signals, and deep market analysis — powered by a 4-model AI ensemble analyzing 192 features across 13 data categories with time-aligned self-learning predictions.",
+  "description": "AI-powered Bitcoin analysis and trading platform with self-learning predictions, arbitrage scanning, smart money tracking, and more",
+  "heroSubtitle": "Real-time predictions, trading signals, arbitrage scanning across 19 exchanges, smart money tracking, prediction games, and deep market analysis — powered by a 4-model AI ensemble analyzing 192 features across 13 data categories with time-aligned self-learning predictions.",
   "project": {
     "title": "Incognito Generation",
     "subtitle": "An Incognito Generation project",
@@ -12,7 +12,8 @@
     "title": "WHAT IS BTC SEER?",
     "p1": "BTC Seer is a production-grade Bitcoin prediction platform that analyzes <b>192 engineered features</b> across 13 categories — technical indicators, news sentiment, on-chain metrics, derivatives data, macro markets, ETF flows, exchange flows, stablecoin supply, social signals, and more.",
     "p2": "It generates <b>time-aligned predictions</b> across <b>5 timeframes</b> (1H, 4H, 24H, 1W, 1MO) using a <b>4-model ensemble</b>: Temporal Fusion Transformer (40%), XGBoost (25%), LSTM (20%), and Google TimesFM (15%) — with adaptive weighting that shifts based on model performance.",
-    "p3": "The system features a <b>self-learning feedback loop</b> — it evaluates every prediction, discovers accuracy patterns, populates per-model performance logs, and automatically adjusts confidence and direction based on what it learns."
+    "p3": "The system features a <b>self-learning feedback loop</b> — it evaluates every prediction, discovers accuracy patterns, populates per-model performance logs, and automatically adjusts confidence and direction based on what it learns.",
+    "p4": "Beyond predictions, BTC Seer offers <b>cross-exchange arbitrage scanning</b> across 19 exchanges, <b>smart money tracking</b>, <b>whale monitoring</b>, <b>price alerts</b>, <b>daily AI briefings</b>, an interactive <b>prediction game</b>, <b>memecoin tracking</b>, and <b>new listing detection</b> — available in English, Russian, and Chinese."
   },
   "selfLearning": {
     "title": "Self-Learning Prediction System",
@@ -43,7 +44,10 @@
     "dataSources": "Data Sources",
     "timeframes": "Timeframes",
     "backgroundJobs": "Background Jobs",
-    "retrainCycle": "Retrain Cycle"
+    "retrainCycle": "Retrain Cycle",
+    "pages": "Pages",
+    "exchanges": "Exchanges",
+    "languages": "Languages"
   },
   "howToUse": {
     "title": "HOW TO USE BTC SEER",
@@ -98,13 +102,19 @@
       { "freq": "Every 1 min", "desc": "BTC price from Binance (OHLCV candles)" },
       { "freq": "Every 2 min", "desc": "News from 25+ RSS feeds, CryptoPanic, Reddit, Binance announcements" },
       { "freq": "Every 2 min", "desc": "Alt-coin prices (ETH, SOL, XRP and more)" },
+      { "freq": "Every 3 min", "desc": "Arbitrage scanner — cross-exchange spread detection across 19 exchanges" },
       { "freq": "Every 5 min", "desc": "Event classification — news categorized into regulatory, technical, market, macro, supply, exchange events" },
+      { "freq": "Every 5 min", "desc": "Smart money & whale transaction monitoring — large BTC movements and exchange inflows/outflows" },
+      { "freq": "Every 5 min", "desc": "New token listing detection across major exchanges" },
       { "freq": "Every 10 min", "desc": "Influencer tweets — weighted by market impact (Elon, Saylor, CZ, Cathie Wood, etc.)" },
+      { "freq": "Every 10 min", "desc": "Memecoin tracker — trending tokens, risk scores, and volume spikes" },
       { "freq": "Every 30 min", "desc": "Funding rates, open interest, and derivatives data from Binance perpetuals" },
       { "freq": "Every 1 hr", "desc": "1H prediction + quant, macro indicators, on-chain metrics, BTC dominance, technical snapshot, phrase analysis" },
       { "freq": "Every 4 hrs", "desc": "4H prediction + quant at 00/04/08/12/16/20 UTC" },
       { "freq": "Daily 00:04", "desc": "24H/1W/1MO predictions + quant, data cleanup, subscription checks" },
-      { "freq": "Every 6 hrs", "desc": "Auto-retraining, continuous learning, A/B testing, pattern discovery" }
+      { "freq": "Daily 06:00", "desc": "AI daily briefing — market summary, key metrics, outlook, and notable events" },
+      { "freq": "Every 6 hrs", "desc": "Auto-retraining, continuous learning, A/B testing, pattern discovery" },
+      { "freq": "Real-time", "desc": "Price alert notifications via Telegram when user-defined thresholds are hit" }
     ]
   },
   "howAiWorks": {
@@ -133,7 +143,29 @@
     "coinsMarket": "Coins & Market Data",
     "coinsMarketDesc": "Track BTC, ETH, SOL, XRP, and more — search any coin, generate AI analysis reports",
     "accuracyTransparency": "Accuracy & Transparency",
-    "accuracyTransparencyDesc": "Every prediction scored against actual results — see per-model accuracy, error distributions, learned patterns, and confidence calibration in the Analysis tab"
+    "accuracyTransparencyDesc": "Every prediction scored against actual results — see per-model accuracy, error distributions, learned patterns, and confidence calibration in the Analysis tab",
+    "smartMoney": "Smart Money Tracker",
+    "smartMoneyDesc": "Track whale and institutional flows — large transactions, exchange inflows/outflows, and smart money movements in real time",
+    "predictionGame": "Prediction Game",
+    "predictionGameDesc": "Compete with other users by predicting BTC price direction — earn points, climb the leaderboard, and sharpen your market intuition",
+    "priceAlerts": "Price Alerts",
+    "priceAlertsDesc": "Set custom price thresholds and receive instant push notifications via Telegram when targets are hit",
+    "dailyBriefings": "Daily Briefings",
+    "dailyBriefingsDesc": "AI-generated daily market briefings with key metrics, trend summary, notable events, and short-term outlook",
+    "arbitrageScanner": "Arbitrage Scanner",
+    "arbitrageScannerDesc": "Detect cross-exchange price spreads across 19 exchanges in real time — see net profit after fees for Binance, Coinbase, Kraken, OKX, Bybit, and more",
+    "whales": "Whale Tracking",
+    "whalesDesc": "Monitor large BTC wallet movements, whale accumulation/distribution patterns, and significant on-chain transfers",
+    "memecoins": "Memecoin Tracker",
+    "memecoinsDesc": "Track trending memecoins with risk scores, volume spikes, and social buzz indicators",
+    "newListings": "New Listings",
+    "newListingsDesc": "Stay ahead with newly listed tokens across major exchanges — early detection of new trading opportunities",
+    "referral": "Partner & Referral",
+    "referralDesc": "Refer friends and earn commissions — partner dashboard with analytics, earnings tracking, and referral links",
+    "multiLang": "Multi-Language",
+    "multiLangDesc": "Full app available in English, Russian, and Chinese — seamless switching with complete translations",
+    "subscriptions": "Subscription Tiers",
+    "subscriptionsDesc": "Free, Premium, and Pro plans — unlock advanced features, faster updates, and priority support based on your needs"
   },
   "whatsInside": {
     "title": "WHAT'S INSIDE",
@@ -153,7 +185,16 @@
     "tools": { "name": "Tools", "desc": "Calculators and utilities for position sizing, risk management, and trade planning" },
     "resources": { "name": "Resources", "desc": "Curated links, guides, and reference material for Bitcoin traders" },
     "settings": { "name": "Settings", "desc": "Customize alerts, notifications, and display preferences" },
-    "premium": { "name": "Premium", "desc": "Unlock advanced features, faster updates, and priority access" }
+    "premium": { "name": "Premium", "desc": "Free, Premium, and Pro tiers with different feature access levels" },
+    "smartMoney": { "name": "Smart Money", "desc": "Whale and institutional flow tracking — large transactions, exchange inflows/outflows, smart money movements" },
+    "predictionGame": { "name": "Prediction Game", "desc": "Interactive BTC price prediction game — compete with users, earn points, climb the leaderboard" },
+    "priceAlerts": { "name": "Price Alerts", "desc": "Custom price alerts with push notifications via Telegram when thresholds are hit" },
+    "dailyBriefings": { "name": "Daily Briefings", "desc": "AI-generated daily market summary with key metrics, outlook, and notable events" },
+    "arbitrage": { "name": "Arbitrage", "desc": "Cross-exchange arbitrage detection across 19 exchanges — real-time spreads and net profit after fees" },
+    "whales": { "name": "Whales", "desc": "Whale wallet tracking, large transaction monitoring, and accumulation/distribution patterns" },
+    "memecoins": { "name": "Memecoins", "desc": "Trending memecoin tracker with risk scores, volume data, and social buzz" },
+    "newListings": { "name": "New Listings", "desc": "Newly listed tokens across exchanges — early detection of new trading opportunities" },
+    "referral": { "name": "Referral", "desc": "Partner and referral system — earn commissions, track referrals, and partner analytics dashboard" }
   },
   "features": {
     "title": "Features",
@@ -183,7 +224,17 @@
     "etfFlows": "ETF Flows",
     "learnEducate": "Learn & Educate",
     "eventMemory": "Event Memory",
-    "selfLearning": "Self-Learning AI"
+    "selfLearning": "Self-Learning AI",
+    "smartMoney": "Smart Money",
+    "predictionGame": "Prediction Game",
+    "priceAlerts": "Price Alerts",
+    "dailyBriefings": "Daily Briefings",
+    "arbitrage": "Arbitrage Scanner",
+    "whales": "Whale Tracking",
+    "memecoins": "Memecoins",
+    "newListings": "New Listings",
+    "referral": "Referral System",
+    "multiLang": "Multi-Language"
   },
   "credits": {
     "title": "Credits & Community",

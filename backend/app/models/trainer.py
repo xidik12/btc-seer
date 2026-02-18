@@ -760,6 +760,19 @@ class ModelTrainer:
         # 4. Record metrics in ModelVersion table
         await self._save_model_versions(results)
 
+        # 4b. Register successful models as A/B testing candidates
+        from app.models.ab_tester import register_candidate
+        for model_type, result in results.items():
+            if result.get("status") == "trained" and result.get("weights_path"):
+                try:
+                    await register_candidate(
+                        model_type=model_type,
+                        weights_path=result["weights_path"],
+                        metrics=result,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to register {model_type} as A/B candidate: {e}")
+
         # 5. Check if any model improved
         improved = any(
             r.get("status") == "trained" and r.get("avg_accuracy", 0) > 0.50
@@ -878,10 +891,10 @@ class ModelTrainer:
                 hours_since_training = (datetime.utcnow() - last_trained).total_seconds() / 3600
 
             should_retrain = (
-                # Accuracy dropped below 52% (barely better than random)
-                accuracy < 0.52
-                # Or it's been more than 24 hours since last training
-                or (hours_since_training is not None and hours_since_training > 24)
+                # Accuracy dropped below threshold (stricter than random)
+                accuracy < settings.retrain_accuracy_threshold
+                # Or it's been more than the configured interval since last training
+                or (hours_since_training is not None and hours_since_training > settings.retrain_interval_hours)
                 # Or never trained and have enough data
                 or (last_trained is None and feature_count >= self.MIN_SAMPLES)
             )

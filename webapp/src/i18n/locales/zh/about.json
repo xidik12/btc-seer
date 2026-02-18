@@ -1,8 +1,8 @@
 {
   "title": "关于 BTC Seer",
   "version": "版本",
-  "description": "AI 驱动的比特币分析与交易平台，具有自学习预测功能",
-  "heroSubtitle": "实时预测、交易信号和深度市场分析 — 由4模型 AI 集成系统驱动，分析覆盖13个数据类别的192个特征，具有时间对齐的自学习预测。",
+  "description": "AI 驱动的比特币分析与交易平台，具有自学习预测、套利扫描、聪明钱追踪等功能",
+  "heroSubtitle": "实时预测、交易信号、19个交易所套利扫描、聪明钱追踪、预测竞猜和深度市场分析 — 由4模型 AI 集成系统驱动，分析覆盖13个数据类别的192个特征，具有时间对齐的自学习预测。",
   "project": {
     "title": "Incognito Generation",
     "subtitle": "Incognito Generation 项目",
@@ -12,7 +12,8 @@
     "title": "什么是 BTC SEER？",
     "p1": "BTC Seer 是一个生产级比特币预测平台，分析覆盖13个类别的 <b>192个工程特征</b> — 技术指标、新闻情绪、链上指标、衍生品数据、宏观市场、ETF 资金流、交易所资金流、稳定币供应、社交信号等。",
     "p2": "它使用 <b>4模型集成</b> 在 <b>5个时间周期</b>（1小时、4小时、24小时、1周、1月）生成 <b>时间对齐的预测</b>：时序融合变换器 (40%)、XGBoost (25%)、LSTM (20%) 和 Google TimesFM (15%) — 权重根据模型表现自适应调整。",
-    "p3": "系统具有 <b>自学习反馈循环</b> — 评估每个预测，发现准确率模式，记录每个模型的性能日志，并根据学习结果自动调整置信度和方向。"
+    "p3": "系统具有 <b>自学习反馈循环</b> — 评估每个预测，发现准确率模式，记录每个模型的性能日志，并根据学习结果自动调整置信度和方向。",
+    "p4": "除预测外，BTC Seer 还提供覆盖19个交易所的<b>跨所套利扫描</b>、<b>聪明钱追踪</b>、<b>巨鲸监控</b>、<b>价格提醒</b>、<b>每日AI简报</b>、互动式<b>预测竞猜游戏</b>、<b>Meme币追踪</b>和<b>新币上线检测</b> — 支持英文、俄文和中文。"
   },
   "selfLearning": {
     "title": "自学习预测系统",
@@ -43,7 +44,10 @@
     "dataSources": "数据源",
     "timeframes": "时间周期",
     "backgroundJobs": "后台任务",
-    "retrainCycle": "重训周期"
+    "retrainCycle": "重训周期",
+    "pages": "页面",
+    "exchanges": "交易所",
+    "languages": "语言"
   },
   "howToUse": {
     "title": "如何使用 BTC SEER",
@@ -98,13 +102,19 @@
       { "freq": "每1分钟", "desc": "来自 Binance 的 BTC 价格（OHLCV K线）" },
       { "freq": "每2分钟", "desc": "来自25+ RSS 源、CryptoPanic、Reddit、Binance 公告的新闻" },
       { "freq": "每2分钟", "desc": "山寨币价格（ETH、SOL、XRP 等）" },
+      { "freq": "每3分钟", "desc": "套利扫描器 — 跨19个交易所检测价差" },
       { "freq": "每5分钟", "desc": "事件分类 — 新闻分为监管、技术、市场、宏观、供应、交易所事件" },
+      { "freq": "每5分钟", "desc": "聪明钱与巨鲸交易监控 — BTC 大额转账及交易所资金进出" },
+      { "freq": "每5分钟", "desc": "主要交易所新代币上线检测" },
       { "freq": "每10分钟", "desc": "KOL 推文 — 按市场影响力加权（Elon、Saylor、CZ、Cathie Wood 等）" },
+      { "freq": "每10分钟", "desc": "Meme币追踪器 — 热门代币、风险评分、交易量异动" },
       { "freq": "每30分钟", "desc": "来自 Binance 永续合约的资金费率、未平仓合约和衍生品数据" },
       { "freq": "每1小时", "desc": "1小时预测 + 量化、宏观指标、链上指标、BTC 市占率、技术快照、短语分析" },
       { "freq": "每4小时", "desc": "4小时预测 + 量化，在 00/04/08/12/16/20 UTC" },
       { "freq": "每天 00:04", "desc": "24小时/1周/1月预测 + 量化，数据清理，订阅检查" },
-      { "freq": "每6小时", "desc": "自动重训、持续学习、A/B 测试、模式发现" }
+      { "freq": "每天 06:00", "desc": "AI 每日简报 — 市场总结、核心指标、趋势展望及重要事件" },
+      { "freq": "每6小时", "desc": "自动重训、持续学习、A/B 测试、模式发现" },
+      { "freq": "实时", "desc": "用户自定义价格阈值触发后通过 Telegram 推送价格提醒" }
     ]
   },
   "howAiWorks": {
@@ -133,7 +143,29 @@
     "coinsMarket": "币种与市场数据",
     "coinsMarketDesc": "追踪 BTC、ETH、SOL、XRP 等 — 搜索任意币种，生成 AI 分析报告",
     "accuracyTransparency": "准确率与透明度",
-    "accuracyTransparencyDesc": "每个预测对照实际结果评分 — 查看每模型准确率、误差分布、发现的模式和置信度校准（分析标签）"
+    "accuracyTransparencyDesc": "每个预测对照实际结果评分 — 查看每模型准确率、误差分布、发现的模式和置信度校准（分析标签）",
+    "smartMoney": "聪明钱追踪",
+    "smartMoneyDesc": "追踪巨鲸和机构资金流向 — 大额交易、交易所资金进出、聪明钱实时动态",
+    "predictionGame": "预测竞猜",
+    "predictionGameDesc": "与其他用户竞猜 BTC 价格走势 — 赢取积分，冲击排行榜，锻炼市场直觉",
+    "priceAlerts": "价格提醒",
+    "priceAlertsDesc": "设置自定义价格阈值，目标触发后通过 Telegram 即时推送通知",
+    "dailyBriefings": "每日简报",
+    "dailyBriefingsDesc": "AI 生成的每日市场简报，涵盖核心指标、趋势总结、重要事件和短期展望",
+    "arbitrageScanner": "套利扫描器",
+    "arbitrageScannerDesc": "实时检测19个交易所的跨所价差 — 查看 Binance、Coinbase、Kraken、OKX、Bybit 等扣除手续费后的净利润",
+    "whales": "巨鲸追踪",
+    "whalesDesc": "监控 BTC 大户钱包动向、巨鲸吸筹/派发模式及链上大额转账",
+    "memecoins": "Meme币追踪",
+    "memecoinsDesc": "追踪热门Meme币，包含风险评分、交易量异动和社交热度指标",
+    "newListings": "新币上线",
+    "newListingsDesc": "抢先发现各大交易所新上线代币 — 第一时间捕获新的交易机会",
+    "referral": "合作与推荐",
+    "referralDesc": "推荐好友赚取佣金 — 合作伙伴仪表盘提供数据分析、收益追踪和推荐链接",
+    "multiLang": "多语言支持",
+    "multiLangDesc": "完整应用支持英文、俄文和中文 — 一键切换，所有内容完整翻译",
+    "subscriptions": "订阅等级",
+    "subscriptionsDesc": "免费版、高级版和专业版 — 根据需求解锁高级功能、更快更新和优先支持"
   },
   "whatsInside": {
     "title": "功能一览",
@@ -153,7 +185,16 @@
     "tools": { "name": "工具", "desc": "仓位大小、风险管理和交易计划的计算器和实用工具" },
     "resources": { "name": "资源", "desc": "为比特币交易者精选的链接、指南和参考资料" },
     "settings": { "name": "设置", "desc": "自定义提醒、通知和显示偏好" },
-    "premium": { "name": "高级版", "desc": "解锁高级功能、更快更新和优先访问" }
+    "premium": { "name": "高级版", "desc": "免费版、高级版和专业版，不同等级解锁不同功能" },
+    "smartMoney": { "name": "聪明钱", "desc": "巨鲸和机构资金流追踪 — 大额交易、交易所资金进出、聪明钱动态" },
+    "predictionGame": { "name": "预测竞猜", "desc": "互动式 BTC 价格预测游戏 — 与用户竞争，赢取积分，冲击排行榜" },
+    "priceAlerts": { "name": "价格提醒", "desc": "自定义价格提醒，触发阈值后通过 Telegram 推送通知" },
+    "dailyBriefings": { "name": "每日简报", "desc": "AI 生成的每日市场总结，涵盖核心指标、趋势展望和重要事件" },
+    "arbitrage": { "name": "套利", "desc": "跨19个交易所的套利检测 — 实时价差和扣除手续费后的净利润" },
+    "whales": { "name": "巨鲸", "desc": "巨鲸钱包追踪、大额交易监控及吸筹/派发模式分析" },
+    "memecoins": { "name": "Meme币", "desc": "热门Meme币追踪器，包含风险评分、交易量数据和社交热度" },
+    "newListings": { "name": "新币上线", "desc": "各交易所新上线代币 — 抢先发现新交易机会" },
+    "referral": { "name": "推荐", "desc": "合作伙伴与推荐系统 — 赚取佣金、追踪推荐、合作伙伴数据分析" }
   },
   "features": {
     "title": "功能",
@@ -183,7 +224,17 @@
     "etfFlows": "ETF 资金流",
     "learnEducate": "学习与教育",
     "eventMemory": "事件记忆",
-    "selfLearning": "自学习 AI"
+    "selfLearning": "自学习 AI",
+    "smartMoney": "聪明钱",
+    "predictionGame": "预测竞猜",
+    "priceAlerts": "价格提醒",
+    "dailyBriefings": "每日简报",
+    "arbitrage": "套利扫描器",
+    "whales": "巨鲸追踪",
+    "memecoins": "Meme币",
+    "newListings": "新币上线",
+    "referral": "推荐系统",
+    "multiLang": "多语言支持"
   },
   "credits": {
     "title": "作者与社区",

@@ -35,8 +35,11 @@ export default function About() {
     { value: '4', labelKey: 'about:byTheNumbers.aiModels' },
     { value: '13', labelKey: 'about:byTheNumbers.dataSources' },
     { value: '5', labelKey: 'about:byTheNumbers.timeframes' },
-    { value: '24', labelKey: 'about:byTheNumbers.backgroundJobs' },
+    { value: '32', labelKey: 'about:byTheNumbers.backgroundJobs' },
     { value: '6h', labelKey: 'about:byTheNumbers.retrainCycle' },
+    { value: '30+', labelKey: 'about:byTheNumbers.pages' },
+    { value: '19', labelKey: 'about:byTheNumbers.exchanges' },
+    { value: '3', labelKey: 'about:byTheNumbers.languages' },
   ]
 
   const steps = [1, 2, 3, 4, 5].map((n) => ({
@@ -70,6 +73,8 @@ export default function About() {
   const whatsInsideKeys = [
     'dashboard', 'signals', 'advisor', 'technical', 'powerLaw', 'elliottWave',
     'liquidations', 'coins', 'news', 'events', 'history', 'paperTrading',
+    'smartMoney', 'predictionGame', 'priceAlerts', 'dailyBriefings',
+    'arbitrage', 'whales', 'memecoins', 'newListings', 'referral',
     'learn', 'tools', 'resources', 'settings', 'premium',
   ]
 
@@ -81,7 +86,7 @@ export default function About() {
         <h1 className="text-xl font-bold mb-1 text-shimmer-gold">{t('common:app.title')}</h1>
         <p className="text-text-secondary text-sm">{t('about:description')}</p>
         <div className="flex items-center justify-center gap-2 mt-2">
-          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-accent-blue/15 text-accent-blue border border-accent-blue/30">v2.0</span>
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-accent-blue/15 text-accent-blue border border-accent-blue/30">v3.0</span>
           <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-accent-green/15 text-accent-green border border-accent-green/30">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-green pulse-glow" />
             {t('common:app.live')}
@@ -111,6 +116,7 @@ export default function About() {
           <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p1') }} />
           <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p2') }} />
           <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p3') }} />
+          <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p4') }} />
         </div>
       </div>
 
@@ -245,6 +251,18 @@ export default function About() {
             { icon: I(<><path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" /><path d="M12 18a4 4 0 01-4-4c0-2.5 2-4.5 4-7" /></>), titleKey: 'about:features.onChain', descKey: 'about:features.onChainDesc' },
             { icon: I(<><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>), titleKey: 'about:features.paperTrading', descKey: 'about:features.paperTradingDesc' },
             { icon: I(<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></>), titleKey: 'about:howItHelps.accuracyTransparency', descKey: 'about:howItHelps.accuracyTransparencyDesc' },
+            /* New feature items */
+            { icon: I(<><path d="M2 2l20 20" /><path d="M12 2C6.5 2 2 6.5 2 12" /><path d="M22 12c0 5.5-4.5 10-10 10" /><circle cx="12" cy="12" r="3" /></>), titleKey: 'about:howItHelps.smartMoney', descKey: 'about:howItHelps.smartMoneyDesc' },
+            { icon: I(<><path d="M6 9l6-6 6 6" /><path d="M6 15l6 6 6-6" /><line x1="12" y1="3" x2="12" y2="21" /></>), titleKey: 'about:howItHelps.predictionGame', descKey: 'about:howItHelps.predictionGameDesc' },
+            { icon: I(<><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></>), titleKey: 'about:howItHelps.priceAlerts', descKey: 'about:howItHelps.priceAlertsDesc' },
+            { icon: I(<><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>), titleKey: 'about:howItHelps.dailyBriefings', descKey: 'about:howItHelps.dailyBriefingsDesc' },
+            { icon: I(<><path d="M8 3H5a2 2 0 00-2 2v3" /><path d="M21 8V5a2 2 0 00-2-2h-3" /><path d="M3 16v3a2 2 0 002 2h3" /><path d="M16 21h3a2 2 0 002-2v-3" /><path d="M7 12h10" /><path d="M12 7v10" /></>), titleKey: 'about:howItHelps.arbitrageScanner', descKey: 'about:howItHelps.arbitrageScannerDesc' },
+            { icon: I(<><path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" /></>), titleKey: 'about:howItHelps.whales', descKey: 'about:howItHelps.whalesDesc' },
+            { icon: I(<><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></>), titleKey: 'about:howItHelps.memecoins', descKey: 'about:howItHelps.memecoinsDesc' },
+            { icon: I(<><path d="M12 5v14" /><path d="M5 12h14" /><rect x="3" y="3" width="18" height="18" rx="2" /></>), titleKey: 'about:howItHelps.newListings', descKey: 'about:howItHelps.newListingsDesc' },
+            { icon: I(<><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" /></>), titleKey: 'about:howItHelps.referral', descKey: 'about:howItHelps.referralDesc' },
+            { icon: I(<><path d="M5 8l6 6" /><path d="M4 14l6-6 2-3" /><path d="M2 5h12" /><path d="M7 2h1" /><path d="M22 22l-5-10-5 10" /><path d="M14 18h6" /></>), titleKey: 'about:howItHelps.multiLang', descKey: 'about:howItHelps.multiLangDesc' },
+            { icon: I(<><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14 2 9.27l6.91-1.01z" /></>), titleKey: 'about:howItHelps.subscriptions', descKey: 'about:howItHelps.subscriptionsDesc' },
           ].map((item) => (
             <div key={item.titleKey} className="flex items-start gap-3 p-2 rounded-xl bg-white/[0.02]">
               <span className="mt-0.5 shrink-0">{item.icon}</span>
@@ -292,6 +310,17 @@ export default function About() {
             { icon: I(<><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></>, true), labelKey: 'about:features.learnEducate' },
             { icon: I(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>, true), labelKey: 'about:features.eventMemory' },
             { icon: I(<><path d="M4 4h16v16H4z" /><path d="M9 9h6v6H9z" /><path d="M4 9h5M15 9h5M4 15h5M15 15h5M9 4v5M9 15v5M15 4v5M15 15v5" /></>, true), labelKey: 'about:features.selfLearning' },
+            /* New feature grid items */
+            { icon: I(<><path d="M2 2l20 20" /><path d="M12 2C6.5 2 2 6.5 2 12" /><path d="M22 12c0 5.5-4.5 10-10 10" /></>, true), labelKey: 'about:features.smartMoney' },
+            { icon: I(<><path d="M6 9l6-6 6 6" /><path d="M6 15l6 6 6-6" /></>, true), labelKey: 'about:features.predictionGame' },
+            { icon: I(<><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></>, true), labelKey: 'about:features.priceAlerts' },
+            { icon: I(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>, true), labelKey: 'about:features.dailyBriefings' },
+            { icon: I(<><path d="M8 3H5a2 2 0 00-2 2v3" /><path d="M21 8V5a2 2 0 00-2-2h-3" /><path d="M3 16v3a2 2 0 002 2h3" /><path d="M16 21h3a2 2 0 002-2v-3" /></>, true), labelKey: 'about:features.arbitrage' },
+            { icon: I(<><path d="M12 2c-4 4.5-8 8.5-8 13a8 8 0 0016 0c0-4.5-4-8.5-8-13z" /></>, true), labelKey: 'about:features.whales' },
+            { icon: I(<><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></>, true), labelKey: 'about:features.memecoins' },
+            { icon: I(<><path d="M12 5v14" /><path d="M5 12h14" /></>, true), labelKey: 'about:features.newListings' },
+            { icon: I(<><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" /></>, true), labelKey: 'about:features.referral' },
+            { icon: I(<><path d="M5 8l6 6" /><path d="M4 14l6-6 2-3" /><path d="M2 5h12" /><path d="M22 22l-5-10-5 10" /><path d="M14 18h6" /></>, true), labelKey: 'about:features.multiLang' },
           ].map((f) => (
             <div key={f.labelKey} className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02]">
               <span className="shrink-0">{f.icon}</span>
