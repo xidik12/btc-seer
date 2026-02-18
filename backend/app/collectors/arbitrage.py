@@ -32,18 +32,36 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Exchange configuration
 # ---------------------------------------------------------------------------
-EXCHANGE_IDS = [
-    "binance",
-    "coinbase",
-    "kraken",
-    "bybit",
-    "okx",
-    "kucoin",
-    "gateio",
-    "bitfinex",
-    "htx",
-    "mexc",
-]
+# Exchange metadata: id -> {region, country, continent}
+# ---------------------------------------------------------------------------
+EXCHANGE_META: dict[str, dict] = {
+    # Asia
+    "binance":    {"country": "Global/Cayman Islands", "continent": "asia"},
+    "okx":        {"country": "Seychelles",            "continent": "asia"},
+    "bybit":      {"country": "Dubai/UAE",             "continent": "asia"},
+    "kucoin":     {"country": "Seychelles",            "continent": "asia"},
+    "gateio":     {"country": "Cayman Islands",        "continent": "asia"},
+    "htx":        {"country": "Seychelles",            "continent": "asia"},
+    "mexc":       {"country": "Seychelles",            "continent": "asia"},
+    "bitget":     {"country": "Seychelles",            "continent": "asia"},
+    "bingx":      {"country": "Singapore",             "continent": "asia"},
+    "phemex":     {"country": "Singapore",             "continent": "asia"},
+    "woo":        {"country": "Cayman Islands",        "continent": "asia"},
+    # North America
+    "coinbase":   {"country": "USA",                   "continent": "north_america"},
+    "kraken":     {"country": "USA",                   "continent": "north_america"},
+    "gemini":     {"country": "USA",                   "continent": "north_america"},
+    # Europe
+    "bitfinex":   {"country": "British Virgin Islands","continent": "europe"},
+    "bitstamp":   {"country": "Luxembourg",            "continent": "europe"},
+    "whitebit":   {"country": "Lithuania",             "continent": "europe"},
+    # Latin America
+    "mercado":    {"country": "Brazil",                "continent": "latin_america"},
+    # Africa / Middle East
+    "lbank":      {"country": "British Virgin Islands","continent": "asia"},
+}
+
+EXCHANGE_IDS = list(EXCHANGE_META.keys())
 
 # Map coin_id (CoinGecko-style) to the typical USDT trading pair symbol
 # used across most exchanges.  ccxt normalises to "BTC/USDT" format.
@@ -77,16 +95,18 @@ _SYMBOL_COIN_MAP: dict[str, str] = {v: k for k, v in _COIN_SYMBOL_MAP.items()}
 # Per-exchange fee table (taker fee %, one side)
 # ---------------------------------------------------------------------------
 EXCHANGE_FEES: dict[str, float] = {
-    "binance": 0.10,
-    "coinbase": 0.40,
-    "kraken": 0.26,
-    "bybit": 0.10,
-    "okx": 0.10,
-    "kucoin": 0.10,
-    "gateio": 0.15,
-    "bitfinex": 0.20,
-    "htx": 0.20,
-    "mexc": 0.10,
+    # Asia
+    "binance": 0.10, "okx": 0.10, "bybit": 0.10, "kucoin": 0.10,
+    "gateio": 0.15, "htx": 0.20, "mexc": 0.10, "bitget": 0.10,
+    "bingx": 0.10, "phemex": 0.10, "woo": 0.10,
+    # North America
+    "coinbase": 0.40, "kraken": 0.26, "gemini": 0.35,
+    # Europe
+    "bitfinex": 0.20, "bitstamp": 0.30, "whitebit": 0.10,
+    # Latin America
+    "mercado": 0.30,
+    # Other
+    "lbank": 0.10,
 }
 DEFAULT_FEE_PCT = 0.15  # fallback
 ACTIONABLE_THRESHOLD_PCT = 0.3  # net profit must exceed this
@@ -135,27 +155,28 @@ class ArbitrageCollector(BaseCollector):
     # Data fetching
     # ------------------------------------------------------------------
     async def _fetch_tickers_ccxt(self, exchange_id: str) -> dict[str, dict] | None:
-        """Fetch tickers for tracked coins only from an exchange via ccxt.
+        """Fetch tickers for tracked coins from an exchange via ccxt.
 
-        Uses symbols filter to only fetch the 20 tracked coins instead of
-        thousands — much faster and less likely to hit rate limits.
+        Tries symbols filter first (faster), falls back to full fetch on any error.
         """
         ex = self._get_exchange(exchange_id)
         if ex is None:
             return None
+
+        # Try filtered fetch first (faster, less data)
+        symbols = list(_SYMBOL_COIN_MAP.keys())
         try:
-            symbols = list(_SYMBOL_COIN_MAP.keys())
             tickers = await ex.fetch_tickers(symbols=symbols)
+            if tickers:
+                return tickers
+        except Exception:
+            pass  # Fall through to full fetch
+
+        # Fallback: fetch all tickers
+        try:
+            tickers = await ex.fetch_tickers()
             return tickers
         except Exception as e:
-            # Some exchanges don't support symbols filter — fall back to all
-            if "not supported" in str(e).lower() or "invalid" in str(e).lower():
-                try:
-                    tickers = await ex.fetch_tickers()
-                    return tickers
-                except Exception as e2:
-                    logger.warning(f"ccxt fetch_tickers fallback failed for {exchange_id}: {e2}")
-                    return None
             logger.warning(f"ccxt fetch_tickers failed for {exchange_id}: {e}")
             return None
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatCoinPrice, formatTimeAgo } from '../utils/format'
@@ -14,16 +14,21 @@ const COIN_SYMBOLS = {
 
 // Consistent exchange colors
 const EXCHANGE_COLORS = {
-  binance: '#F0B90B',
-  coinbase: '#0052FF',
-  kraken: '#5741D9',
-  bybit: '#F7A600',
-  okx: '#FFFFFF',
-  kucoin: '#23AF91',
-  gateio: '#2354E6',
-  bitfinex: '#7BBA44',
-  htx: '#2B6CB0',
-  mexc: '#1972E2',
+  binance: '#F0B90B', coinbase: '#0052FF', kraken: '#5741D9',
+  bybit: '#F7A600', okx: '#FFFFFF', kucoin: '#23AF91',
+  gateio: '#2354E6', bitfinex: '#7BBA44', htx: '#2B6CB0',
+  mexc: '#1972E2', bitget: '#00F0FF', bingx: '#2DC8A2',
+  phemex: '#D3FF57', woo: '#004CFF', gemini: '#00DCFA',
+  bitstamp: '#509E2F', whitebit: '#02C076', mercado: '#57BD68',
+  lbank: '#1C6CF2',
+}
+
+const CONTINENT_LABELS = {
+  all: 'All Regions',
+  asia: 'Asia',
+  north_america: 'N. America',
+  europe: 'Europe',
+  latin_america: 'LATAM',
 }
 
 const PROFIT_COLORS = {
@@ -49,9 +54,25 @@ function ExchangeDot({ exchange }) {
   const color = EXCHANGE_COLORS[exchange] || '#888'
   return (
     <span
-      className="inline-block w-2 h-2 rounded-full mr-1"
+      className="inline-block w-2 h-2 rounded-full mr-1 flex-shrink-0"
       style={{ backgroundColor: color }}
     />
+  )
+}
+
+function RegionTag({ continent }) {
+  if (!continent) return null
+  const colors = {
+    asia: 'bg-amber-500/15 text-amber-400',
+    north_america: 'bg-blue-500/15 text-blue-400',
+    europe: 'bg-purple-500/15 text-purple-400',
+    latin_america: 'bg-green-500/15 text-green-400',
+  }
+  const labels = { asia: 'Asia', north_america: 'NA', europe: 'EU', latin_america: 'LATAM' }
+  return (
+    <span className={`text-[8px] px-1 py-0.5 rounded ${colors[continent] || 'bg-white/5 text-text-muted'}`}>
+      {labels[continent] || continent}
+    </span>
   )
 }
 
@@ -74,11 +95,17 @@ function ArbitrageCard({ opp, onExpand, isExpanded }) {
 
       <div className="grid grid-cols-2 gap-2 text-[10px] mb-2">
         <div className="bg-accent-green/10 rounded-lg p-2">
-          <p className="text-text-muted flex items-center"><ExchangeDot exchange={opp.buy_exchange} />Buy @ {opp.buy_exchange}</p>
+          <p className="text-text-muted flex items-center gap-1">
+            <ExchangeDot exchange={opp.buy_exchange} />Buy @ {opp.buy_exchange}
+            <RegionTag continent={opp.buy_continent} />
+          </p>
           <p className="text-accent-green font-bold text-xs">{formatCoinPrice(opp.buy_price)}</p>
         </div>
         <div className="bg-accent-red/10 rounded-lg p-2">
-          <p className="text-text-muted flex items-center"><ExchangeDot exchange={opp.sell_exchange} />Sell @ {opp.sell_exchange}</p>
+          <p className="text-text-muted flex items-center gap-1">
+            <ExchangeDot exchange={opp.sell_exchange} />Sell @ {opp.sell_exchange}
+            <RegionTag continent={opp.sell_continent} />
+          </p>
           <p className="text-accent-red font-bold text-xs">{formatCoinPrice(opp.sell_price)}</p>
         </div>
       </div>
@@ -226,14 +253,17 @@ export default function Arbitrage() {
   const [opportunities, setOpportunities] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [regionFilter, setRegionFilter] = useState('all')
   const [expandedCoin, setExpandedCoin] = useState(null)
   const [tab, setTab] = useState('scanner')
   const [lastUpdate, setLastUpdate] = useState(null)
+  const [exchangeCount, setExchangeCount] = useState(0)
 
   const fetchData = useCallback(async () => {
     try {
       const data = await api.getArbitrageOpportunities()
       setOpportunities(data?.opportunities || [])
+      setExchangeCount(data?.exchanges_count || 0)
       setLastUpdate(Date.now())
     } catch (err) {
       console.error('Arbitrage fetch error:', err)
@@ -248,11 +278,19 @@ export default function Arbitrage() {
     return () => clearInterval(interval)
   }, [fetchData])
 
-  const filtered = filter === 'all'
+  // Apply profit filter
+  let filtered = filter === 'all'
     ? opportunities
     : filter === 'actionable'
     ? opportunities.filter(o => o.is_actionable)
     : opportunities.filter(o => o.net_profit_pct > 0)
+
+  // Apply region filter
+  if (regionFilter !== 'all') {
+    filtered = filtered.filter(o =>
+      o.buy_continent === regionFilter || o.sell_continent === regionFilter
+    )
+  }
 
   // Sort profitable tab by dollar profit
   const sorted = filter === 'profitable'
@@ -283,12 +321,8 @@ export default function Arbitrage() {
           <p className="text-accent-green text-lg font-bold">{totalActionable}</p>
         </div>
         <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-          <p className="text-text-muted text-[10px]">Best Spread</p>
-          <p className="text-accent-yellow text-lg font-bold">
-            {opportunities.length > 0
-              ? `${Math.max(...opportunities.map(o => o.net_profit_pct || 0)).toFixed(2)}%`
-              : '--'}
-          </p>
+          <p className="text-text-muted text-[10px]">Exchanges</p>
+          <p className="text-accent-blue text-lg font-bold">{exchangeCount || '--'}</p>
         </div>
       </div>
 
@@ -313,7 +347,7 @@ export default function Arbitrage() {
         <ProfitCalculator />
       ) : (
         <>
-          {/* Filters */}
+          {/* Profit Filters */}
           <div className="flex gap-2">
             {['all', 'actionable', 'profitable'].map(f => (
               <button
@@ -330,6 +364,23 @@ export default function Arbitrage() {
             ))}
           </div>
 
+          {/* Region Filters */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            {Object.entries(CONTINENT_LABELS).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setRegionFilter(key)}
+                className={`text-[10px] px-2.5 py-1 rounded-lg border transition-colors whitespace-nowrap ${
+                  regionFilter === key
+                    ? 'bg-accent-purple/20 border-accent-purple text-accent-purple'
+                    : 'bg-bg-card border-white/5 text-text-muted'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           {/* Opportunities List */}
           {loading ? (
             <div className="flex justify-center py-12">
@@ -337,7 +388,9 @@ export default function Arbitrage() {
             </div>
           ) : sorted.length === 0 ? (
             <div className="text-center text-text-muted text-sm py-12">
-              No arbitrage opportunities found. Scanning 10 exchanges every 30 seconds...
+              {regionFilter !== 'all'
+                ? `No opportunities for ${CONTINENT_LABELS[regionFilter]}. Try "All Regions".`
+                : `No arbitrage opportunities found. Scanning ${exchangeCount || 19} exchanges every 30 seconds...`}
             </div>
           ) : (
             <div className="space-y-2">
@@ -355,7 +408,7 @@ export default function Arbitrage() {
       )}
 
       <p className="text-text-muted text-[9px] text-center leading-relaxed">
-        Prices across 10 exchanges with per-exchange fee rates. Tap a card to see all exchange prices. Net profit = spread - (buy fee + sell fee).
+        Prices across {exchangeCount || 19} exchanges worldwide with per-exchange fee rates. Tap a card to see all prices. Filter by region to find cross-border opportunities.
       </p>
     </div>
   )

@@ -16,7 +16,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, ExchangeTicker, ArbitrageOpportunity
-from app.collectors.arbitrage import EXCHANGE_FEES, DEFAULT_FEE_PCT
+from app.collectors.arbitrage import EXCHANGE_FEES, DEFAULT_FEE_PCT, EXCHANGE_META
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +43,18 @@ async def get_current_opportunities(
 
     opportunities = []
     for row in rows:
+        buy_meta = EXCHANGE_META.get(row.buy_exchange, {})
+        sell_meta = EXCHANGE_META.get(row.sell_exchange, {})
         opportunities.append({
             "id": row.id,
             "coin_id": row.coin_id,
             "buy_exchange": row.buy_exchange,
+            "buy_country": buy_meta.get("country"),
+            "buy_continent": buy_meta.get("continent"),
             "buy_price": row.buy_price,
             "sell_exchange": row.sell_exchange,
+            "sell_country": sell_meta.get("country"),
+            "sell_continent": sell_meta.get("continent"),
             "sell_price": row.sell_price,
             "spread_pct": row.spread_pct,
             "net_profit_pct": row.net_profit_pct,
@@ -61,6 +67,7 @@ async def get_current_opportunities(
     return {
         "count": len(opportunities),
         "actionable": sum(1 for o in opportunities if o["is_actionable"]),
+        "exchanges_count": len(EXCHANGE_META),
         "opportunities": opportunities,
     }
 
@@ -264,6 +271,7 @@ async def get_arbitrage_analytics(
         "coins": coins[:20],
         "exchange_pairs": pairs[:20],
         "exchange_fees": EXCHANGE_FEES,
+        "exchange_meta": EXCHANGE_META,
     }
 
 
