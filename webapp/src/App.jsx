@@ -98,10 +98,17 @@ export default function App() {
   const location = useLocation()
   useLanguageInit()
 
-  // Auto-register user when Mini App opens
+  // Auto-register user when Mini App opens (retry once on failure)
   useEffect(() => {
     if (tg?.initData) {
-      api.registerUser(tg.initData).catch(() => {})
+      api.registerUser(tg.initData).catch((err) => {
+        console.warn('User registration failed, retrying in 3s:', err.message)
+        setTimeout(() => {
+          api.registerUser(tg.initData).catch((e) =>
+            console.warn('User registration retry failed:', e.message)
+          )
+        }, 3000)
+      })
     }
   }, [tg])
 
