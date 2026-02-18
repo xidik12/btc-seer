@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.config import settings
-from app.database import async_session, BotUser
+from app.database import async_session, BotUser, Partner
 from app.api.admin import _verify_telegram_init_data
 from app.bot.subscription import grant_trial, is_premium, get_status_text
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-def _user_response(user: BotUser, is_new: bool = False) -> dict:
+def _user_response(user: BotUser, is_new: bool = False, partner_code: str | None = None) -> dict:
     return {
         "status": "new" if is_new else "existing",
         "user": {
@@ -27,6 +27,7 @@ def _user_response(user: BotUser, is_new: bool = False) -> dict:
             "is_banned": user.is_banned,
             "trial_end": user.trial_end.isoformat() if user.trial_end else None,
             "subscription_end": user.subscription_end.isoformat() if user.subscription_end else None,
+            "partner_code": partner_code,
         },
     }
 
@@ -79,7 +80,13 @@ async def register_user(request: Request):
                 await grant_trial(user, session)
             await session.commit()
 
-    return _user_response(user, is_new)
+        # Check if this user is a partner (has a Partner record linked to their telegram_id)
+        partner_result = await session.execute(
+            select(Partner.code).where(Partner.telegram_id == telegram_id, Partner.is_active == True)
+        )
+        partner_code = partner_result.scalar_one_or_none()
+
+    return _user_response(user, is_new, partner_code=partner_code)
 
 
 @router.get("/me")
@@ -98,10 +105,15 @@ async def get_current_user(request: Request):
         )
         user = result.scalar_one_or_none()
 
-    if not user:
-        raise HTTPException(404, "User not registered")
+        if not user:
+            raise HTTPException(404, "User not registered")
 
-    return _user_response(user)
+        partner_result = await session.execute(
+            select(Partner.code).where(Partner.telegram_id == telegram_id, Partner.is_active == True)
+        )
+        partner_code = partner_result.scalar_one_or_none()
+
+    return _user_response(user, partner_code=partner_code)
 
 
 class AlertPreferencesRequest(BaseModel):

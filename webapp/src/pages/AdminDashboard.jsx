@@ -370,6 +370,7 @@ function PartnersTab({ initData }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [createdLink, setCreatedLink] = useState(null)
   const [form, setForm] = useState({ name: '', code: '', telegram_id: '', commission_pct: 20, contact_email: '', contact_telegram: '' })
 
   const fetchPartners = useCallback(async () => {
@@ -391,8 +392,9 @@ function PartnersTab({ initData }) {
     if (!form.name || !form.code) return
     const payload = { ...form, telegram_id: form.telegram_id ? parseInt(form.telegram_id) : null }
     try {
-      await api.createAdminPartner(initData, payload)
+      const result = await api.createAdminPartner(initData, payload)
       setShowCreate(false)
+      setCreatedLink(result.referral_link)
       setForm({ name: '', code: '', telegram_id: '', commission_pct: 20, contact_email: '', contact_telegram: '' })
       fetchPartners()
     } catch (err) {
@@ -420,6 +422,19 @@ function PartnersTab({ initData }) {
           {showCreate ? 'Cancel' : '+ Create Partner'}
         </button>
       </div>
+
+      {createdLink && (
+        <div className="bg-bg-card rounded-xl border border-accent-green/30 p-3 space-y-2 slide-up">
+          <p className="text-accent-green text-xs font-semibold">Partner Created! Share this link:</p>
+          <div className="flex items-center gap-2">
+            <code className="text-[10px] text-text-primary bg-white/5 px-2 py-1 rounded flex-1 break-all">{createdLink}</code>
+            <button onClick={() => { navigator.clipboard.writeText(createdLink); }}
+              className="text-[10px] px-3 py-1.5 bg-accent-green/15 text-accent-green rounded-lg shrink-0">Copy</button>
+          </div>
+          <button onClick={() => setCreatedLink(null)}
+            className="text-[9px] text-text-muted hover:text-text-primary">Dismiss</button>
+        </div>
+      )}
 
       {showCreate && (
         <div className="bg-bg-card rounded-xl border border-accent-blue/20 p-3 space-y-2 slide-up">
@@ -499,6 +514,10 @@ function PartnersTab({ initData }) {
                 {!p.telegram_id && <span className="text-accent-yellow"> | No TG linked</span>}
                 {p.contact_email && ` | ${p.contact_email}`}
               </div>
+              <button onClick={() => { navigator.clipboard.writeText(`https://t.me/BTCSeerBot?start=partner_${p.code}`) }}
+                className="text-[8px] mt-1 px-2 py-0.5 rounded bg-accent-blue/10 text-accent-blue hover:bg-accent-blue/20">
+                Copy Referral Link
+              </button>
             </div>
           ))}
         </div>

@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTelegram } from '../hooks/useTelegram'
+import { api } from '../utils/api'
 
 const menuItems = [
   {
@@ -97,12 +98,44 @@ const menuItems = [
 
 export default function More() {
   const navigate = useNavigate()
-  const { hapticFeedback } = useTelegram()
+  const { tg, hapticFeedback } = useTelegram()
   const { t } = useTranslation('common')
+  const [partnerCode, setPartnerCode] = useState(null)
+
+  useEffect(() => {
+    const initData = tg?.initData
+    if (!initData) return
+    api.getCurrentUser(initData)
+      .then((res) => { if (res?.user?.partner_code) setPartnerCode(res.user.partner_code) })
+      .catch(() => {})
+  }, [tg])
 
   return (
     <div className="px-4 pt-4 space-y-3 pb-20">
       <h1 className="text-lg font-bold">{t('category.more')}</h1>
+
+      {partnerCode && (
+        <button
+          onClick={() => { hapticFeedback?.selectionChanged(); navigate(`/partner/${partnerCode}`) }}
+          className="w-full flex items-center gap-3 bg-gradient-to-r from-purple-500/10 to-accent-blue/10 rounded-xl p-4 border border-purple-500/20 hover:border-purple-500/40 transition-colors text-left slide-up"
+        >
+          <span className="text-purple-400 shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+              <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 00-3-3.87" />
+              <path d="M16 3.13a4 4 0 010 7.75" />
+            </svg>
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-text-primary text-sm font-medium">Partner Dashboard</p>
+            <p className="text-purple-400 text-[10px]">View your referrals & commission</p>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-purple-400 shrink-0">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      )}
 
       <div className="space-y-2">
         {menuItems.map((item) => (
