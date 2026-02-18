@@ -1084,6 +1084,7 @@ class Partner(Base):
     code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     contact_email: Mapped[str] = mapped_column(String(200), nullable=True)
     contact_telegram: Mapped[str] = mapped_column(String(100), nullable=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=True, unique=True, index=True)
     commission_pct: Mapped[float] = mapped_column(Float, default=20.0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())

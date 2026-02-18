@@ -31,6 +31,7 @@ def _require_admin(request: Request) -> int:
 class PartnerCreate(BaseModel):
     name: str
     code: str
+    telegram_id: int | None = None
     commission_pct: float = 20.0
     contact_email: str | None = None
     contact_telegram: str | None = None
@@ -39,6 +40,7 @@ class PartnerCreate(BaseModel):
 
 class PartnerUpdate(BaseModel):
     name: str | None = None
+    telegram_id: int | None = None
     commission_pct: float | None = None
     contact_email: str | None = None
     contact_telegram: str | None = None
@@ -79,6 +81,7 @@ async def list_partners(request: Request):
                 "id": p.id,
                 "name": p.name,
                 "code": p.code,
+                "telegram_id": p.telegram_id,
                 "commission_pct": p.commission_pct,
                 "contact_email": p.contact_email,
                 "contact_telegram": p.contact_telegram,
@@ -111,6 +114,7 @@ async def create_partner(request: Request, body: PartnerCreate):
         partner = Partner(
             name=body.name,
             code=body.code,
+            telegram_id=body.telegram_id,
             commission_pct=body.commission_pct,
             contact_email=body.contact_email,
             contact_telegram=body.contact_telegram,
@@ -144,6 +148,8 @@ async def update_partner(request: Request, partner_id: int, body: PartnerUpdate)
 
         if body.name is not None:
             partner.name = body.name
+        if body.telegram_id is not None:
+            partner.telegram_id = body.telegram_id
         if body.commission_pct is not None:
             partner.commission_pct = body.commission_pct
         if body.contact_email is not None:

@@ -370,7 +370,7 @@ function PartnersTab({ initData }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showCreate, setShowCreate] = useState(false)
-  const [form, setForm] = useState({ name: '', code: '', commission_pct: 20, contact_email: '', contact_telegram: '' })
+  const [form, setForm] = useState({ name: '', code: '', telegram_id: '', commission_pct: 20, contact_email: '', contact_telegram: '' })
 
   const fetchPartners = useCallback(async () => {
     setLoading(true)
@@ -389,10 +389,11 @@ function PartnersTab({ initData }) {
 
   const handleCreate = async () => {
     if (!form.name || !form.code) return
+    const payload = { ...form, telegram_id: form.telegram_id ? parseInt(form.telegram_id) : null }
     try {
-      await api.createAdminPartner(initData, form)
+      await api.createAdminPartner(initData, payload)
       setShowCreate(false)
-      setForm({ name: '', code: '', commission_pct: 20, contact_email: '', contact_telegram: '' })
+      setForm({ name: '', code: '', telegram_id: '', commission_pct: 20, contact_email: '', contact_telegram: '' })
       fetchPartners()
     } catch (err) {
       alert('Failed: ' + err.message)
@@ -427,6 +428,9 @@ function PartnersTab({ initData }) {
             className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-1.5 text-xs text-text-primary" />
           <input type="text" placeholder="Referral Code (e.g. CRYPTOEDU)" value={form.code}
             onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })}
+            className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-1.5 text-xs text-text-primary font-mono" />
+          <input type="text" placeholder="Partner's Telegram ID (for dashboard access)" value={form.telegram_id}
+            onChange={e => setForm({ ...form, telegram_id: e.target.value.replace(/\D/g, '') })}
             className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-1.5 text-xs text-text-primary font-mono" />
           <div className="flex gap-2">
             <input type="number" placeholder="Commission %" value={form.commission_pct}
@@ -491,6 +495,8 @@ function PartnersTab({ initData }) {
               </div>
               <div className="text-text-muted text-[8px] mt-1">
                 {p.commission_pct}% commission
+                {p.telegram_id && <span className="text-accent-blue"> | TG: {p.telegram_id}</span>}
+                {!p.telegram_id && <span className="text-accent-yellow"> | No TG linked</span>}
                 {p.contact_email && ` | ${p.contact_email}`}
               </div>
             </div>

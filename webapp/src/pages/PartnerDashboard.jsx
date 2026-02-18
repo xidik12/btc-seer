@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '../utils/api'
+import { useTelegram } from '../hooks/useTelegram'
 
 function StatCard({ label, value, sub, color = 'text-text-primary' }) {
   return (
@@ -14,6 +15,9 @@ function StatCard({ label, value, sub, color = 'text-text-primary' }) {
 
 export default function PartnerDashboard() {
   const { code } = useParams()
+  const { tg } = useTelegram()
+  const initData = tg?.initData || ''
+
   const [stats, setStats] = useState(null)
   const [referrals, setReferrals] = useState([])
   const [loading, setLoading] = useState(true)
@@ -21,19 +25,19 @@ export default function PartnerDashboard() {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    if (!code) return
+    if (!code || !initData) return
     setLoading(true)
     Promise.all([
-      api.getPartnerStats(code),
-      api.getPartnerReferrals(code),
+      api.getPartnerStats(initData, code),
+      api.getPartnerReferrals(initData, code),
     ])
       .then(([statsData, refData]) => {
         setStats(statsData)
         setReferrals(refData.referrals || [])
       })
-      .catch((err) => setError(err.message || 'Partner not found'))
+      .catch((err) => setError(err.message || 'Access denied'))
       .finally(() => setLoading(false))
-  }, [code])
+  }, [code, initData])
 
   const copyLink = () => {
     if (!stats?.referral_link) return
@@ -41,6 +45,22 @@ export default function PartnerDashboard() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
+  }
+
+  // Not inside Telegram — can't authenticate
+  if (!initData) {
+    return (
+      <div className="px-4 pt-4 space-y-4">
+        <h1 className="text-lg font-bold">Partner Dashboard</h1>
+        <div className="bg-bg-card rounded-2xl p-6 border border-accent-yellow/20 text-center">
+          <p className="text-accent-yellow text-sm font-semibold mb-2">Authentication Required</p>
+          <p className="text-text-muted text-xs">
+            Open BTC Seer from Telegram to access your partner dashboard.
+            Your Telegram account must be linked to this partner code.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {
@@ -59,7 +79,8 @@ export default function PartnerDashboard() {
       <div className="px-4 pt-4 space-y-4">
         <h1 className="text-lg font-bold">Partner Dashboard</h1>
         <div className="bg-bg-card rounded-2xl p-6 border border-accent-red/20 text-center">
-          <p className="text-accent-red text-sm">{error}</p>
+          <p className="text-accent-red text-sm font-semibold mb-2">Access Denied</p>
+          <p className="text-text-muted text-xs">{error}</p>
         </div>
       </div>
     )

@@ -1,20 +1,35 @@
-"""Partner dashboard API — partners access their own stats via their code."""
+"""Partner dashboard API — partners access their own stats via Telegram auth."""
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy import select, desc
 
 from app.config import settings
 from app.database import async_session, Partner, PartnerReferral
+from app.api.admin import _verify_telegram_init_data
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/partner", tags=["partner-dashboard"])
 
 
+def _get_partner_telegram_id(request: Request) -> int:
+    """Extract and verify the partner's telegram_id from initData."""
+    init_data = request.headers.get("X-Telegram-Init-Data", "")
+    if not init_data:
+        raise HTTPException(401, "Authentication required. Open BTC Seer from Telegram.")
+    user_data = _verify_telegram_init_data(init_data)
+    telegram_id = user_data.get("id")
+    if not telegram_id:
+        raise HTTPException(401, "Invalid Telegram authentication")
+    return telegram_id
+
+
 @router.get("/{code}/stats")
-async def partner_self_stats(code: str):
-    """Get a partner's own referral stats."""
+async def partner_self_stats(code: str, request: Request):
+    """Get a partner's own referral stats. Requires Telegram auth matching partner's telegram_id."""
+    caller_id = _get_partner_telegram_id(request)
+
     async with async_session() as session:
         result = await session.execute(
             select(Partner).where(Partner.code == code, Partner.is_active == True)
@@ -22,6 +37,10 @@ async def partner_self_stats(code: str):
         partner = result.scalar_one_or_none()
         if not partner:
             raise HTTPException(404, "Partner not found")
+
+        # Allow access if caller is the partner OR the admin
+        if partner.telegram_id != caller_id and caller_id != settings.admin_telegram_id:
+            raise HTTPException(403, "Access denied. This dashboard belongs to another partner.")
 
         ref_result = await session.execute(
             select(PartnerReferral).where(PartnerReferral.partner_id == partner.id)
@@ -53,8 +72,10 @@ async def partner_self_stats(code: str):
 
 
 @router.get("/{code}/referrals")
-async def partner_self_referrals(code: str):
-    """Get a partner's referred users (anonymized)."""
+async def partner_self_referrals(code: str, request: Request):
+    """Get a partner's referred users (anonymized). Requires Telegram auth."""
+    caller_id = _get_partner_telegram_id(request)
+
     async with async_session() as session:
         result = await session.execute(
             select(Partner).where(Partner.code == code, Partner.is_active == True)
@@ -62,6 +83,9 @@ async def partner_self_referrals(code: str):
         partner = result.scalar_one_or_none()
         if not partner:
             raise HTTPException(404, "Partner not found")
+
+        if partner.telegram_id != caller_id and caller_id != settings.admin_telegram_id:
+            raise HTTPException(403, "Access denied. This dashboard belongs to another partner.")
 
         ref_result = await session.execute(
             select(PartnerReferral).where(PartnerReferral.partner_id == partner.id)

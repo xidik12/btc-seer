@@ -260,9 +260,13 @@ export const api = {
   getInstitutionalHoldings: () => cachedFetch('/whales/institutional', T300),
   getInstitutionalHistory: (ticker, limit = 30) => cachedFetch(`/whales/institutional/${ticker}?limit=${limit}`, T300),
 
-  // Partner Dashboard (public — no auth)
-  getPartnerStats: (code) => fetchAPI(`/partner/${code}/stats`),
-  getPartnerReferrals: (code) => fetchAPI(`/partner/${code}/referrals`),
+  // Partner Dashboard (Telegram auth — only the linked partner can access)
+  getPartnerStats: (initData, code) => fetchAPI(`/partner/${code}/stats`, {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  getPartnerReferrals: (initData, code) => fetchAPI(`/partner/${code}/referrals`, {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
 
   // Partner Admin (requires initData)
   getAdminPartners: (initData) => fetchAPI('/admin/partners', { headers: { 'X-Telegram-Init-Data': initData } }),
