@@ -12,6 +12,7 @@ Scheduled jobs:
 """
 
 import logging
+from collections import defaultdict
 from datetime import datetime
 
 from sqlalchemy import select, or_
@@ -72,6 +73,9 @@ class DexScannerCollector(BaseCollector):
                 seen.add(key)
                 unique_tokens.append(t)
 
+        # Enrich tokens from boost/profile endpoints with trading data
+        unique_tokens = await self._enrich_tokens(unique_tokens)
+
         # Filter by volume and liquidity thresholds
         qualified = [
             t for t in unique_tokens
@@ -98,6 +102,65 @@ class DexScannerCollector(BaseCollector):
             "qualified": len(qualified),
             "stored": stored_count,
         }
+
+    # ── Enrich tokens with trading data ────────────────────────────────────────
+
+    async def _enrich_tokens(self, tokens: list[dict]) -> list[dict]:
+        """Fetch trading data for tokens missing volume/liquidity from DexScreener pairs endpoint.
+
+        Boost/profile endpoints only return metadata — no volume, liquidity, or price.
+        """
+        need_enrichment = [
+            t for t in tokens
+            if t.get("address") and t.get("chain")
+            and (not t.get("volume_24h") or not t.get("liquidity"))
+        ]
+
+        if not need_enrichment:
+            return tokens
+
+        by_chain: dict[str, list[dict]] = defaultdict(list)
+        for t in need_enrichment:
+            by_chain[t["chain"]].append(t)
+
+        for chain, chain_tokens in by_chain.items():
+            for i in range(0, len(chain_tokens), 30):
+                batch = chain_tokens[i:i + 30]
+                addrs = ",".join(t["address"] for t in batch)
+                url = f"https://api.dexscreener.com/tokens/v1/{chain}/{addrs}"
+                data = await self.fetch_json(url)
+                if not data:
+                    continue
+
+                pairs = data if isinstance(data, list) else data.get("pairs", [])
+
+                best: dict[str, dict] = {}
+                for pair in pairs:
+                    addr = (pair.get("baseToken", {}).get("address") or "").lower()
+                    vol = float(pair.get("volume", {}).get("h24", 0) or 0)
+                    if addr and (addr not in best or vol > best[addr].get("vol", 0)):
+                        best[addr] = {
+                            "vol": vol,
+                            "liq": float(pair.get("liquidity", {}).get("usd", 0) or 0),
+                            "price": float(pair.get("priceUsd", 0) or 0),
+                            "symbol": pair.get("baseToken", {}).get("symbol"),
+                            "name": pair.get("baseToken", {}).get("name"),
+                        }
+
+                for t in batch:
+                    info = best.get(t["address"].lower())
+                    if info:
+                        t["volume_24h"] = t.get("volume_24h") or info["vol"]
+                        t["liquidity"] = t.get("liquidity") or info["liq"]
+                        t["price_usd"] = t.get("price_usd") or info["price"]
+                        t["symbol"] = t.get("symbol") or info["symbol"]
+                        t["name"] = t.get("name") or info["name"]
+
+        enriched = len([t for t in need_enrichment if t.get("volume_24h")])
+        if enriched:
+            logger.info(f"DexScanner: enriched {enriched}/{len(need_enrichment)} tokens with trading data")
+
+        return tokens
 
     # ── Job 2: DEX-to-CEX migration check (every 30 min) ─────────────────────
 

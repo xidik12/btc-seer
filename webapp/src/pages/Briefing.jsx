@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 
 const SENTIMENT_COLORS = {
@@ -8,6 +9,7 @@ const SENTIMENT_COLORS = {
 }
 
 export default function Briefing() {
+  const { t } = useTranslation('common')
   const [briefing, setBriefing] = useState(null)
   const [history, setHistory] = useState([])
   const [selectedDate, setSelectedDate] = useState(null)
@@ -49,7 +51,7 @@ export default function Briefing() {
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
-      <h1 className="text-lg font-bold">Daily Briefing</h1>
+      <h1 className="text-lg font-bold">{t('briefing.title')}</h1>
 
       {/* Date selector */}
       {history.length > 0 && (
@@ -90,7 +92,7 @@ export default function Briefing() {
             </div>
             {briefing.confidence && (
               <div className="flex items-center gap-2">
-                <span className="text-text-muted text-[10px]">Confidence</span>
+                <span className="text-text-muted text-[10px]">{t('briefing.confidence')}</span>
                 <div className="flex-1 h-1.5 bg-bg-primary rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full bg-accent-blue"
@@ -107,25 +109,25 @@ export default function Briefing() {
             <div className="grid grid-cols-2 gap-2">
               {briefing.data_snapshot.fear_greed != null && (
                 <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-                  <p className="text-text-muted text-[10px]">Fear & Greed</p>
+                  <p className="text-text-muted text-[10px]">{t('briefing.fearGreed')}</p>
                   <p className="text-text-primary font-bold text-lg">{briefing.data_snapshot.fear_greed}</p>
                 </div>
               )}
               {briefing.data_snapshot.whale_count != null && (
                 <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-                  <p className="text-text-muted text-[10px]">Whale Txs (24h)</p>
+                  <p className="text-text-muted text-[10px]">{t('briefing.whaleTxs')}</p>
                   <p className="text-text-primary font-bold text-lg">{briefing.data_snapshot.whale_count}</p>
                 </div>
               )}
               {briefing.data_snapshot.accuracy != null && (
                 <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-                  <p className="text-text-muted text-[10px]">AI Accuracy</p>
+                  <p className="text-text-muted text-[10px]">{t('briefing.aiAccuracy')}</p>
                   <p className="text-text-primary font-bold text-lg">{Math.round(briefing.data_snapshot.accuracy)}%</p>
                 </div>
               )}
               {briefing.data_snapshot.arb_count != null && (
                 <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-                  <p className="text-text-muted text-[10px]">Arb Opps</p>
+                  <p className="text-text-muted text-[10px]">{t('briefing.arbOpps')}</p>
                   <p className="text-text-primary font-bold text-lg">{briefing.data_snapshot.arb_count}</p>
                 </div>
               )}
@@ -142,8 +144,8 @@ export default function Briefing() {
         </>
       ) : (
         <div className="bg-bg-card rounded-2xl p-6 border border-white/5 text-center">
-          <p className="text-text-muted text-sm">No briefing available yet.</p>
-          <p className="text-text-muted text-xs mt-1">Briefings are generated daily at 08:00 UTC.</p>
+          <p className="text-text-muted text-sm">{t('briefing.noBriefing')}</p>
+          <p className="text-text-muted text-xs mt-1">{t('briefing.generatedAt')}</p>
         </div>
       )}
     </div>

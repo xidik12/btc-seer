@@ -136,11 +136,17 @@ class NewListingCollector(BaseCollector):
                 ANNOUNCEMENTS_URL, json=payload, headers=headers, timeout=15
             ) as resp:
                 if resp.status != 200:
+                    logger.warning(
+                        f"NewListingCollector: backfill announcements HTTP {resp.status}"
+                    )
                     return {"backfilled": 0}
                 data = await resp.json()
 
         except Exception as e:
-            logger.error(f"NewListingCollector: backfill announcements error: {e}")
+            logger.error(
+                f"NewListingCollector: backfill announcements error: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             return {"backfilled": 0}
 
         catalogs = data.get("data", {}).get("catalogs", [])
@@ -186,14 +192,23 @@ class NewListingCollector(BaseCollector):
                 ANNOUNCEMENTS_URL, json=payload, headers=headers, timeout=15
             ) as resp:
                 if resp.status != 200:
+                    body_preview = ""
+                    try:
+                        body_preview = (await resp.text())[:200]
+                    except Exception:
+                        pass
                     logger.warning(
-                        f"NewListingCollector: announcements HTTP {resp.status}"
+                        f"NewListingCollector: announcements HTTP {resp.status} "
+                        f"url={ANNOUNCEMENTS_URL} body={body_preview}"
                     )
                     return {"announcements": []}
                 data = await resp.json()
 
         except Exception as e:
-            logger.error(f"NewListingCollector: announcements fetch error: {e}")
+            logger.error(
+                f"NewListingCollector: announcements fetch error: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
             return {"announcements": []}
 
         catalogs = data.get("data", {}).get("catalogs", [])
@@ -399,3 +414,12 @@ async def evaluate_listing_performance():
         await collector.evaluate_listing_performance()
     except Exception as e:
         logger.error(f"evaluate_listing_performance error: {e}", exc_info=True)
+
+
+async def backfill_recent_announcements():
+    """Startup: backfill last 5 Binance listing announcements."""
+    collector = _get_collector()
+    try:
+        await collector.backfill_recent_announcements()
+    except Exception as e:
+        logger.error(f"backfill_recent_announcements error: {e}", exc_info=True)

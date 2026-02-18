@@ -62,7 +62,7 @@ export default function PriceAlerts() {
       setIsRepeating(false)
       fetchAlerts()
     } catch (err) {
-      alert(err.message || 'Failed to create alert')
+      alert(err.message || t('alerts.failedCreate'))
     }
     setCreating(false)
   }
@@ -80,11 +80,11 @@ export default function PriceAlerts() {
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
-      <h1 className="text-lg font-bold">Price Alerts</h1>
+      <h1 className="text-lg font-bold">{t('alerts.title')}</h1>
 
       {/* Create Form */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5 space-y-3">
-        <h3 className="text-sm font-semibold text-text-primary">New Alert</h3>
+        <h3 className="text-sm font-semibold text-text-primary">{t('alerts.newAlert')}</h3>
 
         {/* Coin selector */}
         <div className="flex gap-2">
@@ -110,7 +110,7 @@ export default function PriceAlerts() {
               type="number"
               value={targetPrice}
               onChange={(e) => setTargetPrice(e.target.value)}
-              placeholder={`Target price${currentPrice ? ` (now $${Number(currentPrice).toLocaleString()})` : ''}`}
+              placeholder={`${t('alerts.targetPrice')}${currentPrice ? ` ($${Number(currentPrice).toLocaleString()})` : ''}`}
               className="flex-1 bg-bg-secondary rounded-xl px-3 py-2.5 text-sm text-text-primary placeholder-text-muted border border-white/5 outline-none focus:border-accent-blue/30"
             />
           </div>
@@ -126,7 +126,7 @@ export default function PriceAlerts() {
                 : 'bg-bg-secondary text-text-muted border border-white/5'
             }`}
           >
-            Above ↑
+            {t('alerts.above')} ↑
           </button>
           <button
             onClick={() => setDirection('below')}
@@ -136,7 +136,7 @@ export default function PriceAlerts() {
                 : 'bg-bg-secondary text-text-muted border border-white/5'
             }`}
           >
-            Below ↓
+            {t('alerts.below')} ↓
           </button>
         </div>
 
@@ -149,13 +149,13 @@ export default function PriceAlerts() {
               onChange={(e) => setIsRepeating(e.target.checked)}
               className="rounded"
             />
-            Repeating
+            {t('alerts.repeating')}
           </label>
           <input
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Note (optional)"
+            placeholder={t('alerts.noteOptional')}
             className="flex-1 bg-bg-secondary rounded-lg px-2 py-1.5 text-xs text-text-primary placeholder-text-muted border border-white/5 outline-none"
           />
         </div>
@@ -165,18 +165,18 @@ export default function PriceAlerts() {
           disabled={creating || !targetPrice}
           className="w-full py-2.5 rounded-xl bg-accent-blue text-white font-semibold text-sm disabled:opacity-50 active:scale-[0.98] transition-all"
         >
-          {creating ? 'Creating...' : 'Create Alert'}
+          {creating ? t('alerts.creating') : t('alerts.createAlert')}
         </button>
 
         <p className="text-text-muted text-[10px] text-center">
-          {activeCount}/10 alerts used
+          {t('alerts.alertsUsed', { used: activeCount, max: 10 })}
         </p>
       </div>
 
       {/* Active Alerts */}
       {activeAlerts.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-text-primary">Active Alerts</h3>
+          <h3 className="text-sm font-semibold text-text-primary">{t('alerts.activeAlerts')}</h3>
           {activeAlerts.map((a) => (
             <div key={a.id} className="bg-bg-card rounded-xl p-3 border border-white/5 flex items-center justify-between slide-up">
               <div>
@@ -202,7 +202,7 @@ export default function PriceAlerts() {
       {/* Triggered History */}
       {triggeredAlerts.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-text-muted">Triggered</h3>
+          <h3 className="text-sm font-semibold text-text-muted">{t('alerts.triggered')}</h3>
           {triggeredAlerts.slice(0, 10).map((a) => (
             <div key={a.id} className="bg-bg-card/50 rounded-xl p-3 border border-white/5 opacity-60">
               <div className="flex items-center justify-between">

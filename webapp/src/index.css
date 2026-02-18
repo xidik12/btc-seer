@@ -271,3 +271,18 @@ button:active {
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
 }
+
+/* ============================================================
+   Streak Fire Animation
+   ============================================================ */
+@keyframes streak-fire {
+  0%, 100% { transform: scale(1) translateY(0); }
+  25% { transform: scale(1.15) translateY(-1px); }
+  50% { transform: scale(1.05) translateY(0); }
+  75% { transform: scale(1.2) translateY(-2px); }
+}
+
+.streak-fire {
+  display: inline-block;
+  animation: streak-fire 1.2s ease-in-out infinite;
+}
