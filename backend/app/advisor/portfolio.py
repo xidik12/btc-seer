@@ -163,7 +163,10 @@ async def record_trade_result(
             portfolio.daily_loss_today += abs(pnl_usdt)
 
             # Check daily loss limit -> cooldown
-            daily_loss_pct = (portfolio.daily_loss_today / max(balance_before, 0.01)) * 100
+            # Use start-of-day balance (current balance + losses today) as denominator
+            # to stay consistent with entry_detector.py
+            start_of_day_balance = max(portfolio.balance_usdt + portfolio.daily_loss_today, 0.01)
+            daily_loss_pct = (portfolio.daily_loss_today / start_of_day_balance) * 100
             if daily_loss_pct >= portfolio.daily_max_loss_pct:
                 portfolio.cooldown_until = datetime.utcnow() + timedelta(
                     hours=settings.advisor_cooldown_hours

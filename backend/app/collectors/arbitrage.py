@@ -413,8 +413,10 @@ class ArbitrageCollector(BaseCollector):
         # Withdrawal fee (need to move coins from buy exchange to sell exchange)
         base_symbol = _COIN_BASE_SYMBOL.get(coin_id, "")
         withdrawal_fee_usd = WITHDRAWAL_FEES_USD.get(base_symbol, DEFAULT_WITHDRAWAL_FEE_USD)
-        # Convert withdrawal fee to percentage of trade (assume $1000 notional)
-        withdrawal_fee_pct = (withdrawal_fee_usd / best_ask) * 100 if best_ask > 0 else 0
+        # Convert withdrawal fee to percentage of a $10,000 reference trade size
+        # (fixed notional avoids distortion for low-price coins like DOGE)
+        reference_trade_usd = 10_000
+        withdrawal_fee_pct = (withdrawal_fee_usd / reference_trade_usd) * 100
         total_fees += withdrawal_fee_pct
 
         spread_pct = (best_bid - best_ask) / best_ask * 100 if best_ask > 0 else 0.0
