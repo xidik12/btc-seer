@@ -12,7 +12,7 @@ const ADVISOR_TABS = [
   { path: '/history', labelKey: 'advisor.tabs.history' },
 ]
 
-function PortfolioSettingsCard({ portfolio, telegramId, onSave, isNew, t }) {
+function PortfolioSettingsCard({ portfolio, telegramId, initData, onSave, isNew, t }) {
   const [balance, setBalance] = useState(String(portfolio?.balance || 10))
   const [maxLeverage, setMaxLeverage] = useState(String(portfolio?.max_leverage || 20))
   const [maxOpenTrades, setMaxOpenTrades] = useState(String(portfolio?.max_open_trades || 3))
@@ -39,9 +39,9 @@ function PortfolioSettingsCard({ portfolio, telegramId, onSave, isNew, t }) {
         max_risk_per_trade_pct: Number(riskPct) || 1,
       }
       if (isNew) {
-        await api.setupPortfolio(telegramId, settings)
+        await api.setupPortfolio(initData, telegramId, settings)
       } else {
-        await api.updatePortfolio(telegramId, settings)
+        await api.updatePortfolio(initData, telegramId, settings)
       }
       onSave()
       if (!isNew) setCollapsed(true)
@@ -493,7 +493,7 @@ function ClosedTradeRow({ trade }) {
 }
 
 export default function Advisor() {
-  const { user } = useTelegram()
+  const { user, tg, initData } = useTelegram()
   const navigate = useNavigate()
   const { t } = useTranslation('trading')
   const telegramId = user?.id
@@ -520,17 +520,17 @@ export default function Advisor() {
   const [suggestReason, setSuggestReason] = useState(null)
 
   const fetchData = useCallback(async () => {
-    if (!telegramId) {
+    if (!telegramId || !initData) {
       setLoading(false)
       return
     }
     try {
       setError(null)
       const [p, trades, hist, fb] = await Promise.all([
-        api.getPortfolio(telegramId),
-        api.getActiveTrades(telegramId),
-        api.getTradeHistory(telegramId),
-        api.getFeedback(30).catch(() => null),
+        api.getPortfolio(initData, telegramId),
+        api.getActiveTrades(initData, telegramId),
+        api.getTradeHistory(initData, telegramId),
+        api.getFeedback(initData, 30).catch(() => null),
       ])
 
       if (!p || p.error) {
@@ -550,7 +550,7 @@ export default function Advisor() {
     } finally {
       setLoading(false)
     }
-  }, [telegramId])
+  }, [telegramId, initData])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -561,7 +561,7 @@ export default function Advisor() {
     setSuggestReason(null)
     setAnalysis(null)
     try {
-      const result = await api.getSuggestion(telegramId)
+      const result = await api.getSuggestion(initData, telegramId)
       if (result.analysis) setAnalysis(result.analysis)
       if (result.suggestion) {
         // New trade was created — refresh trades
@@ -579,7 +579,7 @@ export default function Advisor() {
 
   const handleOpen = async (tradeId) => {
     try {
-      await api.openTrade(tradeId)
+      await api.openTrade(initData, tradeId)
       fetchData()
     } catch (err) {
       console.error('Open trade error:', err)
@@ -591,7 +591,7 @@ export default function Advisor() {
     if (!exitPrice) return
     const doClose = async () => {
       try {
-        await api.closeTrade(tradeId, exitPrice, 'manual_close')
+        await api.closeTrade(initData, tradeId, exitPrice, 'manual_close')
         fetchData()
       } catch (err) {
         console.error('Close trade error:', err)
@@ -668,6 +668,7 @@ export default function Advisor() {
       <PortfolioSettingsCard
         portfolio={portfolio}
         telegramId={telegramId}
+        initData={initData}
         onSave={fetchData}
         isNew={needsSetup}
         t={t}

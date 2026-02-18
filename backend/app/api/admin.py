@@ -30,10 +30,11 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 # ─── Auth ────────────────────────────────────────────────────────────────────
 
 
-def _verify_telegram_init_data(init_data: str) -> dict:
+def _verify_telegram_init_data(init_data: str, **kwargs) -> dict:
     """Verify Telegram WebApp initData using HMAC-SHA256.
 
     Returns parsed user data if valid, raises HTTPException if not.
+    Pass max_age=seconds to control auth_date expiry (default: 300s for admin).
     """
     if not settings.telegram_bot_token:
         raise HTTPException(403, "Bot token not configured")
@@ -70,13 +71,14 @@ def _verify_telegram_init_data(init_data: str) -> dict:
         logger.warning("Admin auth: HMAC signature mismatch")
         raise HTTPException(401, "Invalid initData signature")
 
-    # Check auth_date freshness (5 minutes for admin operations)
+    # Check auth_date freshness
     auth_date = parsed.get("auth_date", [None])[0]
     if auth_date:
         auth_time = datetime.utcfromtimestamp(int(auth_date))
         age_seconds = (datetime.utcnow() - auth_time).total_seconds()
-        if age_seconds > 300:  # 5 minutes for admin operations
-            logger.warning(f"Admin auth: initData expired (age={age_seconds:.0f}s)")
+        max_age = kwargs.get("max_age", 300)  # default 5 min for admin
+        if age_seconds > max_age:
+            logger.warning(f"Auth: initData expired (age={age_seconds:.0f}s, max={max_age})")
             raise HTTPException(401, "Session expired — please reopen the app from Telegram")
 
     # Parse user data

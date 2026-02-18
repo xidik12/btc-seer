@@ -15,6 +15,7 @@ export function useTelegram() {
   return {
     tg,
     user: tg?.initDataUnsafe?.user,
+    initData: tg?.initData || '',
     colorScheme: tg?.colorScheme || 'dark',
     isAvailable: !!tg,
     close: () => tg?.close(),

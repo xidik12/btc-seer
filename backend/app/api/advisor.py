@@ -16,11 +16,11 @@ router = APIRouter(prefix="/api/advisor", tags=["advisor"])
 
 
 def _get_authenticated_user(request: Request) -> int:
-    """Extract and verify telegram_id from initData."""
+    """Extract and verify telegram_id from initData (24h session for user routes)."""
     init_data = request.headers.get("X-Telegram-Init-Data", "")
     if not init_data:
         raise HTTPException(401, "Authentication required")
-    user_data = _verify_telegram_init_data(init_data)
+    user_data = _verify_telegram_init_data(init_data, max_age=86400)  # 24h for user-facing routes
     telegram_id = user_data.get("id")
     if not telegram_id:
         raise HTTPException(401, "Invalid authentication")

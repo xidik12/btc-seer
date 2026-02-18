@@ -135,37 +135,59 @@ export const api = {
   getEventCategoryStats: () => cachedFetch('/events/category-stats', T60),
   getEventMemory: () => cachedFetch('/events/memory', T120),
 
-  // Advisor (user-specific, no cache)
-  getPortfolio: (telegramId) => fetchAPI(`/advisor/portfolio/${telegramId}`),
-  getActiveTrades: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}`),
-  getTradeHistory: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}/history`),
-  openTrade: (tradeId) => fetchAPI(`/advisor/trades/${tradeId}/opened`, { method: 'POST' }),
-  closeTrade: (tradeId, exitPrice, reason = 'manual_close') =>
+  // Advisor (user-specific, no cache — requires Telegram auth)
+  getPortfolio: (initData, telegramId) => fetchAPI(`/advisor/portfolio/${telegramId}`, {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  getActiveTrades: (initData, telegramId) => fetchAPI(`/advisor/trades/${telegramId}`, {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  getTradeHistory: (initData, telegramId) => fetchAPI(`/advisor/trades/${telegramId}/history`, {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  openTrade: (initData, tradeId) => fetchAPI(`/advisor/trades/${tradeId}/opened`, {
+    method: 'POST',
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  closeTrade: (initData, tradeId, exitPrice, reason = 'manual_close') =>
     fetchAPI(`/advisor/trades/${tradeId}/close`, {
       method: 'POST',
+      headers: { 'X-Telegram-Init-Data': initData },
       body: JSON.stringify({ exit_price: exitPrice, reason }),
     }),
 
-  setupPortfolio: (telegramId, settings) =>
+  setupPortfolio: (initData, telegramId, settings) =>
     fetchAPI(`/advisor/portfolio/${telegramId}/setup`, {
       method: 'POST',
+      headers: { 'X-Telegram-Init-Data': initData },
       body: JSON.stringify(settings),
     }),
-  updatePortfolio: (telegramId, settings) =>
+  updatePortfolio: (initData, telegramId, settings) =>
     fetchAPI(`/advisor/portfolio/${telegramId}/update`, {
       method: 'POST',
+      headers: { 'X-Telegram-Init-Data': initData },
       body: JSON.stringify(settings),
     }),
-  getSuggestion: (telegramId) =>
-    fetchAPI(`/advisor/suggest/${telegramId}`, { method: 'POST' }),
-  getFeedback: (days = 30) => cachedFetch(`/advisor/feedback?days=${days}`, T120),
+  getSuggestion: (initData, telegramId) =>
+    fetchAPI(`/advisor/suggest/${telegramId}`, {
+      method: 'POST',
+      headers: { 'X-Telegram-Init-Data': initData },
+    }),
+  getFeedback: (initData, days = 30) => fetchAPI(`/advisor/feedback?days=${days}`, {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
 
   // Mock/Paper Trading (user-specific, no cache)
-  getMockTrades: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}?mock=true`),
-  getMockHistory: (telegramId) => fetchAPI(`/advisor/trades/${telegramId}/history?mock=true`),
-  createMockTrade: (telegramId, trade) =>
+  getMockTrades: (initData, telegramId) => fetchAPI(`/advisor/trades/${telegramId}?mock=true`, {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  getMockHistory: (initData, telegramId) => fetchAPI(`/advisor/trades/${telegramId}/history?mock=true`, {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  createMockTrade: (initData, telegramId, trade) =>
     fetchAPI(`/advisor/trades/${telegramId}/mock`, {
       method: 'POST',
+      headers: { 'X-Telegram-Init-Data': initData },
       body: JSON.stringify(trade),
     }),
 

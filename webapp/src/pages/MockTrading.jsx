@@ -726,7 +726,7 @@ const HistoryTab = memo(function HistoryTab({ history, t }) {
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════
 export default function MockTrading() {
-  const { user } = useTelegram()
+  const { user, initData } = useTelegram()
   const telegramId = user?.id || 0
   const tutorial = useTutorial()
   const { t } = useTranslation('trading')
@@ -746,8 +746,8 @@ export default function MockTrading() {
   const fetchData = useCallback(async () => {
     try {
       const [mockTrades, mockHist, priceData] = await Promise.all([
-        telegramId ? api.getMockTrades(telegramId) : { trades: [], current_price: 0 },
-        telegramId ? api.getMockHistory(telegramId) : { results: [] },
+        telegramId ? api.getMockTrades(initData, telegramId) : { trades: [], current_price: 0 },
+        telegramId ? api.getMockHistory(initData, telegramId) : { results: [] },
         api.getCurrentPrice(),
       ])
       setTrades(mockTrades?.trades || [])
@@ -761,7 +761,7 @@ export default function MockTrading() {
     } finally {
       setLoading(false)
     }
-  }, [telegramId])
+  }, [telegramId, initData])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -790,7 +790,7 @@ export default function MockTrading() {
     }
     setSubmitting(true)
     try {
-      await api.createMockTrade(telegramId, tradeData)
+      await api.createMockTrade(initData, telegramId, tradeData)
       fetchData()
       setTab('active')
     } catch (err) {
@@ -804,7 +804,7 @@ export default function MockTrading() {
   handleCloseRef.current = async (tradeId, price) => {
     if (!window.confirm(t('position.closeConfirm', { price: formatPrice(price) }))) return
     try {
-      await api.closeTrade(tradeId, price, 'manual_close')
+      await api.closeTrade(initData, tradeId, price, 'manual_close')
       fetchData()
     } catch (err) {
       console.error('Close mock trade error:', err)
