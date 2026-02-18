@@ -305,6 +305,8 @@ export const api = {
     return cachedFetch(url, T60)
   },
   getCoinArbitrage: (coinId) => cachedFetch(`/arbitrage/${coinId}`, T15),
+  calculateArbitrage: (coinId, amount) => cachedFetch(`/arbitrage/calculate?coin_id=${coinId}&amount_usd=${amount}`, T15),
+  getArbitrageAnalytics: (hours = 24) => cachedFetch(`/arbitrage/analytics?hours=${hours}`, T60),
 
   // New Listings
   getNewListings: (hours = 168) => cachedFetch(`/listings/recent?hours=${hours}`, T60),

@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy import select
 
 from app.collectors.base import BaseCollector
+from app.config import settings
 from app.database import async_session, CoinInfo, CoinPrice
 
 logger = logging.getLogger(__name__)
@@ -38,10 +39,15 @@ COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 class CoinCollector(BaseCollector):
     """Collects price data for multiple tracked coins via CoinGecko."""
 
-    CG_HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json",
-    }
+    @property
+    def CG_HEADERS(self):
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+        }
+        if settings.coingecko_api_key:
+            headers["x-cg-demo-api-key"] = settings.coingecko_api_key
+        return headers
 
     async def collect(self) -> dict:
         """Fetch market data for all tracked coins in a single API call."""

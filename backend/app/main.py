@@ -363,6 +363,11 @@ async def lifespan(app: FastAPI):
             await _safe_run(backfill_coin_ohlcv(), "backfill_coin_ohlcv")
             await _safe_run(backfill_whale_transactions(), "backfill_whale_transactions")
 
+            # Step 2b: Seed new listings, DEX, and memecoins
+            await _safe_run(check_new_listings(), "check_new_listings")
+            await _safe_run(scan_dex_tokens(), "scan_dex_tokens")
+            await _safe_run(discover_memecoins(), "discover_memecoins")
+
             # Step 3: Clean up duplicate predictions from old 30-min scheduler
             await _safe_run(deduplicate_predictions(), "deduplicate_predictions")
 

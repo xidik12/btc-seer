@@ -10,10 +10,15 @@ logger = logging.getLogger(__name__)
 class MarketCollector(BaseCollector):
     """Collects BTC market data from Binance and CoinGecko."""
 
-    CG_HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json",
-    }
+    @property
+    def CG_HEADERS(self):
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+        }
+        if settings.coingecko_api_key:
+            headers["x-cg-demo-api-key"] = settings.coingecko_api_key
+        return headers
 
     BINANCE_TICKER_URL = "https://api.binance.com/api/v3/ticker/24hr"
     BINANCE_KLINES_URL = "https://api.binance.com/api/v3/klines"

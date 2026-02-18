@@ -47,6 +47,7 @@ class NewListingCollector(BaseCollector):
     """Detects new Binance listings by diffing exchangeInfo and scraping announcements."""
 
     _known_symbols: set = set()
+    _db_seeded: bool = False
 
     def __init__(self):
         super().__init__()
@@ -55,10 +56,32 @@ class NewListingCollector(BaseCollector):
         """Primary collect — delegates to check_new_listings."""
         return await self.check_new_listings()
 
+    async def _seed_from_db(self):
+        """Restore known symbols from DB on first run (survives restarts)."""
+        if self._db_seeded:
+            return
+        try:
+            async with async_session() as session:
+                result = await session.execute(
+                    select(NewListing.symbol).distinct()
+                )
+                db_symbols = {row[0] for row in result.all() if row[0]}
+                if db_symbols:
+                    self._known_symbols.update(db_symbols)
+                    logger.info(
+                        f"NewListingCollector: restored {len(db_symbols)} known symbols from DB"
+                    )
+        except Exception as e:
+            logger.error(f"NewListingCollector: DB seed error: {e}")
+        self._db_seeded = True
+
     # ── Job 1: exchangeInfo diff (every 30s) ─────────────────────────────────
 
     async def check_new_listings(self) -> dict:
         """Poll Binance exchangeInfo, diff against cached symbols, detect new ones."""
+        # Ensure we've restored known symbols from DB
+        await self._seed_from_db()
+
         data = await self.fetch_json(EXCHANGE_INFO_URL)
         if not data or "symbols" not in data:
             logger.warning("NewListingCollector: exchangeInfo returned no data")
@@ -98,6 +121,54 @@ class NewListingCollector(BaseCollector):
                 stored.append(sym)
 
         return {"new_symbols": stored, "total_symbols": len(current_symbols)}
+
+    async def backfill_recent_announcements(self) -> dict:
+        """Scrape last 5 Binance listing announcements to populate initial data."""
+        try:
+            session = await self.get_session()
+            payload = {"catalogId": 48, "pageNo": 1, "pageSize": 5}
+            headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+            }
+
+            async with session.post(
+                ANNOUNCEMENTS_URL, json=payload, headers=headers, timeout=15
+            ) as resp:
+                if resp.status != 200:
+                    return {"backfilled": 0}
+                data = await resp.json()
+
+        except Exception as e:
+            logger.error(f"NewListingCollector: backfill announcements error: {e}")
+            return {"backfilled": 0}
+
+        catalogs = data.get("data", {}).get("catalogs", [])
+        articles = catalogs[0].get("articles", []) if catalogs else []
+
+        backfilled = 0
+        for art in articles:
+            title = art.get("title", "")
+            code = art.get("code", "")
+            url = (
+                f"https://www.binance.com/en/support/announcement/{code}"
+                if code
+                else None
+            )
+            symbols = self._extract_symbols(title)
+            for sym in symbols:
+                listing = await self._store_listing(
+                    symbol=sym,
+                    exchange="binance",
+                    listing_type="spot",
+                    announcement_url=url,
+                )
+                if listing:
+                    backfilled += 1
+
+        if backfilled:
+            logger.info(f"NewListingCollector: backfilled {backfilled} recent announcements")
+        return {"backfilled": backfilled}
 
     # ── Job 2: Announcements feed (every 2 min) ──────────────────────────────
 

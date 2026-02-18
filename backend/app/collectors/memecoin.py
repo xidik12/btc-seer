@@ -30,14 +30,21 @@ logger = logging.getLogger(__name__)
 DEXSCREENER_BOOSTS_LATEST = "https://api.dexscreener.com/token-boosts/latest/v1"
 DEXSCREENER_BOOSTS_TOP = "https://api.dexscreener.com/token-boosts/top/v1"
 DEXSCREENER_PROFILES_LATEST = "https://api.dexscreener.com/token-profiles/latest/v1"
+DEXSCREENER_SEARCH = "https://api.dexscreener.com/latest/dex/search"
+
+# Search queries to discover trending memecoins across chains
+MEMECOIN_SEARCH_QUERIES = [
+    "PEPE", "DOGE", "SHIB", "BONK", "WIF", "FLOKI",
+    "MEME", "TRUMP", "BRETT", "POPCAT",
+]
 
 # Minimum thresholds for memecoins
 MIN_VOLUME_24H = 10_000    # $10K
 MIN_LIQUIDITY = 5_000      # $5K
 MAX_AGE_DAYS = 7           # only tokens < 7 days old
 
-# Dead token criteria
-DEAD_VOLUME_THRESHOLD = 0  # $0 volume
+# Dead token criteria — only mark dead after explicit 0 volume AND stale for 48h
+DEAD_STALE_HOURS = 48
 
 
 class MemecoinCollector(BaseCollector):
@@ -53,9 +60,10 @@ class MemecoinCollector(BaseCollector):
     # ── Job 1: Discover memecoins (every 10 min) ─────────────────────────────
 
     async def discover_memecoins(self) -> dict:
-        """Fetch trending/boosted tokens from DexScreener, filter for young memecoins."""
+        """Fetch trending/boosted tokens from DexScreener + search, filter for young memecoins."""
         all_tokens: list[dict] = []
 
+        # Source 1: Boost endpoints (paid promos — still useful but not sole source)
         boosts_latest = await self.fetch_json(DEXSCREENER_BOOSTS_LATEST)
         boosts_top = await self.fetch_json(DEXSCREENER_BOOSTS_TOP)
         profiles_latest = await self.fetch_json(DEXSCREENER_PROFILES_LATEST)
@@ -67,6 +75,15 @@ class MemecoinCollector(BaseCollector):
         ]:
             tokens = self._parse_tokens(raw_data)
             all_tokens.extend(tokens)
+
+        # Source 2: Search for popular memecoin names — finds genuinely trending tokens
+        for query in MEMECOIN_SEARCH_QUERIES:
+            search_data = await self.fetch_json(DEXSCREENER_SEARCH, params={"q": query})
+            if search_data and "pairs" in search_data:
+                for pair in search_data["pairs"][:10]:  # top 10 per query
+                    token = self._normalize_pair(pair)
+                    if token:
+                        all_tokens.append(token)
 
         # Deduplicate by address + chain
         seen: set[tuple[str, str]] = set()
@@ -143,8 +160,12 @@ class MemecoinCollector(BaseCollector):
     # ── Job 3: Cleanup dead memecoins (daily) ─────────────────────────────────
 
     async def cleanup_dead_memecoins(self) -> dict:
-        """Mark tokens with 0 volume for >24h as 'dead'."""
-        cutoff = datetime.utcnow() - timedelta(hours=24)
+        """Mark tokens with 0 volume AND stale for >48h as 'dead'.
+
+        Only marks dead if volume was explicitly fetched as 0 (not just
+        'not refreshed'), preventing false positives from stale data.
+        """
+        cutoff = datetime.utcnow() - timedelta(hours=DEAD_STALE_HOURS)
         marked_dead = 0
 
         async with async_session() as session:
@@ -157,8 +178,8 @@ class MemecoinCollector(BaseCollector):
             tokens = result.scalars().all()
 
             for token in tokens:
-                # If volume is 0 or negligible and last update was > 24h ago
-                if (token.volume_24h or 0) <= DEAD_VOLUME_THRESHOLD:
+                # Only mark dead if volume is explicitly 0 AND stale for 48h+
+                if token.volume_24h is not None and token.volume_24h == 0:
                     token.status = "dead"
                     token.updated_at = datetime.utcnow()
                     marked_dead += 1
@@ -202,6 +223,40 @@ class MemecoinCollector(BaseCollector):
         return min(score, 100)
 
     # ── Parsing helpers ───────────────────────────────────────────────────────
+
+    @staticmethod
+    def _normalize_pair(pair: dict) -> dict | None:
+        """Normalize a DexScreener pair result into a standard token dict."""
+        base_token = pair.get("baseToken", {})
+        address = base_token.get("address", "")
+        if not address:
+            return None
+
+        chain = pair.get("chainId") or "unknown"
+
+        def safe_float(v):
+            if v is None:
+                return None
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                return None
+
+        volume_raw = pair.get("volume", {})
+        volume_24h = safe_float(volume_raw.get("h24")) if isinstance(volume_raw, dict) else safe_float(volume_raw)
+
+        liq_raw = pair.get("liquidity", {})
+        liquidity = safe_float(liq_raw.get("usd")) if isinstance(liq_raw, dict) else safe_float(liq_raw)
+
+        return {
+            "address": address,
+            "chain": chain,
+            "symbol": base_token.get("symbol"),
+            "name": base_token.get("name"),
+            "price_usd": safe_float(pair.get("priceUsd")),
+            "volume_24h": volume_24h,
+            "liquidity": liquidity,
+        }
 
     def _parse_tokens(self, data: dict | list | None) -> list[dict]:
         """Parse a DexScreener response into a flat token list."""

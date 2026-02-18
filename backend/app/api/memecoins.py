@@ -17,10 +17,10 @@ async def get_trending_memecoins(
     limit: int = Query(50, ge=1, le=200),
     session: AsyncSession = Depends(get_session),
 ):
-    """Get trending memecoins with risk scores."""
+    """Get trending memecoins with risk scores. Includes both active and graduated tokens."""
     result = await session.execute(
         select(MemeToken)
-        .where(MemeToken.status == "active")
+        .where(MemeToken.status.in_(["active", "graduated"]))
         .where(MemeToken.volume_24h > 0)
         .order_by(desc(MemeToken.volume_24h))
         .limit(limit)

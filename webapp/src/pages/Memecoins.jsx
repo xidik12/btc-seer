@@ -181,8 +181,16 @@ export default function Memecoins() {
           <div className="w-6 h-6 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
         </div>
       ) : tokens.length === 0 ? (
-        <div className="text-center text-text-muted text-sm py-12">
-          No memecoins discovered yet. Scanner running every 10 minutes...
+        <div className="text-center py-12 space-y-3">
+          <p className="text-text-muted text-sm">No memecoins discovered yet</p>
+          <div className="bg-bg-card rounded-xl p-4 border border-white/5 max-w-sm mx-auto text-left space-y-2">
+            <p className="text-text-secondary text-xs leading-relaxed">
+              The scanner searches DexScreener for trending memecoins every 10 minutes across Solana, Ethereum, BSC and more.
+            </p>
+            <p className="text-text-muted text-[10px]">
+              Tokens must have &gt;$10K volume and &gt;$5K liquidity to qualify. New tokens typically appear within 30 minutes of launch.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="space-y-2">

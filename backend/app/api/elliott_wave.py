@@ -4,6 +4,7 @@ Detects swing points, labels impulse/corrective wave patterns,
 calculates Fibonacci projections, and detects RSI/MACD divergences.
 """
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -17,6 +18,9 @@ from app.database import get_session, Price
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/elliott-wave", tags=["elliott-wave"])
+
+# Backend cache: {timeframe: {"data": ..., "ts": epoch, "wave_changed_at": epoch}}
+_analysis_cache: dict[str, dict] = {}
 
 FIB_RETRACEMENT_RATIOS = [0.236, 0.382, 0.5, 0.618, 0.786]
 FIB_EXTENSION_RATIOS = [1.0, 1.272, 1.618, 2.618, 4.236]
@@ -78,7 +82,7 @@ def find_swing_points(
 
         if is_swing_high:
             price = float(highs.iloc[i])
-            if swings and abs(price - swings[-1]["price"]) < 0.3 * atr_val:
+            if swings and abs(price - swings[-1]["price"]) < 1.0 * atr_val:
                 continue
             swings.append({
                 "index": i,
@@ -87,7 +91,7 @@ def find_swing_points(
             })
         elif is_swing_low:
             price = float(lows.iloc[i])
-            if swings and abs(price - swings[-1]["price"]) < 0.3 * atr_val:
+            if swings and abs(price - swings[-1]["price"]) < 1.0 * atr_val:
                 continue
             swings.append({
                 "index": i,
@@ -363,57 +367,82 @@ def _try_impulse(swings: List[dict]) -> Optional[dict]:
 
 
 def _try_corrective(swings: List[dict]) -> Optional[dict]:
-    """Try to identify a corrective (ABC) pattern with sub-type classification."""
-    if len(swings) < 4:
+    """Try to identify a corrective (ABC) pattern with sub-type classification.
+
+    Detects current position in A/B/C based on swing count:
+    - 2 swings (A started, not complete) -> in wave A
+    - 3 swings (A complete, B started) -> in wave B
+    - 4+ swings (A, B complete, C started/complete) -> in wave C
+    """
+    if len(swings) < 3:
         return None
 
-    recent = swings[-4:]
-    waves = [
-        {"label": "A", "start_price": recent[0]["price"], "end_price": recent[1]["price"],
-         "start_idx": recent[0]["index"], "end_idx": recent[1]["index"]},
-        {"label": "B", "start_price": recent[1]["price"], "end_price": recent[2]["price"],
-         "start_idx": recent[1]["index"], "end_idx": recent[2]["index"]},
-        {"label": "C", "start_price": recent[2]["price"], "end_price": recent[3]["price"],
-         "start_idx": recent[2]["index"], "end_idx": recent[3]["index"]},
-    ]
-
-    a_range = abs(waves[0]["end_price"] - waves[0]["start_price"])
-    b_range = abs(waves[1]["end_price"] - waves[1]["start_price"])
-    c_range = abs(waves[2]["end_price"] - waves[2]["start_price"])
-
-    if recent[0]["type"] == "high":
+    # Determine direction from the first swing
+    if swings[-3]["type"] == "high":
         direction = "bearish"
     else:
         direction = "bullish"
 
-    # Sub-type classification
+    # Try to detect current position in A/B/C
+    # 4+ swings = full ABC (or C forming)
+    if len(swings) >= 4:
+        recent = swings[-4:]
+        waves = [
+            {"label": "A", "start_price": recent[0]["price"], "end_price": recent[1]["price"],
+             "start_idx": recent[0]["index"], "end_idx": recent[1]["index"]},
+            {"label": "B", "start_price": recent[1]["price"], "end_price": recent[2]["price"],
+             "start_idx": recent[1]["index"], "end_idx": recent[2]["index"]},
+            {"label": "C", "start_price": recent[2]["price"], "end_price": recent[3]["price"],
+             "start_idx": recent[2]["index"], "end_idx": recent[3]["index"]},
+        ]
+        current_wave = "C"
+    else:
+        # 3 swings = A complete, B forming
+        recent = swings[-3:]
+        waves = [
+            {"label": "A", "start_price": recent[0]["price"], "end_price": recent[1]["price"],
+             "start_idx": recent[0]["index"], "end_idx": recent[1]["index"]},
+            {"label": "B", "start_price": recent[1]["price"], "end_price": recent[2]["price"],
+             "start_idx": recent[1]["index"], "end_idx": recent[2]["index"]},
+        ]
+        current_wave = "B"
+
+    a_range = abs(waves[0]["end_price"] - waves[0]["start_price"])
+    b_range = abs(waves[1]["end_price"] - waves[1]["start_price"])
+    c_range = abs(waves[2]["end_price"] - waves[2]["start_price"]) if len(waves) >= 3 else 0.0
+
+    # Sub-type classification (only if we have C wave)
     b_retrace_of_a = b_range / a_range if a_range > 0 else 0
 
-    if 0.38 <= b_retrace_of_a <= 0.88 and c_range >= 0.9 * a_range:
-        sub_type = "zigzag"
-        confidence = 0.55
-        if a_range > 0:
+    if len(waves) >= 3 and a_range > 0:
+        if 0.38 <= b_retrace_of_a <= 0.88 and c_range >= 0.9 * a_range:
+            sub_type = "zigzag"
+            confidence = 0.55
             c_ratio = c_range / a_range
             for target in [1.0, 1.618]:
                 if abs(c_ratio - target) < 0.1:
                     confidence += 0.05
                     break
-    elif 0.80 <= b_retrace_of_a <= 1.20 and 0.8 <= (c_range / a_range if a_range > 0 else 0) <= 1.2:
-        sub_type = "flat"
-        confidence = 0.50
-    elif b_range > a_range and c_range > a_range:
-        sub_type = "expanded_flat"
-        confidence = 0.45
+        elif 0.80 <= b_retrace_of_a <= 1.20 and 0.8 <= (c_range / a_range) <= 1.2:
+            sub_type = "flat"
+            confidence = 0.50
+        elif b_range > a_range and c_range > a_range:
+            sub_type = "expanded_flat"
+            confidence = 0.45
+        else:
+            sub_type = "irregular"
+            confidence = 0.30
     else:
-        sub_type = "irregular"
-        confidence = 0.30
+        # Only A+B available — partial corrective
+        sub_type = "forming"
+        confidence = 0.30 + (0.05 if 0.38 <= b_retrace_of_a <= 0.88 else 0)
 
     confidence = round(min(confidence, 0.95), 2)
 
     return {
         "pattern": "corrective",
         "sub_type": sub_type,
-        "current_wave": "C",
+        "current_wave": current_wave,
         "direction": direction,
         "waves": waves,
         "confidence": confidence,
@@ -424,7 +453,12 @@ def _try_corrective(swings: List[dict]) -> Optional[dict]:
 
 
 def calculate_fib_targets(waves: List[dict], direction: str) -> dict:
-    """Calculate Fibonacci support/resistance levels from wave structure."""
+    """Calculate Fibonacci support/resistance levels from wave structure.
+
+    Anchors properly to wave relationships:
+    - Extensions: projected from Wave 1 start (not just latest endpoint)
+    - Retracements: from the most recent completed wave's range
+    """
     support_levels = []
     resistance_levels = []
 
@@ -433,47 +467,64 @@ def calculate_fib_targets(waves: List[dict], direction: str) -> dict:
 
     # Use wave 1 range as the base measurement
     w1 = waves[0]
-    w1_range = abs(w1["end_price"] - w1["start_price"])
+    w1_start = w1["start_price"]
+    w1_end = w1["end_price"]
+    w1_range = abs(w1_end - w1_start)
 
     if w1_range == 0:
         return {"support_levels": [], "resistance_levels": []}
 
     last_wave = waves[-1]
-    ref_price = last_wave["end_price"]
+    current_wave_label = last_wave.get("label", "")
 
     if direction == "bullish":
-        # Resistance projections above current (extensions)
-        for ratio in FIB_EXTENSION_RATIOS:
-            price = ref_price + w1_range * ratio
-            resistance_levels.append({
-                "price": round(price, 2),
-                "ratio": ratio,
-                "label": f"{ratio:.3f} extension",
-            })
-        # Support retracement below current
-        for ratio in FIB_RETRACEMENT_RATIOS:
-            price = ref_price - w1_range * ratio
-            support_levels.append({
-                "price": round(price, 2),
-                "ratio": ratio,
-                "label": f"{ratio:.3f} retracement",
-            })
+        # For Wave 3 target: project from Wave 1 start using Wave 2 end as base
+        if len(waves) >= 2:
+            # Wave 3 extension targets from Wave 2 end
+            w2_end = waves[1]["end_price"]
+            for ratio in FIB_EXTENSION_RATIOS:
+                price = w2_end + w1_range * ratio
+                resistance_levels.append({
+                    "price": round(price, 2),
+                    "ratio": ratio,
+                    "label": f"W3 {ratio:.3f} ext",
+                })
+
+        # Retracement from last completed impulse wave
+        wave_high = max(w["end_price"] for w in waves)
+        wave_low = w1_start
+        total_range = wave_high - wave_low
+        if total_range > 0:
+            for ratio in FIB_RETRACEMENT_RATIOS:
+                price = wave_high - total_range * ratio
+                support_levels.append({
+                    "price": round(price, 2),
+                    "ratio": ratio,
+                    "label": f"{ratio:.3f} retrace",
+                })
     else:
-        # Bearish — support below (extensions), resistance above (retracements)
-        for ratio in FIB_EXTENSION_RATIOS:
-            price = ref_price - w1_range * ratio
-            support_levels.append({
-                "price": round(price, 2),
-                "ratio": ratio,
-                "label": f"{ratio:.3f} extension",
-            })
-        for ratio in FIB_RETRACEMENT_RATIOS:
-            price = ref_price + w1_range * ratio
-            resistance_levels.append({
-                "price": round(price, 2),
-                "ratio": ratio,
-                "label": f"{ratio:.3f} retracement",
-            })
+        # Bearish — extensions project downward
+        if len(waves) >= 2:
+            w2_end = waves[1]["end_price"]
+            for ratio in FIB_EXTENSION_RATIOS:
+                price = w2_end - w1_range * ratio
+                support_levels.append({
+                    "price": round(price, 2),
+                    "ratio": ratio,
+                    "label": f"W3 {ratio:.3f} ext",
+                })
+
+        wave_low = min(w["end_price"] for w in waves)
+        wave_high = w1_start
+        total_range = wave_high - wave_low
+        if total_range > 0:
+            for ratio in FIB_RETRACEMENT_RATIOS:
+                price = wave_low + total_range * ratio
+                resistance_levels.append({
+                    "price": round(price, 2),
+                    "ratio": ratio,
+                    "label": f"{ratio:.3f} retrace",
+                })
 
     # Sort by price
     support_levels.sort(key=lambda x: x["price"], reverse=True)
@@ -672,7 +723,16 @@ async def get_elliott_wave_current(
     timeframe: str = Query("4h", regex="^(1h|4h|1d|1w|1mo)$"),
     session: AsyncSession = Depends(get_session),
 ):
-    """Current Elliott Wave analysis for BTC."""
+    """Current Elliott Wave analysis for BTC with 5-minute caching."""
+    global _analysis_cache
+
+    # Check cache (5 minutes)
+    cache_key = timeframe
+    now_ts = time.time()
+    cached = _analysis_cache.get(cache_key)
+    if cached and (now_ts - cached["ts"]) < 300:
+        return cached["data"]
+
     cfg = TIMEFRAME_CONFIG[timeframe]
     since = datetime.utcnow() - timedelta(days=cfg["days"])
     result = await session.execute(
@@ -691,6 +751,7 @@ async def get_elliott_wave_current(
             "divergences": [],
             "confidence": 0.0,
             "summary": "No price data available.",
+            "last_changed": None,
         }
 
     df = pd.DataFrame([
@@ -709,11 +770,29 @@ async def get_elliott_wave_current(
     # Remove internal swings from response
     analysis.pop("swings", None)
 
-    return {
+    # Track when wave count last changed
+    prev_wave = cached["data"]["wave_count"]["current_wave"] if cached and "data" in cached else None
+    new_wave = analysis.get("wave_count", {}).get("current_wave")
+    if cached and prev_wave == new_wave:
+        last_changed = cached.get("wave_changed_at", datetime.utcnow().isoformat())
+    else:
+        last_changed = datetime.utcnow().isoformat()
+
+    response = {
         "current_price": current_price,
         "timeframe": timeframe,
+        "last_changed": last_changed,
         **analysis,
     }
+
+    # Update cache
+    _analysis_cache[cache_key] = {
+        "data": response,
+        "ts": now_ts,
+        "wave_changed_at": last_changed,
+    }
+
+    return response
 
 
 @router.get("/historical")

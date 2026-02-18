@@ -16,6 +16,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, ExchangeTicker, ArbitrageOpportunity
+from app.collectors.arbitrage import EXCHANGE_FEES, DEFAULT_FEE_PCT
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,153 @@ async def get_arbitrage_history(
         "coin_id": coin_id,
         "hours": hours,
         "history": history,
+    }
+
+
+# ---------------------------------------------------------------------------
+# GET /api/arbitrage/calculate
+# ---------------------------------------------------------------------------
+@router.get("/calculate")
+async def calculate_arbitrage_profit(
+    coin_id: str = Query(..., description="Coin ID (e.g. 'bitcoin')"),
+    amount_usd: float = Query(1000, ge=10, le=1_000_000, description="Trade amount in USD"),
+    session: AsyncSession = Depends(get_session),
+):
+    """Calculate detailed profit breakdown for each exchange pair including fees."""
+    cutoff = datetime.utcnow() - timedelta(minutes=5)
+
+    result = await session.execute(
+        select(ArbitrageOpportunity)
+        .where(
+            ArbitrageOpportunity.coin_id == coin_id,
+            ArbitrageOpportunity.timestamp >= cutoff,
+        )
+        .order_by(desc(ArbitrageOpportunity.net_profit_pct))
+        .limit(1)
+    )
+    opp = result.scalar_one_or_none()
+
+    if not opp:
+        return {"coin_id": coin_id, "amount_usd": amount_usd, "opportunities": []}
+
+    # Calculate for the best opportunity
+    buy_fee_pct = EXCHANGE_FEES.get(opp.buy_exchange, DEFAULT_FEE_PCT)
+    sell_fee_pct = EXCHANGE_FEES.get(opp.sell_exchange, DEFAULT_FEE_PCT)
+
+    # Buy side
+    buy_fee_usd = amount_usd * buy_fee_pct / 100
+    coins_bought = (amount_usd - buy_fee_usd) / opp.buy_price if opp.buy_price > 0 else 0
+
+    # Sell side
+    gross_sell = coins_bought * opp.sell_price
+    sell_fee_usd = gross_sell * sell_fee_pct / 100
+    net_sell = gross_sell - sell_fee_usd
+
+    net_profit_usd = net_sell - amount_usd
+    net_profit_pct = (net_profit_usd / amount_usd * 100) if amount_usd > 0 else 0
+
+    return {
+        "coin_id": coin_id,
+        "amount_usd": amount_usd,
+        "best_opportunity": {
+            "buy_exchange": opp.buy_exchange,
+            "sell_exchange": opp.sell_exchange,
+            "buy_price": opp.buy_price,
+            "sell_price": opp.sell_price,
+            "buy_fee_pct": buy_fee_pct,
+            "sell_fee_pct": sell_fee_pct,
+            "buy_fee_usd": round(buy_fee_usd, 2),
+            "sell_fee_usd": round(sell_fee_usd, 2),
+            "coins_bought": round(coins_bought, 8),
+            "gross_sell_usd": round(gross_sell, 2),
+            "net_profit_usd": round(net_profit_usd, 2),
+            "net_profit_pct": round(net_profit_pct, 4),
+            "spread_pct": opp.spread_pct,
+            "is_profitable": net_profit_usd > 0,
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# GET /api/arbitrage/analytics
+# ---------------------------------------------------------------------------
+@router.get("/analytics")
+async def get_arbitrage_analytics(
+    hours: int = Query(24, ge=1, le=168),
+    session: AsyncSession = Depends(get_session),
+):
+    """Analytics: average spread by coin, best exchange pairs, opportunity frequency."""
+    cutoff = datetime.utcnow() - timedelta(hours=hours)
+
+    result = await session.execute(
+        select(ArbitrageOpportunity)
+        .where(ArbitrageOpportunity.timestamp >= cutoff)
+        .order_by(desc(ArbitrageOpportunity.timestamp))
+        .limit(2000)
+    )
+    rows = result.scalars().all()
+
+    if not rows:
+        return {"hours": hours, "coins": [], "exchange_pairs": [], "total_opportunities": 0}
+
+    # Aggregate by coin
+    coin_stats: dict[str, dict] = {}
+    pair_stats: dict[str, dict] = {}
+
+    for row in rows:
+        # Per-coin stats
+        cs = coin_stats.setdefault(row.coin_id, {
+            "coin_id": row.coin_id,
+            "count": 0,
+            "actionable_count": 0,
+            "total_spread": 0,
+            "best_spread": 0,
+        })
+        cs["count"] += 1
+        if row.is_actionable:
+            cs["actionable_count"] += 1
+        cs["total_spread"] += row.spread_pct or 0
+        cs["best_spread"] = max(cs["best_spread"], row.net_profit_pct or 0)
+
+        # Per exchange-pair stats
+        pair_key = f"{row.buy_exchange}->{row.sell_exchange}"
+        ps = pair_stats.setdefault(pair_key, {
+            "pair": pair_key,
+            "buy_exchange": row.buy_exchange,
+            "sell_exchange": row.sell_exchange,
+            "count": 0,
+            "actionable_count": 0,
+            "avg_profit": 0,
+            "total_profit": 0,
+        })
+        ps["count"] += 1
+        if row.is_actionable:
+            ps["actionable_count"] += 1
+        ps["total_profit"] += row.net_profit_pct or 0
+
+    # Compute averages
+    coins = []
+    for cs in coin_stats.values():
+        cs["avg_spread"] = round(cs["total_spread"] / cs["count"], 4) if cs["count"] else 0
+        cs["best_spread"] = round(cs["best_spread"], 4)
+        del cs["total_spread"]
+        coins.append(cs)
+    coins.sort(key=lambda x: x["best_spread"], reverse=True)
+
+    pairs = []
+    for ps in pair_stats.values():
+        ps["avg_profit"] = round(ps["total_profit"] / ps["count"], 4) if ps["count"] else 0
+        del ps["total_profit"]
+        pairs.append(ps)
+    pairs.sort(key=lambda x: x["avg_profit"], reverse=True)
+
+    return {
+        "hours": hours,
+        "total_opportunities": len(rows),
+        "total_actionable": sum(1 for r in rows if r.is_actionable),
+        "coins": coins[:20],
+        "exchange_pairs": pairs[:20],
+        "exchange_fees": EXCHANGE_FEES,
     }
 
 

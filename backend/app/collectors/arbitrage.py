@@ -74,10 +74,21 @@ _COIN_SYMBOL_MAP: dict[str, str] = {
 _SYMBOL_COIN_MAP: dict[str, str] = {v: k for k, v in _COIN_SYMBOL_MAP.items()}
 
 # ---------------------------------------------------------------------------
-# Fee assumptions (maker + taker one side)
+# Per-exchange fee table (taker fee %, one side)
 # ---------------------------------------------------------------------------
-FEE_PER_SIDE_PCT = 0.1  # 0.1% per trade (typical maker/taker)
-TOTAL_FEES_PCT = FEE_PER_SIDE_PCT * 2  # buy side + sell side
+EXCHANGE_FEES: dict[str, float] = {
+    "binance": 0.10,
+    "coinbase": 0.40,
+    "kraken": 0.26,
+    "bybit": 0.10,
+    "okx": 0.10,
+    "kucoin": 0.10,
+    "gateio": 0.15,
+    "bitfinex": 0.20,
+    "htx": 0.20,
+    "mexc": 0.10,
+}
+DEFAULT_FEE_PCT = 0.15  # fallback
 ACTIONABLE_THRESHOLD_PCT = 0.3  # net profit must exceed this
 
 
@@ -124,19 +135,27 @@ class ArbitrageCollector(BaseCollector):
     # Data fetching
     # ------------------------------------------------------------------
     async def _fetch_tickers_ccxt(self, exchange_id: str) -> dict[str, dict] | None:
-        """Fetch all tickers from an exchange via ccxt.
+        """Fetch tickers for tracked coins only from an exchange via ccxt.
 
-        Returns a dict keyed by normalised symbol, e.g.::
-
-            {"BTC/USDT": {"bid": 97000.0, "ask": 97010.0, ...}, ...}
+        Uses symbols filter to only fetch the 20 tracked coins instead of
+        thousands — much faster and less likely to hit rate limits.
         """
         ex = self._get_exchange(exchange_id)
         if ex is None:
             return None
         try:
-            tickers = await ex.fetch_tickers()
+            symbols = list(_SYMBOL_COIN_MAP.keys())
+            tickers = await ex.fetch_tickers(symbols=symbols)
             return tickers
         except Exception as e:
+            # Some exchanges don't support symbols filter — fall back to all
+            if "not supported" in str(e).lower() or "invalid" in str(e).lower():
+                try:
+                    tickers = await ex.fetch_tickers()
+                    return tickers
+                except Exception as e2:
+                    logger.warning(f"ccxt fetch_tickers fallback failed for {exchange_id}: {e2}")
+                    return None
             logger.warning(f"ccxt fetch_tickers failed for {exchange_id}: {e}")
             return None
 
@@ -185,18 +204,24 @@ class ArbitrageCollector(BaseCollector):
         # Determine which symbols we care about
         symbols_of_interest = set(_SYMBOL_COIN_MAP.keys())
 
-        # Fetch tickers from all exchanges concurrently
-        tasks = {
-            eid: self._fetch_exchange_tickers(eid)
-            for eid in EXCHANGE_IDS
-        }
-        results: dict[str, dict[str, dict] | None] = {}
-        for eid, coro in tasks.items():
+        # Fetch tickers from all exchanges truly concurrently with asyncio.gather
+        async def _safe_fetch(eid: str):
             try:
-                results[eid] = await coro
+                return eid, await self._fetch_exchange_tickers(eid)
             except Exception as e:
                 logger.error(f"Unexpected error fetching {eid}: {e}")
-                results[eid] = None
+                return eid, None
+
+        gathered = await asyncio.gather(
+            *[_safe_fetch(eid) for eid in EXCHANGE_IDS],
+            return_exceptions=True,
+        )
+        results: dict[str, dict[str, dict] | None] = {}
+        for item in gathered:
+            if isinstance(item, Exception):
+                continue
+            eid, tickers = item
+            results[eid] = tickers
 
         # ------------------------------------------------------------------
         # 1. Collect per-coin, per-exchange data and persist ExchangeTicker
@@ -340,19 +365,18 @@ class ArbitrageCollector(BaseCollector):
         ):
             return None
 
-        # Don't count same-exchange "arb"
+        # Skip same-exchange opportunities — not real arbitrage
         if best_ask_exchange == best_bid_exchange:
-            # Still store the opportunity for record-keeping but spread is
-            # effectively zero.  We could skip it, but let's keep it for
-            # the history endpoint.
-            pass
+            return None
+
+        # Per-exchange fees
+        buy_fee = EXCHANGE_FEES.get(best_ask_exchange, DEFAULT_FEE_PCT)
+        sell_fee = EXCHANGE_FEES.get(best_bid_exchange, DEFAULT_FEE_PCT)
+        total_fees = buy_fee + sell_fee
 
         spread_pct = (best_bid - best_ask) / best_ask * 100 if best_ask > 0 else 0.0
-        net_profit_pct = spread_pct - TOTAL_FEES_PCT
-        is_actionable = (
-            net_profit_pct > ACTIONABLE_THRESHOLD_PCT
-            and best_ask_exchange != best_bid_exchange
-        )
+        net_profit_pct = spread_pct - total_fees
+        is_actionable = net_profit_pct > ACTIONABLE_THRESHOLD_PCT
 
         return ArbitrageOpportunity(
             coin_id=coin_id,
@@ -363,7 +387,7 @@ class ArbitrageCollector(BaseCollector):
             sell_price=best_bid,
             spread_pct=round(spread_pct, 4),
             net_profit_pct=round(net_profit_pct, 4),
-            estimated_fees_pct=TOTAL_FEES_PCT,
+            estimated_fees_pct=round(total_fees, 4),
             is_actionable=is_actionable,
             exchange_prices=exchange_prices,
         )

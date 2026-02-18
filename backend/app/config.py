@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     etherscan_api_key: str = ""  # Etherscan V2 API (free from https://etherscan.io/apis)
     solscan_api_key: str = ""  # Solscan Pro API (free tier: 10M CU from https://pro-api.solscan.io)
     arkham_api_key: str = ""  # Arkham Intelligence API (apply at intel.arkm.com/api)
+    coingecko_api_key: str = ""  # CoinGecko Demo API key (free: 30 req/min from https://www.coingecko.com/en/api/pricing)
 
     # Database — /data/ path is a Railway persistent volume
     # Set DATABASE_URL to a postgresql:// URL to use PostgreSQL (e.g. Railway PG plugin)

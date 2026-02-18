@@ -1,12 +1,39 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatCoinPrice, formatTimeAgo } from '../utils/format'
+
+// Coin ID to symbol mapping for display
+const COIN_SYMBOLS = {
+  bitcoin: 'BTC', ethereum: 'ETH', ripple: 'XRP', solana: 'SOL',
+  binancecoin: 'BNB', cardano: 'ADA', dogecoin: 'DOGE', 'avalanche-2': 'AVAX',
+  polkadot: 'DOT', chainlink: 'LINK', 'matic-network': 'MATIC', 'shiba-inu': 'SHIB',
+  uniswap: 'UNI', litecoin: 'LTC', cosmos: 'ATOM', near: 'NEAR',
+  aptos: 'APT', arbitrum: 'ARB', optimism: 'OP', sui: 'SUI',
+}
+
+// Consistent exchange colors
+const EXCHANGE_COLORS = {
+  binance: '#F0B90B',
+  coinbase: '#0052FF',
+  kraken: '#5741D9',
+  bybit: '#F7A600',
+  okx: '#FFFFFF',
+  kucoin: '#23AF91',
+  gateio: '#2354E6',
+  bitfinex: '#7BBA44',
+  htx: '#2B6CB0',
+  mexc: '#1972E2',
+}
 
 const PROFIT_COLORS = {
   high: 'text-accent-green',
   marginal: 'text-accent-yellow',
   negative: 'text-accent-red',
+}
+
+function coinSymbol(coinId) {
+  return COIN_SYMBOLS[coinId] || coinId?.toUpperCase()
 }
 
 function ProfitBadge({ pct }) {
@@ -18,23 +45,40 @@ function ProfitBadge({ pct }) {
   )
 }
 
-function ArbitrageCard({ opp }) {
+function ExchangeDot({ exchange }) {
+  const color = EXCHANGE_COLORS[exchange] || '#888'
+  return (
+    <span
+      className="inline-block w-2 h-2 rounded-full mr-1"
+      style={{ backgroundColor: color }}
+    />
+  )
+}
+
+function ArbitrageCard({ opp, onExpand, isExpanded }) {
   const profitLevel = opp.net_profit_pct > 0.3 ? 'border-accent-green/20' : opp.net_profit_pct > 0 ? 'border-accent-yellow/20' : 'border-accent-red/20'
+  const dollarProfit = opp.buy_price > 0 ? ((opp.sell_price - opp.buy_price) / opp.buy_price * 1000).toFixed(2) : '0.00'
 
   return (
-    <div className={`bg-bg-card rounded-xl p-3 border ${profitLevel} slide-up`}>
+    <div
+      className={`bg-bg-card rounded-xl p-3 border ${profitLevel} slide-up cursor-pointer`}
+      onClick={() => onExpand(opp.coin_id)}
+    >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-bold text-text-primary">{opp.coin_id?.toUpperCase()}</span>
-        <ProfitBadge pct={opp.net_profit_pct} />
+        <span className="text-sm font-bold text-text-primary">{coinSymbol(opp.coin_id)}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-text-muted">${dollarProfit}/1K</span>
+          <ProfitBadge pct={opp.net_profit_pct} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-[10px] mb-2">
         <div className="bg-accent-green/10 rounded-lg p-2">
-          <p className="text-text-muted">Buy @ {opp.buy_exchange}</p>
+          <p className="text-text-muted flex items-center"><ExchangeDot exchange={opp.buy_exchange} />Buy @ {opp.buy_exchange}</p>
           <p className="text-accent-green font-bold text-xs">{formatCoinPrice(opp.buy_price)}</p>
         </div>
         <div className="bg-accent-red/10 rounded-lg p-2">
-          <p className="text-text-muted">Sell @ {opp.sell_exchange}</p>
+          <p className="text-text-muted flex items-center"><ExchangeDot exchange={opp.sell_exchange} />Sell @ {opp.sell_exchange}</p>
           <p className="text-accent-red font-bold text-xs">{formatCoinPrice(opp.sell_price)}</p>
         </div>
       </div>
@@ -44,25 +88,136 @@ function ArbitrageCard({ opp }) {
         <span>Fees: ~{opp.estimated_fees_pct?.toFixed(2)}%</span>
         <span>{formatTimeAgo(opp.timestamp)}</span>
       </div>
+
+      {/* Expanded: Exchange Price Grid */}
+      {isExpanded && opp.exchange_prices && (
+        <div className="mt-3 pt-3 border-t border-white/5">
+          <h4 className="text-[10px] font-semibold text-text-muted mb-2">All Exchange Prices</h4>
+          <div className="space-y-1">
+            {Object.entries(opp.exchange_prices)
+              .filter(([, data]) => data?.bid || data?.ask)
+              .sort(([, a], [, b]) => (a.ask || a.bid || 0) - (b.ask || b.bid || 0))
+              .map(([exchange, data]) => (
+                <div key={exchange} className="flex items-center justify-between text-[10px]">
+                  <span className="text-text-secondary flex items-center capitalize">
+                    <ExchangeDot exchange={exchange} />{exchange}
+                  </span>
+                  <div className="flex gap-3">
+                    {data.bid && <span className="text-accent-green font-mono">{formatCoinPrice(data.bid)}</span>}
+                    {data.ask && <span className="text-accent-red font-mono">{formatCoinPrice(data.ask)}</span>}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function ExchangePriceGrid({ prices }) {
-  if (!prices || !Object.keys(prices).length) return null
+function ProfitCalculator() {
+  const [coinId, setCoinId] = useState('bitcoin')
+  const [amount, setAmount] = useState(1000)
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  const calculate = async () => {
+    setLoading(true)
+    try {
+      const data = await api.calculateArbitrage(coinId, amount)
+      setResult(data?.best_opportunity)
+    } catch (err) {
+      console.error('Calculate error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-      <h3 className="text-xs font-semibold text-text-muted mb-2">Exchange Prices</h3>
-      <div className="space-y-1">
-        {Object.entries(prices).sort(([, a], [, b]) => a - b).map(([exchange, price]) => (
-          <div key={exchange} className="flex items-center justify-between text-xs">
-            <span className="text-text-secondary capitalize">{exchange}</span>
-            <span className="text-text-primary font-mono">{formatCoinPrice(price)}</span>
-          </div>
-        ))}
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] text-text-muted block mb-1">Coin</label>
+          <select
+            value={coinId}
+            onChange={e => setCoinId(e.target.value)}
+            className="w-full bg-bg-card border border-white/10 rounded-lg px-2 py-1.5 text-xs text-text-primary"
+          >
+            {Object.entries(COIN_SYMBOLS).map(([id, sym]) => (
+              <option key={id} value={id}>{sym}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-[10px] text-text-muted block mb-1">Amount (USD)</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={e => setAmount(Number(e.target.value))}
+            min={10}
+            max={1000000}
+            className="w-full bg-bg-card border border-white/10 rounded-lg px-2 py-1.5 text-xs text-text-primary"
+          />
+        </div>
       </div>
+
+      <button
+        onClick={calculate}
+        disabled={loading}
+        className="w-full bg-accent-blue/20 border border-accent-blue text-accent-blue text-xs py-2 rounded-lg font-medium"
+      >
+        {loading ? 'Calculating...' : 'Calculate Profit'}
+      </button>
+
+      {result && (
+        <div className={`bg-bg-card rounded-xl p-3 border ${result.is_profitable ? 'border-accent-green/20' : 'border-accent-red/20'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-text-muted">Net Profit</span>
+            <span className={`text-sm font-bold ${result.is_profitable ? 'text-accent-green' : 'text-accent-red'}`}>
+              ${result.net_profit_usd?.toFixed(2)} ({result.net_profit_pct?.toFixed(3)}%)
+            </span>
+          </div>
+          <div className="space-y-1 text-[10px]">
+            <div className="flex justify-between">
+              <span className="text-text-muted flex items-center"><ExchangeDot exchange={result.buy_exchange} />Buy @ {result.buy_exchange}</span>
+              <span className="text-text-primary">{formatCoinPrice(result.buy_price)} (fee: ${result.buy_fee_usd})</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-text-muted flex items-center"><ExchangeDot exchange={result.sell_exchange} />Sell @ {result.sell_exchange}</span>
+              <span className="text-text-primary">{formatCoinPrice(result.sell_price)} (fee: ${result.sell_fee_usd})</span>
+            </div>
+            <div className="flex justify-between border-t border-white/5 pt-1">
+              <span className="text-text-muted">Coins traded</span>
+              <span className="text-text-primary font-mono">{result.coins_bought?.toFixed(6)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {result === null && !loading && (
+        <p className="text-[10px] text-text-muted text-center">
+          Enter an amount and click Calculate to see exact profit after real exchange fees.
+        </p>
+      )}
     </div>
+  )
+}
+
+function RefreshTimer({ lastUpdate }) {
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    if (!lastUpdate) return
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - lastUpdate) / 1000))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [lastUpdate])
+
+  return (
+    <span className="text-[9px] text-text-muted">
+      Updated {elapsed}s ago
+    </span>
   )
 }
 
@@ -71,11 +226,15 @@ export default function Arbitrage() {
   const [opportunities, setOpportunities] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [expandedCoin, setExpandedCoin] = useState(null)
+  const [tab, setTab] = useState('scanner')
+  const [lastUpdate, setLastUpdate] = useState(null)
 
   const fetchData = useCallback(async () => {
     try {
       const data = await api.getArbitrageOpportunities()
       setOpportunities(data?.opportunities || [])
+      setLastUpdate(Date.now())
     } catch (err) {
       console.error('Arbitrage fetch error:', err)
     } finally {
@@ -95,11 +254,23 @@ export default function Arbitrage() {
     ? opportunities.filter(o => o.is_actionable)
     : opportunities.filter(o => o.net_profit_pct > 0)
 
+  // Sort profitable tab by dollar profit
+  const sorted = filter === 'profitable'
+    ? [...filtered].sort((a, b) => {
+        const profitA = a.buy_price > 0 ? (a.sell_price - a.buy_price) / a.buy_price : 0
+        const profitB = b.buy_price > 0 ? (b.sell_price - b.buy_price) / b.buy_price : 0
+        return profitB - profitA
+      })
+    : filtered
+
   const totalActionable = opportunities.filter(o => o.is_actionable).length
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
-      <h1 className="text-lg font-bold">Arbitrage Scanner</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-bold">Arbitrage Scanner</h1>
+        <RefreshTimer lastUpdate={lastUpdate} />
+      </div>
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-2">
@@ -121,42 +292,70 @@ export default function Arbitrage() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Tab Bar */}
       <div className="flex gap-2">
-        {['all', 'actionable', 'profitable'].map(f => (
+        {['scanner', 'calculator'].map(t => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
+            key={t}
+            onClick={() => setTab(t)}
             className={`text-xs px-3 py-1.5 rounded-lg border transition-colors capitalize ${
-              filter === f
+              tab === t
                 ? 'bg-accent-blue/20 border-accent-blue text-accent-blue'
                 : 'bg-bg-card border-white/5 text-text-muted'
             }`}
           >
-            {f}
+            {t === 'scanner' ? 'Live Scanner' : 'Profit Calculator'}
           </button>
         ))}
       </div>
 
-      {/* Opportunities List */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-6 h-6 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center text-text-muted text-sm py-12">
-          No arbitrage opportunities found. Scanning every 30 seconds...
-        </div>
+      {tab === 'calculator' ? (
+        <ProfitCalculator />
       ) : (
-        <div className="space-y-2">
-          {filtered.map((opp, i) => (
-            <ArbitrageCard key={opp.id || i} opp={opp} />
-          ))}
-        </div>
+        <>
+          {/* Filters */}
+          <div className="flex gap-2">
+            {['all', 'actionable', 'profitable'].map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors capitalize ${
+                  filter === f
+                    ? 'bg-accent-blue/20 border-accent-blue text-accent-blue'
+                    : 'bg-bg-card border-white/5 text-text-muted'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          {/* Opportunities List */}
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-6 h-6 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : sorted.length === 0 ? (
+            <div className="text-center text-text-muted text-sm py-12">
+              No arbitrage opportunities found. Scanning 10 exchanges every 30 seconds...
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sorted.map((opp, i) => (
+                <ArbitrageCard
+                  key={opp.id || i}
+                  opp={opp}
+                  isExpanded={expandedCoin === opp.coin_id}
+                  onExpand={(id) => setExpandedCoin(expandedCoin === id ? null : id)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      <p className="text-text-muted text-[9px] text-center">
-        Prices across 10 exchanges. Fees estimated at 0.1% per side. Net profit = spread - fees.
+      <p className="text-text-muted text-[9px] text-center leading-relaxed">
+        Prices across 10 exchanges with per-exchange fee rates. Tap a card to see all exchange prices. Net profit = spread - (buy fee + sell fee).
       </p>
     </div>
   )

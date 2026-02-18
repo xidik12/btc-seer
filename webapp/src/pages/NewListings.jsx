@@ -5,6 +5,19 @@ import { formatCoinPrice, formatTimeAgo } from '../utils/format'
 
 const TABS = ['listings', 'dex-trending', 'dex-to-cex']
 
+function PerformanceBadge({ pct, label }) {
+  if (pct == null) return null
+  const color = pct >= 0 ? 'text-accent-green' : 'text-accent-red'
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-text-muted text-[10px]">{label}:</span>
+      <span className={`font-bold text-[10px] ${color}`}>
+        {pct > 0 ? '+' : ''}{pct.toFixed(1)}%
+      </span>
+    </div>
+  )
+}
+
 function ListingCard({ listing }) {
   const change1h = listing.change_pct_1h
   const change24h = listing.change_pct_24h
@@ -23,34 +36,54 @@ function ListingCard({ listing }) {
       </div>
 
       {listing.price_at_listing && (
-        <div className="flex items-center gap-4 text-xs">
+        <div className="flex items-center gap-4 text-xs mb-1">
           <div>
             <span className="text-text-muted">Listed at: </span>
             <span className="font-bold">{formatCoinPrice(listing.price_at_listing)}</span>
           </div>
+          <PerformanceBadge pct={change1h} label="1h" />
+          <PerformanceBadge pct={change24h} label="24h" />
+        </div>
+      )}
+
+      {/* Performance tracking bar */}
+      {(change1h != null || change24h != null) && (
+        <div className="flex gap-1 mt-1.5">
           {change1h != null && (
-            <div>
-              <span className="text-text-muted">1h: </span>
-              <span className={`font-bold ${change1h >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-                {change1h > 0 ? '+' : ''}{change1h.toFixed(1)}%
-              </span>
+            <div className="flex-1 h-1 rounded-full overflow-hidden bg-white/5">
+              <div
+                className={`h-full rounded-full ${change1h >= 0 ? 'bg-accent-green' : 'bg-accent-red'}`}
+                style={{ width: `${Math.min(100, Math.abs(change1h) * 2)}%` }}
+              />
             </div>
           )}
           {change24h != null && (
-            <div>
-              <span className="text-text-muted">24h: </span>
-              <span className={`font-bold ${change24h >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-                {change24h > 0 ? '+' : ''}{change24h.toFixed(1)}%
-              </span>
+            <div className="flex-1 h-1 rounded-full overflow-hidden bg-white/5">
+              <div
+                className={`h-full rounded-full ${change24h >= 0 ? 'bg-accent-green' : 'bg-accent-red'}`}
+                style={{ width: `${Math.min(100, Math.abs(change24h) * 2)}%` }}
+              />
             </div>
           )}
         </div>
       )}
 
       {listing.was_on_dex_first && (
-        <span className="text-[9px] px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded mt-1 inline-block">
+        <span className="text-[9px] px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded mt-1.5 inline-block">
           DEX first
         </span>
+      )}
+
+      {listing.announcement_url && (
+        <a
+          href={listing.announcement_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[9px] text-accent-blue hover:underline mt-1 inline-block"
+          onClick={e => e.stopPropagation()}
+        >
+          View announcement
+        </a>
       )}
     </div>
   )
@@ -136,7 +169,7 @@ export default function NewListings() {
                 : 'bg-bg-card border-white/5 text-text-muted'
             }`}
           >
-            {t === 'listings' ? 'CEX Listings' : t === 'dex-trending' ? 'DEX Trending' : 'DEX → CEX'}
+            {t === 'listings' ? 'CEX Listings' : t === 'dex-trending' ? 'DEX Trending' : 'DEX \u2192 CEX'}
           </button>
         ))}
       </div>
@@ -147,8 +180,30 @@ export default function NewListings() {
           <div className="w-6 h-6 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
         </div>
       ) : data.length === 0 ? (
-        <div className="text-center text-text-muted text-sm py-12">
-          No data yet. Scanning exchanges for new listings...
+        <div className="text-center py-12 space-y-3">
+          <p className="text-text-muted text-sm">
+            {tab === 'listings' ? 'No new CEX listings detected' : 'No tokens found'}
+          </p>
+          <div className="bg-bg-card rounded-xl p-4 border border-white/5 max-w-sm mx-auto text-left space-y-2">
+            {tab === 'listings' ? (
+              <>
+                <p className="text-text-secondary text-xs leading-relaxed">
+                  New Binance listings are rare events (typically 1-3 per week). The scanner checks every 30 seconds for new trading pairs and monitors announcements every 2 minutes.
+                </p>
+                <p className="text-text-muted text-[10px]">
+                  When a new listing is detected, price performance is tracked at 1h and 24h intervals. Check back regularly or try the DEX Trending tab.
+                </p>
+              </>
+            ) : tab === 'dex-trending' ? (
+              <p className="text-text-secondary text-xs leading-relaxed">
+                DEX trending tokens are scanned from DexScreener every 5 minutes. Tokens must have &gt;$10K volume and &gt;$5K liquidity.
+              </p>
+            ) : (
+              <p className="text-text-secondary text-xs leading-relaxed">
+                DEX-to-CEX migrations are checked every 30 minutes by cross-referencing DexScreener tokens against Binance listings.
+              </p>
+            )}
+          </div>
         </div>
       ) : (
         <div className="space-y-2">

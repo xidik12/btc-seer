@@ -235,29 +235,42 @@ async def _insert_klines(klines: list[dict], source: str = "binance_backfill"):
 
 
 async def collect_price_data():
-    """Collect and store BTC price data (runs every minute)."""
-    try:
-        data = await market_collector.collect()
-        ticker = data.get("ticker")
+    """Collect and store BTC price data (runs every minute).
 
-        if not ticker:
-            logger.warning("No ticker data received")
+    Uses Binance klines endpoint for proper per-candle OHLC instead of the
+    24hr ticker (which returns rolling 24h open/high/low — wrong for candle
+    resampling in Elliott Wave etc.).
+    """
+    try:
+        # Fetch latest closed 1-minute kline for proper OHLC
+        kline_data = await market_collector.fetch_json(
+            market_collector.BINANCE_KLINES_URL,
+            params={"symbol": "BTCUSDT", "interval": "1m", "limit": 2},
+        )
+
+        if not kline_data or len(kline_data) < 2:
+            logger.warning("No kline data received")
             return
+
+        # Use the second-to-last candle (last closed candle)
+        k = kline_data[-2]
+        from datetime import timezone
+        candle_ts = datetime.fromtimestamp(k[0] / 1000, tz=timezone.utc).replace(tzinfo=None)
 
         async with async_session() as session:
             price = Price(
-                timestamp=datetime.utcnow(),
-                open=float(ticker.get("openPrice", 0)),
-                high=float(ticker.get("highPrice", 0)),
-                low=float(ticker.get("lowPrice", 0)),
-                close=float(ticker.get("lastPrice", 0)),
-                volume=float(ticker.get("volume", 0)),
+                timestamp=candle_ts,
+                open=float(k[1]),
+                high=float(k[2]),
+                low=float(k[3]),
+                close=float(k[4]),
+                volume=float(k[5]),
                 source="binance",
             )
             session.add(price)
             await session.commit()
 
-        logger.info(f"Price collected: ${ticker.get('lastPrice')}")
+        logger.info(f"Price collected: ${k[4]} (kline OHLC)")
 
     except Exception as e:
         logger.error(f"Price collection error: {e}")
