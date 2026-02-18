@@ -1,0 +1,25 @@
+{
+  "title": "Partners",
+  "create": "Create Partner",
+  "name": "Partner Name",
+  "code": "Referral Code",
+  "commission": "Commission %",
+  "email": "Contact Email",
+  "telegram": "Contact Telegram",
+  "notes": "Notes",
+  "active": "Active",
+  "inactive": "Inactive",
+  "referrals": "Referrals",
+  "conversions": "Conversions",
+  "conversionRate": "Conv. Rate",
+  "totalCommission": "Total Commission",
+  "noPartners": "No partners yet. Create one to get started.",
+  "createSuccess": "Partner created successfully",
+  "deactivated": "Partner deactivated",
+  "stats": {
+    "totalReferred": "Total Referred",
+    "premiumConversions": "Premium Conversions",
+    "totalStars": "Total Stars",
+    "pendingPayout": "Pending Payout"
+  }
+}

@@ -365,6 +365,142 @@ function SystemTab({ system, initData }) {
   )
 }
 
+function PartnersTab({ initData }) {
+  const [partners, setPartners] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [showCreate, setShowCreate] = useState(false)
+  const [form, setForm] = useState({ name: '', code: '', commission_pct: 20, contact_email: '', contact_telegram: '' })
+
+  const fetchPartners = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await api.getAdminPartners(initData)
+      setPartners(data.partners || [])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [initData])
+
+  useEffect(() => { fetchPartners() }, [fetchPartners])
+
+  const handleCreate = async () => {
+    if (!form.name || !form.code) return
+    try {
+      await api.createAdminPartner(initData, form)
+      setShowCreate(false)
+      setForm({ name: '', code: '', commission_pct: 20, contact_email: '', contact_telegram: '' })
+      fetchPartners()
+    } catch (err) {
+      alert('Failed: ' + err.message)
+    }
+  }
+
+  const handleToggle = async (id, currentActive) => {
+    try {
+      await api.updateAdminPartner(initData, id, { is_active: !currentActive })
+      fetchPartners()
+    } catch (err) {
+      alert('Failed: ' + err.message)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-text-muted text-[9px]">{partners.length} partners total</span>
+        <button
+          onClick={() => setShowCreate(!showCreate)}
+          className="text-[10px] px-3 py-1 rounded-lg bg-accent-blue/15 text-accent-blue hover:bg-accent-blue/25"
+        >
+          {showCreate ? 'Cancel' : '+ Create Partner'}
+        </button>
+      </div>
+
+      {showCreate && (
+        <div className="bg-bg-card rounded-xl border border-accent-blue/20 p-3 space-y-2 slide-up">
+          <input type="text" placeholder="Partner Name" value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })}
+            className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-1.5 text-xs text-text-primary" />
+          <input type="text" placeholder="Referral Code (e.g. CRYPTOEDU)" value={form.code}
+            onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })}
+            className="w-full bg-bg-hover border border-white/10 rounded-lg px-3 py-1.5 text-xs text-text-primary font-mono" />
+          <div className="flex gap-2">
+            <input type="number" placeholder="Commission %" value={form.commission_pct}
+              onChange={e => setForm({ ...form, commission_pct: parseFloat(e.target.value) || 0 })}
+              className="w-24 bg-bg-hover border border-white/10 rounded-lg px-3 py-1.5 text-xs text-text-primary" />
+            <input type="text" placeholder="Email (optional)" value={form.contact_email}
+              onChange={e => setForm({ ...form, contact_email: e.target.value })}
+              className="flex-1 bg-bg-hover border border-white/10 rounded-lg px-3 py-1.5 text-xs text-text-primary" />
+          </div>
+          <button onClick={handleCreate}
+            className="w-full text-xs py-2 rounded-lg bg-accent-blue text-white font-semibold hover:bg-accent-blue/80">
+            Create Partner
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-accent-red/10 border border-accent-red/30 rounded-xl px-3 py-2">
+          <p className="text-accent-red text-xs">{error}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="animate-pulse space-y-2">
+          {[1,2,3].map(i => <div key={i} className="h-16 bg-bg-card rounded-xl" />)}
+        </div>
+      ) : partners.length === 0 ? (
+        <div className="text-center text-text-muted text-xs py-8">
+          No partners yet. Create one to get started.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {partners.map(p => (
+            <div key={p.id} className={`bg-bg-card rounded-xl border p-3 ${p.is_active ? 'border-white/5' : 'border-accent-red/20 opacity-60'}`}>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-text-primary text-xs font-semibold">{p.name}</span>
+                  <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400">{p.code}</span>
+                </div>
+                <button onClick={() => handleToggle(p.id, p.is_active)}
+                  className={`text-[8px] px-2 py-0.5 rounded ${p.is_active ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'}`}>
+                  {p.is_active ? 'Active' : 'Inactive'}
+                </button>
+              </div>
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                <div className="text-center">
+                  <div className="text-text-primary text-xs font-bold">{p.total_referrals}</div>
+                  <div className="text-text-muted text-[8px]">Referrals</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-accent-green text-xs font-bold">{p.conversions}</div>
+                  <div className="text-text-muted text-[8px]">Converts</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-text-primary text-xs font-bold">{p.conversion_rate}%</div>
+                  <div className="text-text-muted text-[8px]">Rate</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-accent-yellow text-xs font-bold">{p.total_commission}</div>
+                  <div className="text-text-muted text-[8px]">Comm.</div>
+                </div>
+              </div>
+              <div className="text-text-muted text-[8px] mt-1">
+                {p.commission_pct}% commission
+                {p.contact_email && ` | ${p.contact_email}`}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminDashboard() {
   const { tg, user } = useTelegram()
   const initData = tg?.initData || ''
@@ -433,7 +569,7 @@ export default function AdminDashboard() {
     )
   }
 
-  const tabs = ['overview', 'users', 'predictions', 'system']
+  const tabs = ['overview', 'users', 'predictions', 'partners', 'system']
 
   return (
     <div className="px-4 pt-4 space-y-3 pb-20">
@@ -456,6 +592,7 @@ export default function AdminDashboard() {
       {tab === 'overview' && <OverviewTab stats={stats} />}
       {tab === 'users' && <UsersTab initData={initData} />}
       {tab === 'predictions' && <PredictionsTab predictions={predictions} />}
+      {tab === 'partners' && <PartnersTab initData={initData} />}
       {tab === 'system' && <SystemTab system={system} initData={initData} />}
     </div>
   )

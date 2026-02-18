@@ -379,6 +379,9 @@ class BotUser(Base):
     referred_by: Mapped[int] = mapped_column(BigInteger, nullable=True)
     referral_count: Mapped[int] = mapped_column(Integer, default=0)
 
+    # Partner referral
+    partner_code: Mapped[str] = mapped_column(String(50), nullable=True)
+
     # Admin / ban
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
     ban_reason: Mapped[str] = mapped_column(String(500), nullable=True)
@@ -1053,6 +1056,55 @@ class MultichainOnchain(Base):
     defi_tvl: Mapped[float] = mapped_column(Float, nullable=True)
     stablecoin_volume: Mapped[float] = mapped_column(Float, nullable=True)
     new_contracts_24h: Mapped[int] = mapped_column(Integer, nullable=True)
+
+
+class InstitutionalHolding(Base):
+    """Tracks institutional BTC holdings from BitcoinTreasuries and SEC EDGAR."""
+    __tablename__ = "institutional_holdings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    company_name: Mapped[str] = mapped_column(String(200))
+    ticker: Mapped[str] = mapped_column(String(20), nullable=True)
+    country: Mapped[str] = mapped_column(String(50), nullable=True)
+    total_btc: Mapped[float] = mapped_column(Float)
+    entry_value_usd: Mapped[float] = mapped_column(Float, nullable=True)
+    current_value_usd: Mapped[float] = mapped_column(Float, nullable=True)
+    change_btc: Mapped[float] = mapped_column(Float, nullable=True)
+    source: Mapped[str] = mapped_column(String(50), default="bitcointreasuries")
+    snapshot_date: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class Partner(Base):
+    """Partner referral accounts for commission-based partnerships."""
+    __tablename__ = "partners"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200))
+    code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    contact_email: Mapped[str] = mapped_column(String(200), nullable=True)
+    contact_telegram: Mapped[str] = mapped_column(String(100), nullable=True)
+    commission_pct: Mapped[float] = mapped_column(Float, default=20.0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    created_by: Mapped[int] = mapped_column(BigInteger, default=0)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
+
+
+class PartnerReferral(Base):
+    """Tracks users referred by partners and their conversion/commission status."""
+    __tablename__ = "partner_referrals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    partner_id: Mapped[int] = mapped_column(Integer, index=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
+    signed_up_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    subscribed: Mapped[bool] = mapped_column(Boolean, default=False)
+    subscription_tier: Mapped[str] = mapped_column(String(20), nullable=True)
+    subscription_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    stars_paid: Mapped[int] = mapped_column(Integer, nullable=True)
+    commission_amount: Mapped[float] = mapped_column(Float, nullable=True)
+    commission_paid: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class LearnedPattern(Base):

@@ -16,6 +16,7 @@ from app.database import (
 from app.bot.keyboards import main_keyboard, settings_keyboard, back_keyboard, advisor_keyboard, trade_close_keyboard, subscribe_keyboard
 from app.bot.subscription import require_premium, is_premium, get_status_text, grant_trial
 from app.bot.referral import parse_referral_code, process_referral
+from app.bot.partner_referral import parse_partner_code, process_partner_referral
 from app.signals.generator import DISCLAIMER
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,12 @@ async def cmd_start(message: Message, command: CommandObject):
     """Handle /start command — subscribe, process referrals, show main menu."""
     is_new = False
     referral_info = None
-    referral_code = parse_referral_code(command.args)
+    partner_info = None
+
+    # Parse start parameter — check for partner_ first, then ref_
+    start_param = command.args
+    partner_code = parse_partner_code(start_param)
+    referral_code = parse_referral_code(start_param) if not partner_code else None
 
     async with async_session() as session:
         result = await session.execute(
@@ -51,8 +57,10 @@ async def cmd_start(message: Message, command: CommandObject):
             else:
                 await session.commit()
 
-            # Process referral for new users only
-            if referral_code:
+            # Process partner referral or user referral for new users only
+            if partner_code:
+                partner_info = await process_partner_referral(user, partner_code, session)
+            elif referral_code:
                 referral_info = await process_referral(user, referral_code, session)
         else:
             # Grant trial to existing users who missed it during beta
@@ -83,6 +91,8 @@ async def cmd_start(message: Message, command: CommandObject):
         ref_user = referral_info.get("referrer_username") or "a friend"
         bonus = referral_info["bonus_days"]
         referral_line = f"\n\n🎁 Referred by @{ref_user} — you both got +{bonus} days Premium!"
+    elif partner_info:
+        referral_line = f"\n\n🤝 Joined via partner: {partner_info['partner_name']}"
 
     name = message.from_user.first_name or "there"
 

@@ -1,0 +1,25 @@
+{
+  "title": "Партнёры",
+  "create": "Создать партнёра",
+  "name": "Имя партнёра",
+  "code": "Реферальный код",
+  "commission": "Комиссия %",
+  "email": "Email",
+  "telegram": "Telegram",
+  "notes": "Заметки",
+  "active": "Активен",
+  "inactive": "Неактивен",
+  "referrals": "Рефералы",
+  "conversions": "Конверсии",
+  "conversionRate": "Конв. %",
+  "totalCommission": "Общая комиссия",
+  "noPartners": "Нет партнёров. Создайте первого.",
+  "createSuccess": "Партнёр создан",
+  "deactivated": "Партнёр деактивирован",
+  "stats": {
+    "totalReferred": "Всего привлечено",
+    "premiumConversions": "Премиум конверсии",
+    "totalStars": "Всего звёзд",
+    "pendingPayout": "К выплате"
+  }
+}

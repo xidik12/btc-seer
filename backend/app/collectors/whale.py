@@ -37,12 +37,13 @@ class WhaleCollector(BaseCollector):
 
     MEMPOOL_BLOCKS_URL = "https://mempool.space/api/blocks"
     MEMPOOL_BLOCK_TXS_URL = "https://mempool.space/api/block/{block_hash}/txs/{start_index}"
+    MEMPOOL_RECENT_URL = "https://mempool.space/api/mempool/recent"
     BTCSCAN_ADDR_URL = "https://btcscan.org/api/address"
     BLOCKCHAIR_TX_URL = "https://api.blockchair.com/bitcoin/transactions"
 
     # Scan first N txs per block (each page = 25 txs)
-    PAGES_PER_BLOCK = 4  # 100 txs per block
-    BLOCKS_TO_SCAN = 3   # ~30 min of blocks
+    PAGES_PER_BLOCK = 12  # 300 txs per block — 3x better coverage for whale detection
+    BLOCKS_TO_SCAN = 3    # ~30 min of blocks
 
     def __init__(self):
         super().__init__()
@@ -118,7 +119,11 @@ class WhaleCollector(BaseCollector):
         if len(self._last_seen_hashes) > 5000:
             self._last_seen_hashes = set(list(self._last_seen_hashes)[-3000:])
 
-        logger.info(f"Whale collector: {len(transactions)} new large txs from block scan")
+        # Step 2: Scan mempool for large unconfirmed txs
+        mempool_txs = await self._scan_mempool_large_txs()
+        transactions.extend(mempool_txs)
+
+        logger.info(f"Whale collector: {len(transactions)} new large txs from block scan + mempool")
         return {"transactions": transactions, "count": len(transactions)}
 
     async def monitor_known_addresses(self) -> dict:
@@ -237,6 +242,54 @@ class WhaleCollector(BaseCollector):
             "raw_data": None,  # don't store full tx to save DB space
             "source": "mempool_blocks",
         }
+
+    async def _scan_mempool_large_txs(self) -> list[dict]:
+        """Scan mempool for large unconfirmed transactions (>100 BTC).
+
+        Uses mempool.space /api/mempool/recent to catch whale txs before confirmation.
+        """
+        transactions = []
+        try:
+            recent_txs = await self.fetch_json(self.MEMPOOL_RECENT_URL)
+            if not recent_txs or not isinstance(recent_txs, list):
+                return transactions
+
+            for tx in recent_txs:
+                tx_hash = tx.get("txid", "")
+                if not tx_hash or tx_hash in self._last_seen_hashes:
+                    continue
+
+                value = tx.get("value", 0)
+                amount_btc = value / 1e8
+
+                if amount_btc < 100:
+                    continue
+
+                # Mempool /recent endpoint has limited data, create basic record
+                self._last_seen_hashes.add(tx_hash)
+                transactions.append({
+                    "tx_hash": tx_hash,
+                    "amount_btc": round(amount_btc, 4),
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "direction": "unknown",
+                    "from_entity": "unknown",
+                    "to_entity": "unknown",
+                    "entity_name": None,
+                    "entity_type": None,
+                    "entity_wallet": None,
+                    "severity": calculate_severity(amount_btc),
+                    "from_address": None,
+                    "to_address": None,
+                    "raw_data": None,
+                    "source": "mempool_unconfirmed",
+                })
+
+        except Exception as e:
+            logger.debug(f"Mempool scan error: {e}")
+
+        if transactions:
+            logger.info(f"Mempool scan: {len(transactions)} large unconfirmed txs")
+        return transactions
 
     async def _fetch_address_txs(self, address: str) -> list[dict] | None:
         """Fetch recent transactions for an address from BTCScan."""

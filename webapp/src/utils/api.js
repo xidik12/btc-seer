@@ -256,6 +256,33 @@ export const api = {
   getWhaleFlowHistory: (days = 7) => cachedFetch(`/whales/flow-history?days=${days}`, T300),
   getAddressTransactions: (address, limit = 50) => cachedFetch(`/whales/address/${address}?limit=${limit}`, T60),
 
+  // Institutional Holdings
+  getInstitutionalHoldings: () => cachedFetch('/whales/institutional', T300),
+  getInstitutionalHistory: (ticker, limit = 30) => cachedFetch(`/whales/institutional/${ticker}?limit=${limit}`, T300),
+
+  // Partner Dashboard (public — no auth)
+  getPartnerStats: (code) => fetchAPI(`/partner/${code}/stats`),
+  getPartnerReferrals: (code) => fetchAPI(`/partner/${code}/referrals`),
+
+  // Partner Admin (requires initData)
+  getAdminPartners: (initData) => fetchAPI('/admin/partners', { headers: { 'X-Telegram-Init-Data': initData } }),
+  createAdminPartner: (initData, data) => fetchAPI('/admin/partners', {
+    method: 'POST',
+    headers: { 'X-Telegram-Init-Data': initData },
+    body: JSON.stringify(data),
+  }),
+  updateAdminPartner: (initData, id, data) => fetchAPI(`/admin/partners/${id}`, {
+    method: 'PUT',
+    headers: { 'X-Telegram-Init-Data': initData },
+    body: JSON.stringify(data),
+  }),
+  deleteAdminPartner: (initData, id) => fetchAPI(`/admin/partners/${id}`, {
+    method: 'DELETE',
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  getAdminPartnerStats: (initData, id) => fetchAPI(`/admin/partners/${id}/stats`, { headers: { 'X-Telegram-Init-Data': initData } }),
+  getAdminPartnerReferrals: (initData, id) => fetchAPI(`/admin/partners/${id}/referrals`, { headers: { 'X-Telegram-Init-Data': initData } }),
+
   // Referral
   getReferralInfo: (initData) => fetchAPI('/referral/info', { headers: { 'X-Telegram-Init-Data': initData } }),
   getReferralLeaderboard: () => cachedFetch('/referral/leaderboard', T120),

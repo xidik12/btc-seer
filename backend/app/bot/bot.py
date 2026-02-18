@@ -332,14 +332,23 @@ async def on_payment_success(message: Message):
 
         # Record payment history
         tier_map = {30: "monthly", 90: "quarterly", 365: "yearly"}
+        tier_label = tier_map.get(days, "monthly")
         session.add(PaymentHistory(
             telegram_id=telegram_id,
-            tier=tier_map.get(days, "monthly"),
+            tier=tier_label,
             days=days,
             stars_amount=payment.total_amount,
             payment_id=payment.telegram_payment_charge_id,
         ))
         await session.commit()
+
+        # Record partner conversion if user was referred by a partner
+        if user.partner_code:
+            try:
+                from app.bot.partner_referral import record_partner_conversion
+                await record_partner_conversion(telegram_id, tier_label, payment.total_amount)
+            except Exception as e:
+                logger.error(f"Partner conversion recording failed: {e}")
 
         status = get_status_text(user)
 

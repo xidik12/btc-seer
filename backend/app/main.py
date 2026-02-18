@@ -22,6 +22,7 @@ from app.api import advisor as advisor_api
 from app.api import admin as admin_api
 from app.api import powerlaw, public_api, liquidations, elliott_wave, subscription, auth as auth_api, referral as referral_api
 from app.api import arbitrage as arbitrage_api, listings as listings_api, memecoins as memecoins_api
+from app.api import partner_admin as partner_admin_api, partner_dashboard as partner_dashboard_api
 from app.scheduler.jobs import (
     backfill_historical_prices,
     collect_price_data,
@@ -75,6 +76,9 @@ from app.collectors.eth_whale import collect_eth_whale_transactions
 from app.collectors.sol_whale import collect_sol_whale_transactions
 from app.collectors.eth_onchain import collect_multichain_onchain
 from app.collectors.cryptopanic_v2 import collect_cryptopanic_v2
+from app.collectors.sec_edgar import collect_sec_filings
+from app.collectors.btc_treasuries import scrape_btc_treasuries
+from app.collectors.arkham import collect_arkham_transfers
 from app.models.phrase_analyzer import analyze_news_phrases
 from app.models.continuous_learner import run_continuous_learning
 from app.models.ab_tester import evaluate_candidates
@@ -190,6 +194,11 @@ async def lifespan(app: FastAPI):
                           next_run_time=datetime.utcnow() + timedelta(minutes=5))  # offset by 5 min
         scheduler.add_job(resolve_unknown_whale_addresses, "interval", minutes=30, id="resolve_addresses",
                           next_run_time=datetime.utcnow() + timedelta(minutes=15))  # offset by 15 min
+
+        # Institutional whale tracking
+        scheduler.add_job(collect_sec_filings, "interval", minutes=30, id="collect_sec_filings")
+        scheduler.add_job(scrape_btc_treasuries, "interval", hours=6, id="scrape_btc_treasuries")
+        scheduler.add_job(collect_arkham_transfers, "interval", minutes=5, id="collect_arkham_transfers")
 
         # Prediction jobs — time-aligned cron schedules (UTC)
         # 1h: every hour at :00
@@ -447,6 +456,8 @@ app.include_router(public_api.router)
 app.include_router(arbitrage_api.router)
 app.include_router(listings_api.router)
 app.include_router(memecoins_api.router)
+app.include_router(partner_admin_api.router)
+app.include_router(partner_dashboard_api.router)
 
 
 @app.get("/health")

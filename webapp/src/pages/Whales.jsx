@@ -305,12 +305,79 @@ function WhaleCard({ tx, t, onAddressClick }) {
   )
 }
 
+function InstitutionalTab({ t }) {
+  const [holdings, setHoldings] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.getInstitutionalHoldings()
+      .then(data => setHoldings(data?.holdings || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="w-6 h-6 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (holdings.length === 0) {
+    return (
+      <div className="text-center text-text-muted text-sm py-12">
+        No institutional holdings data yet. Data updates every 6 hours.
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {holdings.map((h, i) => (
+        <div key={h.ticker || i} className="bg-bg-card rounded-xl p-3 border border-purple-500/10 slide-up">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-text-primary text-sm font-bold">{h.company_name}</span>
+              {h.ticker && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 font-mono">
+                  {h.ticker}
+                </span>
+              )}
+            </div>
+            {h.country && <span className="text-text-muted text-[9px]">{h.country}</span>}
+          </div>
+          <div className="flex items-center gap-3 text-[10px]">
+            <span className="text-text-primary font-bold">{h.total_btc?.toLocaleString()} BTC</span>
+            {h.change_btc != null && h.change_btc !== 0 && (
+              <span className={h.change_btc > 0 ? 'text-accent-green font-bold' : 'text-accent-red font-bold'}>
+                {h.change_btc > 0 ? '+' : ''}{h.change_btc.toLocaleString()} BTC
+              </span>
+            )}
+            {h.current_value_usd && (
+              <span className="text-text-muted">
+                ${(h.current_value_usd / 1e9).toFixed(2)}B
+              </span>
+            )}
+          </div>
+          {h.snapshot_date && (
+            <div className="text-text-muted text-[9px] mt-1">
+              Updated: {new Date(h.snapshot_date).toLocaleDateString()}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function Whales() {
   const { t } = useTranslation(['market', 'common'])
   const [stats, setStats] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [filter, setFilter] = useState('all')
   const [chainFilter, setChainFilter] = useState('all')
+  const [mainTab, setMainTab] = useState('transactions')
   const [loading, setLoading] = useState(true)
   const [selectedAddress, setSelectedAddress] = useState(null)
 
@@ -370,6 +437,27 @@ export default function Whales() {
 
       <h1 className="text-lg font-bold mt-3 mb-3">{t('market:whales.title')}</h1>
 
+      {/* Main Tab: Transactions | Institutional */}
+      <div className="flex gap-2 mb-3">
+        {['transactions', 'institutional'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setMainTab(tab)}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              mainTab === tab
+                ? 'bg-accent-blue/20 border-accent-blue text-accent-blue'
+                : 'bg-bg-card border-white/5 text-text-muted'
+            }`}
+          >
+            {tab === 'transactions' ? 'Transactions' : 'Institutional'}
+          </button>
+        ))}
+      </div>
+
+      {mainTab === 'institutional' ? (
+        <InstitutionalTab t={t} />
+      ) : (
+      <>
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div className="bg-bg-card rounded-xl p-3 border border-white/5">
@@ -488,6 +576,8 @@ export default function Whales() {
             <WhaleCard key={tx.tx_hash || tx.id} tx={tx} t={t} onAddressClick={handleAddressClick} />
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   )

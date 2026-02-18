@@ -313,6 +313,92 @@ async def get_address_transactions(
     }
 
 
+@router.get("/institutional")
+async def get_institutional_holdings(
+    session: AsyncSession = Depends(get_session),
+):
+    """Get latest institutional BTC holdings with delta tracking."""
+    from app.database import InstitutionalHolding
+    from sqlalchemy import distinct
+
+    # Get latest snapshot per company (most recent snapshot_date)
+    subquery = (
+        select(
+            InstitutionalHolding.company_name,
+            func.max(InstitutionalHolding.snapshot_date).label("latest")
+        )
+        .group_by(InstitutionalHolding.company_name)
+        .subquery()
+    )
+
+    result = await session.execute(
+        select(InstitutionalHolding).join(
+            subquery,
+            and_(
+                InstitutionalHolding.company_name == subquery.c.company_name,
+                InstitutionalHolding.snapshot_date == subquery.c.latest,
+            )
+        ).order_by(desc(InstitutionalHolding.total_btc))
+    )
+    holdings = result.scalars().all()
+
+    return {
+        "count": len(holdings),
+        "holdings": [
+            {
+                "id": h.id,
+                "company_name": h.company_name,
+                "ticker": h.ticker,
+                "country": h.country,
+                "total_btc": h.total_btc,
+                "entry_value_usd": h.entry_value_usd,
+                "current_value_usd": h.current_value_usd,
+                "change_btc": h.change_btc,
+                "source": h.source,
+                "snapshot_date": h.snapshot_date.isoformat() if h.snapshot_date else None,
+            }
+            for h in holdings
+        ],
+    }
+
+
+@router.get("/institutional/{ticker}")
+async def get_institutional_history(
+    ticker: str,
+    limit: int = Query(30, ge=1, le=365),
+    session: AsyncSession = Depends(get_session),
+):
+    """Get a single company's BTC holding history by ticker."""
+    from app.database import InstitutionalHolding
+
+    result = await session.execute(
+        select(InstitutionalHolding)
+        .where(InstitutionalHolding.ticker == ticker.upper())
+        .order_by(desc(InstitutionalHolding.snapshot_date))
+        .limit(limit)
+    )
+    holdings = result.scalars().all()
+
+    if not holdings:
+        return {"ticker": ticker.upper(), "history": [], "count": 0}
+
+    return {
+        "ticker": ticker.upper(),
+        "company_name": holdings[0].company_name if holdings else None,
+        "count": len(holdings),
+        "history": [
+            {
+                "total_btc": h.total_btc,
+                "change_btc": h.change_btc,
+                "current_value_usd": h.current_value_usd,
+                "snapshot_date": h.snapshot_date.isoformat() if h.snapshot_date else None,
+                "source": h.source,
+            }
+            for h in holdings
+        ],
+    }
+
+
 @router.post("/backfill")
 async def trigger_whale_backfill():
     """Trigger whale transaction backfill from Blockchair (admin use)."""
