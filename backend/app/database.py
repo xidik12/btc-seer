@@ -1136,6 +1136,87 @@ class LearnedPattern(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
+class PriceAlert(Base):
+    """User-defined price alerts for any tracked coin."""
+    __tablename__ = "price_alerts"
+    __table_args__ = (
+        Index("ix_price_alerts_user_active", "telegram_id", "is_active"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    coin_id: Mapped[str] = mapped_column(String(100), default="bitcoin")
+    target_price: Mapped[float] = mapped_column(Float)
+    direction: Mapped[str] = mapped_column(String(10))  # above, below
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_repeating: Mapped[bool] = mapped_column(Boolean, default=False)
+    note: Mapped[str] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    triggered_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    triggered_price: Mapped[float] = mapped_column(Float, nullable=True)
+
+
+class DailyBriefing(Base):
+    """AI-generated daily market briefing."""
+    __tablename__ = "daily_briefings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    date: Mapped[str] = mapped_column(String(10), unique=True, index=True)  # YYYY-MM-DD
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    summary_html: Mapped[str] = mapped_column(Text)
+    summary_text: Mapped[str] = mapped_column(Text)
+    data_snapshot: Mapped[dict] = mapped_column(JSON, nullable=True)
+    btc_price: Mapped[float] = mapped_column(Float, nullable=True)
+    btc_24h_change: Mapped[float] = mapped_column(Float, nullable=True)
+    overall_sentiment: Mapped[str] = mapped_column(String(20), nullable=True)  # bullish, bearish, neutral
+    confidence: Mapped[float] = mapped_column(Float, nullable=True)
+    generation_method: Mapped[str] = mapped_column(String(30), default="template")
+
+
+class UserPrediction(Base):
+    """User predictions for the prediction game."""
+    __tablename__ = "user_predictions"
+    __table_args__ = (
+        Index("ix_user_pred_user_ts", "telegram_id", "timestamp"),
+        Index("ix_user_pred_round", "round_date", "timeframe"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    round_date: Mapped[str] = mapped_column(String(10))  # YYYY-MM-DD
+    timeframe: Mapped[str] = mapped_column(String(10), default="24h")  # 24h, 4h, 1h
+    direction: Mapped[str] = mapped_column(String(10))  # up, down
+    lock_price: Mapped[float] = mapped_column(Float)
+    resolve_price: Mapped[float] = mapped_column(Float, nullable=True)
+    was_correct: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    points_earned: Mapped[int] = mapped_column(Integer, nullable=True)
+    streak_at_prediction: Mapped[int] = mapped_column(Integer, default=0)
+    multiplier: Mapped[float] = mapped_column(Float, default=1.0)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, resolved
+
+
+class GameProfile(Base):
+    """Leaderboard profile for the prediction game."""
+    __tablename__ = "game_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
+    username: Mapped[str] = mapped_column(String(100), nullable=True)
+    total_points: Mapped[int] = mapped_column(Integer, default=0)
+    total_predictions: Mapped[int] = mapped_column(Integer, default=0)
+    correct_predictions: Mapped[int] = mapped_column(Integer, default=0)
+    current_streak: Mapped[int] = mapped_column(Integer, default=0)
+    best_streak: Mapped[int] = mapped_column(Integer, default=0)
+    accuracy_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    weekly_points: Mapped[int] = mapped_column(Integer, default=0)
+    monthly_points: Mapped[int] = mapped_column(Integer, default=0)
+    weekly_reset_date: Mapped[str] = mapped_column(String(10), nullable=True)
+    monthly_reset_date: Mapped[str] = mapped_column(String(10), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+
+
 def _add_missing_columns(connection):
     """Add any columns defined in models but missing from existing tables (works on both SQLite and PostgreSQL)."""
     inspector = inspect(connection)

@@ -4,7 +4,7 @@ from datetime import datetime
 from aiogram import Bot
 from sqlalchemy import select, or_, and_, desc
 
-from app.database import async_session, BotUser, Price, Prediction, Signal, AlertLog
+from app.database import async_session, BotUser, Price, Prediction, Signal, AlertLog, PriceAlert, DailyBriefing, CoinPrice
 from app.config import settings
 from app.signals.generator import DISCLAIMER
 from app.bot.subscription import is_premium
@@ -221,6 +221,144 @@ class AlertSender:
             except Exception as e:
                 logger.error(f"Failed to send listing alert to {user.telegram_id}: {e}")
                 await self._log_alert(user.telegram_id, "new_listing", "failed", str(e))
+
+    async def check_price_alerts(self):
+        """Check all active price alerts against current prices. Runs every 30s."""
+        try:
+            async with async_session() as session:
+                # Get all active alerts
+                result = await session.execute(
+                    select(PriceAlert).where(PriceAlert.is_active == True)
+                )
+                alerts = result.scalars().all()
+
+                if not alerts:
+                    return
+
+                # Get current BTC price
+                result = await session.execute(
+                    select(Price).order_by(desc(Price.timestamp)).limit(1)
+                )
+                btc_price_row = result.scalar_one_or_none()
+                btc_price = btc_price_row.close if btc_price_row else None
+
+                # Get latest coin prices for non-BTC alerts
+                coin_prices = {}
+                if btc_price:
+                    coin_prices["bitcoin"] = btc_price
+
+                coin_ids = {a.coin_id for a in alerts if a.coin_id != "bitcoin"}
+                if coin_ids:
+                    for coin_id in coin_ids:
+                        result = await session.execute(
+                            select(CoinPrice)
+                            .where(CoinPrice.coin_id == coin_id)
+                            .order_by(desc(CoinPrice.timestamp))
+                            .limit(1)
+                        )
+                        cp = result.scalar_one_or_none()
+                        if cp:
+                            coin_prices[coin_id] = cp.price_usd
+
+                triggered = 0
+                for alert in alerts:
+                    current = coin_prices.get(alert.coin_id)
+                    if current is None:
+                        continue
+
+                    crossed = (
+                        (alert.direction == "above" and current >= alert.target_price) or
+                        (alert.direction == "below" and current <= alert.target_price)
+                    )
+                    if not crossed:
+                        continue
+
+                    # Trigger the alert
+                    alert.triggered_at = datetime.utcnow()
+                    alert.triggered_price = current
+                    if not alert.is_repeating:
+                        alert.is_active = False
+
+                    # Send notification
+                    symbol = alert.coin_id.upper()[:6]
+                    dir_emoji = "📈" if alert.direction == "above" else "📉"
+                    note_line = f"\n📝 {alert.note}" if alert.note else ""
+                    msg = (
+                        f"🔔 <b>Price Alert Triggered!</b>\n\n"
+                        f"{dir_emoji} <b>{symbol}</b> is now {'above' if alert.direction == 'above' else 'below'} "
+                        f"${alert.target_price:,.2f}\n"
+                        f"Current: <b>${current:,.2f}</b>"
+                        f"{note_line}\n\n"
+                        f"{'🔄 Repeating alert — still active.' if alert.is_repeating else '✅ One-shot alert — deactivated.'}"
+                    )
+
+                    try:
+                        await self.bot.send_message(alert.telegram_id, msg, parse_mode="HTML")
+                        triggered += 1
+                    except Exception as e:
+                        logger.error(f"Failed to send price alert to {alert.telegram_id}: {e}")
+
+                await session.commit()
+                if triggered:
+                    logger.info(f"Price alerts triggered: {triggered}")
+
+        except Exception as e:
+            logger.error(f"check_price_alerts error: {e}", exc_info=True)
+
+    async def send_daily_briefing(self):
+        """Send daily briefing to subscribed premium users. Runs at 08:00 UTC."""
+        try:
+            async with async_session() as session:
+                # Get latest briefing
+                result = await session.execute(
+                    select(DailyBriefing).order_by(desc(DailyBriefing.date)).limit(1)
+                )
+                briefing = result.scalar_one_or_none()
+
+                if not briefing:
+                    logger.warning("No briefing to send")
+                    return
+
+                # Get premium subscribed users
+                now = datetime.utcnow()
+                from sqlalchemy import or_, and_
+                query = (
+                    select(BotUser)
+                    .where(BotUser.subscribed == True)
+                )
+                if settings.subscription_enabled:
+                    query = query.where(
+                        or_(
+                            and_(
+                                BotUser.subscription_tier == "premium",
+                                BotUser.subscription_end > now,
+                            ),
+                            BotUser.trial_end > now,
+                        )
+                    )
+                result = await session.execute(query)
+                users = result.scalars().all()
+
+            if not users:
+                return
+
+            # Truncate for Telegram's 4096 char limit
+            text = briefing.summary_text[:3900]
+            if len(briefing.summary_text) > 3900:
+                text += "\n\n... Open BTC Seer for the full briefing."
+
+            sent = 0
+            for user in users:
+                try:
+                    await self.bot.send_message(user.telegram_id, text, parse_mode="HTML")
+                    sent += 1
+                except Exception as e:
+                    logger.debug(f"Briefing send failed for {user.telegram_id}: {e}")
+
+            logger.info(f"Daily briefing sent to {sent}/{len(users)} users")
+
+        except Exception as e:
+            logger.error(f"send_daily_briefing error: {e}", exc_info=True)
 
     def _format_alert(self, predictions: list, signal, current_price: float = None) -> str:
         """Format prediction alert message."""

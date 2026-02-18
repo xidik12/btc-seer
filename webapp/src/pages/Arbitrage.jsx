@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatCoinPrice, formatTimeAgo } from '../utils/format'
+import ShareButton from '../components/ShareButton'
+import { arbitrageShareText } from '../utils/shareTemplates'
 
 // Coin ID to symbol mapping for display
 const COIN_SYMBOLS = {
@@ -88,6 +90,7 @@ function ArbitrageCard({ opp, onExpand, isExpanded }) {
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-bold text-text-primary">{coinSymbol(opp.coin_id)}</span>
         <div className="flex items-center gap-2">
+          <ShareButton compact text={arbitrageShareText(opp)} />
           <span className="text-[10px] text-text-muted">${dollarProfit}/1K</span>
           <ProfitBadge pct={opp.net_profit_pct} />
         </div>

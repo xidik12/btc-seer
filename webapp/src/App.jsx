@@ -34,6 +34,10 @@ const Arbitrage = lazy(() => import('./pages/Arbitrage'))
 const NewListings = lazy(() => import('./pages/NewListings'))
 const Memecoins = lazy(() => import('./pages/Memecoins'))
 const PartnerDashboard = lazy(() => import('./pages/PartnerDashboard'))
+const PriceAlerts = lazy(() => import('./pages/PriceAlerts'))
+const Briefing = lazy(() => import('./pages/Briefing'))
+const PredictionGame = lazy(() => import('./pages/PredictionGame'))
+const SmartMoney = lazy(() => import('./pages/SmartMoney'))
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -141,6 +145,11 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/partner/:code" element={<PartnerDashboard />} />
+          {/* New features */}
+          <Route path="/alerts" element={<PriceAlerts />} />
+          <Route path="/briefing" element={<Briefing />} />
+          <Route path="/game" element={<PredictionGame />} />
+          <Route path="/smart-money" element={<SmartMoney />} />
         </Routes>
         </Suspense>
         </div>

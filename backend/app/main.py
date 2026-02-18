@@ -23,6 +23,7 @@ from app.api import admin as admin_api
 from app.api import powerlaw, public_api, liquidations, elliott_wave, subscription, auth as auth_api, referral as referral_api
 from app.api import arbitrage as arbitrage_api, listings as listings_api, memecoins as memecoins_api
 from app.api import partner_admin as partner_admin_api, partner_dashboard as partner_dashboard_api
+from app.api import alerts as alerts_api, briefings as briefings_api, game as game_api, smartmoney as smartmoney_api
 from app.scheduler.jobs import (
     backfill_historical_prices,
     collect_price_data,
@@ -58,7 +59,10 @@ from app.scheduler.jobs import (
     resolve_unknown_whale_addresses,
     snapshot_daily_metrics,
     aggregate_coin_sentiments,
+    evaluate_game_predictions,
+    reset_game_periods,
 )
+from app.scheduler.daily_briefing import generate_daily_briefing
 from app.advisor.feedback import run_training_feedback, run_adaptive_weight_learning
 from app.collectors.coins import collect_coin_prices, seed_tracked_coins
 from app.collectors.coin_ohlcv import collect_coin_ohlcv, backfill_coin_ohlcv
@@ -262,6 +266,15 @@ async def lifespan(app: FastAPI):
         # Database backup
         scheduler.add_job(run_database_backup, "interval", hours=settings.backup_interval_hours, id="database_backup")
 
+        # Daily briefing generation (07:55 UTC)
+        scheduler.add_job(generate_daily_briefing, "cron", hour=7, minute=55, id="generate_briefing")
+
+        # Prediction game evaluation (every hour at :05)
+        scheduler.add_job(evaluate_game_predictions, "cron", minute=5, id="evaluate_game")
+
+        # Game leaderboard period reset (daily at 00:00)
+        scheduler.add_job(reset_game_periods, "cron", hour=0, minute=0, id="reset_game_periods")
+
         scheduler.start()
         logger.info("Scheduler started")
 
@@ -279,6 +292,23 @@ async def lifespan(app: FastAPI):
                 "interval",
                 hours=1,
                 id="send_alerts",
+            )
+
+            # Price alerts check (every 30s)
+            scheduler.add_job(
+                alert_sender.check_price_alerts,
+                "interval",
+                seconds=30,
+                id="check_price_alerts",
+            )
+
+            # Daily briefing delivery (08:00 UTC)
+            scheduler.add_job(
+                alert_sender.send_daily_briefing,
+                "cron",
+                hour=8,
+                minute=0,
+                id="send_briefing",
             )
 
             # Set bot description & command menu
@@ -306,6 +336,9 @@ async def lifespan(app: FastAPI):
                     BotCommand(command="report", description="Report a bug or issue"),
                     BotCommand(command="settings", description="Alert frequency preferences"),
                     BotCommand(command="subscribe", description="View subscription plans"),
+                    BotCommand(command="alert", description="Manage price alerts"),
+                    BotCommand(command="game", description="Prediction game — UP or DOWN?"),
+                    BotCommand(command="smartmoney", description="Smart money score & whale feed"),
                 ])
                 logger.info("Bot description & commands set")
             except Exception as e:
@@ -463,6 +496,10 @@ app.include_router(listings_api.router)
 app.include_router(memecoins_api.router)
 app.include_router(partner_admin_api.router)
 app.include_router(partner_dashboard_api.router)
+app.include_router(alerts_api.router)
+app.include_router(briefings_api.router)
+app.include_router(game_api.router)
+app.include_router(smartmoney_api.router)
 
 
 @app.get("/health")

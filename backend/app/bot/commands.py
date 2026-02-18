@@ -902,6 +902,210 @@ async def cmd_listings(message: Message):
     await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=back_keyboard())
 
 
+@router.message(Command("alert"))
+@require_premium
+async def cmd_alert(message: Message):
+    """Manage price alerts: /alert [price] [above|below] [repeat]"""
+    from app.database import PriceAlert
+    from app.bot.keyboards import alert_list_keyboard
+
+    telegram_id = message.from_user.id
+    parts = (message.text or "").split()
+
+    # /alert with no args — show active alerts
+    if len(parts) <= 1:
+        async with async_session() as session:
+            result = await session.execute(
+                select(PriceAlert)
+                .where(PriceAlert.telegram_id == telegram_id, PriceAlert.is_active == True)
+                .order_by(desc(PriceAlert.created_at))
+            )
+            alerts = result.scalars().all()
+
+        if not alerts:
+            await message.answer(
+                "🔔 <b>Price Alerts</b>\n\nNo active alerts.\n\n"
+                "Create one:\n<code>/alert 100000 above</code>\n<code>/alert 90000 below repeat</code>",
+                parse_mode="HTML",
+                reply_markup=back_keyboard(),
+            )
+            return
+
+        lines = ["🔔 <b>Active Price Alerts</b>\n"]
+        for a in alerts:
+            emoji = "📈" if a.direction == "above" else "📉"
+            repeat = " 🔄" if a.is_repeating else ""
+            lines.append(f"{emoji} {a.coin_id.upper()[:6]} {'above' if a.direction == 'above' else 'below'} ${a.target_price:,.0f}{repeat}")
+
+        await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=alert_list_keyboard(alerts))
+        return
+
+    # /alert <price> <direction> [repeat]
+    try:
+        target_price = float(parts[1].replace(",", ""))
+    except ValueError:
+        await message.answer("Usage: /alert <price> <above|below> [repeat]")
+        return
+
+    direction = parts[2].lower() if len(parts) > 2 else "above"
+    if direction not in ("above", "below"):
+        await message.answer("Direction must be 'above' or 'below'")
+        return
+
+    is_repeating = "repeat" in (p.lower() for p in parts[3:])
+
+    async with async_session() as session:
+        from sqlalchemy import func as sqlfunc
+        result = await session.execute(
+            select(sqlfunc.count(PriceAlert.id))
+            .where(PriceAlert.telegram_id == telegram_id, PriceAlert.is_active == True)
+        )
+        count = result.scalar() or 0
+        if count >= 10:
+            await message.answer("You have 10 active alerts (max). Delete one first.")
+            return
+
+        alert = PriceAlert(
+            telegram_id=telegram_id,
+            target_price=target_price,
+            direction=direction,
+            is_repeating=is_repeating,
+        )
+        session.add(alert)
+        await session.commit()
+
+    repeat_label = " (repeating)" if is_repeating else ""
+    await message.answer(
+        f"✅ Alert created: BTC {'above' if direction == 'above' else 'below'} ${target_price:,.0f}{repeat_label}",
+        parse_mode="HTML",
+        reply_markup=back_keyboard(),
+    )
+
+
+@router.message(Command("game"))
+async def cmd_game(message: Message):
+    """Prediction game: /game to play or see status."""
+    from app.database import UserPrediction, GameProfile
+    from app.bot.keyboards import game_keyboard
+
+    telegram_id = message.from_user.id
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+
+    async with async_session() as session:
+        # Check for existing prediction today
+        result = await session.execute(
+            select(UserPrediction).where(
+                UserPrediction.telegram_id == telegram_id,
+                UserPrediction.round_date == today,
+                UserPrediction.timeframe == "24h",
+                UserPrediction.status == "pending",
+            )
+        )
+        current = result.scalar_one_or_none()
+
+        # Get profile
+        result = await session.execute(
+            select(GameProfile).where(GameProfile.telegram_id == telegram_id)
+        )
+        profile = result.scalar_one_or_none()
+
+        # Get current price
+        result = await session.execute(
+            select(Price).order_by(desc(Price.timestamp)).limit(1)
+        )
+        price_row = result.scalar_one_or_none()
+        btc_price = price_row.close if price_row else 0
+
+    if current:
+        emoji = "🟢" if current.direction == "up" else "🔴"
+        text = (
+            f"🎮 <b>Prediction Game</b>\n\n"
+            f"Today's prediction: {emoji} <b>{current.direction.upper()}</b>\n"
+            f"Lock price: ${current.lock_price:,.0f}\n"
+            f"Current: ${btc_price:,.0f}\n\n"
+        )
+    else:
+        text = (
+            f"🎮 <b>Prediction Game</b>\n\n"
+            f"BTC: <b>${btc_price:,.0f}</b>\n\n"
+            f"Will BTC go UP or DOWN in the next 24h?\n"
+            f"Tap below to make your prediction!\n\n"
+        )
+
+    if profile:
+        streak_emoji = "🔥" if profile.current_streak >= 3 else ""
+        text += (
+            f"📊 Points: <b>{profile.total_points}</b> | "
+            f"Streak: <b>{profile.current_streak}</b> {streak_emoji}\n"
+            f"Accuracy: {profile.accuracy_pct:.0f}% ({profile.correct_predictions}/{profile.total_predictions})"
+        )
+
+    await message.answer(text, parse_mode="HTML", reply_markup=game_keyboard())
+
+
+@router.message(Command("smartmoney"))
+@require_premium
+async def cmd_smartmoney(message: Message):
+    """Show smart money score + last 3 events."""
+    from app.database import WhaleTransaction
+    from datetime import timedelta
+
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+
+    async with async_session() as session:
+        # Get recent whale transactions for score
+        result = await session.execute(
+            select(WhaleTransaction)
+            .where(WhaleTransaction.timestamp >= cutoff)
+            .order_by(desc(WhaleTransaction.timestamp))
+            .limit(3)
+        )
+        whales = result.scalars().all()
+
+        # Simple score based on net flow direction
+        result = await session.execute(
+            select(WhaleTransaction)
+            .where(WhaleTransaction.timestamp >= cutoff)
+        )
+        all_whales = result.scalars().all()
+
+    bullish = sum(tx.amount_usd or 0 for tx in all_whales if tx.direction == "exchange_out")
+    bearish = sum(tx.amount_usd or 0 for tx in all_whales if tx.direction == "exchange_in")
+    total = bullish + bearish
+    score = ((bullish - bearish) / total * 100) if total else 0
+
+    if score > 50:
+        label = "🟢 Strong Bullish"
+    elif score > 20:
+        label = "🟢 Bullish"
+    elif score > -20:
+        label = "🟡 Neutral"
+    elif score > -50:
+        label = "🔴 Bearish"
+    else:
+        label = "🔴 Strong Bearish"
+
+    lines = [
+        f"💰 <b>Smart Money Score</b>\n",
+        f"Score: <b>{score:.0f}</b> ({label})\n",
+    ]
+
+    if whales:
+        lines.append("<b>Recent Events:</b>")
+        for tx in whales:
+            dir_label = {
+                "exchange_in": "📥 Exch Inflow",
+                "exchange_out": "📤 Exch Outflow",
+            }.get(tx.direction, "🔄 Transfer")
+            entity = tx.entity_name or tx.from_entity
+            lines.append(f"{dir_label}: {tx.amount_btc:,.0f} BTC ({entity})")
+    else:
+        lines.append("No whale events in the last 24h.")
+
+    lines.append(f"\n<i>{DISCLAIMER}</i>")
+    await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=back_keyboard())
+
+
 @router.message(Command("meme"))
 @require_premium
 async def cmd_meme(message: Message):

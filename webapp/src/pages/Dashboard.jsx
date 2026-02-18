@@ -15,6 +15,7 @@ import DominanceWidget from '../components/DominanceWidget'
 import FearGreedWidget from '../components/FearGreedWidget'
 import SupplyWidget from '../components/SupplyWidget'
 import DataSourceFooter from '../components/DataSourceFooter'
+import DailyBriefingCard from '../components/DailyBriefingCard'
 
 class SafeWrap extends Component {
   constructor(props) {
@@ -174,6 +175,33 @@ const quickIcons = {
       <line x1="15" y1="9" x2="15.01" y2="9" strokeWidth="2.5" />
     </svg>
   ),
+  alerts: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 01-3.46 0" />
+    </svg>
+  ),
+  briefing: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  ),
+  game: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 12h8" />
+      <path d="M12 8v8" />
+      <path d="M8.5 8.5l7 7" />
+    </svg>
+  ),
+  smartmoney: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+    </svg>
+  ),
 }
 
 const CATEGORIES = [
@@ -183,6 +211,7 @@ const CATEGORIES = [
       { path: '/signals', labelKey: 'link.signals', icon: 'signals' },
       { path: '/advisor', labelKey: 'link.advisor', icon: 'advisor' },
       { path: '/mock-trading', labelKey: 'link.paperTrade', icon: 'advisor' },
+      { path: '/alerts', labelKey: 'link.alerts', icon: 'alerts' },
     ],
   },
   {
@@ -202,6 +231,7 @@ const CATEGORIES = [
       { path: '/new-listings', labelKey: 'link.listings', icon: 'listings' },
       { path: '/memecoins', labelKey: 'link.memecoins', icon: 'memecoins' },
       { path: '/whales', labelKey: 'link.whales', icon: 'whales' },
+      { path: '/smart-money', labelKey: 'link.smartMoney', icon: 'smartmoney' },
       { path: '/news', labelKey: 'link.news', icon: 'news' },
       { path: '/events', labelKey: 'link.events', icon: 'events' },
       { path: '/history', labelKey: 'link.history', icon: 'history' },
@@ -210,6 +240,8 @@ const CATEGORIES = [
   {
     titleKey: 'category.more',
     links: [
+      { path: '/game', labelKey: 'link.game', icon: 'game' },
+      { path: '/briefing', labelKey: 'link.briefing', icon: 'briefing' },
       { path: '/learn', labelKey: 'link.learn', icon: 'learn' },
       { path: '/resources', labelKey: 'link.resources', icon: 'resources' },
       { path: '/tools', labelKey: 'link.tools', icon: 'tools' },
@@ -287,6 +319,10 @@ export default function Dashboard() {
           <QuantPredictionCard />
         </SafeWrap>
       </div>
+
+      <SafeWrap name="DailyBriefing" t={t}>
+        <DailyBriefingCard />
+      </SafeWrap>
 
       <SafeWrap name="SignalPanel" t={t}>
         <SignalPanel />

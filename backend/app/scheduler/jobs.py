@@ -15,6 +15,7 @@ from app.database import (
     PredictionContext, ModelPerformanceLog, WhaleTransaction,
     PredictionAnalysis, MarketingMetrics, SupportTicket,
     PaymentHistory, ApiUsageLog, Referral,
+    UserPrediction, GameProfile,
     timestamp_diff_order,
 )
 from app.collectors import (
@@ -2889,3 +2890,131 @@ async def aggregate_coin_sentiments():
 
     except Exception as e:
         logger.error(f"Sentiment aggregation error: {e}", exc_info=True)
+
+
+# ── Prediction Game Jobs ──────────────────────────────────────
+
+CORRECT_POINTS = 10
+WRONG_POINTS = -5
+STREAK_MULTIPLIERS = {3: 2.0, 5: 3.0, 10: 5.0}
+
+
+def _get_multiplier(streak: int) -> float:
+    mult = 1.0
+    for threshold, m in sorted(STREAK_MULTIPLIERS.items()):
+        if streak >= threshold:
+            mult = m
+    return mult
+
+
+async def evaluate_game_predictions():
+    """Resolve pending game predictions. Runs every hour at :05."""
+    try:
+        now = datetime.utcnow()
+        yesterday = (now - timedelta(hours=24)).strftime("%Y-%m-%d")
+
+        async with async_session() as session:
+            # Get current BTC price
+            result = await session.execute(
+                select(Price).order_by(desc(Price.timestamp)).limit(1)
+            )
+            price_row = result.scalar_one_or_none()
+            if not price_row:
+                return
+            current_price = price_row.close
+
+            # Get pending 24h predictions from yesterday (they've had 24h to resolve)
+            result = await session.execute(
+                select(UserPrediction).where(
+                    UserPrediction.status == "pending",
+                    UserPrediction.round_date <= yesterday,
+                )
+            )
+            pending = result.scalars().all()
+
+            if not pending:
+                return
+
+            resolved = 0
+            for pred in pending:
+                pred.resolve_price = current_price
+                pred.status = "resolved"
+                was_correct = (
+                    (pred.direction == "up" and current_price > pred.lock_price) or
+                    (pred.direction == "down" and current_price < pred.lock_price)
+                )
+                pred.was_correct = was_correct
+
+                # Calculate points
+                base_points = CORRECT_POINTS if was_correct else WRONG_POINTS
+                points = int(base_points * pred.multiplier)
+                pred.points_earned = points
+
+                # Update game profile
+                result = await session.execute(
+                    select(GameProfile).where(GameProfile.telegram_id == pred.telegram_id)
+                )
+                profile = result.scalar_one_or_none()
+                if not profile:
+                    profile = GameProfile(telegram_id=pred.telegram_id)
+                    session.add(profile)
+                    await session.flush()
+
+                profile.total_points = max(0, (profile.total_points or 0) + points)
+                profile.weekly_points = max(0, (profile.weekly_points or 0) + points)
+                profile.monthly_points = max(0, (profile.monthly_points or 0) + points)
+
+                if was_correct:
+                    profile.correct_predictions = (profile.correct_predictions or 0) + 1
+                    profile.current_streak = (profile.current_streak or 0) + 1
+                    if profile.current_streak > (profile.best_streak or 0):
+                        profile.best_streak = profile.current_streak
+                else:
+                    profile.current_streak = 0
+
+                # Recalculate accuracy
+                if profile.total_predictions and profile.total_predictions > 0:
+                    profile.accuracy_pct = (profile.correct_predictions or 0) / profile.total_predictions * 100
+
+                resolved += 1
+
+            await session.commit()
+            if resolved:
+                logger.info(f"Game predictions resolved: {resolved}")
+
+    except Exception as e:
+        logger.error(f"evaluate_game_predictions error: {e}", exc_info=True)
+
+
+async def reset_game_periods():
+    """Reset weekly/monthly leaderboard points. Runs daily at 00:00 UTC."""
+    try:
+        now = datetime.utcnow()
+        today = now.strftime("%Y-%m-%d")
+        weekday = now.weekday()  # 0 = Monday
+        day_of_month = now.day
+
+        async with async_session() as session:
+            result = await session.execute(select(GameProfile))
+            profiles = result.scalars().all()
+
+            updated = 0
+            for profile in profiles:
+                # Reset weekly on Monday
+                if weekday == 0 and profile.weekly_reset_date != today:
+                    profile.weekly_points = 0
+                    profile.weekly_reset_date = today
+                    updated += 1
+
+                # Reset monthly on 1st
+                if day_of_month == 1 and profile.monthly_reset_date != today:
+                    profile.monthly_points = 0
+                    profile.monthly_reset_date = today
+                    updated += 1
+
+            if updated:
+                await session.commit()
+                logger.info(f"Game period reset: {updated} profile updates")
+
+    except Exception as e:
+        logger.error(f"reset_game_periods error: {e}", exc_info=True)

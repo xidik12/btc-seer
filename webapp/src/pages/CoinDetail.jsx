@@ -5,6 +5,8 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { api } from '../utils/api'
 import { formatCoinPrice, formatPercent, formatMarketCap, formatSupply, formatDate } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
+import ShareButton from '../components/ShareButton'
+import { coinShareText } from '../utils/shareTemplates'
 
 const CHART_PERIODS = [
   { labelKey: 'detail.timeframes.1d', days: 1 },
@@ -93,11 +95,14 @@ export default function CoinDetail() {
           <h1 className="text-lg font-bold">{detail.name}</h1>
           <p className="text-xs text-text-muted">{detail.symbol}</p>
         </div>
-        {md.market_cap_rank && (
-          <span className="ml-auto text-[10px] text-text-muted bg-white/5 px-2 py-1 rounded-full">
-            {t('detail.rankNumber', { rank: md.market_cap_rank })}
-          </span>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          <ShareButton compact text={coinShareText({ name: detail.name, symbol: detail.symbol, price, change_24h: change })} />
+          {md.market_cap_rank && (
+            <span className="text-[10px] text-text-muted bg-white/5 px-2 py-1 rounded-full">
+              {t('detail.rankNumber', { rank: md.market_cap_rank })}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Price */}

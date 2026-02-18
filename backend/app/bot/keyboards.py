@@ -162,6 +162,34 @@ def faq_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
+def alert_list_keyboard(alerts: list) -> InlineKeyboardMarkup:
+    """Keyboard with delete buttons for each active alert."""
+    buttons = []
+    for a in alerts[:10]:
+        symbol = a.coin_id.upper()[:6] if hasattr(a, 'coin_id') else "BTC"
+        direction = "↑" if a.direction == "above" else "↓"
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"❌ {symbol} {direction} ${a.target_price:,.0f}",
+                callback_data=f"delete_alert:{a.id}",
+            )
+        ])
+    buttons.append([InlineKeyboardButton(text="« Back", callback_data="back_to_main")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def game_keyboard() -> InlineKeyboardMarkup:
+    """Prediction game UP/DOWN keyboard."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🟢 UP", callback_data="game_predict:up"),
+            InlineKeyboardButton(text="🔴 DOWN", callback_data="game_predict:down"),
+        ],
+        [InlineKeyboardButton(text="🏆 Leaderboard", callback_data="game_leaderboard")],
+        [InlineKeyboardButton(text="« Back", callback_data="back_to_main")],
+    ])
+
+
 def feedback_keyboard(feedback_type: str, reference_id: int) -> InlineKeyboardMarkup:
     """Thumbs up/down feedback keyboard."""
     return InlineKeyboardMarkup(inline_keyboard=[

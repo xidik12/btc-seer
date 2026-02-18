@@ -317,4 +317,52 @@ export const api = {
   getTrendingMemecoins: () => cachedFetch('/memecoins/trending', T60),
   getMemecoinRisk: (address) => cachedFetch(`/memecoins/${address}/risk`, T120),
   getMemecoinLeaderboard: () => cachedFetch('/memecoins/leaderboard', T120),
+
+  // Price Alerts (user-specific, no cache)
+  getUserAlerts: (initData) => fetchAPI('/alerts/', { headers: { 'X-Telegram-Init-Data': initData } }),
+  createAlert: (initData, body) => fetchAPI('/alerts/', {
+    method: 'POST',
+    headers: { 'X-Telegram-Init-Data': initData },
+    body: JSON.stringify(body),
+  }),
+  deleteAlert: (initData, alertId) => fetchAPI(`/alerts/${alertId}`, {
+    method: 'DELETE',
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  updateAlert: (initData, alertId, body) => fetchAPI(`/alerts/${alertId}`, {
+    method: 'PATCH',
+    headers: { 'X-Telegram-Init-Data': initData },
+    body: JSON.stringify(body),
+  }),
+
+  // Daily Briefings
+  getLatestBriefing: () => cachedFetch('/briefings/latest', T120),
+  getBriefingHistory: (days = 7) => cachedFetch(`/briefings/history?days=${days}`, T300),
+  getBriefingByDate: (date) => cachedFetch(`/briefings/${date}`, T300),
+
+  // Prediction Game
+  makeGamePrediction: (initData, direction, timeframe = '24h') => fetchAPI('/game/predict', {
+    method: 'POST',
+    headers: { 'X-Telegram-Init-Data': initData },
+    body: JSON.stringify({ direction, timeframe }),
+  }),
+  getGameStatus: (initData) => fetchAPI('/game/status', {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+  getGameLeaderboard: (period = 'all_time', limit = 20) =>
+    cachedFetch(`/game/leaderboard?period=${period}&limit=${limit}`, T60),
+  getGameConsensus: (timeframe = '24h') =>
+    cachedFetch(`/game/consensus?timeframe=${timeframe}`, T30),
+  getGameHistory: (initData, limit = 30) => fetchAPI(`/game/history?limit=${limit}`, {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
+
+  // Smart Money
+  getSmartMoneyFeed: (initData, hours = 24, limit = 50, eventType = 'all', direction = 'all') => {
+    const params = `?hours=${hours}&limit=${limit}&event_type=${eventType}&direction=${direction}`
+    return fetchAPI(`/smart-money/feed${params}`, {
+      headers: initData ? { 'X-Telegram-Init-Data': initData } : {},
+    })
+  },
+  getSmartMoneyScore: () => cachedFetch('/smart-money/score', T60),
 }
