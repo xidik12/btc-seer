@@ -4,10 +4,16 @@ uvicorn[standard]==0.34.0
 python-multipart==0.0.20
 websockets==14.1
 
+# Production server
+gunicorn==23.0.0
+
 # Database
 sqlalchemy==2.0.36
 aiosqlite==0.20.0
 asyncpg==0.30.0
+
+# Database migrations
+alembic==1.14.0
 
 # Telegram
 aiogram==3.16.0
@@ -29,8 +35,8 @@ ta==0.11.0
 # Code gracefully falls back when pandas_ta is unavailable (PANDAS_TA_AVAILABLE=False)
 
 # Advanced quantitative analysis
-arch>=7.0        # GARCH volatility models
-PyWavelets>=1.6  # Wavelet decomposition
+arch==7.2.0
+PyWavelets==1.7.0
 
 # NLP / Sentiment
 vaderSentiment==3.3.2
@@ -41,7 +47,7 @@ langdetect==1.0.9
 aiohttp==3.11.11
 feedparser==6.0.11
 yfinance==0.2.51
-beautifulsoup4>=4.12
+beautifulsoup4==4.12.3
 
 # Scheduling
 apscheduler==3.10.4
@@ -58,7 +64,27 @@ greenlet==3.1.1
 certifi>=2024.0.0
 
 # Exchange aggregation (arbitrage)
-ccxt>=4.0
+ccxt==4.4.57
 
 # Optional (Reddit)
 praw==7.8.1
+
+# Error tracking
+sentry-sdk[fastapi]==2.20.0
+
+# Metrics
+prometheus-fastapi-instrumentator==7.0.0
+
+# Retry / circuit breakers
+tenacity==9.0.0
+
+# JWT auth
+PyJWT==2.10.1
+
+# Redis client
+redis[hiredis]==5.2.1
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.2
+httpx==0.28.1

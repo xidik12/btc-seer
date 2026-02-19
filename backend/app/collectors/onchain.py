@@ -1,5 +1,7 @@
 import logging
 
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
 from app.collectors.base import BaseCollector
 
 logger = logging.getLogger(__name__)
@@ -13,6 +15,12 @@ class OnChainCollector(BaseCollector):
     MEMPOOL_STATS_URL = "https://mempool.space/api/mempool"
     BLOCKCHAIR_STATS_URL = "https://api.blockchair.com/bitcoin/stats"
 
+    @retry(
+        retry=retry_if_exception_type(Exception),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        reraise=True,
+    )
     async def collect(self) -> dict:
         """Collect on-chain data from multiple sources with fallbacks."""
         blockchain_stats = await self._get_blockchain_stats()

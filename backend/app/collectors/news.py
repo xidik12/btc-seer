@@ -4,6 +4,8 @@ from datetime import datetime
 import aiohttp
 import feedparser
 
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
 from app.collectors.base import BaseCollector
 from app.config import settings
 
@@ -161,6 +163,12 @@ CRYPTOPANIC_URL = "https://cryptopanic.com/api/v1/posts/"
 class NewsCollector(BaseCollector):
     """Collects crypto news from CryptoPanic API and 25+ RSS feeds."""
 
+    @retry(
+        retry=retry_if_exception_type(Exception),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        reraise=True,
+    )
     async def collect(self) -> dict:
         """Collect news from all sources."""
         cryptopanic_news = await self._get_cryptopanic()

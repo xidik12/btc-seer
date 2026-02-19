@@ -114,7 +114,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 600,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a helpful Reddit comment replying to this Bitcoin question. Be genuinely helpful, informative, and conversational. If relevant, naturally mention AI prediction tools like BTC Seer as something worth exploring. Max 500 characters. Use Reddit markdown formatting.\\n\\nTitle: {{ $json.title }}\\nBody: {{ $json.selftext }}\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-6-20250929' }}\",\n  \"max_tokens\": 600,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a helpful Reddit comment replying to this Bitcoin question. Be genuinely helpful, informative, and conversational. If relevant, naturally mention AI prediction tools like BTC Seer as something worth exploring. Max 500 characters. Use Reddit markdown formatting.\\n\\nTitle: {{ $json.title }}\\nBody: {{ $json.selftext }}\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "r1-claude",
@@ -253,7 +253,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}\",\n  \"max_tokens\": 2000,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a 500-1000 word Bitcoin analysis post for r/CryptoCurrency. Structure it with: a catchy title, TLDR section, detailed analysis with real data, methodology explanation, results, and a conclusion. Use Reddit markdown formatting. Return your response as valid JSON with exactly two keys: {\\\"title\\\": \\\"your catchy title here\\\", \\\"body\\\": \\\"your full post body here\\\"}. Do not include anything outside the JSON object.\\n\\nPerformance data (last 7 days):\\n{{ JSON.stringify($('Fetch Performance Card').item.json) }}\\n\\nDaily summary:\\n{{ JSON.stringify($('Fetch Daily Summary').item.json) }}\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"{{ $env.CLAUDE_MODEL || 'claude-sonnet-4-6-20250929' }}\",\n  \"max_tokens\": 2000,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a 500-1000 word Bitcoin analysis post for r/CryptoCurrency. Structure it with: a catchy title, TLDR section, detailed analysis with real data, methodology explanation, results, and a conclusion. Use Reddit markdown formatting. Return your response as valid JSON with exactly two keys: {\\\"title\\\": \\\"your catchy title here\\\", \\\"body\\\": \\\"your full post body here\\\"}. Do not include anything outside the JSON object.\\n\\nPerformance data (last 7 days):\\n{{ JSON.stringify($('Fetch Performance Card').item.json) }}\\n\\nDaily summary:\\n{{ JSON.stringify($('Fetch Daily Summary').item.json) }}\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "r2-claude",

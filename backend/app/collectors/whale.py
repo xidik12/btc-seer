@@ -2,6 +2,8 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
 from app.collectors.base import BaseCollector
 from app.collectors.known_entities import KNOWN_ENTITIES, MONITORED_ADDRESSES, identify_any
 
@@ -51,6 +53,12 @@ class WhaleCollector(BaseCollector):
         self._last_scanned_block: int = 0  # track highest block we've scanned
         self._last_entity_check: dict[str, datetime] = {}
 
+    @retry(
+        retry=retry_if_exception_type(Exception),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        reraise=True,
+    )
     async def collect(self) -> dict:
         """Scan recent Bitcoin blocks for whale transactions (>100 BTC).
 

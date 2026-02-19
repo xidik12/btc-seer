@@ -10,6 +10,7 @@ from app.config import settings
 from app.database import async_session, BotUser, Partner
 from app.api.admin import _verify_telegram_init_data
 from app.bot.subscription import grant_trial, is_premium, get_status_text
+from app.jwt_utils import create_access_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -86,7 +87,14 @@ async def register_user(request: Request):
         )
         partner_code = partner_result.scalar_one_or_none()
 
-    return _user_response(user, is_new, partner_code=partner_code)
+    token = create_access_token(
+        telegram_id=user.telegram_id,
+        username=user.username,
+        subscription_tier=user.subscription_tier or "free",
+        is_premium=is_premium(user),
+        is_banned=user.is_banned,
+    )
+    return {**_user_response(user, is_new, partner_code=partner_code), "access_token": token}
 
 
 @router.get("/me")

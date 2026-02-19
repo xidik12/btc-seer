@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     coingecko_api_key: str = ""  # CoinGecko Demo API key (free: 30 req/min from https://www.coingecko.com/en/api/pricing)
 
     # Database — /data/ path is a Railway persistent volume
-    # Set DATABASE_URL to a postgresql:// URL to use PostgreSQL (e.g. Railway PG plugin)
-    database_url: str = "sqlite+aiosqlite:////data/btc_oracle.db"
+    # DATABASE_URL is required — set to postgresql:// for production or sqlite+aiosqlite:// for local dev
+    database_url: str
 
     # Backup settings
     backup_enabled: bool = True
@@ -89,6 +89,18 @@ class Settings(BaseSettings):
     api_basic_rate_limit: int = 300
     api_pro_rate_limit: int = 1000
     api_enterprise_rate_limit: int = 5000
+
+    # Sentry error tracking
+    sentry_dsn: str = ""
+    sentry_traces_sample_rate: float = 0.1
+
+    # Redis (for rate limiting, caching)
+    redis_url: str = "redis://localhost:6379/0"
+
+    # JWT authentication
+    jwt_secret_key: str = ""
+    jwt_algorithm: str = "HS256"
+    jwt_expire_hours: int = 24
 
     @property
     def is_postgres(self) -> bool:

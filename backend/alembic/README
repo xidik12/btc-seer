@@ -1,0 +1,30 @@
+BTC Oracle - Database Migrations (Alembic)
+
+## Usage
+
+All commands run from the `backend/` directory.
+
+### Apply migrations
+```bash
+alembic upgrade head
+```
+
+### Create a new migration
+```bash
+alembic revision --autogenerate -m "describe your change"
+```
+
+### Check current state
+```bash
+alembic current
+alembic history
+```
+
+### Rollback one step
+```bash
+alembic downgrade -1
+```
+
+## Notes
+- The sqlalchemy.url in alembic.ini is intentionally empty; it is loaded from DATABASE_URL env var via settings.
+- Always test migrations against a staging database before production.

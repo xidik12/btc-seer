@@ -47,7 +47,7 @@ BTC_SEER_API_BASE=https://btc-oracle-production.up.railway.app
 
 # Claude API
 ANTHROPIC_API_KEY=sk-ant-api03-...
-CLAUDE_MODEL=claude-sonnet-4-5-20250929
+CLAUDE_MODEL=claude-sonnet-4-6-20250929
 CLAUDE_DAILY_BUDGET_USD=5.00
 
 # Platform credentials (see Platform Setup below)

@@ -51,7 +51,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 800, messages: [{ role: 'user', content: 'Based on this Bitcoin prediction data:\\n' + JSON.stringify($json) + '\\n\\nChart: https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=default\\n\\nWrite a Facebook post about today\\'s Bitcoin prediction. Longer format (600 chars max). Educational, engaging. Include the chart link. Mention @BTC_Seer_Bot on Telegram.' }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-6-20250929', max_tokens: 800, messages: [{ role: 'user', content: 'Based on this Bitcoin prediction data:\\n' + JSON.stringify($json) + '\\n\\nChart: https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=default\\n\\nWrite a Facebook post about today\\'s Bitcoin prediction. Longer format (600 chars max). Educational, engaging. Include the chart link. Mention @BTC_Seer_Bot on Telegram.' }] }) }}",
         "options": {}
       },
       "id": "fb-daily-claude",
@@ -136,7 +136,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 600, messages: [{ role: 'user', content: 'Based on this Bitcoin prediction data:\\n' + JSON.stringify($json) + '\\n\\nChart: https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=instagram\\n\\nWrite an Instagram caption for this prediction post. Include hashtags. Max 500 chars. Use #Bitcoin #BTC #CryptoPrediction #AITrading #BTCSeer.' }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-6-20250929', max_tokens: 600, messages: [{ role: 'user', content: 'Based on this Bitcoin prediction data:\\n' + JSON.stringify($json) + '\\n\\nChart: https://btc-oracle-production.up.railway.app/api/charts/prediction-card.png?timeframe=24h&size=instagram\\n\\nWrite an Instagram caption for this prediction post. Include hashtags. Max 500 chars. Use #Bitcoin #BTC #CryptoPrediction #AITrading #BTCSeer.' }] }) }}",
         "options": {}
       },
       "id": "ig-daily-claude",
@@ -236,7 +236,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929', max_tokens: 1000, messages: [{ role: 'user', content: 'Based on this Bitcoin prediction data:\\n' + JSON.stringify($json) + '\\n\\nWrite a Facebook group discussion post. Ask a question to engage the community. Include weekly stats. Max 800 chars.' }] }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: $env.CLAUDE_MODEL || 'claude-sonnet-4-6-20250929', max_tokens: 1000, messages: [{ role: 'user', content: 'Based on this Bitcoin prediction data:\\n' + JSON.stringify($json) + '\\n\\nWrite a Facebook group discussion post. Ask a question to engage the community. Include weekly stats. Max 800 chars.' }] }) }}",
         "options": {}
       },
       "id": "fb-group-claude",

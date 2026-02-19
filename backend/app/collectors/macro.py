@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime
 
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
 from app.collectors.base import BaseCollector
 from app.config import settings
 
@@ -35,6 +37,12 @@ class MacroCollector(BaseCollector):
     # Cache last successful values
     _last_good: dict = {}
 
+    @retry(
+        retry=retry_if_exception_type(Exception),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        reraise=True,
+    )
     async def collect(self) -> dict:
         """Collect macro data using Alpha Vantage (primary) or Yahoo Finance (fallback)."""
         result = {
