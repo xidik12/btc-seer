@@ -5,6 +5,7 @@ Endpoints (free, no auth):
   - GET  /token-boosts/latest/v1
   - GET  /token-boosts/top/v1
   - GET  /token-profiles/latest/v1
+  - GET  /latest/dex/search?q=...
 
 Scheduled jobs:
   - scan_dex_tokens()               every 5 min
@@ -26,6 +27,13 @@ logger = logging.getLogger(__name__)
 DEXSCREENER_BOOSTS_LATEST = "https://api.dexscreener.com/token-boosts/latest/v1"
 DEXSCREENER_BOOSTS_TOP = "https://api.dexscreener.com/token-boosts/top/v1"
 DEXSCREENER_PROFILES_LATEST = "https://api.dexscreener.com/token-profiles/latest/v1"
+DEXSCREENER_SEARCH = "https://api.dexscreener.com/latest/dex/search"
+
+# Search queries to discover trending DEX tokens across chains
+DEX_SEARCH_QUERIES = [
+    "SOL", "ETH", "ARB", "BASE", "AVAX", "MATIC",
+    "USDC", "DAI", "WBTC", "LINK", "UNI", "AAVE",
+]
 
 # Binance exchangeInfo for CEX cross-reference
 EXCHANGE_INFO_URL = "https://api.binance.com/api/v3/exchangeInfo"
@@ -63,6 +71,15 @@ class DexScannerCollector(BaseCollector):
         ]:
             tokens = self._parse_dexscreener_response(raw_data, source_name)
             all_tokens.extend(tokens)
+
+        # Source 2: Search for popular tokens — finds genuinely high-volume pairs
+        for query in DEX_SEARCH_QUERIES:
+            search_data = await self.fetch_json(DEXSCREENER_SEARCH, params={"q": query})
+            if search_data and "pairs" in search_data:
+                for pair in search_data["pairs"][:10]:  # top 10 per query
+                    token = self._normalize_pair(pair)
+                    if token:
+                        all_tokens.append(token)
 
         # Deduplicate by address + chain
         seen = set()
@@ -232,6 +249,42 @@ class DexScannerCollector(BaseCollector):
         return {"migrations_found": migrations_found}
 
     # ── Parsing helpers ───────────────────────────────────────────────────────
+
+    @staticmethod
+    def _normalize_pair(pair: dict) -> dict | None:
+        """Normalize a DexScreener search pair result into a standard token dict."""
+        base_token = pair.get("baseToken", {})
+        address = base_token.get("address", "")
+        if not address:
+            return None
+
+        chain = pair.get("chainId") or "unknown"
+
+        def safe_float(v):
+            if v is None:
+                return None
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                return None
+
+        volume_raw = pair.get("volume", {})
+        volume_24h = safe_float(volume_raw.get("h24")) if isinstance(volume_raw, dict) else safe_float(volume_raw)
+
+        liq_raw = pair.get("liquidity", {})
+        liquidity = safe_float(liq_raw.get("usd")) if isinstance(liq_raw, dict) else safe_float(liq_raw)
+
+        return {
+            "address": address,
+            "chain": chain,
+            "symbol": base_token.get("symbol"),
+            "name": base_token.get("name"),
+            "price_usd": safe_float(pair.get("priceUsd")),
+            "volume_24h": volume_24h,
+            "liquidity": liquidity,
+            "boosts": 0,
+            "source": "search",
+        }
 
     def _parse_dexscreener_response(
         self, data: dict | list | None, source: str

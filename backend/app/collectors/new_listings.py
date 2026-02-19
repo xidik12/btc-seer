@@ -24,6 +24,7 @@ ANNOUNCEMENTS_URL = (
     "https://www.binance.com/bapi/composite/v1/public/cms/article/catalog/list/query"
 )
 TICKER_PRICE_URL = "https://api.binance.com/api/v3/ticker/price"
+COINGECKO_NEW_URL = "https://api.coingecko.com/api/v3/coins/list/new"
 
 # Regex to pull 2-10 letter uppercase symbols from announcement titles
 _SYMBOL_RE = re.compile(r"\b([A-Z]{2,10})\b")
@@ -307,6 +308,48 @@ class NewListingCollector(BaseCollector):
             )
         return {"evaluated": len(evaluated)}
 
+    # ── Job 4: CoinGecko recently listed (every 30 min) ─────────────────────
+
+    async def check_coingecko_new(self) -> dict:
+        """Fetch recently listed coins from CoinGecko (free, no auth)."""
+        data = await self.fetch_json(COINGECKO_NEW_URL)
+        if not data or not isinstance(data, list):
+            # Fallback: try CoinGecko search for "new" coins via markets endpoint
+            data = await self.fetch_json(
+                "https://api.coingecko.com/api/v3/coins/markets",
+                params={
+                    "vs_currency": "usd",
+                    "order": "id_asc",
+                    "per_page": 20,
+                    "page": 1,
+                    "sparkline": "false",
+                },
+            )
+            if not data or not isinstance(data, list):
+                return {"coingecko_new": 0}
+
+        stored = 0
+        for coin in data[:20]:
+            symbol = (coin.get("symbol") or "").upper()
+            if not symbol or len(symbol) < 2:
+                continue
+
+            # Use activated_at or just the coin name
+            name = coin.get("name") or symbol
+
+            listing = await self._store_listing(
+                symbol=symbol,
+                exchange="coingecko",
+                listing_type="new",
+                announcement_url=None,
+            )
+            if listing:
+                stored += 1
+
+        if stored:
+            logger.info(f"NewListingCollector: {stored} new coins from CoinGecko")
+        return {"coingecko_new": stored}
+
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     async def _store_listing(
@@ -414,6 +457,15 @@ async def evaluate_listing_performance():
         await collector.evaluate_listing_performance()
     except Exception as e:
         logger.error(f"evaluate_listing_performance error: {e}", exc_info=True)
+
+
+async def check_coingecko_new():
+    """Scheduled: every 30 min — fetch recently listed coins from CoinGecko."""
+    collector = _get_collector()
+    try:
+        await collector.check_coingecko_new()
+    except Exception as e:
+        logger.error(f"check_coingecko_new error: {e}", exc_info=True)
 
 
 async def backfill_recent_announcements():

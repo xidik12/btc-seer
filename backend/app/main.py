@@ -73,7 +73,7 @@ from app.scheduler.coin_prediction_jobs import (
     evaluate_coin_predictions,
 )
 from app.collectors.arbitrage import scan_arbitrage
-from app.collectors.new_listings import check_new_listings, check_listing_announcements, evaluate_listing_performance, backfill_recent_announcements
+from app.collectors.new_listings import check_new_listings, check_listing_announcements, evaluate_listing_performance, backfill_recent_announcements, check_coingecko_new
 from app.collectors.dex_scanner import scan_dex_tokens, check_dex_to_cex_migrations
 from app.collectors.memecoin import discover_memecoins, update_memecoin_risk_scores, cleanup_dead_memecoins
 from app.collectors.eth_whale import collect_eth_whale_transactions
@@ -190,6 +190,7 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(check_new_listings, "interval", seconds=30, id="check_listings")
         scheduler.add_job(check_listing_announcements, "interval", minutes=2, id="check_announcements")
         scheduler.add_job(evaluate_listing_performance, "interval", hours=1, id="eval_listings")
+        scheduler.add_job(check_coingecko_new, "interval", minutes=30, id="check_cg_new")
 
         # DEX scanner
         scheduler.add_job(scan_dex_tokens, "interval", minutes=5, id="scan_dex")
@@ -422,6 +423,7 @@ async def lifespan(app: FastAPI):
             # Step 2b: Seed new listings, DEX, and memecoins
             await _safe_run(check_new_listings(), "check_new_listings")
             await _safe_run(backfill_recent_announcements(), "backfill_recent_announcements")
+            await _safe_run(check_coingecko_new(), "check_coingecko_new")
             await _safe_run(scan_dex_tokens(), "scan_dex_tokens")
             await _safe_run(discover_memecoins(), "discover_memecoins")
 
