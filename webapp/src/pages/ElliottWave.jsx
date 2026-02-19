@@ -4,6 +4,7 @@ import { api } from '../utils/api'
 import { formatPrice } from '../utils/format'
 import SubTabBar from '../components/SubTabBar'
 import DataSourceFooter from '../components/DataSourceFooter'
+import { useChartZoom } from '../hooks/useChartZoom'
 
 const POLL_INTERVAL = 60_000
 
@@ -102,6 +103,11 @@ function WaveChart({ historicalData, currentData, timeframe, t }) {
   const containerRef = useRef(null)
   const [svgWidth, setSvgWidth] = useState(375)
 
+  const { data: pts, bindGestures, isZoomed, resetZoom } = useChartZoom(
+    historicalData?.points || [],
+    { minWindow: 10 }
+  )
+
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -110,15 +116,13 @@ function WaveChart({ historicalData, currentData, timeframe, t }) {
     return () => ro.disconnect()
   }, [])
 
-  if (!historicalData?.points?.length) {
+  if (!pts?.length) {
     return (
       <div ref={containerRef} className="bg-[#131722] rounded-2xl h-72 flex items-center justify-center border border-white/5">
         <span className="text-[#555] text-sm">{t('common:chart.loadingChart')}</span>
       </div>
     )
   }
-
-  const pts = historicalData.points
   const fibLevels = historicalData.fib_levels || []
   const fibTargets = currentData?.fibonacci_targets || {}
   const resistanceLvls = [...(fibTargets.resistance_levels || [])].sort((a, b) => a.price - b.price)
@@ -203,13 +207,31 @@ function WaveChart({ historicalData, currentData, timeframe, t }) {
   const lastY = yOf(lastPt.price)
 
   return (
-    <div ref={containerRef} className="rounded-2xl overflow-hidden border border-white/[0.06]" style={{ background: '#131722' }}>
+    <div
+      ref={containerRef}
+      className="rounded-2xl overflow-hidden border border-white/[0.06]"
+      style={{ background: '#131722', ...bindGestures.style }}
+      onTouchStart={bindGestures.onTouchStart}
+      onTouchMove={bindGestures.onTouchMove}
+      onTouchEnd={bindGestures.onTouchEnd}
+      onClick={bindGestures.onClick}
+    >
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.05]">
         <span className="text-[#c8c8d0] text-[11px] font-bold tracking-wide">BTC / USDT</span>
         <span className="text-[#3a3a4a] text-[9px] select-none">·</span>
         <span className="text-[#6b6b80] text-[9px] font-semibold">{timeframe.toUpperCase()}</span>
-        <span className="ml-auto text-[#454555] text-[9px]">{t('market:elliott.title')}</span>
+        {isZoomed ? (
+          <button
+            onTouchEnd={(e) => { e.stopPropagation(); resetZoom() }}
+            onClick={(e) => { e.stopPropagation(); resetZoom() }}
+            className="ml-auto px-2 py-0.5 rounded-full bg-accent-blue/20 text-accent-blue text-[9px] font-semibold border border-accent-blue/30"
+          >
+            Reset zoom
+          </button>
+        ) : (
+          <span className="ml-auto text-[#454555] text-[9px]">{t('market:elliott.title')}</span>
+        )}
       </div>
 
       <svg width={W} height={TOTAL_H} style={{ display: 'block' }}>
@@ -371,6 +393,11 @@ function WaveChart({ historicalData, currentData, timeframe, t }) {
           MOMENTUM
         </text>
       </svg>
+      {!isZoomed && (
+        <div className="px-3 pb-2 text-[9px] text-[#3a3a52] text-center select-none">
+          Pinch to zoom · Drag to pan
+        </div>
+      )}
     </div>
   )
 }
