@@ -67,7 +67,7 @@ class News(Base):
     __tablename__ = "news"
     __table_args__ = (
         Index("ix_news_published_at", "timestamp"),
-        Index("ix_news_coin_created", "coin_id", "created_at"),
+        Index("ix_news_coin_timestamp", "coin_id", "timestamp"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -93,7 +93,7 @@ class Prediction(Base):
     __tablename__ = "predictions"
     __table_args__ = (
         Index("ix_predictions_timestamp_timeframe", "timestamp", "timeframe"),
-        Index("ix_predictions_timeframe_created", "timeframe", "created_at"),
+        Index("ix_predictions_timeframe_timestamp", "timeframe", "timestamp"),
         Index("ix_predictions_was_correct_timeframe", "was_correct", "timeframe"),
     )
 
@@ -121,7 +121,7 @@ class Signal(Base):
     __tablename__ = "signals"
     __table_args__ = (
         Index("ix_signals_timestamp_timeframe", "timestamp", "timeframe"),
-        Index("ix_signals_timeframe_created", "timeframe", "created_at"),
+        Index("ix_signals_timeframe_timestamp", "timeframe", "timestamp"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
