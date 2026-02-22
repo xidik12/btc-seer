@@ -62,6 +62,32 @@ async def cmd_start(message: Message, command: CommandObject):
                 partner_info = await process_partner_referral(user, partner_code, session)
             elif referral_code:
                 referral_info = await process_referral(user, referral_code, session)
+
+            # Notify admin about new user
+            if settings.admin_telegram_id:
+                try:
+                    from aiogram import Bot
+                    bot = Bot(token=settings.telegram_bot_token)
+                    u = message.from_user
+                    name_parts = [u.first_name or "", u.last_name or ""]
+                    full_name = " ".join(p for p in name_parts if p)
+                    source = ""
+                    if partner_code:
+                        source = f"\nSource: partner code <code>{partner_code}</code>"
+                    elif referral_code:
+                        source = f"\nSource: referral <code>{referral_code}</code>"
+                    await bot.send_message(
+                        settings.admin_telegram_id,
+                        f"👤 <b>New User Joined!</b>\n\n"
+                        f"Name: {full_name}\n"
+                        f"Username: @{u.username or 'none'}\n"
+                        f"ID: <code>{u.id}</code>"
+                        f"{source}",
+                        parse_mode="HTML",
+                    )
+                    await bot.session.close()
+                except Exception as e:
+                    logger.error(f"Failed to notify admin about new user: {e}")
         else:
             # Auto-link partner telegram_id if existing user clicks their own partner link
             if partner_code:
