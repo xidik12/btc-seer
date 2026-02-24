@@ -41,7 +41,9 @@ function CryptoSection() {
   const [coins, setCoins] = useState([])
 
   useEffect(() => {
-    api.getTrackedCoins().then(setCoins).catch(() => {})
+    api.getTrackedCoins()
+      .then((data) => setCoins(Array.isArray(data) ? data : data?.coins ?? []))
+      .catch(() => {})
   }, [])
 
   return (
