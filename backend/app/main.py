@@ -11,7 +11,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.middleware.gzip import GZipMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -445,7 +444,7 @@ async def lifespan(app: FastAPI):
 
             # Step 4: Wait briefly for data to settle, then generate predictions for all timeframes
             # so the dashboard has data immediately. Cron scheduler takes over after this.
-            await asyncio.sleep(5)
+            await asyncio.sleep(30)
             await _safe_run(generate_prediction(), "generate_prediction")
             await _safe_run(generate_quant_prediction(), "generate_quant_prediction")
             await _safe_run(classify_news_events(), "classify_news_events")
@@ -519,9 +518,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# GZip compression — compresses all responses >500 bytes (JS bundles, JSON, HTML)
-app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # API Key authentication middleware (for /api/v1/ public endpoints)
 from app.middleware.auth import APIKeyMiddleware
@@ -601,19 +597,8 @@ async def serve_root():
     }
 
 
-class CachedStaticFiles(StaticFiles):
-    """Static file server with immutable cache headers for hashed assets."""
-
-    async def get_response(self, path, scope):
-        response = await super().get_response(path, scope)
-        # Vite hashed assets (e.g. index-abc123.js) are immutable — cache for 1 year
-        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-        return response
-
-
 if WEBAPP_DIST.exists():
-    # Mount static assets with long-term caching (hashed filenames from Vite)
-    app.mount("/assets", CachedStaticFiles(directory=WEBAPP_DIST / "assets"), name="static")
+    app.mount("/assets", StaticFiles(directory=WEBAPP_DIST / "assets"), name="static")
 
     # Handle 404s by serving static files or the SPA (for client-side routing)
     @app.exception_handler(StarletteHTTPException)
