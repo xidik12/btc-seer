@@ -89,7 +89,8 @@
     "alerts": "Price Alerts",
     "briefing": "Daily Briefing",
     "game": "Prediction Game",
-    "smartMoney": "Smart Money"
+    "smartMoney": "Smart Money",
+    "markets": "Markets"
   },
   "btn": {
     "cancel": "Cancel",

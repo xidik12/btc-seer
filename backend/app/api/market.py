@@ -134,12 +134,16 @@ async def get_price_stats(
             .order_by(Price.timestamp)
         )
     else:
-        # All time
+        # All time — cap at 8640 rows (6 days of 1-min candles) to avoid unbounded scan
         result_historical = await session.execute(
-            select(Price).order_by(Price.timestamp)
+            select(Price).order_by(desc(Price.timestamp)).limit(8640)
         )
 
     prices = result_historical.scalars().all()
+
+    # "all" query uses DESC+LIMIT, reverse to ascending order for downstream code
+    if not delta and prices:
+        prices = list(reversed(prices))
 
     min_needed = _MIN_CANDLES.get(timeframe, 5)
 
@@ -417,6 +421,18 @@ async def get_candles(
     }
 
 
+def build_macro_item(current_val, prev_val, daily_val):
+    """Build macro item with price and change data."""
+    if current_val is None:
+        return None
+    item = {"price": current_val}
+    if prev_val and prev_val > 0:
+        item["change_1h"] = round((current_val - prev_val) / prev_val * 100, 4)
+    if daily_val and daily_val > 0:
+        item["change_24h"] = round((current_val - daily_val) / daily_val * 100, 4)
+    return item
+
+
 @router.get("/macro")
 async def get_macro_data(session: AsyncSession = Depends(get_session)):
     """Get latest macro market data with price changes."""
@@ -475,57 +491,25 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
     )
     daily_macro = daily_result.scalar_one_or_none()
 
-    def build_macro_item(current_val, prev_val, daily_val):
-        """Build macro item with price and change data."""
-        if current_val is None:
-            return None
-        item = {"price": current_val}
-        if prev_val and prev_val > 0:
-            item["change_1h"] = round((current_val - prev_val) / prev_val * 100, 4)
-        if daily_val and daily_val > 0:
-            item["change_24h"] = round((current_val - daily_val) / daily_val * 100, 4)
-        return item
+    # Build all macro items using getattr for dynamic key access
+    all_macro_keys = [
+        "dxy", "gold", "sp500", "treasury_10y", "nasdaq", "vix", "eurusd",
+        "gbpusd", "usdjpy", "usdchf", "audusd", "usdcad", "nzdusd",
+        "wti_oil", "silver", "copper", "natural_gas",
+        "dow_jones", "russell_2000", "dax", "nikkei_225", "ftse_100",
+        "treasury_2y", "treasury_5y", "treasury_30y",
+    ]
+    result = {}
+    for key in all_macro_keys:
+        result[key] = build_macro_item(
+            getattr(macro, key, None),
+            getattr(prev_macro, key, None) if prev_macro else None,
+            getattr(daily_macro, key, None) if daily_macro else None,
+        )
+    result["fear_greed_index"] = macro.fear_greed_index
+    result["fear_greed_label"] = macro.fear_greed_label
+    result["timestamp"] = macro.timestamp.isoformat()
 
-    result = {
-        "dxy": build_macro_item(
-            macro.dxy,
-            prev_macro.dxy if prev_macro else None,
-            daily_macro.dxy if daily_macro else None,
-        ),
-        "gold": build_macro_item(
-            macro.gold,
-            prev_macro.gold if prev_macro else None,
-            daily_macro.gold if daily_macro else None,
-        ),
-        "sp500": build_macro_item(
-            macro.sp500,
-            prev_macro.sp500 if prev_macro else None,
-            daily_macro.sp500 if daily_macro else None,
-        ),
-        "treasury_10y": build_macro_item(
-            macro.treasury_10y,
-            prev_macro.treasury_10y if prev_macro else None,
-            daily_macro.treasury_10y if daily_macro else None,
-        ),
-        "nasdaq": build_macro_item(
-            macro.nasdaq,
-            prev_macro.nasdaq if prev_macro else None,
-            daily_macro.nasdaq if daily_macro else None,
-        ),
-        "vix": build_macro_item(
-            macro.vix,
-            prev_macro.vix if prev_macro else None,
-            daily_macro.vix if daily_macro else None,
-        ),
-        "eurusd": build_macro_item(
-            macro.eurusd,
-            prev_macro.eurusd if prev_macro else None,
-            daily_macro.eurusd if daily_macro else None,
-        ),
-        "fear_greed_index": macro.fear_greed_index,
-        "fear_greed_label": macro.fear_greed_label,
-        "timestamp": macro.timestamp.isoformat(),
-    }
     _set_cache("macro", result, 300)
     return result
 
@@ -854,4 +838,167 @@ async def get_btc_supply():
         ],
     }
     _set_cache("supply", result, 600)
+    return result
+
+
+# ── New TradingView-style endpoints ──
+
+NEW_MACRO_KEYS = [
+    "gbpusd", "usdjpy", "usdchf", "audusd", "usdcad", "nzdusd",
+    "wti_oil", "silver", "copper", "natural_gas",
+    "dow_jones", "russell_2000", "dax", "nikkei_225", "ftse_100",
+    "treasury_2y", "treasury_5y", "treasury_30y",
+]
+
+
+@router.get("/forex")
+async def get_forex_data(session: AsyncSession = Depends(get_session)):
+    """Get forex pairs with price and changes."""
+    cached = _get_cached("forex")
+    if cached is not None:
+        return cached
+
+    forex_keys = ["eurusd", "gbpusd", "usdjpy", "usdchf", "audusd", "usdcad", "nzdusd"]
+
+    result = await session.execute(
+        select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
+    )
+    macro = result.scalar_one_or_none()
+    if not macro:
+        return {k: None for k in forex_keys}
+
+    prev_result = await session.execute(
+        select(MacroData).where(MacroData.timestamp <= macro.timestamp - timedelta(minutes=50))
+        .order_by(desc(MacroData.timestamp)).limit(1)
+    )
+    prev_macro = prev_result.scalar_one_or_none()
+
+    daily_result = await session.execute(
+        select(MacroData).where(MacroData.timestamp <= macro.timestamp - timedelta(hours=23))
+        .order_by(desc(MacroData.timestamp)).limit(1)
+    )
+    daily_macro = daily_result.scalar_one_or_none()
+
+    data = {}
+    for key in forex_keys:
+        data[key] = build_macro_item(
+            getattr(macro, key, None),
+            getattr(prev_macro, key, None) if prev_macro else None,
+            getattr(daily_macro, key, None) if daily_macro else None,
+        )
+
+    data["timestamp"] = macro.timestamp.isoformat()
+    _set_cache("forex", data, 300)
+    return data
+
+
+@router.get("/commodities")
+async def get_commodities_data(session: AsyncSession = Depends(get_session)):
+    """Get commodities with price and changes."""
+    cached = _get_cached("commodities")
+    if cached is not None:
+        return cached
+
+    commodity_keys = ["gold", "wti_oil", "silver", "copper", "natural_gas"]
+
+    result = await session.execute(
+        select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
+    )
+    macro = result.scalar_one_or_none()
+    if not macro:
+        return {k: None for k in commodity_keys}
+
+    prev_result = await session.execute(
+        select(MacroData).where(MacroData.timestamp <= macro.timestamp - timedelta(minutes=50))
+        .order_by(desc(MacroData.timestamp)).limit(1)
+    )
+    prev_macro = prev_result.scalar_one_or_none()
+
+    daily_result = await session.execute(
+        select(MacroData).where(MacroData.timestamp <= macro.timestamp - timedelta(hours=23))
+        .order_by(desc(MacroData.timestamp)).limit(1)
+    )
+    daily_macro = daily_result.scalar_one_or_none()
+
+    data = {}
+    for key in commodity_keys:
+        data[key] = build_macro_item(
+            getattr(macro, key, None),
+            getattr(prev_macro, key, None) if prev_macro else None,
+            getattr(daily_macro, key, None) if daily_macro else None,
+        )
+
+    data["timestamp"] = macro.timestamp.isoformat()
+    _set_cache("commodities", data, 300)
+    return data
+
+
+@router.get("/yields")
+async def get_yield_curve(session: AsyncSession = Depends(get_session)):
+    """Get treasury yield curve (2Y, 5Y, 10Y, 30Y) with 30-day history."""
+    cached = _get_cached("yields")
+    if cached is not None:
+        return cached
+
+    yield_keys = ["treasury_2y", "treasury_5y", "treasury_10y", "treasury_30y"]
+
+    result = await session.execute(
+        select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
+    )
+    macro = result.scalar_one_or_none()
+
+    current = {}
+    if macro:
+        for key in yield_keys:
+            val = getattr(macro, key, None)
+            current[key] = val
+
+    # 30-day history for chart
+    history_result = await session.execute(
+        select(MacroData)
+        .where(MacroData.timestamp >= datetime.utcnow() - timedelta(days=30))
+        .order_by(MacroData.timestamp)
+    )
+    history_rows = history_result.scalars().all()
+
+    history = []
+    for row in history_rows:
+        entry = {"timestamp": row.timestamp.isoformat()}
+        for key in yield_keys:
+            entry[key] = getattr(row, key, None)
+        history.append(entry)
+
+    # Inversion detection
+    t2y = current.get("treasury_2y")
+    t10y = current.get("treasury_10y")
+    inverted = t2y is not None and t10y is not None and t2y > t10y
+
+    data = {
+        "current": current,
+        "inverted": inverted,
+        "history": history,
+        "timestamp": macro.timestamp.isoformat() if macro else None,
+    }
+    _set_cache("yields", data, 300)
+    return data
+
+
+@router.get("/ta-summary")
+async def get_ta_summary(session: AsyncSession = Depends(get_session)):
+    """Get TradingView-style TA summary rating."""
+    cached = _get_cached("ta_summary")
+    if cached is not None:
+        return cached
+
+    from app.features.ta_summary import TASummaryRating
+
+    # Reuse the indicators endpoint logic internally
+    try:
+        indicators = await get_indicators(session)
+    except Exception as e:
+        logger.error(f"TA summary indicator fetch error: {e}")
+        return {"error": "Failed to compute TA summary"}
+
+    result = TASummaryRating.compute(indicators)
+    _set_cache("ta_summary", result, 60)
     return result

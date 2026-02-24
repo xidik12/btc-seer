@@ -4,6 +4,8 @@ import { api } from '../utils/api'
 import { formatPricePrecise, formatPrice, formatTimeAgo } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
 import SubTabBar from '../components/SubTabBar'
+import TASummaryGauge from '../components/TASummaryGauge'
+import YieldCurveChart from '../components/YieldCurveChart'
 import DataSourceFooter from '../components/DataSourceFooter'
 import {
   ResponsiveContainer,
@@ -369,6 +371,11 @@ export default function Technical() {
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
       <SubTabBar tabs={tabs} />
+
+      {/* ── TradingView-style TA Summary ── */}
+      <TASummaryGauge />
+
+      <YieldCurveChart />
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">{t('technical.title')}</h1>
         {data?.timestamp && (

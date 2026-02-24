@@ -11,6 +11,7 @@ import SignalPanel from '../components/SignalPanel'
 import NewsCarousel from '../components/NewsCarousel'
 import InfluencerFeed from '../components/InfluencerFeed'
 import MacroDashboard from '../components/MacroDashboard'
+import TickerTape from '../components/TickerTape'
 import OnChainWidget from '../components/OnChainWidget'
 import DominanceWidget from '../components/DominanceWidget'
 import FearGreedWidget from '../components/FearGreedWidget'
@@ -203,6 +204,12 @@ const quickIcons = {
       <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
     </svg>
   ),
+  market: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3v18h18" />
+      <path d="M7 16l4-4 4 4 5-5" />
+    </svg>
+  ),
 }
 
 const CATEGORIES = [
@@ -227,6 +234,7 @@ const CATEGORIES = [
   {
     titleKey: 'category.market',
     links: [
+      { path: '/markets', labelKey: 'link.markets', icon: 'market' },
       { path: '/coins', labelKey: 'link.coins', icon: 'coins' },
       { path: '/arbitrage', labelKey: 'link.arbitrage', icon: 'arbitrage' },
       { path: '/new-listings', labelKey: 'link.listings', icon: 'listings' },
@@ -411,6 +419,8 @@ export default function Dashboard() {
         </h1>
         <span className="text-text-muted text-xs pulse-glow">{t('common:app.live')}</span>
       </header>
+
+      {(loading || isPremium) && <TickerTape />}
 
       <QuickAccessGrid />
 

@@ -152,6 +152,28 @@ class MacroData(Base):
     fear_greed_index: Mapped[int] = mapped_column(Integer, nullable=True)
     fear_greed_label: Mapped[str] = mapped_column(String(30), nullable=True)
     m2_supply: Mapped[float] = mapped_column(Float, nullable=True)  # M2 money supply (trillions USD)
+    # Forex pairs
+    gbpusd: Mapped[float] = mapped_column(Float, nullable=True)
+    usdjpy: Mapped[float] = mapped_column(Float, nullable=True)
+    usdchf: Mapped[float] = mapped_column(Float, nullable=True)
+    audusd: Mapped[float] = mapped_column(Float, nullable=True)
+    usdcad: Mapped[float] = mapped_column(Float, nullable=True)
+    nzdusd: Mapped[float] = mapped_column(Float, nullable=True)
+    # Commodities
+    wti_oil: Mapped[float] = mapped_column(Float, nullable=True)
+    silver: Mapped[float] = mapped_column(Float, nullable=True)
+    copper: Mapped[float] = mapped_column(Float, nullable=True)
+    natural_gas: Mapped[float] = mapped_column(Float, nullable=True)
+    # Indices
+    dow_jones: Mapped[float] = mapped_column(Float, nullable=True)
+    russell_2000: Mapped[float] = mapped_column(Float, nullable=True)
+    dax: Mapped[float] = mapped_column(Float, nullable=True)
+    nikkei_225: Mapped[float] = mapped_column(Float, nullable=True)
+    ftse_100: Mapped[float] = mapped_column(Float, nullable=True)
+    # Treasury yields
+    treasury_2y: Mapped[float] = mapped_column(Float, nullable=True)
+    treasury_5y: Mapped[float] = mapped_column(Float, nullable=True)
+    treasury_30y: Mapped[float] = mapped_column(Float, nullable=True)
 
 
 class OnChainData(Base):
@@ -1234,6 +1256,20 @@ class GameProfile(Base):
     monthly_reset_date: Mapped[str] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class EconomicEvent(Base):
+    __tablename__ = "economic_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_date: Mapped[datetime] = mapped_column(DateTime, index=True)
+    event_name: Mapped[str] = mapped_column(String(200))
+    country: Mapped[str] = mapped_column(String(5), default="US")
+    importance: Mapped[str] = mapped_column(String(10), default="medium")  # low/medium/high
+    actual: Mapped[str] = mapped_column(String(50), nullable=True)
+    forecast: Mapped[str] = mapped_column(String(50), nullable=True)
+    previous: Mapped[str] = mapped_column(String(50), nullable=True)
+    source: Mapped[str] = mapped_column(String(50), default="scheduled")
 
 
 def _add_missing_columns(connection):

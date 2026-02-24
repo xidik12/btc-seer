@@ -29,6 +29,7 @@ from app.api import arbitrage as arbitrage_api, listings as listings_api, memeco
 from app.api import partner_admin as partner_admin_api, partner_dashboard as partner_dashboard_api
 from app.api import alerts as alerts_api, briefings as briefings_api, game as game_api, smartmoney as smartmoney_api
 from app.api import websocket as websocket_api
+from app.api import calendar as calendar_api
 from app.scheduler.jobs import (
     backfill_historical_prices,
     collect_price_data,
@@ -555,6 +556,7 @@ app.include_router(briefings_api.router)
 app.include_router(game_api.router)
 app.include_router(smartmoney_api.router)
 app.include_router(websocket_api.router)
+app.include_router(calendar_api.router)
 
 
 @app.get("/health")
@@ -596,7 +598,6 @@ async def serve_root():
 
 
 if WEBAPP_DIST.exists():
-    # Mount static assets
     app.mount("/assets", StaticFiles(directory=WEBAPP_DIST / "assets"), name="static")
 
     # Handle 404s by serving static files or the SPA (for client-side routing)
