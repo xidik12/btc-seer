@@ -491,46 +491,25 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
     )
     daily_macro = daily_result.scalar_one_or_none()
 
-    result = {
-        "dxy": build_macro_item(
-            macro.dxy,
-            prev_macro.dxy if prev_macro else None,
-            daily_macro.dxy if daily_macro else None,
-        ),
-        "gold": build_macro_item(
-            macro.gold,
-            prev_macro.gold if prev_macro else None,
-            daily_macro.gold if daily_macro else None,
-        ),
-        "sp500": build_macro_item(
-            macro.sp500,
-            prev_macro.sp500 if prev_macro else None,
-            daily_macro.sp500 if daily_macro else None,
-        ),
-        "treasury_10y": build_macro_item(
-            macro.treasury_10y,
-            prev_macro.treasury_10y if prev_macro else None,
-            daily_macro.treasury_10y if daily_macro else None,
-        ),
-        "nasdaq": build_macro_item(
-            macro.nasdaq,
-            prev_macro.nasdaq if prev_macro else None,
-            daily_macro.nasdaq if daily_macro else None,
-        ),
-        "vix": build_macro_item(
-            macro.vix,
-            prev_macro.vix if prev_macro else None,
-            daily_macro.vix if daily_macro else None,
-        ),
-        "eurusd": build_macro_item(
-            macro.eurusd,
-            prev_macro.eurusd if prev_macro else None,
-            daily_macro.eurusd if daily_macro else None,
-        ),
-        "fear_greed_index": macro.fear_greed_index,
-        "fear_greed_label": macro.fear_greed_label,
-        "timestamp": macro.timestamp.isoformat(),
-    }
+    # Build all macro items using getattr for dynamic key access
+    all_macro_keys = [
+        "dxy", "gold", "sp500", "treasury_10y", "nasdaq", "vix", "eurusd",
+        "gbpusd", "usdjpy", "usdchf", "audusd", "usdcad", "nzdusd",
+        "wti_oil", "silver", "copper", "natural_gas",
+        "dow_jones", "russell_2000", "dax", "nikkei_225", "ftse_100",
+        "treasury_2y", "treasury_5y", "treasury_30y",
+    ]
+    result = {}
+    for key in all_macro_keys:
+        result[key] = build_macro_item(
+            getattr(macro, key, None),
+            getattr(prev_macro, key, None) if prev_macro else None,
+            getattr(daily_macro, key, None) if daily_macro else None,
+        )
+    result["fear_greed_index"] = macro.fear_greed_index
+    result["fear_greed_label"] = macro.fear_greed_label
+    result["timestamp"] = macro.timestamp.isoformat()
+
     _set_cache("macro", result, 300)
     return result
 

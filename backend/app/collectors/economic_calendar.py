@@ -29,6 +29,11 @@ RECURRING_EVENTS = [
 class EconomicCalendarCollector(BaseCollector):
     """Generates upcoming economic events from hardcoded schedule."""
 
+    async def collect(self) -> dict:
+        """Implement abstract method — returns upcoming events."""
+        events = await self.get_upcoming_events(days=14)
+        return {"events": events, "count": len(events)}
+
     async def get_upcoming_events(self, days: int = 14) -> list[dict]:
         """Return upcoming economic events in the next N days."""
         now = datetime.utcnow()
