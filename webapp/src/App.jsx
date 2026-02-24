@@ -39,6 +39,7 @@ const PriceAlerts = lazy(() => import('./pages/PriceAlerts'))
 const Briefing = lazy(() => import('./pages/Briefing'))
 const PredictionGame = lazy(() => import('./pages/PredictionGame'))
 const SmartMoney = lazy(() => import('./pages/SmartMoney'))
+const MarketOverview = lazy(() => import('./pages/MarketOverview'))
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -148,6 +149,7 @@ export default function App() {
             <Route path="/briefing" element={<PremiumRoute><Briefing /></PremiumRoute>} />
             <Route path="/game" element={<PremiumRoute><PredictionGame /></PremiumRoute>} />
             <Route path="/smart-money" element={<PremiumRoute><SmartMoney /></PremiumRoute>} />
+            <Route path="/markets" element={<PremiumRoute><MarketOverview /></PremiumRoute>} />
           </Routes>
           </Suspense>
           </div>

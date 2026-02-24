@@ -241,18 +241,45 @@ async def collect_macro_data():
         macro_data = await macro_collector.collect()
         fear_greed = await fear_greed_collector.collect()
 
-        dxy = macro_data.get("dxy", {}).get("price") if isinstance(macro_data.get("dxy"), dict) else None
-        gold = macro_data.get("gold", {}).get("price") if isinstance(macro_data.get("gold"), dict) else None
-        sp500 = macro_data.get("sp500", {}).get("price") if isinstance(macro_data.get("sp500"), dict) else None
-        treasury_10y = macro_data.get("treasury_10y", {}).get("price") if isinstance(macro_data.get("treasury_10y"), dict) else None
-        nasdaq = macro_data.get("nasdaq", {}).get("price") if isinstance(macro_data.get("nasdaq"), dict) else None
-        vix = macro_data.get("vix", {}).get("price") if isinstance(macro_data.get("vix"), dict) else None
-        eurusd = macro_data.get("eurusd", {}).get("price") if isinstance(macro_data.get("eurusd"), dict) else None
+        def _price(key):
+            val = macro_data.get(key)
+            return val.get("price") if isinstance(val, dict) else None
+
+        dxy = _price("dxy")
+        gold = _price("gold")
+        sp500 = _price("sp500")
+        treasury_10y = _price("treasury_10y")
+        nasdaq = _price("nasdaq")
+        vix = _price("vix")
+        eurusd = _price("eurusd")
+        # New forex
+        gbpusd = _price("gbpusd")
+        usdjpy = _price("usdjpy")
+        usdchf = _price("usdchf")
+        audusd = _price("audusd")
+        usdcad = _price("usdcad")
+        nzdusd = _price("nzdusd")
+        # New commodities
+        wti_oil = _price("wti_oil")
+        silver = _price("silver")
+        copper = _price("copper")
+        natural_gas = _price("natural_gas")
+        # New indices
+        dow_jones = _price("dow_jones")
+        russell_2000 = _price("russell_2000")
+        dax = _price("dax")
+        nikkei_225 = _price("nikkei_225")
+        ftse_100 = _price("ftse_100")
+
         fear_greed_index = fear_greed.get("value")
         fear_greed_label = fear_greed.get("label")
 
         # Don't save a row where ALL values are None
-        if dxy is None and gold is None and sp500 is None and treasury_10y is None and nasdaq is None and vix is None and eurusd is None and fear_greed_index is None:
+        all_prices = [dxy, gold, sp500, treasury_10y, nasdaq, vix, eurusd,
+                      gbpusd, usdjpy, usdchf, audusd, usdcad, nzdusd,
+                      wti_oil, silver, copper, natural_gas,
+                      dow_jones, russell_2000, dax, nikkei_225, ftse_100]
+        if all(v is None for v in all_prices) and fear_greed_index is None:
             logger.warning("Macro collection returned all None values, skipping DB save")
             return
 
@@ -262,6 +289,13 @@ async def collect_macro_data():
             m2_supply = await macro_collector.fetch_m2_supply()
         except Exception as e:
             logger.debug(f"M2 supply fetch error: {e}")
+
+        # Fetch treasury yields from FRED
+        treasury_yields = {}
+        try:
+            treasury_yields = await macro_collector.fetch_treasury_yields()
+        except Exception as e:
+            logger.debug(f"Treasury yields fetch error: {e}")
 
         async with async_session() as session:
             macro = MacroData(
@@ -276,11 +310,33 @@ async def collect_macro_data():
                 fear_greed_index=fear_greed_index,
                 fear_greed_label=fear_greed_label,
                 m2_supply=m2_supply,
+                # New forex
+                gbpusd=gbpusd,
+                usdjpy=usdjpy,
+                usdchf=usdchf,
+                audusd=audusd,
+                usdcad=usdcad,
+                nzdusd=nzdusd,
+                # New commodities
+                wti_oil=wti_oil,
+                silver=silver,
+                copper=copper,
+                natural_gas=natural_gas,
+                # New indices
+                dow_jones=dow_jones,
+                russell_2000=russell_2000,
+                dax=dax,
+                nikkei_225=nikkei_225,
+                ftse_100=ftse_100,
+                # Treasury yields from FRED
+                treasury_2y=treasury_yields.get("treasury_2y"),
+                treasury_5y=treasury_yields.get("treasury_5y"),
+                treasury_30y=treasury_yields.get("treasury_30y"),
             )
             session.add(macro)
             await session.commit()
 
-        logger.info(f"Macro data collected: DXY={dxy}, Gold={gold}, SP500={sp500}, 10Y={treasury_10y}, NDQ={nasdaq}, VIX={vix}, EURUSD={eurusd}")
+        logger.info(f"Macro data collected: DXY={dxy}, Gold={gold}, SP500={sp500}, 10Y={treasury_10y}, NDQ={nasdaq}, VIX={vix}, EUR={eurusd}, DJI={dow_jones}, OIL={wti_oil}")
 
     except Exception as e:
         logger.error(f"Macro collection error: {e}")

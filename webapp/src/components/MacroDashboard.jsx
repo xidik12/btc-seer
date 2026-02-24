@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import { formatPricePrecise, formatPercent } from '../utils/format.js'
 
-const MACRO_ITEMS = [
+const CORE_ITEMS = [
   { key: 'dxy', labelKey: 'macro.dxy', icon: '$' },
   { key: 'gold', labelKey: 'macro.gold', icon: 'Au' },
   { key: 'sp500', labelKey: 'macro.sp500', icon: 'SP' },
@@ -11,6 +11,31 @@ const MACRO_ITEMS = [
   { key: 'nasdaq', labelKey: 'macro.nasdaq', icon: 'NDQ' },
   { key: 'vix', labelKey: 'macro.vix', icon: 'VX' },
   { key: 'eurusd', labelKey: 'macro.eurusd', icon: 'EU' },
+]
+
+const EXTENDED_ITEMS = [
+  // Forex
+  { key: 'gbpusd', labelKey: 'macro.gbpusd', icon: 'GB' },
+  { key: 'usdjpy', labelKey: 'macro.usdjpy', icon: 'JP' },
+  { key: 'usdchf', labelKey: 'macro.usdchf', icon: 'CH' },
+  { key: 'audusd', labelKey: 'macro.audusd', icon: 'AU' },
+  { key: 'usdcad', labelKey: 'macro.usdcad', icon: 'CA' },
+  { key: 'nzdusd', labelKey: 'macro.nzdusd', icon: 'NZ' },
+  // Commodities
+  { key: 'wti_oil', labelKey: 'macro.wtiOil', icon: 'OIL' },
+  { key: 'silver', labelKey: 'macro.silver', icon: 'Ag' },
+  { key: 'copper', labelKey: 'macro.copper', icon: 'Cu' },
+  { key: 'natural_gas', labelKey: 'macro.naturalGas', icon: 'NG' },
+  // Indices
+  { key: 'dow_jones', labelKey: 'macro.dowJones', icon: 'DJI' },
+  { key: 'russell_2000', labelKey: 'macro.russell', icon: 'RUT' },
+  { key: 'dax', labelKey: 'macro.dax', icon: 'DAX' },
+  { key: 'nikkei_225', labelKey: 'macro.nikkei', icon: 'N225' },
+  { key: 'ftse_100', labelKey: 'macro.ftse', icon: 'FTSE' },
+  // Treasury yields
+  { key: 'treasury_2y', labelKey: 'macro.treasury2y', icon: '2Y' },
+  { key: 'treasury_5y', labelKey: 'macro.treasury5y', icon: '5Y' },
+  { key: 'treasury_30y', labelKey: 'macro.treasury30y', icon: '30Y' },
 ]
 
 const KEY_ALIASES = {
@@ -25,14 +50,11 @@ const KEY_ALIASES = {
 
 function findValue(data, key) {
   if (!data) return null
-  // Try the direct key first
   if (data[key] !== undefined) return data[key]
-  // Try aliases
   const aliases = KEY_ALIASES[key] || []
   for (const alias of aliases) {
     if (data[alias] !== undefined) return data[alias]
   }
-  // Try inside a nested object (some APIs wrap in items/assets)
   if (Array.isArray(data)) {
     const match = data.find(
       (item) =>
@@ -99,6 +121,7 @@ export default function MacroDashboard() {
   const [macroData, setMacroData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [showAll, setShowAll] = useState(false)
 
   const fetchMacro = useCallback(async () => {
     try {
@@ -117,6 +140,8 @@ export default function MacroDashboard() {
     const interval = setInterval(fetchMacro, 300_000)
     return () => clearInterval(interval)
   }, [fetchMacro])
+
+  const items = showAll ? [...CORE_ITEMS, ...EXTENDED_ITEMS] : CORE_ITEMS
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 slide-up">
@@ -155,22 +180,30 @@ export default function MacroDashboard() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {MACRO_ITEMS.map(({ key, labelKey, icon }) => {
-            const raw = findValue(macroData, key)
-            const price = extractPrice(raw)
-            const change = extractChange(raw)
-            return (
-              <MacroCard
-                key={key}
-                label={t(labelKey)}
-                icon={icon}
-                price={price}
-                change={change}
-              />
-            )
-          })}
-        </div>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {items.map(({ key, labelKey, icon }) => {
+              const raw = findValue(macroData, key)
+              const price = extractPrice(raw)
+              const change = extractChange(raw)
+              return (
+                <MacroCard
+                  key={key}
+                  label={t(labelKey)}
+                  icon={icon}
+                  price={price}
+                  change={change}
+                />
+              )
+            })}
+          </div>
+          <button
+            onClick={() => setShowAll(!showAll)}
+            className="w-full text-center text-accent-blue text-[10px] mt-3 hover:underline"
+          >
+            {showAll ? t('macro.showLess') : t('macro.showAll')}
+          </button>
+        </>
       )}
     </div>
   )

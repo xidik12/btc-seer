@@ -390,4 +390,11 @@ export const api = {
     })
   },
   getSmartMoneyScore: () => cachedFetch('/smart-money/score', T60),
+
+  // Market Overview (TradingView-style)
+  getForexData: () => cachedFetch('/market/forex', T120),
+  getCommoditiesData: () => cachedFetch('/market/commodities', T120),
+  getYieldCurve: () => cachedFetch('/market/yields', T120),
+  getTASummary: () => cachedFetch('/market/ta-summary', T60),
+  getEconomicCalendar: (days = 14) => cachedFetch(`/market/calendar/upcoming?days=${days}`, T300),
 }

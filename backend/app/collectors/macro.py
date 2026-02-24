@@ -32,7 +32,27 @@ class MacroCollector(BaseCollector):
         "nasdaq": ["^NDX", "QQQ"],
         "vix": ["^VIX"],
         "eurusd": ["EURUSD=X"],
+        # Forex pairs
+        "gbpusd": ["GBPUSD=X"],
+        "usdjpy": ["JPY=X"],
+        "usdchf": ["CHF=X"],
+        "audusd": ["AUDUSD=X"],
+        "usdcad": ["CADUSD=X"],
+        "nzdusd": ["NZDUSD=X"],
+        # Commodities
+        "wti_oil": ["CL=F"],
+        "silver": ["SI=F"],
+        "copper": ["HG=F"],
+        "natural_gas": ["NG=F"],
+        # Indices
+        "dow_jones": ["^DJI", "DIA"],
+        "russell_2000": ["^RUT", "IWM"],
+        "dax": ["^GDAXI"],
+        "nikkei_225": ["^N225"],
+        "ftse_100": ["^FTSE"],
     }
+
+    ALL_KEYS = list(YF_SYMBOLS.keys())
 
     # Cache last successful values
     _last_good: dict = {}
@@ -45,18 +65,10 @@ class MacroCollector(BaseCollector):
     )
     async def collect(self) -> dict:
         """Collect macro data using Alpha Vantage (primary) or Yahoo Finance (fallback)."""
-        result = {
-            "dxy": None,
-            "gold": None,
-            "sp500": None,
-            "treasury_10y": None,
-            "nasdaq": None,
-            "vix": None,
-            "eurusd": None,
-            "timestamp": self.now().isoformat(),
-        }
+        result = {key: None for key in self.ALL_KEYS}
+        result["timestamp"] = self.now().isoformat()
 
-        # Try Alpha Vantage first (if API key set)
+        # Try Alpha Vantage first (if API key set) — only covers original 7
         if settings.alpha_vantage_api_key:
             av_quotes = await self._fetch_alpha_vantage()
             for key, value in av_quotes.items():
@@ -65,7 +77,7 @@ class MacroCollector(BaseCollector):
                     MacroCollector._last_good[key] = value
 
         # For any missing data, try Yahoo Finance v8 chart API
-        for key in ["dxy", "gold", "sp500", "treasury_10y", "nasdaq", "vix", "eurusd"]:
+        for key in self.ALL_KEYS:
             if result[key] is None:
                 for symbol in self.YF_SYMBOLS.get(key, []):
                     yf_quote = await self._fetch_yahoo_v8(symbol)
@@ -113,12 +125,7 @@ class MacroCollector(BaseCollector):
         return result
 
     async def fetch_m2_supply(self) -> float | None:
-        """Fetch M2 money supply from FRED API or use fallback estimate.
-
-        FRED series: M2SL (seasonally adjusted, billions)
-        Falls back to hardcoded estimate with 7.2% annual growth.
-        """
-        # Try FRED API if key is available
+        """Fetch M2 money supply from FRED API or use fallback estimate."""
         if settings.fred_api_key:
             try:
                 url = (
@@ -130,18 +137,45 @@ class MacroCollector(BaseCollector):
                 if data and "observations" in data and data["observations"]:
                     value_str = data["observations"][0].get("value", "")
                     if value_str and value_str != ".":
-                        # FRED returns billions, convert to trillions
                         return float(value_str) / 1000.0
             except Exception as e:
                 logger.warning(f"FRED M2 fetch error: {e}")
 
-        # Fallback: estimate M2 using base + 7.2% annual growth
-        # Jan 2024 M2 was ~$20.8T, growing ~7.2%/year
         base_date = datetime(2024, 1, 1)
-        base_m2 = 20.8  # trillions
+        base_m2 = 20.8
         years_elapsed = (datetime.utcnow() - base_date).days / 365.25
         estimated_m2 = base_m2 * (1.072 ** years_elapsed)
         return round(estimated_m2, 2)
+
+    async def fetch_treasury_yields(self) -> dict:
+        """Fetch treasury yields (2Y, 5Y, 10Y, 30Y) from FRED API."""
+        yields = {}
+        series_map = {
+            "treasury_2y": "DGS2",
+            "treasury_5y": "DGS5",
+            "treasury_10y_fred": "DGS10",
+            "treasury_30y": "DGS30",
+        }
+
+        if not settings.fred_api_key:
+            return yields
+
+        for key, series_id in series_map.items():
+            try:
+                url = (
+                    f"https://api.stlouisfed.org/fred/series/observations"
+                    f"?series_id={series_id}&api_key={settings.fred_api_key}"
+                    f"&sort_order=desc&limit=1&file_type=json"
+                )
+                data = await self.fetch_json(url)
+                if data and "observations" in data and data["observations"]:
+                    value_str = data["observations"][0].get("value", "")
+                    if value_str and value_str != ".":
+                        yields[key] = float(value_str)
+            except Exception as e:
+                logger.debug(f"FRED {series_id} fetch error: {e}")
+
+        return yields
 
     async def _fetch_yahoo_v8(self, symbol: str) -> dict | None:
         """Fetch a quote via Yahoo Finance v8 chart API (v7 is deprecated)."""
