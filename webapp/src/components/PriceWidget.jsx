@@ -9,7 +9,7 @@ import {
   formatTimeAgo,
 } from '../utils/format.js'
 
-const POLL_INTERVAL = 30_000
+const POLL_INTERVAL = 120_000
 
 const TIMEFRAMES = [
   { value: '1m', label: '1M', name: '1 Minute' },

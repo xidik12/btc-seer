@@ -60,7 +60,17 @@ async def deep_backfill_historical_prices():
 
         # Insert into Price table, skipping existing dates
         async with async_session() as session:
-            result = await session.execute(select(Price.timestamp))
+            # Only load timestamps within the range of incoming data
+            if all_prices:
+                min_date = min(p["timestamp"] for p in all_prices) - timedelta(days=1)
+                max_date = max(p["timestamp"] for p in all_prices) + timedelta(days=1)
+                result = await session.execute(
+                    select(Price.timestamp).where(
+                        Price.timestamp.between(min_date, max_date)
+                    )
+                )
+            else:
+                result = await session.execute(select(Price.timestamp))
             existing_dates = set()
             for row in result.all():
                 existing_dates.add(row[0].strftime("%Y-%m-%d"))
@@ -156,14 +166,28 @@ async def backfill_historical_prices():
 
 async def _insert_klines(klines: list[dict], source: str = "binance_backfill"):
     """Insert kline data into the Price table, skipping duplicates by timestamp."""
+    if not klines:
+        return 0
     async with async_session() as session:
-        # Build set of existing timestamps (rounded to minute) for dedup
-        result = await session.execute(select(Price.timestamp))
+        # Compute time range of incoming klines for bounded dedup query
+        kline_timestamps = []
+        for k in klines:
+            ts = k["timestamp"]
+            if hasattr(ts, 'tzinfo') and ts.tzinfo is not None:
+                ts = ts.replace(tzinfo=None)
+            kline_timestamps.append(ts)
+        min_ts = min(kline_timestamps) - timedelta(minutes=1)
+        max_ts = max(kline_timestamps) + timedelta(minutes=1)
+
+        # Only load existing timestamps within the kline range (not full table)
+        result = await session.execute(
+            select(Price.timestamp).where(
+                Price.timestamp.between(min_ts, max_ts)
+            )
+        )
         existing_ts_minutes = set()
         for row in result.all():
-            ts = row[0]
-            # Round to nearest minute for comparison
-            existing_ts_minutes.add(ts.replace(second=0, microsecond=0))
+            existing_ts_minutes.add(row[0].replace(second=0, microsecond=0))
 
         inserted = 0
         for k in klines:
@@ -449,7 +473,9 @@ async def save_indicator_snapshot():
             for p in prices
         ])
 
-        df = TechnicalFeatures.calculate_all(df)
+        import asyncio
+        loop = asyncio.get_event_loop()
+        df = await loop.run_in_executor(None, TechnicalFeatures.calculate_all, df)
         latest = df.iloc[-1]
 
         def safe(val):
