@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { useTelegram } from '../hooks/useTelegram'
 import { api } from '../utils/api'
 
@@ -44,13 +44,13 @@ const DEFAULT_STATE = {
 export function SubscriptionProvider({ children }) {
   const { tg } = useTelegram()
 
-  // Initialize from cache for instant render, or default with loading=true
+  // Only trust cache if it says premium (positive cache)
   const cached = getCachedState()
-  const [state, setState] = useState(
-    cached || { ...DEFAULT_STATE, loading: true }
-  )
+  const initialState = (cached && cached.isPremium) ? cached : { ...DEFAULT_STATE, loading: true }
+  const [state, setState] = useState(initialState)
+  const retryRef = useRef(null)
 
-  const fetchStatus = useCallback(async (initData) => {
+  const fetchStatus = useCallback(async (initData, retryCount = 0) => {
     if (!initData) {
       setState((s) => ({ ...s, loading: false, isPremium: false, tier: 'none' }))
       return
@@ -89,12 +89,21 @@ export function SubscriptionProvider({ children }) {
       setState(newState)
       saveCachedState(newState)
     } catch {
-      setState((s) => ({ ...s, loading: false, isPremium: false, tier: 'none' }))
+      // Both endpoints failed — do NOT cache the error state
+      setState((s) => ({ ...s, loading: false }))
+      // Retry up to 3 times with exponential backoff
+      if (retryCount < 3) {
+        const delay = Math.min(3000 * Math.pow(2, retryCount), 15000)
+        retryRef.current = setTimeout(() => fetchStatus(initData, retryCount + 1), delay)
+      }
     }
   }, [])
 
   useEffect(() => {
     fetchStatus(tg?.initData)
+    return () => {
+      if (retryRef.current) clearTimeout(retryRef.current)
+    }
   }, [tg, fetchStatus])
 
   const refresh = useCallback(() => {
