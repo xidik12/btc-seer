@@ -35,7 +35,7 @@ def _get_user_data(request: Request):
     init_data = request.headers.get("X-Telegram-Init-Data", "")
     if not init_data:
         raise HTTPException(401, "Missing initData")
-    user_data = _verify_telegram_init_data(init_data, max_age=0)
+    user_data = _verify_telegram_init_data(init_data, max_age=86400)
     telegram_id = user_data.get("id")
     if not telegram_id:
         raise HTTPException(400, "Invalid user data")

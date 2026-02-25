@@ -100,7 +100,7 @@ async def get_smart_money_feed(
     init_data = request.headers.get("X-Telegram-Init-Data", "")
     if init_data:
         try:
-            user_data = _verify_telegram_init_data(init_data, max_age=0)
+            user_data = _verify_telegram_init_data(init_data, max_age=86400)
             telegram_id = user_data.get("id")
             if telegram_id:
                 async with async_session() as session:

@@ -45,7 +45,7 @@ async def register_user(request: Request):
     if not init_data:
         raise HTTPException(401, "Missing initData")
 
-    user_data = _verify_telegram_init_data(init_data, max_age=0)  # 7d for user registration
+    user_data = _verify_telegram_init_data(init_data, max_age=86400)  # 24h for user registration
     telegram_id = user_data.get("id")
     username = user_data.get("username")
 
@@ -106,7 +106,7 @@ async def get_current_user(request: Request):
     if not init_data:
         raise HTTPException(401, "Missing initData")
 
-    user_data = _verify_telegram_init_data(init_data, max_age=0)
+    user_data = _verify_telegram_init_data(init_data, max_age=3600)
     telegram_id = user_data.get("id")
 
     async with async_session() as session:
@@ -138,7 +138,7 @@ async def get_alert_preferences(request: Request):
     if not init_data:
         raise HTTPException(401, "Missing initData")
 
-    user_data = _verify_telegram_init_data(init_data, max_age=0)
+    user_data = _verify_telegram_init_data(init_data, max_age=86400)
     telegram_id = user_data.get("id")
 
     async with async_session() as session:
@@ -166,7 +166,7 @@ async def update_alert_preferences(request: Request, body: AlertPreferencesReque
     if body.alert_interval not in ("1h", "4h", "24h"):
         raise HTTPException(400, "Invalid interval. Must be 1h, 4h, or 24h")
 
-    user_data = _verify_telegram_init_data(init_data, max_age=0)
+    user_data = _verify_telegram_init_data(init_data, max_age=86400)
     telegram_id = user_data.get("id")
 
     async with async_session() as session:

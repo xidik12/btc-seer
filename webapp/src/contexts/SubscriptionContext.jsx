@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useTelegram } from '../hooks/useTelegram'
 import { api } from '../utils/api'
 
@@ -44,13 +44,13 @@ const DEFAULT_STATE = {
 export function SubscriptionProvider({ children }) {
   const { tg } = useTelegram()
 
-  // Only trust cache if it says premium (positive cache)
+  // Initialize from cache for instant render, or default with loading=true
   const cached = getCachedState()
-  const initialState = (cached && cached.isPremium) ? cached : { ...DEFAULT_STATE, loading: true }
-  const [state, setState] = useState(initialState)
-  const retryRef = useRef(null)
+  const [state, setState] = useState(
+    cached || { ...DEFAULT_STATE, loading: true }
+  )
 
-  const fetchStatus = useCallback(async (initData, retryCount = 0) => {
+  const fetchStatus = useCallback(async (initData) => {
     if (!initData) {
       setState((s) => ({ ...s, loading: false, isPremium: false, tier: 'none' }))
       return
@@ -61,7 +61,7 @@ export function SubscriptionProvider({ children }) {
       const user = res?.user
       if (user) {
         const newState = {
-          isPremium: !!user.is_premium || !!user.is_admin,
+          isPremium: !!user.is_premium,
           isAdmin: !!user.is_admin,
           tier: user.subscription_status || (user.is_premium ? 'active' : 'none'),
           daysLeft: user.days_remaining ?? 0,
@@ -89,21 +89,12 @@ export function SubscriptionProvider({ children }) {
       setState(newState)
       saveCachedState(newState)
     } catch {
-      // Both endpoints failed — do NOT cache the error state
-      setState((s) => ({ ...s, loading: false }))
-      // Retry up to 3 times with exponential backoff
-      if (retryCount < 3) {
-        const delay = Math.min(3000 * Math.pow(2, retryCount), 15000)
-        retryRef.current = setTimeout(() => fetchStatus(initData, retryCount + 1), delay)
-      }
+      setState((s) => ({ ...s, loading: false, isPremium: false, tier: 'none' }))
     }
   }, [])
 
   useEffect(() => {
     fetchStatus(tg?.initData)
-    return () => {
-      if (retryRef.current) clearTimeout(retryRef.current)
-    }
   }, [tg, fetchStatus])
 
   const refresh = useCallback(() => {
