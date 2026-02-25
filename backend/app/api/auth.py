@@ -45,7 +45,7 @@ async def register_user(request: Request):
     if not init_data:
         raise HTTPException(401, "Missing initData")
 
-    user_data = _verify_telegram_init_data(init_data, max_age=86400)  # 24h for user registration
+    user_data = _verify_telegram_init_data(init_data, max_age=604800)  # 7d for user registration
     telegram_id = user_data.get("id")
     username = user_data.get("username")
 
@@ -106,7 +106,7 @@ async def get_current_user(request: Request):
     if not init_data:
         raise HTTPException(401, "Missing initData")
 
-    user_data = _verify_telegram_init_data(init_data, max_age=3600)
+    user_data = _verify_telegram_init_data(init_data, max_age=604800)
     telegram_id = user_data.get("id")
 
     async with async_session() as session:
