@@ -61,7 +61,7 @@ export function SubscriptionProvider({ children }) {
       const user = res?.user
       if (user) {
         const newState = {
-          isPremium: !!user.is_premium,
+          isPremium: !!user.is_premium || !!user.is_admin,
           isAdmin: !!user.is_admin,
           tier: user.subscription_status || (user.is_premium ? 'active' : 'none'),
           daysLeft: user.days_remaining ?? 0,
