@@ -31,6 +31,7 @@ from app.api import partner_admin as partner_admin_api, partner_dashboard as par
 from app.api import alerts as alerts_api, briefings as briefings_api, game as game_api, smartmoney as smartmoney_api
 from app.api import websocket as websocket_api
 from app.api import calendar as calendar_api
+from app.api import dashboard as dashboard_api
 from app.scheduler.jobs import (
     backfill_historical_prices,
     collect_price_data,
@@ -193,11 +194,11 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(generate_coin_predictions_24h, "cron", hour=0, minute=14, id="coin_predict_24h", **_job_defaults)
         scheduler.add_job(evaluate_coin_predictions, "cron", minute=15, id="coin_eval", **_job_defaults)
 
-        # Arbitrage scanning (every 30 seconds)
-        scheduler.add_job(scan_arbitrage, "interval", seconds=30, id="scan_arbitrage", **_job_defaults)
+        # Arbitrage scanning (every 2 minutes)
+        scheduler.add_job(scan_arbitrage, "interval", minutes=2, id="scan_arbitrage", **_job_defaults)
 
         # New listing detection
-        scheduler.add_job(check_new_listings, "interval", seconds=30, id="check_listings", **_job_defaults)
+        scheduler.add_job(check_new_listings, "interval", minutes=5, id="check_listings", **_job_defaults)
         scheduler.add_job(check_listing_announcements, "interval", minutes=2, id="check_announcements", **_job_defaults)
         scheduler.add_job(evaluate_listing_performance, "interval", hours=1, id="eval_listings", **_job_defaults)
         scheduler.add_job(check_coingecko_new, "interval", minutes=30, id="check_cg_new", **_job_defaults)
@@ -207,20 +208,20 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(check_dex_to_cex_migrations, "interval", minutes=30, id="dex_to_cex", **_job_defaults)
 
         # Memecoin discovery
-        scheduler.add_job(discover_memecoins, "interval", minutes=10, id="discover_memes", **_job_defaults)
+        scheduler.add_job(discover_memecoins, "interval", minutes=30, id="discover_memes", **_job_defaults)
         scheduler.add_job(update_memecoin_risk_scores, "interval", minutes=30, id="update_meme_risk", **_job_defaults)
         scheduler.add_job(cleanup_dead_memecoins, "interval", hours=24, id="cleanup_dead_memes", **_job_defaults)
 
         # Multi-chain whale tracking
-        scheduler.add_job(collect_eth_whale_transactions, "interval", minutes=5, id="collect_eth_whales", **_job_defaults)
-        scheduler.add_job(collect_sol_whale_transactions, "interval", minutes=5, id="collect_sol_whales",
+        scheduler.add_job(collect_eth_whale_transactions, "interval", minutes=10, id="collect_eth_whales", **_job_defaults)
+        scheduler.add_job(collect_sol_whale_transactions, "interval", minutes=10, id="collect_sol_whales",
                           next_run_time=datetime.utcnow() + timedelta(minutes=2), **_job_defaults)
 
         # Multi-chain on-chain analytics
         scheduler.add_job(collect_multichain_onchain, "interval", hours=1, id="collect_multichain", **_job_defaults)
 
         # CryptoPanic V2 (multi-coin news)
-        scheduler.add_job(collect_cryptopanic_v2, "interval", minutes=5, id="cryptopanic_v2", **_job_defaults)
+        scheduler.add_job(collect_cryptopanic_v2, "interval", minutes=10, id="cryptopanic_v2", **_job_defaults)
 
         scheduler.add_job(collect_whale_transactions, "interval", minutes=10, id="collect_whales", **_job_defaults)
         scheduler.add_job(monitor_entity_wallets, "interval", minutes=10, id="monitor_entities",
@@ -231,7 +232,7 @@ async def lifespan(app: FastAPI):
         # Institutional whale tracking
         scheduler.add_job(collect_sec_filings, "interval", minutes=30, id="collect_sec_filings", **_job_defaults)
         scheduler.add_job(scrape_btc_treasuries, "interval", hours=6, id="scrape_btc_treasuries", **_job_defaults)
-        scheduler.add_job(collect_arkham_transfers, "interval", minutes=5, id="collect_arkham_transfers", **_job_defaults)
+        scheduler.add_job(collect_arkham_transfers, "interval", minutes=15, id="collect_arkham_transfers", **_job_defaults)
 
         # Prediction jobs — time-aligned cron schedules (UTC)
         # 1h: every hour at :00
@@ -278,7 +279,7 @@ async def lifespan(app: FastAPI):
 
         # Advisor jobs
         scheduler.add_job(run_advisor_check, "interval", minutes=30, id="advisor_check", **_job_defaults)
-        scheduler.add_job(run_trade_management, "interval", minutes=5, id="trade_management", **_job_defaults)
+        scheduler.add_job(run_trade_management, "interval", minutes=10, id="trade_management", **_job_defaults)
 
         # Training feedback loop (daily)
         scheduler.add_job(run_training_feedback, "interval", hours=24, id="training_feedback", **_job_defaults)
@@ -324,11 +325,11 @@ async def lifespan(app: FastAPI):
                 **_job_defaults,
             )
 
-            # Price alerts check (every 30s)
+            # Price alerts check (every 2 minutes)
             scheduler.add_job(
                 alert_sender.check_price_alerts,
                 "interval",
-                seconds=30,
+                minutes=2,
                 id="check_price_alerts",
                 **_job_defaults,
             )
@@ -421,12 +422,16 @@ async def lifespan(app: FastAPI):
             # Step 1: Backfill historical data so charts work immediately
             await _safe_run(backfill_historical_prices(), "backfill_historical_prices")
 
-            # Step 2: Collect fresh data from all sources — run in parallel
+            # Step 2: Critical data first (price, news, macro, on-chain)
             await asyncio.gather(
                 _safe_run(collect_price_data(), "collect_price_data"),
                 _safe_run(collect_news_data(), "collect_news_data"),
                 _safe_run(collect_macro_data(), "collect_macro_data"),
                 _safe_run(collect_onchain_data(), "collect_onchain_data"),
+            )
+
+            # Secondary data (less urgent, staggered to avoid connection pool saturation)
+            await asyncio.gather(
                 _safe_run(collect_influencer_tweets(), "collect_influencer_tweets"),
                 _safe_run(collect_funding_data(), "collect_funding_data"),
                 _safe_run(collect_dominance_data(), "collect_dominance_data"),
@@ -568,6 +573,7 @@ app.include_router(game_api.router)
 app.include_router(smartmoney_api.router)
 app.include_router(websocket_api.router)
 app.include_router(calendar_api.router)
+app.include_router(dashboard_api.router)
 
 
 @app.get("/health")

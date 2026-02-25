@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, desc, func as sa_func
+from sqlalchemy import select, desc, case, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, News
@@ -53,14 +53,20 @@ async def get_news_sentiment(
     """Get aggregated news sentiment over a time period, with per-language breakdown."""
     since = datetime.utcnow() - timedelta(hours=hours)
 
+    # Use SQL aggregation instead of loading all rows into Python
     result = await session.execute(
-        select(News)
+        select(
+            sa_func.count(News.id).label("total"),
+            sa_func.avg(News.sentiment_score).label("avg_score"),
+        )
         .where(News.timestamp >= since)
         .where(News.sentiment_score.isnot(None))
     )
-    news = result.scalars().all()
+    row = result.one()
+    total = row.total or 0
+    avg_score = round(float(row.avg_score), 4) if row.avg_score else None
 
-    if not news:
+    if total == 0:
         return {
             "hours": hours,
             "count": 0,
@@ -71,41 +77,52 @@ async def get_news_sentiment(
             "by_language": {},
         }
 
-    scores = [n.sentiment_score for n in news]
-    bullish = sum(1 for s in scores if s > 0.1)
-    bearish = sum(1 for s in scores if s < -0.1)
-    neutral = len(scores) - bullish - bearish
+    # Conditional count approach — use case() for portable bullish/bearish counting
+    bullish_case = sa_func.sum(case((News.sentiment_score > 0.1, 1), else_=0))
+    bearish_case = sa_func.sum(case((News.sentiment_score < -0.1, 1), else_=0))
 
-    # Per-language sentiment breakdown
+    # Per-language breakdown via SQL GROUP BY
+    lang_result = await session.execute(
+        select(
+            sa_func.coalesce(News.language, "en").label("lang"),
+            sa_func.count(News.id).label("cnt"),
+            sa_func.avg(News.sentiment_score).label("avg_s"),
+            bullish_case.label("bull"),
+            bearish_case.label("bear"),
+        )
+        .where(News.timestamp >= since)
+        .where(News.sentiment_score.isnot(None))
+        .group_by(sa_func.coalesce(News.language, "en"))
+    )
+    lang_rows = lang_result.all()
+
     by_language = {}
-    for n in news:
-        lang = getattr(n, "language", None) or "en"
-        if lang not in by_language:
-            by_language[lang] = {"scores": [], "count": 0}
-        by_language[lang]["scores"].append(n.sentiment_score)
-        by_language[lang]["count"] += 1
-
-    lang_summary = {}
-    for lang, data in by_language.items():
-        lang_scores = data["scores"]
-        lang_bullish = sum(1 for s in lang_scores if s > 0.1)
-        lang_bearish = sum(1 for s in lang_scores if s < -0.1)
-        lang_summary[lang] = {
-            "count": data["count"],
-            "avg_sentiment": round(sum(lang_scores) / len(lang_scores), 4),
-            "bullish_count": lang_bullish,
-            "bearish_count": lang_bearish,
-            "neutral_count": len(lang_scores) - lang_bullish - lang_bearish,
+    total_bullish = 0
+    total_bearish = 0
+    for lr in lang_rows:
+        bull = int(lr.bull or 0)
+        bear = int(lr.bear or 0)
+        cnt = int(lr.cnt or 0)
+        total_bullish += bull
+        total_bearish += bear
+        by_language[lr.lang] = {
+            "count": cnt,
+            "avg_sentiment": round(float(lr.avg_s), 4) if lr.avg_s else None,
+            "bullish_count": bull,
+            "bearish_count": bear,
+            "neutral_count": cnt - bull - bear,
         }
+
+    neutral = total - total_bullish - total_bearish
 
     return {
         "hours": hours,
-        "count": len(scores),
-        "avg_sentiment": round(sum(scores) / len(scores), 4),
-        "bullish_count": bullish,
-        "bearish_count": bearish,
+        "count": total,
+        "avg_sentiment": avg_score,
+        "bullish_count": total_bullish,
+        "bearish_count": total_bearish,
         "neutral_count": neutral,
-        "bullish_pct": round(bullish / len(scores) * 100, 1),
-        "bearish_pct": round(bearish / len(scores) * 100, 1),
-        "by_language": lang_summary,
+        "bullish_pct": round(total_bullish / total * 100, 1) if total else 0,
+        "bearish_pct": round(total_bearish / total * 100, 1) if total else 0,
+        "by_language": by_language,
     }

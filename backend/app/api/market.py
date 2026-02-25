@@ -26,8 +26,42 @@ def _get_cached(key: str) -> dict | None:
     return None
 
 
-def _set_cache(key: str, data: dict, ttl: int) -> None:
+def _set_cache(key: str, data, ttl: int) -> None:
     _cache[key] = (data, time.monotonic() + ttl)
+
+
+async def _get_macro_trio(session: AsyncSession):
+    """Fetch latest, 1h-ago, and 24h-ago MacroData rows with shared cache."""
+    cached = _get_cached("_macro_trio")
+    if cached is not None:
+        return cached
+
+    result = await session.execute(
+        select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
+    )
+    macro = result.scalar_one_or_none()
+    if not macro:
+        return None, None, None
+
+    prev_result = await session.execute(
+        select(MacroData)
+        .where(MacroData.timestamp <= macro.timestamp - timedelta(minutes=50))
+        .order_by(desc(MacroData.timestamp))
+        .limit(1)
+    )
+    prev_macro = prev_result.scalar_one_or_none()
+
+    daily_result = await session.execute(
+        select(MacroData)
+        .where(MacroData.timestamp <= macro.timestamp - timedelta(hours=23))
+        .order_by(desc(MacroData.timestamp))
+        .limit(1)
+    )
+    daily_macro = daily_result.scalar_one_or_none()
+
+    _set_cache("_macro_trio", (macro, prev_macro, daily_macro), 120)
+    return macro, prev_macro, daily_macro
+
 
 router = APIRouter(prefix="/api/market", tags=["market"])
 
@@ -277,7 +311,9 @@ async def get_indicators(
         for p in prices
     ])
 
-    df = TechnicalFeatures.calculate_all(df)
+    import asyncio
+    loop = asyncio.get_event_loop()
+    df = await loop.run_in_executor(None, TechnicalFeatures.calculate_all, df)
 
     # Get latest row
     latest = df.iloc[-1]
@@ -395,7 +431,11 @@ async def get_candles(
     hours: int = Query(168, ge=1, le=720),
     session: AsyncSession = Depends(get_session),
 ):
-    """Get historical candle data."""
+    """Get historical candle data with automatic downsampling."""
+    cached = _get_cached(f"candles:{hours}")
+    if cached is not None:
+        return cached
+
     since = datetime.utcnow() - timedelta(hours=hours)
 
     result = await session.execute(
@@ -405,20 +445,28 @@ async def get_candles(
     )
     prices = result.scalars().all()
 
-    return {
-        "count": len(prices),
-        "candles": [
-            {
-                "timestamp": p.timestamp.isoformat(),
-                "open": p.open,
-                "high": p.high,
-                "low": p.low,
-                "close": p.close,
-                "volume": p.volume,
-            }
-            for p in prices
-        ],
+    # Downsample to max 500 candles to keep response fast
+    max_candles = 500
+    step = max(1, len(prices) // max_candles)
+    candles = [
+        {
+            "timestamp": p.timestamp.isoformat(),
+            "open": p.open,
+            "high": p.high,
+            "low": p.low,
+            "close": p.close,
+            "volume": p.volume,
+        }
+        for p in prices[::step]
+    ]
+
+    result_data = {
+        "count": len(candles),
+        "total_raw": len(prices),
+        "candles": candles,
     }
+    _set_cache(f"candles:{hours}", result_data, 60)
+    return result_data
 
 
 def build_macro_item(current_val, prev_val, daily_val):
@@ -440,14 +488,11 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
     if cached is not None:
         return cached
 
-    macro = None
     try:
-        result = await session.execute(
-            select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
-        )
-        macro = result.scalar_one_or_none()
+        macro, prev_macro, daily_macro = await _get_macro_trio(session)
     except Exception as e:
         logger.warning(f"Macro DB query failed: {e}")
+        macro = None
 
     if not macro:
         # Live fallback: fetch directly from APIs when DB is empty
@@ -472,24 +517,6 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
                 "nasdaq": None, "vix": None, "eurusd": None,
                 "fear_greed_index": None, "fear_greed_label": None, "timestamp": None,
             }
-
-    # Get macro data from ~1 hour ago for change calculation
-    prev_result = await session.execute(
-        select(MacroData)
-        .where(MacroData.timestamp <= macro.timestamp - timedelta(minutes=50))
-        .order_by(desc(MacroData.timestamp))
-        .limit(1)
-    )
-    prev_macro = prev_result.scalar_one_or_none()
-
-    # Get macro data from ~24 hours ago for daily change
-    daily_result = await session.execute(
-        select(MacroData)
-        .where(MacroData.timestamp <= macro.timestamp - timedelta(hours=23))
-        .order_by(desc(MacroData.timestamp))
-        .limit(1)
-    )
-    daily_macro = daily_result.scalar_one_or_none()
 
     # Build all macro items using getattr for dynamic key access
     all_macro_keys = [
@@ -751,6 +778,10 @@ async def get_indicator_history(
     session: AsyncSession = Depends(get_session),
 ):
     """Get historical indicator snapshots for trend analysis."""
+    cached = _get_cached(f"indicator_history:{hours}")
+    if cached is not None:
+        return cached
+
     since = datetime.utcnow() - timedelta(hours=hours)
 
     result = await session.execute(
@@ -763,7 +794,7 @@ async def get_indicator_history(
     if not snapshots:
         return {"snapshots": [], "count": 0}
 
-    return {
+    data = {
         "snapshots": [
             {
                 "timestamp": s.timestamp.isoformat(),
@@ -774,6 +805,8 @@ async def get_indicator_history(
         ],
         "count": len(snapshots),
     }
+    _set_cache(f"indicator_history:{hours}", data, 300)
+    return data
 
 
 @router.get("/supply")
@@ -860,24 +893,9 @@ async def get_forex_data(session: AsyncSession = Depends(get_session)):
 
     forex_keys = ["eurusd", "gbpusd", "usdjpy", "usdchf", "audusd", "usdcad", "nzdusd"]
 
-    result = await session.execute(
-        select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
-    )
-    macro = result.scalar_one_or_none()
+    macro, prev_macro, daily_macro = await _get_macro_trio(session)
     if not macro:
         return {k: None for k in forex_keys}
-
-    prev_result = await session.execute(
-        select(MacroData).where(MacroData.timestamp <= macro.timestamp - timedelta(minutes=50))
-        .order_by(desc(MacroData.timestamp)).limit(1)
-    )
-    prev_macro = prev_result.scalar_one_or_none()
-
-    daily_result = await session.execute(
-        select(MacroData).where(MacroData.timestamp <= macro.timestamp - timedelta(hours=23))
-        .order_by(desc(MacroData.timestamp)).limit(1)
-    )
-    daily_macro = daily_result.scalar_one_or_none()
 
     data = {}
     for key in forex_keys:
@@ -901,24 +919,9 @@ async def get_commodities_data(session: AsyncSession = Depends(get_session)):
 
     commodity_keys = ["gold", "wti_oil", "silver", "copper", "natural_gas"]
 
-    result = await session.execute(
-        select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
-    )
-    macro = result.scalar_one_or_none()
+    macro, prev_macro, daily_macro = await _get_macro_trio(session)
     if not macro:
         return {k: None for k in commodity_keys}
-
-    prev_result = await session.execute(
-        select(MacroData).where(MacroData.timestamp <= macro.timestamp - timedelta(minutes=50))
-        .order_by(desc(MacroData.timestamp)).limit(1)
-    )
-    prev_macro = prev_result.scalar_one_or_none()
-
-    daily_result = await session.execute(
-        select(MacroData).where(MacroData.timestamp <= macro.timestamp - timedelta(hours=23))
-        .order_by(desc(MacroData.timestamp)).limit(1)
-    )
-    daily_macro = daily_result.scalar_one_or_none()
 
     data = {}
     for key in commodity_keys:
@@ -942,10 +945,7 @@ async def get_yield_curve(session: AsyncSession = Depends(get_session)):
 
     yield_keys = ["treasury_2y", "treasury_5y", "treasury_10y", "treasury_30y"]
 
-    result = await session.execute(
-        select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
-    )
-    macro = result.scalar_one_or_none()
+    macro, _, _ = await _get_macro_trio(session)
 
     current = {}
     if macro:

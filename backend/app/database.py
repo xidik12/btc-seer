@@ -18,10 +18,11 @@ def _create_engine():
         return create_async_engine(
             url,
             echo=False,
-            pool_size=10,
-            max_overflow=20,
+            pool_size=20,
+            max_overflow=40,
             pool_pre_ping=True,
             pool_recycle=1800,
+            pool_timeout=10,
             connect_args={"command_timeout": 30},
         )
     _db_logger.info("Using SQLite backend")
@@ -760,6 +761,12 @@ class CoinReport(Base):
 class WhaleTransaction(Base):
     """Large BTC transactions (>100 BTC) tracked for whale movement analysis."""
     __tablename__ = "whale_transactions"
+    __table_args__ = (
+        Index("ix_whale_tx_entity_name", "entity_name"),
+        Index("ix_whale_tx_entity_type", "entity_type"),
+        Index("ix_whale_tx_direction", "direction"),
+        Index("ix_whale_tx_timestamp_direction", "timestamp", "direction"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     tx_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import select, desc, func
+from sqlalchemy import select, desc, func, cast, Date, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, Prediction, PredictionAnalysis, LearnedPattern, ModelPerformanceLog
@@ -257,49 +257,50 @@ async def get_learning_progress(
 
     since = datetime.utcnow() - timedelta(days=days)
 
-    # Get predictions with results
+    # Use SQL GROUP BY to aggregate by date instead of loading all rows
+    date_col = cast(Prediction.timestamp, Date).label("day")
+    correct_case = func.sum(case((Prediction.was_correct == True, 1), else_=0))
+    total_case = func.count(Prediction.id)
+
     result = await session.execute(
-        select(Prediction)
+        select(
+            date_col,
+            total_case.label("total"),
+            correct_case.label("correct"),
+            Prediction.timeframe,
+        )
         .where(Prediction.was_correct.isnot(None))
         .where(Prediction.timestamp >= since)
-        .order_by(Prediction.timestamp)
+        .group_by(date_col, Prediction.timeframe)
+        .order_by(date_col)
     )
-    predictions = result.scalars().all()
+    rows = result.all()
 
-    if not predictions:
+    if not rows:
         return {"days": days, "daily_accuracy": [], "rolling_7d": []}
 
-    # Group by day
+    # Build daily grouped data from SQL results
     daily = {}
-    for p in predictions:
-        day = p.timestamp.strftime("%Y-%m-%d")
+    for row in rows:
+        day = str(row.day)
         if day not in daily:
             daily[day] = {"correct": 0, "total": 0, "timeframes": {}}
-        daily[day]["total"] += 1
-        if p.was_correct:
-            daily[day]["correct"] += 1
-
-        tf = p.timeframe
-        if tf not in daily[day]["timeframes"]:
-            daily[day]["timeframes"][tf] = {"correct": 0, "total": 0}
-        daily[day]["timeframes"][tf]["total"] += 1
-        if p.was_correct:
-            daily[day]["timeframes"][tf]["correct"] += 1
+        daily[day]["total"] += row.total
+        daily[day]["correct"] += row.correct
+        daily[day]["timeframes"][row.timeframe] = (
+            round(row.correct / row.total * 100, 1) if row.total > 0 else None
+        )
 
     daily_accuracy = []
     for date in sorted(daily.keys()):
         d = daily[date]
-        entry = {
+        daily_accuracy.append({
             "date": date,
             "accuracy_pct": round(d["correct"] / d["total"] * 100, 1) if d["total"] > 0 else None,
             "total": d["total"],
             "correct": d["correct"],
-            "by_timeframe": {
-                tf: round(s["correct"] / s["total"] * 100, 1) if s["total"] > 0 else None
-                for tf, s in d["timeframes"].items()
-            },
-        }
-        daily_accuracy.append(entry)
+            "by_timeframe": d["timeframes"],
+        })
 
     # Compute rolling 7-day accuracy
     rolling_7d = []
@@ -320,7 +321,7 @@ async def get_learning_progress(
     )
     active_patterns = pattern_result.scalar() or 0
 
-    # Count ModelPerformanceLog entries (shows learning loop activation)
+    # Count ModelPerformanceLog entries
     perf_result = await session.execute(
         select(func.count(ModelPerformanceLog.id))
         .where(ModelPerformanceLog.timestamp >= since)

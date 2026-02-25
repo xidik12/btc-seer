@@ -148,10 +148,10 @@ async def live_feed(websocket: WebSocket):
     - type: "predictions" — latest predictions by timeframe (every 30s)
     - type: "ping"        — heartbeat every 30s
     """
-    # Validate origin
+    # Validate origin — allow Telegram, localhost, and Railway deployment
     origin = (websocket.headers.get("origin") or "").rstrip("/")
     if origin and origin not in ALLOWED_WS_ORIGINS:
-        if not origin.startswith("http://localhost"):
+        if not (origin.startswith("http://localhost") or origin.endswith(".up.railway.app")):
             await websocket.close(code=1008, reason="Origin not allowed")
             return
 
