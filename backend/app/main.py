@@ -398,8 +398,9 @@ async def lifespan(app: FastAPI):
                     except Exception as e:
                         err_str = str(e).lower()
                         if "conflict" in err_str or "409" in err_str:
-                            logger.warning("Bot polling: 409 conflict, stopping")
-                            break
+                            logger.warning("Bot polling: 409 conflict, retrying in 10s")
+                            await asyncio.sleep(10)
+                            continue
                         logger.error(f"Bot polling crashed: {e}, retrying in {retry_delay}s")
                         await asyncio.sleep(retry_delay)
                         retry_delay = min(retry_delay * 2, 60)
