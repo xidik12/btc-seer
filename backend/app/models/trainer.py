@@ -845,10 +845,13 @@ class ModelTrainer:
             logger.error(f"Error saving model versions: {e}")
 
     async def evaluate_and_retrain_if_needed(self) -> dict:
-        """Check model accuracy; retrain if degraded.
+        """Check model accuracy; retrain if degraded or models are untrained.
 
-        Checks recent prediction accuracy and triggers retraining
-        if accuracy drops below threshold.
+        Triggers retraining when:
+        - Accuracy dropped below threshold
+        - More than retrain_interval_hours since last training
+        - Never trained but have enough data (168+ feature snapshots)
+        - TFT or LSTM are untrained with enough data available
         """
         try:
             async with async_session() as session:
@@ -861,16 +864,14 @@ class ModelTrainer:
                 )
                 recent_preds = result.scalars().all()
 
-                if len(recent_preds) < 10:
-                    return {"status": "insufficient_eval_data", "retrain": False}
-
-                correct = sum(1 for p in recent_preds if p.was_correct)
-                accuracy = correct / len(recent_preds)
-
-                logger.info(
-                    f"Recent prediction accuracy: {accuracy:.2%} "
-                    f"({correct}/{len(recent_preds)})"
-                )
+                accuracy = None
+                if len(recent_preds) >= 10:
+                    correct = sum(1 for p in recent_preds if p.was_correct)
+                    accuracy = correct / len(recent_preds)
+                    logger.info(
+                        f"Recent prediction accuracy: {accuracy:.2%} "
+                        f"({correct}/{len(recent_preds)})"
+                    )
 
                 # Check if we have enough training data
                 result = await session.execute(
@@ -890,23 +891,42 @@ class ModelTrainer:
             if last_trained:
                 hours_since_training = (datetime.utcnow() - last_trained).total_seconds() / 3600
 
+            # Check if any models are missing trained weights
+            from pathlib import Path
+            model_dir = Path(settings.model_dir)
+            tft_missing = not (model_dir / "tft_model.pt").exists()
+            lstm_missing = not (model_dir / "lstm_model.pt").exists()
+            models_missing = tft_missing or lstm_missing
+
             should_retrain = (
-                # Accuracy dropped below threshold (stricter than random)
-                accuracy < settings.retrain_accuracy_threshold
+                # Accuracy dropped below threshold
+                (accuracy is not None and accuracy < settings.retrain_accuracy_threshold)
                 # Or it's been more than the configured interval since last training
                 or (hours_since_training is not None and hours_since_training > settings.retrain_interval_hours)
                 # Or never trained and have enough data
                 or (last_trained is None and feature_count >= self.MIN_SAMPLES)
+                # Or TFT/LSTM models are missing but we have enough data
+                or (models_missing and feature_count >= self.MIN_SAMPLES)
             )
 
             if should_retrain:
                 logger.info(
-                    f"Triggering retrain: accuracy={accuracy:.2%}, "
+                    f"Triggering retrain: accuracy={accuracy}, "
                     f"hours_since_training={hours_since_training}, "
-                    f"feature_count={feature_count}"
+                    f"feature_count={feature_count}, "
+                    f"tft_missing={tft_missing}, lstm_missing={lstm_missing}"
                 )
                 result = await self.train_all()
                 return {"status": "retrained", "retrain": True, "result": result}
+
+            # Not enough eval data but have features — report status
+            if accuracy is None and len(recent_preds) < 10:
+                return {
+                    "status": "insufficient_eval_data",
+                    "retrain": False,
+                    "feature_count": feature_count,
+                    "eval_predictions": len(recent_preds),
+                }
 
             return {
                 "status": "ok",

@@ -44,11 +44,14 @@ class EnsemblePredictor:
     }
 
     # Weights when no models are trained (heuristic mode)
+    # XGBoost heuristic is the strongest untrained predictor (35+ weighted signals)
+    # TimesFM uses a real pre-trained foundation model (zero-shot)
+    # TFT/LSTM heuristics are simple momentum comparisons — minimal weight
     UNTRAINED_WEIGHTS = {
-        "tft": 0.15,
-        "lstm": 0.05,
-        "xgb": 0.50,
-        "timesfm": 0.30,
+        "tft": 0.05,
+        "lstm": 0.02,
+        "xgb": 0.58,
+        "timesfm": 0.35,
     }
 
     def __init__(
@@ -96,14 +99,14 @@ class EnsemblePredictor:
         any_trained = self.tft_trained or self.lstm_trained or self.xgboost_trained
         self.weights = dict(self.DEFAULT_WEIGHTS if any_trained else self.UNTRAINED_WEIGHTS)
 
-        # Downweight untrained models
+        # Downweight untrained models — heuristic fallbacks produce ~0.5 noise
         if not self.tft_trained:
-            self.weights["tft"] = 0.10
+            self.weights["tft"] = 0.03  # Momentum heuristic adds minimal value
         if not self.lstm_trained:
-            self.weights["lstm"] = 0.05
+            self.weights["lstm"] = 0.02  # Momentum heuristic adds minimal value
         if not self.xgboost_trained:
-            # XGBoost heuristic is still useful
-            pass
+            # XGBoost heuristic (35+ weighted signals) is still useful
+            self.weights["xgb"] = max(self.weights["xgb"], 0.40)
         if not self.timesfm_available:
             self.weights["timesfm"] = 0.05
 
@@ -170,7 +173,6 @@ class EnsemblePredictor:
         # Get predictions from all models
         tft_pred = self.tft.predict(norm_sequence)
         lstm_pred = self.lstm.predict(norm_sequence)
-        xgb_pred = self.xgboost.predict(current_features)
         sentiment = self.sentiment_model.get_sentiment_signal(news_data, reddit_data)
 
         # TimesFM uses raw price history
@@ -189,9 +191,12 @@ class EnsemblePredictor:
             lstm_tf = lstm_pred.get(timeframe, lstm_pred.get("1h", {}))
             tfm_tf = timesfm_pred.get(timeframe, {})
 
+            # XGBoost: use per-timeframe model if available
+            xgb_pred_tf = self.xgboost.predict(current_features, timeframe=timeframe)
+
             tft_bullish = tft_tf.get("bullish_prob", 0.5)
             lstm_bullish = lstm_tf.get("bullish_prob", 0.5)
-            xgb_bullish = xgb_pred.get("bullish_prob", 0.5)
+            xgb_bullish = xgb_pred_tf.get("bullish_prob", 0.5)
             tfm_bullish = tfm_tf.get("bullish_prob", 0.5)
             sent_score = sentiment.get("score", 0)
 
@@ -208,40 +213,59 @@ class EnsemblePredictor:
             adjusted_prob = 0.5 + (base_prob - 0.5) * modifier
             adjusted_prob = max(0.05, min(0.95, adjusted_prob))
 
-            # Confidence scoring — lower confidence for longer timeframes
-            tft_conf = tft_tf.get("confidence", 0)
-            lstm_conf = lstm_tf.get("confidence", 0)
-            xgb_conf = xgb_pred.get("confidence", 0)
-            tfm_conf = tfm_tf.get("confidence", 0)
+            # Confidence scoring — based on signal strength, model agreement, training status
+            xgb_conf = xgb_pred_tf.get("confidence", 0)
             signal_strength = abs(adjusted_prob - 0.5) * 2  # 0-1 scale
 
-            base_confidence = 30 + signal_strength * 70 + min(xgb_conf, 30) * 0.5
+            # Base: proportional to signal strength (no free 30-point floor)
+            # signal_strength=0 → 15, signal_strength=0.5 → 52, signal_strength=1.0 → 90
+            base_confidence = 15 + signal_strength * 75
 
-            # Model agreement bonus
-            probs = [xgb_bullish, 0.5 + sent_score / 2]
+            # XGBoost confidence bonus (trained model gives calibrated confidence)
+            if self.xgboost_trained:
+                base_confidence += min(xgb_conf, 20) * 0.3
+
+            # Model agreement: count how many sources agree on direction
+            probs = [xgb_bullish]
             if self.tft_trained:
                 probs.append(tft_bullish)
             if self.lstm_trained:
                 probs.append(lstm_bullish)
             if timesfm_pred:
                 probs.append(tfm_bullish)
+            if abs(sent_score) > 0.05:
+                probs.append(0.5 + sent_score / 2)
 
-            all_agree = all(p > 0.5 for p in probs) or all(p < 0.5 for p in probs)
-            agreement_bonus = 10 if all_agree else -5
+            if len(probs) >= 2:
+                bullish_count = sum(1 for p in probs if p > 0.5)
+                bearish_count = sum(1 for p in probs if p < 0.5)
+                agreement_ratio = max(bullish_count, bearish_count) / len(probs)
+                # Full agreement → +12, majority → +5, split → -8
+                if agreement_ratio >= 0.9:
+                    agreement_bonus = 12
+                elif agreement_ratio >= 0.65:
+                    agreement_bonus = 5
+                else:
+                    agreement_bonus = -8
+            else:
+                agreement_bonus = 0
 
-            # Extra bonus for trained model agreement
-            trained_agreement = 0
-            if self.tft_trained and self.lstm_trained:
-                if (tft_bullish > 0.5) == (lstm_bullish > 0.5):
-                    trained_agreement = 5
+            # Trained model bonus: each trained model adds credibility
+            trained_bonus = 0
+            if self.tft_trained:
+                trained_bonus += 3
+            if self.lstm_trained:
+                trained_bonus += 3
+            if self.xgboost_trained:
+                trained_bonus += 4
 
-            confidence = base_confidence + agreement_bonus + trained_agreement
+            confidence = base_confidence + agreement_bonus + trained_bonus
             # Reduce confidence for longer timeframes (more uncertainty)
-            tf_conf_decay = {"1h": 1.0, "4h": 0.95, "24h": 0.9, "1w": 0.8, "1mo": 0.7}
+            tf_conf_decay = {"1h": 1.0, "4h": 0.92, "24h": 0.85, "1w": 0.72, "1mo": 0.60}
             confidence *= tf_conf_decay.get(timeframe, 1.0)
             any_trained = self.tft_trained or self.lstm_trained or self.xgboost_trained
-            max_conf = 95 if any_trained else 85
-            confidence = float(np.clip(confidence, 25, max_conf))
+            max_conf = 92 if any_trained else 75
+            confidence = float(np.clip(confidence, 15, max_conf))
 
             # Direction — NO neutral
             direction = "bullish" if adjusted_prob >= 0.5 else "bearish"
@@ -288,6 +312,7 @@ class EnsemblePredictor:
                         "bullish_prob": float(xgb_bullish),
                         "confidence": float(xgb_conf),
                         "trained": self.xgboost_trained,
+                        "timeframe_model": timeframe in self.xgboost._models,
                     },
                     "timesfm": {
                         "bullish_prob": float(tfm_bullish),

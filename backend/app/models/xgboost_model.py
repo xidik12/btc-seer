@@ -16,14 +16,38 @@ class XGBoostPredictor:
 
     def __init__(self, model_path: str = None):
         self.model = None
+        self._models = {}  # per-timeframe models: {"1h": Booster, "4h": Booster, ...}
+        self._model_dir = None
 
-        if model_path and Path(model_path).exists():
-            self.load(model_path)
-            logger.info(f"XGBoost model loaded from {model_path}")
-        else:
-            logger.warning("XGBoost model not found, will use heuristic fallback")
+        if model_path:
+            self._model_dir = Path(model_path).parent
+            if Path(model_path).exists():
+                self.load(model_path)
+                logger.info(f"XGBoost model loaded from {model_path}")
+            else:
+                logger.warning("XGBoost model not found, will use heuristic fallback")
 
-    def predict(self, features: np.ndarray) -> dict:
+            # Load per-timeframe models if available
+            self._load_timeframe_models()
+
+    def _load_timeframe_models(self):
+        """Load per-timeframe XGBoost models (xgboost_1h.json, xgboost_4h.json, etc.)."""
+        if not self._model_dir:
+            return
+        try:
+            import xgboost as xgb
+            for tf in ["1h", "4h", "24h", "1w", "1mo"]:
+                path = self._model_dir / f"xgboost_{tf}.json"
+                if path.exists():
+                    model = xgb.Booster()
+                    model.load_model(str(path))
+                    self._models[tf] = model
+            if self._models:
+                logger.info(f"XGBoost per-timeframe models loaded: {list(self._models.keys())}")
+        except Exception as e:
+            logger.debug(f"Per-timeframe XGBoost load error: {e}")
+
+    def predict(self, features: np.ndarray, timeframe: str = None) -> dict:
         """
         Predict price direction from feature vector.
 
@@ -33,17 +57,20 @@ class XGBoostPredictor:
         Returns:
             Dict with direction probability and confidence
         """
-        if self.model is not None:
-            return self._model_predict(features)
+        # Use per-timeframe model if available, otherwise fall back to primary
+        model = self._models.get(timeframe, self.model) if timeframe else self.model
+        if model is not None:
+            return self._model_predict(features, model=model)
         return self._heuristic_predict(features)
 
-    def _model_predict(self, features: np.ndarray) -> dict:
+    def _model_predict(self, features: np.ndarray, model=None) -> dict:
         """Prediction using trained XGBoost model."""
         try:
             import xgboost as xgb
 
+            model = model or self.model
             dmatrix = xgb.DMatrix(features.reshape(1, -1))
-            prob = self.model.predict(dmatrix)[0]
+            prob = model.predict(dmatrix)[0]
 
             return {
                 "bullish_prob": float(prob),
