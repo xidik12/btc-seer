@@ -261,13 +261,10 @@ const CATEGORIES = [
   },
 ]
 
-const ADMIN_TELEGRAM_ID = 598965469
-
 function QuickAccessGrid() {
   const navigate = useNavigate()
-  const { user } = useTelegram()
   const { t } = useTranslation('common')
-  const isAdmin = user?.id === ADMIN_TELEGRAM_ID
+  const { isAdmin } = useSubscription()
 
   return (
     <div className="space-y-3">

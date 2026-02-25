@@ -12,13 +12,26 @@ function getChangeColor(change) {
   return 'bg-[#991b1b]'
 }
 
-export default function CryptoHeatmap({ coins = [] }) {
+export default function CryptoHeatmap({ coins = [], loading = false }) {
   const sorted = useMemo(() => {
     return [...coins]
       .filter((c) => c.market_cap || c.current_price)
       .sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0))
       .slice(0, 12)
   }, [coins])
+
+  if (loading) {
+    return (
+      <div>
+        <p className="text-text-secondary text-[10px] font-semibold mb-2">Crypto Heatmap (24h)</p>
+        <div className="grid grid-cols-3 gap-1.5 animate-pulse">
+          {Array.from({ length: 9 }, (_, i) => (
+            <div key={i} className="rounded-lg bg-bg-secondary" style={{ height: '60px' }} />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   if (!sorted.length) return null
 

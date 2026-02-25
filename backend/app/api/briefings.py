@@ -3,13 +3,14 @@
 import logging
 import re
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, desc
 
 from app.database import async_session, DailyBriefing
+from app.dependencies import relaxed_rate_limit
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/briefings", tags=["briefings"])
+router = APIRouter(prefix="/api/briefings", tags=["briefings"], dependencies=[Depends(relaxed_rate_limit)])
 
 
 @router.get("/latest")

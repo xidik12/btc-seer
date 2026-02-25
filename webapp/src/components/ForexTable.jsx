@@ -64,7 +64,7 @@ export default function ForexTable() {
               <span className="text-text-primary text-sm font-medium">{name}</span>
             </div>
             <span className="text-text-primary text-sm font-semibold tabular-nums text-right">
-              {price != null ? formatPricePrecise(price) : '--'}
+              {price != null ? price.toFixed(4) : '--'}
             </span>
             <span className={`text-[10px] font-semibold text-right w-16 ${
               change != null ? (isUp ? 'text-accent-green' : 'text-accent-red') : 'text-text-muted'

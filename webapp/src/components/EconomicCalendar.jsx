@@ -13,8 +13,9 @@ function formatEventDate(dateStr) {
   const tomorrow = new Date(now)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
-  const dateOnly = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+  const locale = navigator.language || 'en-US'
+  const dateOnly = d.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
+  const time = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })
 
   if (d.toDateString() === now.toDateString()) return `Today ${time}`
   if (d.toDateString() === tomorrow.toDateString()) return `Tomorrow ${time}`
@@ -38,6 +39,8 @@ export default function EconomicCalendar() {
 
   useEffect(() => {
     fetchEvents()
+    const iv = setInterval(fetchEvents, 300_000)
+    return () => clearInterval(iv)
   }, [fetchEvents])
 
   if (loading) {
@@ -64,7 +67,7 @@ export default function EconomicCalendar() {
 
           return (
             <div
-              key={i}
+              key={`${event.event_name}-${event.event_date}`}
               className={`flex items-center gap-3 py-2 border-b border-white/5 last:border-0 ${
                 isPast ? 'opacity-50' : ''
               }`}

@@ -33,7 +33,7 @@ export default function Coins() {
 
   useEffect(() => {
     api.getTrackedCoins().then(data => {
-      setCoins(data.coins || [])
+      setCoins(Array.isArray(data) ? data : data?.coins ?? [])
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [])

@@ -4,13 +4,14 @@ services:
   redis:
     image: redis:7.4-alpine
     container_name: btc-oracle-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-btcoracle_redis_secret}
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-btcoracle_redis_secret}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -20,7 +21,7 @@ services:
     container_name: btc-oracle-backend
     env_file: .env
     environment:
-      REDIS_URL: redis://redis:6379/0
+      REDIS_URL: redis://:${REDIS_PASSWORD:-btcoracle_redis_secret}@redis:6379/0
     ports:
       - "8000:8000"
     volumes:

@@ -105,13 +105,15 @@ export default function TASummaryGauge() {
   const [data, setData] = useState(null)
   const [expanded, setExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   const fetchTA = useCallback(async () => {
     try {
+      setError(false)
       const result = await api.getTASummary()
       setData(result)
     } catch {
-      // silent
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -132,10 +134,19 @@ export default function TASummaryGauge() {
     )
   }
 
-  if (!data || data.error) return null
+  if (error || (!loading && !data) || data?.error) {
+    return (
+      <div className="bg-bg-card rounded-2xl p-4 text-center">
+        <p className="text-text-muted text-xs mb-2">TA Summary unavailable</p>
+        <button onClick={fetchTA} className="text-accent-blue text-xs hover:underline">Retry</button>
+      </div>
+    )
+  }
+
+  if (!data) return null
 
   const rating = data.overall || 'NEUTRAL'
-  const score = data.overall_score || 0
+  const score = Math.max(-1, Math.min(1, data.overall_score || 0))
   const summary = data.summary || {}
   const ma = data.moving_averages || {}
   const osc = data.oscillators || {}

@@ -5,8 +5,28 @@ import logging
 from fastapi import Request, HTTPException
 
 from app.redis_client import get_redis
+import collections
+
+# In-memory fallback when Redis is down (per-process, not shared across workers)
+_inmem_buckets: dict[str, collections.deque] = {}
 
 logger = logging.getLogger(__name__)
+
+
+def _inmem_rate_check(ip: str, limit: int, window: int):
+    """In-memory per-process rate limiter fallback when Redis is unavailable."""
+    now = time.time()
+    bucket = _inmem_buckets.setdefault(ip, collections.deque())
+    # Purge old entries
+    while bucket and bucket[0] < now - window:
+        bucket.popleft()
+    if len(bucket) >= limit:
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Please slow down.",
+            headers={"Retry-After": str(window)},
+        )
+    bucket.append(now)
 
 
 async def rate_limit(
@@ -39,8 +59,9 @@ async def rate_limit(
     except HTTPException:
         raise
     except Exception as exc:
-        # Redis unavailable — fail open (allow request, log warning)
-        logger.warning(f"Rate limiter Redis error (fail-open): {exc}")
+        # Redis unavailable — in-memory fallback (per-process)
+        logger.warning(f"Rate limiter Redis error (in-memory fallback): {exc}")
+        _inmem_rate_check(ip, limit, window)
 
 
 def make_rate_limiter(limit: int = 60, window: int = 60):

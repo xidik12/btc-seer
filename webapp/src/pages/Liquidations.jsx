@@ -111,7 +111,7 @@ function RiskMeter({ longPct, shortPct, fundingRate, t }) {
 // ── Summary Card ──
 
 function SummaryCard({ data, t }) {
-  if (!data) return null
+  if (!data?.summary) return null
   const { current_price, summary } = data
 
   return (

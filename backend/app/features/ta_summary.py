@@ -8,10 +8,59 @@ class TASummaryRating:
     """Computes a TradingView-style TA summary from indicator data."""
 
     @staticmethod
+    def _normalize(indicators: dict) -> dict:
+        """Normalize flat DataFrame keys into the format compute() expects.
+
+        technical.py outputs flat keys (ichimoku_tenkan, macd_hist, bb_position, etc.)
+        but compute() historically expected some nested dicts. This adapter handles both.
+        """
+        d = dict(indicators)  # shallow copy
+
+        # Ichimoku: flat ichimoku_tenkan/kijun → nested dict
+        if "ichimoku" not in d or not isinstance(d.get("ichimoku"), dict):
+            tenkan = d.get("ichimoku_tenkan")
+            kijun = d.get("ichimoku_kijun")
+            if tenkan is not None or kijun is not None:
+                d["ichimoku"] = {"tenkan": tenkan, "kijun": kijun}
+
+        # MACD: flat macd_hist → macd_histogram alias
+        if "macd_histogram" not in d and "macd_hist" in d:
+            d["macd_histogram"] = d["macd_hist"]
+
+        # Bollinger: flat bb_position/bb_lower/bb_upper → nested dict
+        if "bollinger" not in d or not isinstance(d.get("bollinger"), dict):
+            pos = d.get("bb_position")
+            lower = d.get("bb_lower")
+            upper = d.get("bb_upper")
+            if pos is not None or lower is not None or upper is not None:
+                d["bollinger"] = {"position": pos, "lower": lower, "upper": upper}
+
+        # Stochastic RSI: flat stoch_rsi_k/stoch_rsi_d → nested dict
+        if "stoch_rsi" not in d or not isinstance(d.get("stoch_rsi"), dict):
+            k = d.get("stoch_rsi_k")
+            dd = d.get("stoch_rsi_d")
+            if k is not None or dd is not None:
+                d["stoch_rsi"] = {"k": k, "d": dd}
+
+        # CCI: cci_20 → cci alias
+        if "cci" not in d and "cci_20" in d:
+            d["cci"] = d["cci_20"]
+
+        # Trend short: int (1/-1/0) → string ("bullish"/"bearish"/"neutral")
+        ts = d.get("trend_short")
+        if isinstance(ts, (int, float)):
+            d["trend_short"] = "bullish" if ts > 0 else "bearish" if ts < 0 else "neutral"
+
+        return d
+
+    @staticmethod
     def compute(indicators: dict) -> dict:
         """Map 26 indicators to BUY/NEUTRAL/SELL votes and return summary."""
         if not indicators:
             return {"error": "No indicator data"}
+
+        # Normalize flat DataFrame keys to expected format
+        indicators = TASummaryRating._normalize(indicators)
 
         ma_signals = []
         osc_signals = []
@@ -19,6 +68,7 @@ class TASummaryRating:
         price = indicators.get("price") or indicators.get("current_price", 0)
 
         # ── Moving Averages (12 signals) ──
+        ichimoku = indicators.get("ichimoku") if isinstance(indicators.get("ichimoku"), dict) else {}
         ma_keys = {
             "EMA 9": indicators.get("ema_9"),
             "EMA 21": indicators.get("ema_21"),
@@ -29,8 +79,8 @@ class TASummaryRating:
             "SMA 111": indicators.get("sma_111"),
             "SMA 200": indicators.get("sma_200"),
             "SMA 350": indicators.get("sma_350"),
-            "Ichimoku Tenkan": indicators.get("ichimoku", {}).get("tenkan") if isinstance(indicators.get("ichimoku"), dict) else None,
-            "Ichimoku Kijun": indicators.get("ichimoku", {}).get("kijun") if isinstance(indicators.get("ichimoku"), dict) else None,
+            "Ichimoku Tenkan": ichimoku.get("tenkan"),
+            "Ichimoku Kijun": ichimoku.get("kijun"),
             "VWAP": indicators.get("vwap"),
         }
 
@@ -56,7 +106,7 @@ class TASummaryRating:
                 osc_signals.append({"name": "RSI(14)", "value": rsi, "action": "NEUTRAL"})
 
         # MACD histogram
-        macd_hist = indicators.get("macd_histogram") or indicators.get("macd", {}).get("histogram") if isinstance(indicators.get("macd"), dict) else indicators.get("macd_histogram")
+        macd_hist = indicators.get("macd_histogram") or indicators.get("macd_hist")
         if macd_hist is not None:
             if macd_hist > 0:
                 osc_signals.append({"name": "MACD", "value": macd_hist, "action": "BUY"})
@@ -89,7 +139,7 @@ class TASummaryRating:
         # ADX
         adx = indicators.get("adx")
         if adx is not None:
-            trend_short = indicators.get("trend_short") or indicators.get("trend", {}).get("short") if isinstance(indicators.get("trend"), dict) else None
+            trend_short = indicators.get("trend_short")
             if adx > 25 and trend_short == "bullish":
                 osc_signals.append({"name": "ADX", "value": adx, "action": "BUY"})
             elif adx > 25 and trend_short == "bearish":
@@ -98,7 +148,7 @@ class TASummaryRating:
                 osc_signals.append({"name": "ADX", "value": adx, "action": "NEUTRAL"})
 
         # Bollinger Band position
-        bb = indicators.get("bollinger", {}) if isinstance(indicators.get("bollinger"), dict) else {}
+        bb = indicators.get("bollinger") if isinstance(indicators.get("bollinger"), dict) else {}
         bb_lower = bb.get("lower")
         bb_upper = bb.get("upper")
         bb_position = bb.get("position")
@@ -117,8 +167,8 @@ class TASummaryRating:
             else:
                 osc_signals.append({"name": "Bollinger Bands", "value": price, "action": "NEUTRAL"})
 
-        # CCI (Commodity Channel Index) — use if available
-        cci = indicators.get("cci")
+        # CCI (Commodity Channel Index)
+        cci = indicators.get("cci") or indicators.get("cci_20")
         if cci is not None:
             if cci < -100:
                 osc_signals.append({"name": "CCI", "value": cci, "action": "BUY"})
@@ -148,9 +198,8 @@ class TASummaryRating:
                 osc_signals.append({"name": "AO", "value": ao, "action": "NEUTRAL"})
 
         # Stochastic K/D
-        stoch = indicators.get("stochastic", {}) if isinstance(indicators.get("stochastic"), dict) else {}
-        stoch_k_main = stoch.get("k") or indicators.get("stoch_k")
-        stoch_d_main = stoch.get("d") or indicators.get("stoch_d")
+        stoch_k_main = indicators.get("stoch_k")
+        stoch_d_main = indicators.get("stoch_d")
         if stoch_k_main is not None and stoch_d_main is not None:
             if stoch_k_main < 20 and stoch_k_main > stoch_d_main:
                 osc_signals.append({"name": "Stochastic", "value": stoch_k_main, "action": "BUY"})
@@ -180,8 +229,8 @@ class TASummaryRating:
                 osc_signals.append({"name": "BOP", "value": bop, "action": "NEUTRAL"})
 
         # Trend Short
-        trend_short = indicators.get("trend_short") or (indicators.get("trend", {}).get("short") if isinstance(indicators.get("trend"), dict) else None)
-        if trend_short:
+        trend_short = indicators.get("trend_short")
+        if trend_short and trend_short != "neutral":
             if trend_short == "bullish":
                 osc_signals.append({"name": "Trend (Short)", "value": trend_short, "action": "BUY"})
             elif trend_short == "bearish":

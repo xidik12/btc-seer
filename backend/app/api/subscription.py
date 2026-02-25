@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Query, HTTPException, Request
+from fastapi import APIRouter, Depends, Query, HTTPException, Request
 from aiogram import Bot
 from aiogram.types import LabeledPrice
 from sqlalchemy import select
@@ -12,9 +12,10 @@ from app.config import settings
 from app.database import async_session, BotUser, PaymentHistory
 from app.api.admin import _verify_telegram_init_data
 from app.bot.subscription import is_premium, get_status_text
+from app.dependencies import strict_rate_limit
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/subscription", tags=["subscription"])
+router = APIRouter(prefix="/api/subscription", tags=["subscription"], dependencies=[Depends(strict_rate_limit)])
 
 TIER_CONFIG = {
     "monthly":   {"days": 30,  "stars": settings.premium_price_stars_monthly,   "label": "Premium (30 days)"},

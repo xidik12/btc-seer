@@ -52,7 +52,7 @@ export default function TickerTape() {
         return {
           label: t.label,
           price: val?.price ?? (typeof val === 'number' ? val : null),
-          change: val?.change_1h ?? null,
+          change: val?.change_1h ?? val?.change_24h ?? null,
         }
       })
       setItems(built)

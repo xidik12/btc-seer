@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select, desc
 
@@ -11,8 +11,9 @@ from app.database import (
     WhaleTransaction,
 )
 from app.api.admin import _verify_telegram_init_data
+from app.dependencies import standard_rate_limit
 
-router = APIRouter(prefix="/api/advisor", tags=["advisor"])
+router = APIRouter(prefix="/api/advisor", tags=["advisor"], dependencies=[Depends(standard_rate_limit)])
 
 
 def _get_authenticated_user(request: Request) -> int:

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatPricePrecise, formatPercent } from '../utils/format'
@@ -9,10 +9,10 @@ import EconomicCalendar from '../components/EconomicCalendar'
 import DataSourceFooter from '../components/DataSourceFooter'
 
 const SECTION_TABS = [
-  { path: 'crypto', labelKey: 'Crypto' },
-  { path: 'indices', labelKey: 'Indices' },
-  { path: 'forex', labelKey: 'Forex' },
-  { path: 'commodities', labelKey: 'Commodities' },
+  { path: 'crypto', labelKey: 'markets.crypto' },
+  { path: 'indices', labelKey: 'markets.indices' },
+  { path: 'forex', labelKey: 'markets.forex' },
+  { path: 'commodities', labelKey: 'markets.commodities' },
 ]
 
 function AssetRow({ name, icon, price, change }) {
@@ -37,18 +37,32 @@ function AssetRow({ name, icon, price, change }) {
   )
 }
 
+function LoadingSkeleton({ rows = 5 }) {
+  return (
+    <div className="bg-bg-card rounded-xl p-4 animate-pulse">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="h-10 bg-bg-secondary rounded mb-2" />
+      ))}
+    </div>
+  )
+}
+
 function CryptoSection() {
   const [coins, setCoins] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     api.getTrackedCoins()
       .then((data) => setCoins(Array.isArray(data) ? data : data?.coins ?? []))
       .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
+
+  if (loading) return <LoadingSkeleton rows={6} />
 
   return (
     <div className="bg-bg-card rounded-xl p-4">
-      <CryptoHeatmap coins={coins} />
+      <CryptoHeatmap coins={coins} loading={loading} />
       <div className="mt-3">
         {coins.map((c) => (
           <AssetRow
@@ -66,10 +80,13 @@ function CryptoSection() {
 
 function IndicesSection() {
   const [macro, setMacro] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.getMacroData().then(setMacro).catch(() => {})
+    api.getMacroData().then(setMacro).catch(() => {}).finally(() => setLoading(false))
   }, [])
+
+  if (loading) return <LoadingSkeleton rows={7} />
 
   const indices = [
     { key: 'sp500', name: 'S&P 500', icon: 'SP' },
@@ -97,10 +114,13 @@ function IndicesSection() {
 
 function CommoditiesSection() {
   const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.getCommoditiesData().then(setData).catch(() => {})
+    api.getCommoditiesData().then(setData).catch(() => {}).finally(() => setLoading(false))
   }, [])
+
+  if (loading) return <LoadingSkeleton rows={5} />
 
   const items = [
     { key: 'gold', name: 'Gold', icon: 'Au' },
@@ -125,6 +145,7 @@ function CommoditiesSection() {
 }
 
 export default function MarketOverview() {
+  const { t } = useTranslation('common')
   const [activeTab, setActiveTab] = useState('crypto')
 
   return (
@@ -145,7 +166,7 @@ export default function MarketOverview() {
                 : 'bg-bg-card text-text-secondary hover:text-text-primary'
             }`}
           >
-            {tab.labelKey}
+            {t(tab.labelKey, { defaultValue: tab.path.charAt(0).toUpperCase() + tab.path.slice(1) })}
           </button>
         ))}
       </div>

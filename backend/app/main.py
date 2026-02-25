@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -500,7 +501,10 @@ if settings.sentry_dsn:
     )
 
 # Prometheus metrics endpoint at /metrics
-Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+_instrumentator = Instrumentator()
+_instrumentator.instrument(app)
+if os.getenv("EXPOSE_METRICS"):
+    _instrumentator.expose(app, endpoint="/metrics")
 
 # CORS for Mini App
 _cors_origins = [
@@ -562,7 +566,7 @@ app.include_router(calendar_api.router)
 @app.get("/health")
 async def health():
     if _startup_error:
-        return {"status": "degraded", "error": _startup_error}
+        return {"status": "degraded", "error": "Service startup issue. Check server logs."}
     if not _data_ready:
         return {"status": "warming_up"}
     return {"status": "ok"}

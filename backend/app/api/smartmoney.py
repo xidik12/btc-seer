@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select, func, desc, and_
 
 from app.database import (
@@ -12,9 +12,10 @@ from app.database import (
 )
 from app.api.admin import _verify_telegram_init_data
 from app.bot.subscription import is_premium
+from app.dependencies import standard_rate_limit
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/smart-money", tags=["smart-money"])
+router = APIRouter(prefix="/api/smart-money", tags=["smart-money"], dependencies=[Depends(standard_rate_limit)])
 
 
 def _whale_impact(tx) -> str:
