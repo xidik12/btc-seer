@@ -53,7 +53,7 @@ async def cb_predict(callback: CallbackQuery):
         return
     from app.bot.commands import cmd_predict
     await callback.answer()
-    await cmd_predict(callback.message, _from_user_id=callback.from_user.id)
+    await cmd_predict.__wrapped__(callback.message)
 
 
 @callback_router.callback_query(lambda c: c.data == "signal")
@@ -62,7 +62,7 @@ async def cb_signal(callback: CallbackQuery):
         return
     from app.bot.commands import cmd_signal
     await callback.answer()
-    await cmd_signal(callback.message, _from_user_id=callback.from_user.id)
+    await cmd_signal.__wrapped__(callback.message)
 
 
 @callback_router.callback_query(lambda c: c.data == "news")
@@ -71,7 +71,7 @@ async def cb_news(callback: CallbackQuery):
         return
     from app.bot.commands import cmd_news
     await callback.answer()
-    await cmd_news(callback.message)
+    await cmd_news.__wrapped__(callback.message)
 
 
 @callback_router.callback_query(lambda c: c.data == "accuracy")
@@ -80,7 +80,7 @@ async def cb_accuracy(callback: CallbackQuery):
         return
     from app.bot.commands import cmd_accuracy
     await callback.answer()
-    await cmd_accuracy(callback.message)
+    await cmd_accuracy.__wrapped__(callback.message)
 
 
 @callback_router.callback_query(lambda c: c.data == "settings")
@@ -156,7 +156,7 @@ async def cb_advisor_portfolio(callback: CallbackQuery):
         return
     from app.bot.commands import cmd_advisor
     await callback.answer()
-    await cmd_advisor(callback.message, _from_user_id=callback.from_user.id)
+    await cmd_advisor.__wrapped__(callback.message, _from_user_id=callback.from_user.id)
 
 
 @callback_router.callback_query(lambda c: c.data == "advisor_trades")
@@ -165,7 +165,7 @@ async def cb_advisor_trades(callback: CallbackQuery):
         return
     from app.bot.commands import cmd_trades
     await callback.answer()
-    await cmd_trades(callback.message, _from_user_id=callback.from_user.id)
+    await cmd_trades.__wrapped__(callback.message, _from_user_id=callback.from_user.id)
 
 
 @callback_router.callback_query(lambda c: c.data == "advisor_history")
@@ -174,7 +174,7 @@ async def cb_advisor_history(callback: CallbackQuery):
         return
     from app.bot.commands import cmd_history
     await callback.answer()
-    await cmd_history(callback.message, _from_user_id=callback.from_user.id)
+    await cmd_history.__wrapped__(callback.message, _from_user_id=callback.from_user.id)
 
 
 @callback_router.callback_query(lambda c: c.data == "advisor_risk")
