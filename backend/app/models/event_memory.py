@@ -359,16 +359,43 @@ class EventClassifier:
 
 
 class EventPatternMatcher:
-    """Finds similar past events and returns their average price impact."""
+    """Finds similar past events and returns their expected price impact.
+
+    Uses category-specific impact models with:
+    - Keyword similarity (Jaccard) weighting
+    - Severity-band weighting (events of similar severity matter more)
+    - Recency weighting (recent events matter more — markets change)
+    - Directional consistency tracking per category
+    """
+
+    # Category-specific mechanisms: how each event type affects BTC
+    CATEGORY_MECHANISMS = {
+        "war_conflict": "Geopolitical instability → risk-off sentiment → BTC sells off short-term as correlated risk asset, may recover as safe haven",
+        "politics_regulation": "Regulatory clarity/threat → changes adoption outlook → affects institutional demand",
+        "monetary_policy": "Rate decisions → affects dollar strength and risk appetite → BTC inversely correlated with DXY",
+        "tariff_trade": "Trade barriers → economic uncertainty → risk-off initially, potential inflation hedge long-term",
+        "stock_market": "Equity moves → risk sentiment correlation → BTC follows equities short-term",
+        "etf_institutional": "ETF flows → direct demand/supply pressure → immediate price impact proportional to flow size",
+        "exchange_hack": "Security breach → trust crisis → immediate sell-off, recovery depends on amount stolen",
+        "company_announcement": "Corporate action → varies by company relevance to BTC ecosystem",
+        "whale_movement": "Large transfers → supply/demand shift → exchange deposits bearish, withdrawals bullish",
+        "technology": "Protocol upgrades → changes fundamental value proposition → usually bullish if successful",
+        "macro_economic": "Macro shifts → changes BTC's relative attractiveness vs traditional assets",
+        "country_adoption": "Sovereign adoption → massive demand signal → strongly bullish, especially for reserves",
+    }
 
     def find_similar_events(
         self,
         category: str,
         keywords: str,
         past_events: list[dict],
-        min_similarity: float = 0.3,
+        severity: int = 5,
+        min_similarity: float = 0.25,
     ) -> list[dict]:
-        """Find past events in the same category with similar keywords."""
+        """Find past events in the same category with similar keywords.
+
+        Enhanced with severity-band and recency weighting.
+        """
         current_kw_set = set(keywords.lower().split(",")) if keywords else set()
         similar = []
 
@@ -386,21 +413,39 @@ class EventPatternMatcher:
             if not union:
                 continue
 
-            similarity = len(intersection) / len(union)
-            if similarity >= min_similarity:
-                event["similarity"] = similarity
-                similar.append(event)
+            keyword_sim = len(intersection) / len(union)
+
+            # Severity similarity bonus: events with similar severity are more comparable
+            past_severity = event.get("severity", 5)
+            severity_diff = abs(severity - past_severity)
+            severity_sim = max(0, 1.0 - severity_diff * 0.15)  # 0.85 for ±1, 0.7 for ±2, etc.
+
+            # Combined similarity
+            combined_sim = keyword_sim * 0.7 + severity_sim * 0.3
+
+            if combined_sim >= min_similarity:
+                event_copy = dict(event)
+                event_copy["similarity"] = combined_sim
+                event_copy["keyword_similarity"] = keyword_sim
+                event_copy["severity_similarity"] = severity_sim
+                similar.append(event_copy)
 
         # Sort by similarity (highest first)
         similar.sort(key=lambda x: -x.get("similarity", 0))
-        return similar[:20]  # Top 20 most similar
+        return similar[:30]  # Top 30 most similar
 
-    def get_expected_impact(self, similar_events: list[dict]) -> dict:
-        """Calculate expected price impact from similar past events.
+    def get_expected_impact(
+        self,
+        similar_events: list[dict],
+        current_severity: int = 5,
+    ) -> dict:
+        """Calculate expected price impact with severity and recency weighting.
 
-        Returns weighted average of historical impacts, with more similar
-        events weighted higher.
+        Recent events matter more (exponential decay over 30 days).
+        Events with similar severity to current event get more weight.
         """
+        from datetime import datetime, timedelta
+
         if not similar_events:
             return {
                 "expected_1h": 0.0,
@@ -409,18 +454,40 @@ class EventPatternMatcher:
                 "confidence": 0.0,
                 "sample_size": 0,
                 "avg_sentiment_predictive": 0.5,
+                "directional_consistency": 0.0,
+                "mechanism": "",
             }
 
+        now = datetime.utcnow()
         total_weight = 0.0
         weighted_1h = 0.0
         weighted_4h = 0.0
         weighted_24h = 0.0
         predictive_count = 0
         total_predictive = 0
+        direction_counts = {"up": 0, "down": 0}
 
         for event in similar_events:
             sim = event.get("similarity", 0.5)
-            weight = sim * sim  # Quadratic weighting — very similar events matter more
+
+            # Recency weight: half-life of 30 days
+            event_ts = event.get("timestamp")
+            if event_ts:
+                if isinstance(event_ts, str):
+                    try:
+                        event_ts = datetime.fromisoformat(event_ts)
+                    except Exception:
+                        event_ts = None
+                if event_ts:
+                    days_ago = (now - event_ts).total_seconds() / 86400
+                    recency = 0.5 ** (days_ago / 30)  # Half-life 30 days
+                else:
+                    recency = 0.5
+            else:
+                recency = 0.5
+
+            # Combined weight: similarity² × recency
+            weight = sim * sim * recency
 
             c1h = event.get("change_pct_1h")
             c4h = event.get("change_pct_4h")
@@ -429,6 +496,10 @@ class EventPatternMatcher:
             if c1h is not None:
                 weighted_1h += c1h * weight
                 total_weight += weight
+                if c1h > 0:
+                    direction_counts["up"] += 1
+                else:
+                    direction_counts["down"] += 1
 
             if c4h is not None:
                 weighted_4h += c4h * weight
@@ -449,19 +520,33 @@ class EventPatternMatcher:
                 "confidence": 0.0,
                 "sample_size": 0,
                 "avg_sentiment_predictive": 0.5,
+                "directional_consistency": 0.0,
+                "mechanism": "",
             }
 
         avg_1h = weighted_1h / total_weight
         avg_4h = weighted_4h / total_weight
         avg_24h = weighted_24h / total_weight
 
-        # Confidence: more events + higher similarity = higher confidence
+        # Directional consistency: how often do events in this category move the same way?
+        total_dir = direction_counts["up"] + direction_counts["down"]
+        if total_dir > 0:
+            dominant = max(direction_counts.values())
+            directional_consistency = dominant / total_dir  # 0.5 = random, 1.0 = always same direction
+        else:
+            directional_consistency = 0.5
+
+        # Confidence: sample size + average similarity + directional consistency
+        avg_sim = sum(e.get("similarity", 0) for e in similar_events) / len(similar_events)
         confidence = min(1.0,
-            (len(similar_events) / 10)  # More events = more confident
-            * (sum(e.get("similarity", 0) for e in similar_events) / len(similar_events))  # Avg similarity
+            (len(similar_events) / 10) * avg_sim * (0.5 + directional_consistency * 0.5)
         )
 
         avg_predictive = (predictive_count / total_predictive) if total_predictive > 0 else 0.5
+
+        # Get mechanism for this category
+        category = similar_events[0].get("category", "") if similar_events else ""
+        mechanism = self.CATEGORY_MECHANISMS.get(category, "")
 
         return {
             "expected_1h": round(avg_1h, 4),
@@ -470,13 +555,101 @@ class EventPatternMatcher:
             "confidence": round(confidence, 4),
             "sample_size": len(similar_events),
             "avg_sentiment_predictive": round(avg_predictive, 4),
+            "directional_consistency": round(directional_consistency, 4),
+            "mechanism": mechanism,
+        }
+
+    def combine_multiple_events(
+        self,
+        events_with_impacts: list[dict],
+    ) -> dict:
+        """Combine impacts from multiple concurrent events.
+
+        Handles:
+        - Reinforcing events (same direction): impacts compound
+        - Conflicting events (opposite direction): partially cancel, increase uncertainty
+        - Severity-weighted combination
+        """
+        if not events_with_impacts:
+            return {
+                "expected_1h": 0.0,
+                "expected_4h": 0.0,
+                "expected_24h": 0.0,
+                "confidence": 0.0,
+                "active_event_count": 0,
+                "dominant_direction": "neutral",
+                "mechanism_summary": "",
+            }
+
+        total_severity = sum(e.get("severity", 5) for e in events_with_impacts)
+        if total_severity == 0:
+            total_severity = 1
+
+        combined_1h = 0.0
+        combined_4h = 0.0
+        combined_24h = 0.0
+        mechanisms = []
+        directions = []
+
+        for event_data in events_with_impacts:
+            sev_weight = event_data.get("severity", 5) / total_severity
+            impact = event_data.get("expected_impact", {})
+
+            combined_1h += impact.get("expected_1h", 0) * sev_weight
+            combined_4h += impact.get("expected_4h", 0) * sev_weight
+            combined_24h += impact.get("expected_24h", 0) * sev_weight
+
+            mech = impact.get("mechanism", "")
+            if mech:
+                mechanisms.append(f"[{event_data.get('category', '?')}] {mech}")
+
+            # Track direction
+            if impact.get("expected_1h", 0) > 0:
+                directions.append("bullish")
+            elif impact.get("expected_1h", 0) < 0:
+                directions.append("bearish")
+
+        # Directional agreement among events
+        bullish_count = directions.count("bullish")
+        bearish_count = directions.count("bearish")
+        total_dir = bullish_count + bearish_count
+
+        if total_dir > 0:
+            agreement = max(bullish_count, bearish_count) / total_dir
+        else:
+            agreement = 0.5
+
+        # If events conflict, reduce confidence and dampen magnitude
+        if agreement < 0.6:  # Mixed signals
+            conflict_damper = 0.5
+            combined_1h *= conflict_damper
+            combined_4h *= conflict_damper
+            combined_24h *= conflict_damper
+
+        # Confidence from individual event confidences, adjusted for agreement
+        avg_conf = sum(
+            e.get("expected_impact", {}).get("confidence", 0)
+            for e in events_with_impacts
+        ) / len(events_with_impacts)
+        combined_confidence = avg_conf * agreement
+
+        dominant = "bullish" if bullish_count > bearish_count else ("bearish" if bearish_count > bullish_count else "neutral")
+
+        return {
+            "expected_1h": round(combined_1h, 4),
+            "expected_4h": round(combined_4h, 4),
+            "expected_24h": round(combined_24h, 4),
+            "confidence": round(min(1.0, combined_confidence), 4),
+            "active_event_count": len(events_with_impacts),
+            "dominant_direction": dominant,
+            "event_agreement": round(agreement, 4),
+            "mechanism_summary": " | ".join(mechanisms[:3]),
         }
 
     def get_category_stats(self, past_events: list[dict]) -> dict:
-        """Get average impact stats per event category.
+        """Get detailed impact stats per event category including severity bands."""
+        import statistics
 
-        Returns dict like: {"war_conflict": {"avg_1h": -0.5, "avg_24h": -2.1, "count": 15}, ...}
-        """
         stats = {}
 
         for event in past_events:
@@ -487,23 +660,46 @@ class EventPatternMatcher:
             if cat not in stats:
                 stats[cat] = {
                     "impacts_1h": [], "impacts_4h": [], "impacts_24h": [],
-                    "count": 0
+                    "high_sev_impacts": [], "low_sev_impacts": [],
+                    "count": 0, "sentiment_predictive": [],
                 }
 
             stats[cat]["count"] += 1
-            if event.get("change_pct_1h") is not None:
-                stats[cat]["impacts_1h"].append(event["change_pct_1h"])
+            sev = event.get("severity", 5)
+            c1h = event.get("change_pct_1h")
+
+            if c1h is not None:
+                stats[cat]["impacts_1h"].append(c1h)
+                if sev >= 7:
+                    stats[cat]["high_sev_impacts"].append(c1h)
+                elif sev <= 4:
+                    stats[cat]["low_sev_impacts"].append(c1h)
+
             if event.get("change_pct_4h") is not None:
                 stats[cat]["impacts_4h"].append(event["change_pct_4h"])
             if event.get("change_pct_24h") is not None:
                 stats[cat]["impacts_24h"].append(event["change_pct_24h"])
+            if event.get("sentiment_was_predictive") is not None:
+                stats[cat]["sentiment_predictive"].append(event["sentiment_was_predictive"])
 
         result = {}
         for cat, data in stats.items():
+            impacts_1h = data["impacts_1h"]
+            avg_1h = sum(impacts_1h) / len(impacts_1h) if impacts_1h else 0.0
+            std_1h = statistics.stdev(impacts_1h) if len(impacts_1h) >= 2 else 0.0
+            bullish_1h = sum(1 for x in impacts_1h if x > 0) / len(impacts_1h) if impacts_1h else 0.5
+            predictive_power = abs(bullish_1h - 0.5) * 2  # 0 = random, 1 = perfectly directional
+
             result[cat] = {
                 "count": data["count"],
-                "avg_1h": round(sum(data["impacts_1h"]) / len(data["impacts_1h"]), 4) if data["impacts_1h"] else 0.0,
+                "avg_1h": round(avg_1h, 4),
                 "avg_4h": round(sum(data["impacts_4h"]) / len(data["impacts_4h"]), 4) if data["impacts_4h"] else 0.0,
                 "avg_24h": round(sum(data["impacts_24h"]) / len(data["impacts_24h"]), 4) if data["impacts_24h"] else 0.0,
+                "std_1h": round(std_1h, 4),
+                "bullish_ratio": round(bullish_1h, 4),
+                "predictive_power": round(predictive_power, 4),
+                "high_severity_avg": round(sum(data["high_sev_impacts"]) / len(data["high_sev_impacts"]), 4) if data["high_sev_impacts"] else None,
+                "low_severity_avg": round(sum(data["low_sev_impacts"]) / len(data["low_sev_impacts"]), 4) if data["low_sev_impacts"] else None,
+                "sentiment_predictive": round(sum(data["sentiment_predictive"]) / len(data["sentiment_predictive"]), 4) if data["sentiment_predictive"] else 0.5,
             }
         return result

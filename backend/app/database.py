@@ -257,6 +257,91 @@ class EventImpact(Base):
     evaluated_24h: Mapped[bool] = mapped_column(Boolean, default=False)
     evaluated_7d: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Prediction attribution — which prediction was active when this event occurred
+    prediction_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    prediction_was_correct: Mapped[bool] = mapped_column(Boolean, nullable=True)
+
+    # Category-level learning
+    category_accuracy: Mapped[float] = mapped_column(Float, nullable=True)  # rolling accuracy for this category
+
+
+class EventCausalChain(Base):
+    """Causal reasoning log: event → mechanism → prediction → outcome → lesson.
+
+    This is the system's 'thinking' record — it logs WHY an event should move BTC,
+    what the prediction was, what actually happened, and what was learned.
+    """
+    __tablename__ = "event_causal_chains"
+    __table_args__ = (
+        Index("ix_ecc_category_ts", "category", "timestamp"),
+        Index("ix_ecc_event_impact_id", "event_impact_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True, default=func.now())
+
+    # Link to event and prediction
+    event_impact_id: Mapped[int] = mapped_column(Integer, index=True)
+    prediction_id: Mapped[int] = mapped_column(Integer, nullable=True)
+
+    # Event context
+    category: Mapped[str] = mapped_column(String(50), index=True)
+    subcategory: Mapped[str] = mapped_column(String(50), nullable=True)
+    severity: Mapped[int] = mapped_column(Integer, default=5)
+    event_title: Mapped[str] = mapped_column(Text)
+
+    # Causal reasoning
+    mechanism: Mapped[str] = mapped_column(Text)  # "War escalation → risk-off → BTC drops as correlated risk asset"
+    expected_direction: Mapped[str] = mapped_column(String(20))  # bullish / bearish / neutral
+    expected_magnitude_pct: Mapped[float] = mapped_column(Float, nullable=True)  # predicted % move
+
+    # What actually happened
+    actual_direction: Mapped[str] = mapped_column(String(20), nullable=True)
+    actual_change_1h: Mapped[float] = mapped_column(Float, nullable=True)
+    actual_change_4h: Mapped[float] = mapped_column(Float, nullable=True)
+    actual_change_24h: Mapped[float] = mapped_column(Float, nullable=True)
+
+    # Assessment
+    direction_correct: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    magnitude_error_pct: Mapped[float] = mapped_column(Float, nullable=True)
+    lesson: Mapped[str] = mapped_column(Text, nullable=True)  # "War events with severity >7 cause larger drops than expected"
+
+    # Pattern strength (how many similar events confirm this pattern)
+    similar_event_count: Mapped[int] = mapped_column(Integer, default=0)
+    pattern_accuracy: Mapped[float] = mapped_column(Float, nullable=True)  # accuracy of predictions for this category+severity
+
+
+class EventCategoryStats(Base):
+    """Rolling statistics per event category — the system's learned knowledge about each event type."""
+    __tablename__ = "event_category_stats"
+    __table_args__ = (
+        UniqueConstraint("category", "timeframe", name="uq_event_cat_tf"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    category: Mapped[str] = mapped_column(String(50), index=True)
+    timeframe: Mapped[str] = mapped_column(String(10), default="1h")  # 1h, 4h, 24h, 7d
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+
+    # Impact statistics
+    sample_count: Mapped[int] = mapped_column(Integer, default=0)
+    avg_impact_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    median_impact_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    std_impact_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    max_positive_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    max_negative_pct: Mapped[float] = mapped_column(Float, default=0.0)
+
+    # Directional consistency
+    bullish_ratio: Mapped[float] = mapped_column(Float, default=0.5)  # % of events that were bullish
+    predictive_power: Mapped[float] = mapped_column(Float, default=0.0)  # 0=random, 1=perfectly predictable
+
+    # Severity-weighted stats
+    high_severity_avg: Mapped[float] = mapped_column(Float, nullable=True)  # avg impact for severity >= 7
+    low_severity_avg: Mapped[float] = mapped_column(Float, nullable=True)   # avg impact for severity <= 4
+
+    # Sentiment prediction accuracy for this category
+    sentiment_predictive_ratio: Mapped[float] = mapped_column(Float, default=0.5)
+
 
 class QuantPrediction(Base):
     """Quant Theory-based predictions (separate from ML ensemble)."""

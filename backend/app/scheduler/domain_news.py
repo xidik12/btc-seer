@@ -276,10 +276,14 @@ async def evaluate_event_impacts():
     For each event that hasn't been fully evaluated, check if enough time has
     passed and record the actual price change. This builds the historical
     'memory' that the pattern matcher uses.
+
+    After evaluation, triggers event post-mortem for newly-evaluated events.
     """
     from app.scheduler.domain_ml import _get_price_at
 
     try:
+        newly_evaluated_1h = 0
+
         async with async_session() as session:
             # Get events that need evaluation
             result = await session.execute(
@@ -311,6 +315,7 @@ async def evaluate_event_impacts():
                         event.change_pct_1h = round((price_1h - base_price) / base_price * 100, 4)
                         event.evaluated_1h = True
                         evaluated_count += 1
+                        newly_evaluated_1h += 1
 
                         # Check if sentiment was predictive for 1h
                         if event.sentiment_score is not None:
@@ -349,6 +354,14 @@ async def evaluate_event_impacts():
 
         if evaluated_count > 0:
             logger.info(f"Event memory: evaluated {evaluated_count} impact measurements")
+
+        # Run post-mortem for newly evaluated events (learn from results)
+        if newly_evaluated_1h > 0:
+            try:
+                from app.models.event_learner import run_event_post_mortem
+                await run_event_post_mortem()
+            except Exception as e:
+                logger.debug(f"Event post-mortem after evaluation: {e}")
 
     except Exception as e:
         logger.error(f"Event impact evaluation error: {e}")
