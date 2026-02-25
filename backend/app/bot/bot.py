@@ -10,7 +10,7 @@ from app.config import settings
 from app.database import async_session, BotUser, TradeAdvice, Price, PaymentHistory, Prediction, GameProfile, UserPrediction, PriceAlert
 from app.bot.commands import router as commands_router
 from app.bot.keyboards import main_keyboard, settings_keyboard, advisor_keyboard, trade_close_keyboard, feedback_keyboard
-from app.bot.subscription import require_premium, activate_premium, get_status_text
+from app.bot.subscription import check_premium, activate_premium, get_status_text
 
 logger = logging.getLogger(__name__)
 
@@ -48,32 +48,36 @@ callback_router = Router()
 
 
 @callback_router.callback_query(lambda c: c.data == "predict")
-@require_premium
 async def cb_predict(callback: CallbackQuery):
+    if not await check_premium(callback):
+        return
     from app.bot.commands import cmd_predict
     await callback.answer()
-    await cmd_predict(callback.message)
+    await cmd_predict(callback.message, _from_user_id=callback.from_user.id)
 
 
 @callback_router.callback_query(lambda c: c.data == "signal")
-@require_premium
 async def cb_signal(callback: CallbackQuery):
+    if not await check_premium(callback):
+        return
     from app.bot.commands import cmd_signal
     await callback.answer()
-    await cmd_signal(callback.message)
+    await cmd_signal(callback.message, _from_user_id=callback.from_user.id)
 
 
 @callback_router.callback_query(lambda c: c.data == "news")
-@require_premium
 async def cb_news(callback: CallbackQuery):
+    if not await check_premium(callback):
+        return
     from app.bot.commands import cmd_news
     await callback.answer()
     await cmd_news(callback.message)
 
 
 @callback_router.callback_query(lambda c: c.data == "accuracy")
-@require_premium
 async def cb_accuracy(callback: CallbackQuery):
+    if not await check_premium(callback):
+        return
     from app.bot.commands import cmd_accuracy
     await callback.answer()
     await cmd_accuracy(callback.message)
@@ -147,33 +151,37 @@ async def cb_unsubscribe(callback: CallbackQuery):
 # ────────────────────────────────────────────────────────────────
 
 @callback_router.callback_query(lambda c: c.data == "advisor_portfolio")
-@require_premium
 async def cb_advisor_portfolio(callback: CallbackQuery):
+    if not await check_premium(callback):
+        return
     from app.bot.commands import cmd_advisor
     await callback.answer()
-    await cmd_advisor(callback.message)
+    await cmd_advisor(callback.message, _from_user_id=callback.from_user.id)
 
 
 @callback_router.callback_query(lambda c: c.data == "advisor_trades")
-@require_premium
 async def cb_advisor_trades(callback: CallbackQuery):
+    if not await check_premium(callback):
+        return
     from app.bot.commands import cmd_trades
     await callback.answer()
-    await cmd_trades(callback.message)
+    await cmd_trades(callback.message, _from_user_id=callback.from_user.id)
 
 
 @callback_router.callback_query(lambda c: c.data == "advisor_history")
-@require_premium
 async def cb_advisor_history(callback: CallbackQuery):
+    if not await check_premium(callback):
+        return
     from app.bot.commands import cmd_history
     await callback.answer()
-    await cmd_history(callback.message)
+    await cmd_history(callback.message, _from_user_id=callback.from_user.id)
 
 
 @callback_router.callback_query(lambda c: c.data == "advisor_risk")
-@require_premium
 async def cb_advisor_risk(callback: CallbackQuery):
     """Show risk settings for the advisor."""
+    if not await check_premium(callback):
+        return
     await callback.answer()
 
     from app.advisor.portfolio import get_or_create_portfolio

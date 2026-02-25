@@ -14,7 +14,7 @@ from app.database import (
     SupportTicket,
 )
 from app.bot.keyboards import main_keyboard, settings_keyboard, back_keyboard, advisor_keyboard, trade_close_keyboard, subscribe_keyboard
-from app.bot.subscription import require_premium, is_premium, get_status_text, grant_trial
+from app.bot.subscription import require_premium, check_premium, is_premium, get_status_text, grant_trial
 from app.bot.referral import parse_referral_code, process_referral, get_or_create_referral_code
 from app.bot.partner_referral import parse_partner_code, process_partner_referral, try_link_partner_telegram
 from app.signals.generator import DISCLAIMER
@@ -326,11 +326,11 @@ async def cmd_settings(message: Message):
 
 @router.message(Command("advisor"))
 @require_premium
-async def cmd_advisor(message: Message):
+async def cmd_advisor(message: Message, _from_user_id: int = None):
     """Show advisor status, balance, open trades, and $10K progress."""
     from app.advisor.portfolio import get_or_create_portfolio, get_stats
 
-    telegram_id = message.from_user.id
+    telegram_id = _from_user_id or message.from_user.id
     portfolio = await get_or_create_portfolio(telegram_id)
     stats = await get_stats(telegram_id)
 
@@ -432,9 +432,9 @@ async def cmd_setbalance(message: Message):
 
 @router.message(Command("trades"))
 @require_premium
-async def cmd_trades(message: Message):
+async def cmd_trades(message: Message, _from_user_id: int = None):
     """Show open trade advices with current status."""
-    telegram_id = message.from_user.id
+    telegram_id = _from_user_id or message.from_user.id
 
     async with async_session() as session:
         result = await session.execute(
@@ -477,9 +477,9 @@ async def cmd_trades(message: Message):
 
 @router.message(Command("history"))
 @require_premium
-async def cmd_history(message: Message):
+async def cmd_history(message: Message, _from_user_id: int = None):
     """Show trade result history with W/L stats."""
-    telegram_id = message.from_user.id
+    telegram_id = _from_user_id or message.from_user.id
 
     async with async_session() as session:
         result = await session.execute(
