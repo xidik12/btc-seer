@@ -104,7 +104,7 @@ def _require_admin(request: Request) -> dict:
         logger.warning("Admin auth: no initData header")
         raise HTTPException(401, "Admin access requires Telegram authentication")
 
-    user = _verify_telegram_init_data(init_data)
+    user = _verify_telegram_init_data(init_data, max_age=604800)  # 7d — same as user endpoints
     telegram_id = user.get("id", 0)
 
     if not settings.admin_telegram_id:
