@@ -73,12 +73,12 @@ def _verify_telegram_init_data(init_data: str, **kwargs) -> dict:
         logger.warning("Admin auth: HMAC signature mismatch")
         raise HTTPException(401, "Invalid initData signature")
 
-    # Check auth_date freshness
+    # Check auth_date freshness (max_age=0 disables the check)
+    max_age = kwargs.get("max_age", 300)  # default 5 min for admin
     auth_date = parsed.get("auth_date", [None])[0]
-    if auth_date:
+    if auth_date and max_age > 0:
         auth_time = datetime.utcfromtimestamp(int(auth_date))
         age_seconds = (datetime.utcnow() - auth_time).total_seconds()
-        max_age = kwargs.get("max_age", 300)  # default 5 min for admin
         if age_seconds > max_age:
             logger.warning(f"Auth: initData expired (age={age_seconds:.0f}s, max={max_age})")
             raise HTTPException(401, "Session expired — please reopen the app from Telegram")
@@ -104,7 +104,7 @@ def _require_admin(request: Request) -> dict:
         logger.warning("Admin auth: no initData header")
         raise HTTPException(401, "Admin access requires Telegram authentication")
 
-    user = _verify_telegram_init_data(init_data, max_age=604800)  # 7d — same as user endpoints
+    user = _verify_telegram_init_data(init_data, max_age=0)  # no expiry for admin
     telegram_id = user.get("id", 0)
 
     if not settings.admin_telegram_id:
