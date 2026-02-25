@@ -421,41 +421,48 @@ async def lifespan(app: FastAPI):
             # Step 1: Backfill historical data so charts work immediately
             await _safe_run(backfill_historical_prices(), "backfill_historical_prices")
 
-            # Step 2: Collect fresh data from all sources (each isolated)
-            await _safe_run(collect_price_data(), "collect_price_data")
-            await _safe_run(collect_news_data(), "collect_news_data")
-            await _safe_run(collect_macro_data(), "collect_macro_data")
-            await _safe_run(collect_onchain_data(), "collect_onchain_data")
-            await _safe_run(collect_influencer_tweets(), "collect_influencer_tweets")
-            await _safe_run(collect_funding_data(), "collect_funding_data")
-            await _safe_run(collect_dominance_data(), "collect_dominance_data")
-            await _safe_run(collect_coin_prices(), "collect_coin_prices")
-            await _safe_run(backfill_coin_ohlcv(), "backfill_coin_ohlcv")
-            await _safe_run(backfill_whale_transactions(), "backfill_whale_transactions")
+            # Step 2: Collect fresh data from all sources — run in parallel
+            await asyncio.gather(
+                _safe_run(collect_price_data(), "collect_price_data"),
+                _safe_run(collect_news_data(), "collect_news_data"),
+                _safe_run(collect_macro_data(), "collect_macro_data"),
+                _safe_run(collect_onchain_data(), "collect_onchain_data"),
+                _safe_run(collect_influencer_tweets(), "collect_influencer_tweets"),
+                _safe_run(collect_funding_data(), "collect_funding_data"),
+                _safe_run(collect_dominance_data(), "collect_dominance_data"),
+                _safe_run(collect_coin_prices(), "collect_coin_prices"),
+                _safe_run(backfill_whale_transactions(), "backfill_whale_transactions"),
+            )
 
-            # Step 2b: Seed new listings, DEX, and memecoins
-            await _safe_run(check_new_listings(), "check_new_listings")
-            await _safe_run(backfill_recent_announcements(), "backfill_recent_announcements")
-            await _safe_run(check_coingecko_new(), "check_coingecko_new")
-            await _safe_run(scan_dex_tokens(), "scan_dex_tokens")
-            await _safe_run(discover_memecoins(), "discover_memecoins")
+            # Mark server ready after core data — predictions can finish in background
+            global _data_ready
+            _data_ready = True
+            logger.info("Core data loaded — server ready")
 
-            # Step 3: Clean up duplicate predictions from old 30-min scheduler
+            # Step 2b: Secondary collection — parallel
+            await asyncio.gather(
+                _safe_run(backfill_coin_ohlcv(), "backfill_coin_ohlcv"),
+                _safe_run(check_new_listings(), "check_new_listings"),
+                _safe_run(backfill_recent_announcements(), "backfill_recent_announcements"),
+                _safe_run(check_coingecko_new(), "check_coingecko_new"),
+                _safe_run(scan_dex_tokens(), "scan_dex_tokens"),
+                _safe_run(discover_memecoins(), "discover_memecoins"),
+            )
+
+            # Step 3: Clean up duplicate predictions
             await _safe_run(deduplicate_predictions(), "deduplicate_predictions")
 
-            # Step 4: Wait briefly for data to settle, then generate predictions for all timeframes
-            # so the dashboard has data immediately. Cron scheduler takes over after this.
-            await asyncio.sleep(30)
-            await _safe_run(generate_prediction(), "generate_prediction")
-            await _safe_run(generate_quant_prediction(), "generate_quant_prediction")
-            await _safe_run(classify_news_events(), "classify_news_events")
-            await _safe_run(save_indicator_snapshot(), "save_indicator_snapshot")
+            # Step 4: Generate predictions (data is already collected above)
+            await asyncio.gather(
+                _safe_run(generate_prediction(), "generate_prediction"),
+                _safe_run(generate_quant_prediction(), "generate_quant_prediction"),
+                _safe_run(classify_news_events(), "classify_news_events"),
+                _safe_run(save_indicator_snapshot(), "save_indicator_snapshot"),
+            )
 
         async def _startup_wrapper():
-            global _data_ready
             await startup_data_pipeline()
-            _data_ready = True
-            logger.info("Data pipeline ready")
+            logger.info("Full data pipeline complete")
 
         asyncio.create_task(_startup_wrapper())
         logger.info("Startup complete — server ready, data pipeline loading in background")
