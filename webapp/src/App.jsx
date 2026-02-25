@@ -96,9 +96,9 @@ function ScrollToTop() {
 }
 
 function PremiumRoute({ children }) {
-  const { isPremium, isAdmin, loading } = useSubscription()
+  const { isPremium, loading } = useSubscription()
   if (loading) return <PageLoader />
-  if (!isPremium && !isAdmin) return <PaywallOverlay />
+  if (!isPremium) return <PaywallOverlay />
   return children
 }
 

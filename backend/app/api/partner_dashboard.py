@@ -18,7 +18,7 @@ def _get_partner_telegram_id(request: Request) -> int:
     init_data = request.headers.get("X-Telegram-Init-Data", "")
     if not init_data:
         raise HTTPException(401, "Authentication required. Open BTC Seer from Telegram.")
-    user_data = _verify_telegram_init_data(init_data, max_age=0)
+    user_data = _verify_telegram_init_data(init_data, max_age=86400)
     telegram_id = user_data.get("id")
     if not telegram_id:
         raise HTTPException(401, "Invalid Telegram authentication")

@@ -94,63 +94,6 @@ async def activate_premium(user: BotUser, payment_id: str, session, days: int = 
     logger.info(f"Premium activated for user {user.telegram_id} for {days}d until {user.subscription_end}")
 
 
-async def check_premium(event) -> bool:
-    """Check if the user behind event has premium access.
-
-    Returns True if premium/admin, False otherwise.
-    Handles ban check and sends upgrade prompt if not premium.
-    Works for both Message and CallbackQuery events.
-    """
-    if isinstance(event, CallbackQuery):
-        telegram_id = event.from_user.id
-    elif isinstance(event, Message):
-        telegram_id = event.from_user.id
-    else:
-        return True
-
-    # Master switch off = everyone is premium
-    if not settings.subscription_enabled:
-        return True
-
-    # Look up user
-    async with async_session() as session:
-        result = await session.execute(
-            select(BotUser).where(BotUser.telegram_id == telegram_id)
-        )
-        user = result.scalar_one_or_none()
-
-    # Check ban
-    if user and user.is_banned:
-        ban_text = "Your account has been suspended."
-        if user.ban_reason:
-            ban_text += f"\nReason: {user.ban_reason}"
-        if isinstance(event, CallbackQuery):
-            await event.answer(ban_text, show_alert=True)
-        else:
-            await event.answer(ban_text)
-        return False
-
-    if user and is_premium(user):
-        return True
-
-    # User is not premium — send upgrade prompt
-    from app.bot.keyboards import subscribe_keyboard
-    text = (
-        "This feature requires <b>BTC Seer Premium</b>.\n\n"
-        "Get AI predictions, trading signals, advisor & alerts "
-        f"for just {settings.premium_price_stars} Stars (~$9.99/mo).\n\n"
-        "Use /subscribe to unlock."
-    )
-
-    if isinstance(event, CallbackQuery):
-        await event.answer()
-        await event.message.answer(text, parse_mode="HTML", reply_markup=subscribe_keyboard())
-    else:
-        await event.answer(text, parse_mode="HTML", reply_markup=subscribe_keyboard())
-
-    return False
-
-
 def require_premium(handler):
     """Decorator that gates a handler behind premium subscription.
 
@@ -158,8 +101,52 @@ def require_premium(handler):
     """
     @functools.wraps(handler)
     async def wrapper(event, *args, **kwargs):
-        if await check_premium(event):
+        # Extract telegram_id based on event type
+        if isinstance(event, CallbackQuery):
+            telegram_id = event.from_user.id
+        elif isinstance(event, Message):
+            telegram_id = event.from_user.id
+        else:
             return await handler(event, *args, **kwargs)
-        return None
+
+        # Master switch off = skip gate
+        if not settings.subscription_enabled:
+            return await handler(event, *args, **kwargs)
+
+        # Look up user
+        async with async_session() as session:
+            result = await session.execute(
+                select(BotUser).where(BotUser.telegram_id == telegram_id)
+            )
+            user = result.scalar_one_or_none()
+
+        # Check ban
+        if user and user.is_banned:
+            ban_text = "Your account has been suspended."
+            if user.ban_reason:
+                ban_text += f"\nReason: {user.ban_reason}"
+            if isinstance(event, CallbackQuery):
+                await event.answer(ban_text, show_alert=True)
+            else:
+                await event.answer(ban_text)
+            return
+
+        if user and is_premium(user):
+            return await handler(event, *args, **kwargs)
+
+        # User is not premium — send upgrade prompt
+        from app.bot.keyboards import subscribe_keyboard
+        text = (
+            "This feature requires <b>BTC Seer Premium</b>.\n\n"
+            "Get AI predictions, trading signals, advisor & alerts "
+            f"for just {settings.premium_price_stars} Stars (~$9.99/mo).\n\n"
+            "Use /subscribe to unlock."
+        )
+
+        if isinstance(event, CallbackQuery):
+            await event.answer()
+            await event.message.answer(text, parse_mode="HTML", reply_markup=subscribe_keyboard())
+        else:
+            await event.answer(text, parse_mode="HTML", reply_markup=subscribe_keyboard())
 
     return wrapper
