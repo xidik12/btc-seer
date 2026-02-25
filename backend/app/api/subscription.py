@@ -31,7 +31,7 @@ async def create_invoice(request: Request, tier: str = Query(..., pattern="^(mon
     init_data = request.headers.get("X-Telegram-Init-Data", "")
     if not init_data:
         raise HTTPException(401, "Missing initData")
-    _verify_telegram_init_data(init_data, max_age=604800)
+    _verify_telegram_init_data(init_data, max_age=0)
 
     if not settings.telegram_bot_token:
         raise HTTPException(500, "Bot token not configured")
@@ -68,7 +68,7 @@ async def subscription_status(request: Request):
     if not init_data:
         raise HTTPException(401, "Missing initData")
 
-    user_data = _verify_telegram_init_data(init_data, max_age=604800)
+    user_data = _verify_telegram_init_data(init_data, max_age=0)
     telegram_id = user_data.get("id")
     if not telegram_id:
         raise HTTPException(400, "Invalid user data")

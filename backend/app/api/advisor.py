@@ -21,7 +21,7 @@ def _get_authenticated_user(request: Request) -> int:
     init_data = request.headers.get("X-Telegram-Init-Data", "")
     if not init_data:
         raise HTTPException(401, "Authentication required")
-    user_data = _verify_telegram_init_data(init_data, max_age=86400)  # 24h for user-facing routes
+    user_data = _verify_telegram_init_data(init_data, max_age=0)
     telegram_id = user_data.get("id")
     if not telegram_id:
         raise HTTPException(401, "Invalid authentication")
