@@ -1,9 +1,10 @@
 import logging
+import time
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, CoinInfo, CoinPrice, CoinSentiment, CoinPrediction, CoinSignal, CoinFeature
@@ -15,52 +16,83 @@ router = APIRouter(prefix="/api/coins", tags=["coins"])
 
 _search_service = CoinSearchService()
 
+# ── TTL cache for tracked coins ──
+_tracked_cache: tuple[dict, float] | None = None
+_TRACKED_TTL = 30  # seconds
+
 
 @router.get("/tracked")
 async def get_tracked_coins(session: AsyncSession = Depends(get_session)):
-    """List tracked coins with latest prices."""
+    """List tracked coins with latest prices (batch queries, cached 30s)."""
+    global _tracked_cache
+    if _tracked_cache is not None:
+        data, expires = _tracked_cache
+        if time.monotonic() < expires:
+            return data
+
     result = await session.execute(
         select(CoinInfo).where(CoinInfo.is_tracked == True)
     )
     coins = result.scalars().all()
 
+    if not coins:
+        return {"coins": []}
+
+    coin_ids = [c.coin_id for c in coins]
+
+    # Batch query: latest price per coin using window function
+    latest_price_sql = text("""
+        SELECT * FROM (
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY coin_id ORDER BY timestamp DESC) AS rn
+            FROM coin_prices
+            WHERE coin_id = ANY(:coin_ids)
+        ) sub WHERE rn = 1
+    """)
+    price_result = await session.execute(latest_price_sql, {"coin_ids": coin_ids})
+    price_rows = price_result.mappings().all()
+    price_by_coin = {r["coin_id"]: r for r in price_rows}
+
+    # Batch query: last 24 prices per coin for sparkline
+    sparkline_sql = text("""
+        SELECT coin_id, price_usd FROM (
+            SELECT coin_id, price_usd,
+                   ROW_NUMBER() OVER (PARTITION BY coin_id ORDER BY timestamp DESC) AS rn
+            FROM coin_prices
+            WHERE coin_id = ANY(:coin_ids)
+        ) sub WHERE rn <= 24
+        ORDER BY coin_id, rn DESC
+    """)
+    sparkline_result = await session.execute(sparkline_sql, {"coin_ids": coin_ids})
+    sparkline_rows = sparkline_result.mappings().all()
+
+    # Group sparkline data by coin_id (rows come ordered rn DESC = oldest first after reversal)
+    sparklines: dict[str, list[float]] = {}
+    for r in sparkline_rows:
+        sparklines.setdefault(r["coin_id"], []).append(r["price_usd"])
+
     tracked = []
     for coin in coins:
-        # Get latest price
-        price_result = await session.execute(
-            select(CoinPrice)
-            .where(CoinPrice.coin_id == coin.coin_id)
-            .order_by(desc(CoinPrice.timestamp))
-            .limit(1)
-        )
-        price = price_result.scalar_one_or_none()
-
-        # Get mini sparkline (last 24 price points)
-        sparkline_result = await session.execute(
-            select(CoinPrice)
-            .where(CoinPrice.coin_id == coin.coin_id)
-            .order_by(desc(CoinPrice.timestamp))
-            .limit(24)
-        )
-        sparkline_prices = sparkline_result.scalars().all()
-        sparkline = [p.price_usd for p in reversed(sparkline_prices)] if sparkline_prices else []
+        price = price_by_coin.get(coin.coin_id)
+        sparkline = sparklines.get(coin.coin_id, [])
 
         tracked.append({
             "coin_id": coin.coin_id,
             "symbol": coin.symbol,
             "name": coin.name,
             "image_url": coin.image_url,
-            "price_usd": price.price_usd if price else None,
-            "market_cap": price.market_cap if price else None,
-            "volume_24h": price.volume_24h if price else None,
-            "change_1h": price.change_1h if price else None,
-            "change_24h": price.change_24h if price else None,
-            "change_7d": price.change_7d if price else None,
+            "price_usd": price["price_usd"] if price else None,
+            "market_cap": price["market_cap"] if price else None,
+            "volume_24h": price["volume_24h"] if price else None,
+            "change_1h": price["change_1h"] if price else None,
+            "change_24h": price["change_24h"] if price else None,
+            "change_7d": price["change_7d"] if price else None,
             "sparkline": sparkline,
-            "timestamp": price.timestamp.isoformat() if price else None,
+            "timestamp": price["timestamp"].isoformat() if price and price["timestamp"] else None,
         })
 
-    return {"coins": tracked}
+    response = {"coins": tracked}
+    _tracked_cache = (response, time.monotonic() + _TRACKED_TTL)
+    return response
 
 
 @router.get("/{coin_id}/detail")

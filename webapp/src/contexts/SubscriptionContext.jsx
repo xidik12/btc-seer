@@ -4,6 +4,7 @@ import { api } from '../utils/api'
 
 const SubscriptionContext = createContext({
   isPremium: false,
+  isAdmin: false,
   tier: 'none',
   daysLeft: 0,
   statusText: '',
@@ -15,6 +16,7 @@ export function SubscriptionProvider({ children }) {
   const { tg } = useTelegram()
   const [state, setState] = useState({
     isPremium: false,
+    isAdmin: false,
     tier: 'none',
     daysLeft: 0,
     statusText: '',
@@ -34,6 +36,7 @@ export function SubscriptionProvider({ children }) {
       if (user) {
         setState({
           isPremium: !!user.is_premium,
+          isAdmin: !!user.is_admin,
           tier: user.subscription_status || (user.is_premium ? 'active' : 'none'),
           daysLeft: user.days_remaining ?? 0,
           statusText: user.status_text || '',

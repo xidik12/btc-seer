@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import DOMPurify from 'dompurify'
 import { api } from '../utils/api'
 
 const SENTIMENT_COLORS = {
@@ -138,7 +139,7 @@ export default function Briefing() {
           <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
             <div
               className="text-text-secondary text-xs leading-relaxed space-y-2 briefing-content"
-              dangerouslySetInnerHTML={{ __html: briefing.summary_html }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(briefing.summary_html || '') }}
             />
           </div>
         </>

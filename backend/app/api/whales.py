@@ -1,13 +1,18 @@
 import asyncio
+import time
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, desc, func, and_
+from sqlalchemy import select, desc, func, and_, case, literal_column, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, WhaleTransaction, AddressLabel
 
 router = APIRouter(prefix="/api/whales", tags=["whales"])
+
+# ── TTL cache for expensive stats endpoint ──
+_stats_cache: tuple[dict, float] | None = None
+_STATS_TTL = 60  # seconds
 
 
 @router.get("/recent")
@@ -74,31 +79,46 @@ async def get_entities(
 
     entities = get_entities_summary()
 
-    # Enrich with latest activity from DB
+    # Enrich with latest activity from DB — SQL aggregation instead of loading all rows
     now = datetime.utcnow()
     since_7d = now - timedelta(days=7)
 
-    result = await session.execute(
-        select(WhaleTransaction).where(
+    # Aggregate tx count and total BTC per entity in SQL
+    agg_result = await session.execute(
+        select(
+            WhaleTransaction.entity_name,
+            func.count().label("tx_count_7d"),
+            func.sum(WhaleTransaction.amount_btc).label("total_btc_7d"),
+            func.max(WhaleTransaction.timestamp).label("last_seen"),
+        )
+        .where(
             WhaleTransaction.timestamp >= since_7d,
             WhaleTransaction.entity_name.isnot(None),
-        ).order_by(desc(WhaleTransaction.timestamp))
+        )
+        .group_by(WhaleTransaction.entity_name)
     )
-    txs = result.scalars().all()
+    agg_rows = agg_result.all()
 
-    # Group activity by entity
+    # Get last direction per entity (latest tx) using window function
+    last_dir_sql = text("""
+        SELECT entity_name, direction FROM (
+            SELECT entity_name, direction,
+                   ROW_NUMBER() OVER (PARTITION BY entity_name ORDER BY timestamp DESC) AS rn
+            FROM whale_transactions
+            WHERE timestamp >= :since AND entity_name IS NOT NULL
+        ) sub WHERE rn = 1
+    """)
+    dir_result = await session.execute(last_dir_sql, {"since": since_7d})
+    last_directions = {r.entity_name: r.direction for r in dir_result}
+
     entity_activity: dict[str, dict] = {}
-    for tx in txs:
-        name = tx.entity_name
-        if name not in entity_activity:
-            entity_activity[name] = {
-                "tx_count_7d": 0,
-                "total_btc_7d": 0.0,
-                "last_seen": tx.timestamp.isoformat(),
-                "last_direction": tx.direction,
-            }
-        entity_activity[name]["tx_count_7d"] += 1
-        entity_activity[name]["total_btc_7d"] += tx.amount_btc
+    for row in agg_rows:
+        entity_activity[row.entity_name] = {
+            "tx_count_7d": row.tx_count_7d,
+            "total_btc_7d": float(row.total_btc_7d or 0),
+            "last_seen": row.last_seen.isoformat() if row.last_seen else None,
+            "last_direction": last_directions.get(row.entity_name),
+        }
 
     # Merge
     for entity in entities:
@@ -118,25 +138,32 @@ async def get_entities(
 async def get_whale_stats(
     session: AsyncSession = Depends(get_session),
 ):
-    """Get whale transaction statistics for 24h and 7d."""
+    """Get whale transaction statistics for 24h and 7d (SQL aggregation)."""
+    global _stats_cache
+    if _stats_cache is not None:
+        data, expires = _stats_cache
+        if time.monotonic() < expires:
+            return data
+
     now = datetime.utcnow()
     since_24h = now - timedelta(hours=24)
     since_7d = now - timedelta(days=7)
 
-    # 24h stats
-    result_24h = await session.execute(
-        select(WhaleTransaction).where(WhaleTransaction.timestamp >= since_24h)
-    )
-    txs_24h = result_24h.scalars().all()
+    async def _compute_stats_sql(since: datetime) -> dict:
+        """Compute whale stats using SQL aggregation instead of loading all rows."""
+        # Direction counts + totals in a single query
+        dir_result = await session.execute(
+            select(
+                func.coalesce(WhaleTransaction.direction, "unknown").label("dir"),
+                func.count().label("cnt"),
+                func.sum(WhaleTransaction.amount_btc).label("total_btc"),
+            )
+            .where(WhaleTransaction.timestamp >= since)
+            .group_by(func.coalesce(WhaleTransaction.direction, "unknown"))
+        )
+        dir_rows = dir_result.all()
 
-    # 7d stats
-    result_7d = await session.execute(
-        select(WhaleTransaction).where(WhaleTransaction.timestamp >= since_7d)
-    )
-    txs_7d = result_7d.scalars().all()
-
-    def compute_stats(txs):
-        if not txs:
+        if not dir_rows:
             return {
                 "count": 0, "total_btc": 0, "avg_btc": 0,
                 "exchange_in": 0, "exchange_out": 0,
@@ -146,60 +173,93 @@ async def get_whale_stats(
             }
 
         directions = {"exchange_in": 0, "exchange_out": 0, "whale_to_whale": 0, "unknown": 0}
-        exchange_counts = {}
-        entity_counts = {}
-        total_btc = 0
-        net_flow = 0
+        total_count = 0
+        total_btc = 0.0
+        net_flow = 0.0
 
-        for tx in txs:
-            total_btc += tx.amount_btc
-            d = tx.direction or "unknown"
-            directions[d] = directions.get(d, 0) + 1
-
+        for row in dir_rows:
+            d = row.dir
+            directions[d] = directions.get(d, 0) + row.cnt
+            total_count += row.cnt
+            total_btc += row.total_btc or 0
             if d == "exchange_in":
-                net_flow += tx.amount_btc
+                net_flow += row.total_btc or 0
             elif d == "exchange_out":
-                net_flow -= tx.amount_btc
+                net_flow -= row.total_btc or 0
 
-            for entity in [tx.from_entity, tx.to_entity]:
-                if entity and entity != "unknown":
-                    exchange_counts[entity] = exchange_counts.get(entity, 0) + 1
+        # Most active entity (single query)
+        entity_result = await session.execute(
+            select(
+                WhaleTransaction.entity_name,
+                func.count().label("cnt"),
+            )
+            .where(WhaleTransaction.timestamp >= since)
+            .where(WhaleTransaction.entity_name.isnot(None))
+            .group_by(WhaleTransaction.entity_name)
+            .order_by(desc("cnt"))
+            .limit(1)
+        )
+        entity_row = entity_result.first()
+        most_active = entity_row.entity_name if entity_row else None
 
-            if tx.entity_name:
-                entity_counts[tx.entity_name] = entity_counts.get(tx.entity_name, 0) + 1
-
-        most_active = max(entity_counts, key=entity_counts.get) if entity_counts else None
+        # Top exchanges (from_entity and to_entity combined, single query)
+        top_exch_sql = text("""
+            SELECT entity, SUM(cnt) as total FROM (
+                SELECT from_entity as entity, COUNT(*) as cnt
+                FROM whale_transactions
+                WHERE timestamp >= :since AND from_entity IS NOT NULL AND from_entity != 'unknown'
+                GROUP BY from_entity
+                UNION ALL
+                SELECT to_entity as entity, COUNT(*) as cnt
+                FROM whale_transactions
+                WHERE timestamp >= :since AND to_entity IS NOT NULL AND to_entity != 'unknown'
+                GROUP BY to_entity
+            ) sub
+            GROUP BY entity ORDER BY total DESC LIMIT 5
+        """)
+        exch_result = await session.execute(top_exch_sql, {"since": since})
+        top_exchanges = {row.entity: row.total for row in exch_result}
 
         return {
-            "count": len(txs),
+            "count": total_count,
             "total_btc": round(total_btc, 2),
-            "avg_btc": round(total_btc / len(txs), 2) if txs else 0,
+            "avg_btc": round(total_btc / total_count, 2) if total_count else 0,
             "exchange_in": directions["exchange_in"],
             "exchange_out": directions["exchange_out"],
             "whale_to_whale": directions["whale_to_whale"],
             "unknown": directions["unknown"],
             "net_flow_btc": round(net_flow, 2),
-            "top_exchanges": dict(sorted(exchange_counts.items(), key=lambda x: -x[1])[:5]),
+            "top_exchanges": top_exchanges,
             "most_active_entity": most_active,
         }
 
-    # Predictive accuracy
-    evaluated = await session.execute(
-        select(WhaleTransaction).where(
+    stats_24h = await _compute_stats_sql(since_24h)
+    stats_7d = await _compute_stats_sql(since_7d)
+
+    # Predictive accuracy — SQL aggregation instead of loading all rows
+    accuracy_result = await session.execute(
+        select(
+            func.count().label("total"),
+            func.count().filter(WhaleTransaction.direction_was_predictive == True).label("predictive"),
+        )
+        .where(
             WhaleTransaction.evaluated_1h == True,
             WhaleTransaction.direction_was_predictive.isnot(None),
         )
     )
-    eval_txs = evaluated.scalars().all()
-    predictive_count = sum(1 for tx in eval_txs if tx.direction_was_predictive)
-    accuracy = round(predictive_count / len(eval_txs) * 100, 1) if eval_txs else None
+    acc_row = accuracy_result.first()
+    total_evaluated = acc_row.total if acc_row else 0
+    predictive_count = acc_row.predictive if acc_row else 0
+    accuracy = round(predictive_count / total_evaluated * 100, 1) if total_evaluated else None
 
-    return {
-        "stats_24h": compute_stats(txs_24h),
-        "stats_7d": compute_stats(txs_7d),
+    response = {
+        "stats_24h": stats_24h,
+        "stats_7d": stats_7d,
         "predictive_accuracy": accuracy,
-        "total_evaluated": len(eval_txs),
+        "total_evaluated": total_evaluated,
     }
+    _stats_cache = (response, time.monotonic() + _STATS_TTL)
+    return response
 
 
 @router.get("/flow-history")
@@ -207,44 +267,43 @@ async def get_whale_flow_history(
     days: int = Query(7, ge=1, le=30),
     session: AsyncSession = Depends(get_session),
 ):
-    """Get daily aggregated whale flow data for charting."""
+    """Get daily aggregated whale flow data for charting (SQL aggregation)."""
     since = datetime.utcnow() - timedelta(days=days)
 
-    result = await session.execute(
-        select(WhaleTransaction).where(WhaleTransaction.timestamp >= since)
-        .order_by(WhaleTransaction.timestamp)
-    )
-    txs = result.scalars().all()
+    flow_sql = text("""
+        SELECT
+            CAST(timestamp AS DATE) as date,
+            COUNT(*) as count,
+            ROUND(CAST(SUM(amount_btc) AS NUMERIC), 2) as total_btc,
+            ROUND(CAST(SUM(CASE WHEN direction = 'exchange_in' THEN amount_btc ELSE 0 END) AS NUMERIC), 2) as exchange_in_btc,
+            ROUND(CAST(SUM(CASE WHEN direction = 'exchange_out' THEN amount_btc ELSE 0 END) AS NUMERIC), 2) as exchange_out_btc,
+            ROUND(CAST(
+                SUM(CASE WHEN direction = 'exchange_in' THEN amount_btc ELSE 0 END) -
+                SUM(CASE WHEN direction = 'exchange_out' THEN amount_btc ELSE 0 END)
+            AS NUMERIC), 2) as net_flow_btc
+        FROM whale_transactions
+        WHERE timestamp >= :since
+        GROUP BY CAST(timestamp AS DATE)
+        ORDER BY date
+    """)
+    result = await session.execute(flow_sql, {"since": since})
+    rows = result.mappings().all()
 
-    # Group by date
-    daily = {}
-    for tx in txs:
-        date_key = tx.timestamp.strftime("%Y-%m-%d")
-        if date_key not in daily:
-            daily[date_key] = {
-                "date": date_key, "count": 0, "total_btc": 0,
-                "exchange_in_btc": 0, "exchange_out_btc": 0, "net_flow_btc": 0,
-            }
-        day = daily[date_key]
-        day["count"] += 1
-        day["total_btc"] += tx.amount_btc
-        if tx.direction == "exchange_in":
-            day["exchange_in_btc"] += tx.amount_btc
-            day["net_flow_btc"] += tx.amount_btc
-        elif tx.direction == "exchange_out":
-            day["exchange_out_btc"] += tx.amount_btc
-            day["net_flow_btc"] -= tx.amount_btc
-
-    # Round values
-    for day in daily.values():
-        day["total_btc"] = round(day["total_btc"], 2)
-        day["exchange_in_btc"] = round(day["exchange_in_btc"], 2)
-        day["exchange_out_btc"] = round(day["exchange_out_btc"], 2)
-        day["net_flow_btc"] = round(day["net_flow_btc"], 2)
+    history = [
+        {
+            "date": str(r["date"]),
+            "count": r["count"],
+            "total_btc": float(r["total_btc"] or 0),
+            "exchange_in_btc": float(r["exchange_in_btc"] or 0),
+            "exchange_out_btc": float(r["exchange_out_btc"] or 0),
+            "net_flow_btc": float(r["net_flow_btc"] or 0),
+        }
+        for r in rows
+    ]
 
     return {
         "days": days,
-        "history": sorted(daily.values(), key=lambda x: x["date"]),
+        "history": history,
     }
 
 

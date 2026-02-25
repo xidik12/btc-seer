@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs, unquote
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select, desc, func
 
@@ -23,8 +23,10 @@ from app.database import (
     ModelVersion,
 )
 
+from app.dependencies import strict_rate_limit
+
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(strict_rate_limit)])
 
 
 # ─── Auth ────────────────────────────────────────────────────────────────────

@@ -47,7 +47,13 @@ export default function YieldCurveChart() {
     )
   }
 
-  if (!data?.current) return null
+  if (!data?.current) {
+    return (
+      <div className="bg-bg-card rounded-2xl p-4 text-center">
+        <p className="text-text-muted text-xs">Yield curve data unavailable</p>
+      </div>
+    )
+  }
 
   const current = data.current
   const inverted = data.inverted

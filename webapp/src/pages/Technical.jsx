@@ -372,16 +372,17 @@ export default function Technical() {
     <div className="px-4 pt-4 space-y-4 pb-20">
       <SubTabBar tabs={tabs} />
 
-      {/* ── TradingView-style TA Summary ── */}
-      <TASummaryGauge />
-
-      <YieldCurveChart />
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">{t('technical.title')}</h1>
         {data?.timestamp && (
           <span className="text-text-muted text-[10px]">{formatTimeAgo(data.timestamp)}</span>
         )}
       </div>
+
+      {/* ── TradingView-style TA Summary ── */}
+      <TASummaryGauge />
+
+      <YieldCurveChart />
 
       {/* ── Overall Summary ── */}
       <div className={`rounded-2xl p-4 border ${overallBg}`}>
@@ -554,6 +555,7 @@ export default function Technical() {
         color="text-accent-green"
         explain={t('technical.volume.explain')}
       >
+        {volume.volume_ratio != null && (
         <IndicatorRow label={t('technical.volume.ratio')} value={volume.volume_ratio} signal={getVolSignal(volume.volume_ratio)} t={t}
           description={
             volume.volume_ratio > 2 ? t('technical.volume.ratioVeryHigh', { ratio: volume.volume_ratio.toFixed(1) })
@@ -563,6 +565,7 @@ export default function Technical() {
             : t('technical.volume.ratioVeryLow', { ratio: volume.volume_ratio?.toFixed(1) })
           }
         />
+        )}
         <IndicatorRow label={t('technical.volume.vwap')} value={volume.vwap ? formatPricePrecise(volume.vwap) : null} t={t}
           signal={price && volume.vwap ? (price > volume.vwap ? 'bullish' : 'bearish') : null}
           description={price && volume.vwap ? (price > volume.vwap
@@ -701,8 +704,8 @@ export default function Technical() {
           description={t('technical.stochRsi.kFastDesc')}
         />
         <IndicatorRow label={t('technical.stochRsi.dSlow')} value={stochRsi.d} t={t}
-          signal={stochRsi.k > stochRsi.d ? 'bullish' : 'bearish'}
-          description={stochRsi.k > stochRsi.d ? t('technical.stochRsi.dSlowDescAbove') : t('technical.stochRsi.dSlowDescBelow')}
+          signal={stochRsi.k != null && stochRsi.d != null ? (stochRsi.k > stochRsi.d ? 'bullish' : 'bearish') : 'neutral'}
+          description={stochRsi.k != null && stochRsi.d != null && stochRsi.k > stochRsi.d ? t('technical.stochRsi.dSlowDescAbove') : t('technical.stochRsi.dSlowDescBelow')}
         />
       </Section>
 

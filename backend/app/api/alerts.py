@@ -3,16 +3,17 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select, func, desc
 
 from app.database import async_session, PriceAlert, BotUser
 from app.api.admin import _verify_telegram_init_data
 from app.bot.subscription import is_premium
+from app.dependencies import standard_rate_limit
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/alerts", tags=["alerts"])
+router = APIRouter(prefix="/api/alerts", tags=["alerts"], dependencies=[Depends(standard_rate_limit)])
 
 
 class AlertCreate(BaseModel):

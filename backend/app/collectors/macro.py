@@ -153,7 +153,7 @@ class MacroCollector(BaseCollector):
         series_map = {
             "treasury_2y": "DGS2",
             "treasury_5y": "DGS5",
-            "treasury_10y_fred": "DGS10",
+            "treasury_10y": "DGS10",
             "treasury_30y": "DGS30",
         }
 

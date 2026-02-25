@@ -1,12 +1,17 @@
+import time
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func
+from sqlalchemy import select, func, case, cast, Date, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, Prediction
 
 router = APIRouter(prefix="/api/history", tags=["history"])
+
+# ── TTL cache ──
+_accuracy_cache: dict[int, tuple[dict, float]] = {}
+_ACCURACY_TTL = 60  # seconds
 
 
 @router.get("/accuracy")
@@ -14,17 +19,29 @@ async def get_accuracy(
     days: int = Query(30, ge=1, le=365),
     session: AsyncSession = Depends(get_session),
 ):
-    """Get prediction accuracy statistics."""
+    """Get prediction accuracy statistics (SQL aggregation, cached 60s)."""
+    # Check cache
+    if days in _accuracy_cache:
+        data, expires = _accuracy_cache[days]
+        if time.monotonic() < expires:
+            return data
+
     since = datetime.utcnow() - timedelta(days=days)
 
-    result = await session.execute(
-        select(Prediction)
+    # Overall counts via SQL
+    overall_result = await session.execute(
+        select(
+            func.count().label("total"),
+            func.count().filter(Prediction.was_correct == True).label("correct"),
+        )
         .where(Prediction.timestamp >= since)
         .where(Prediction.was_correct.isnot(None))
     )
-    predictions = result.scalars().all()
+    overall = overall_result.first()
+    total = overall.total if overall else 0
+    correct = overall.correct if overall else 0
 
-    if not predictions:
+    if total == 0:
         return {
             "days": days,
             "total": 0,
@@ -32,59 +49,80 @@ async def get_accuracy(
             "by_timeframe": {},
         }
 
-    # Overall accuracy
-    correct = sum(1 for p in predictions if p.was_correct)
-    total = len(predictions)
-
-    # By timeframe
+    # By timeframe via SQL
+    tf_result = await session.execute(
+        select(
+            Prediction.timeframe,
+            func.count().label("total"),
+            func.count().filter(Prediction.was_correct == True).label("correct"),
+        )
+        .where(Prediction.timestamp >= since)
+        .where(Prediction.was_correct.isnot(None))
+        .group_by(Prediction.timeframe)
+    )
     by_timeframe = {}
+    for row in tf_result:
+        by_timeframe[row.timeframe] = {
+            "total": row.total,
+            "correct": row.correct,
+            "accuracy_pct": round(row.correct / row.total * 100, 1) if row.total > 0 else None,
+        }
+    # Ensure all timeframes present
     for tf in ["1h", "4h", "24h"]:
-        tf_preds = [p for p in predictions if p.timeframe == tf]
-        tf_correct = sum(1 for p in tf_preds if p.was_correct)
-        tf_total = len(tf_preds)
-        by_timeframe[tf] = {
-            "total": tf_total,
-            "correct": tf_correct,
-            "accuracy_pct": round(tf_correct / tf_total * 100, 1) if tf_total > 0 else None,
-        }
+        if tf not in by_timeframe:
+            by_timeframe[tf] = {"total": 0, "correct": 0, "accuracy_pct": None}
 
-    # By confidence level
-    high_conf = [p for p in predictions if p.confidence >= 70]
-    med_conf = [p for p in predictions if 40 <= p.confidence < 70]
-    low_conf = [p for p in predictions if p.confidence < 40]
-
+    # By confidence level via SQL
+    conf_result = await session.execute(
+        select(
+            case(
+                (Prediction.confidence >= 70, "high"),
+                (Prediction.confidence >= 40, "medium"),
+                else_="low",
+            ).label("level"),
+            func.count().label("total"),
+            func.count().filter(Prediction.was_correct == True).label("correct"),
+        )
+        .where(Prediction.timestamp >= since)
+        .where(Prediction.was_correct.isnot(None))
+        .group_by("level")
+    )
     by_confidence = {}
-    for label, group in [("high", high_conf), ("medium", med_conf), ("low", low_conf)]:
-        g_correct = sum(1 for p in group if p.was_correct)
-        g_total = len(group)
-        by_confidence[label] = {
-            "total": g_total,
-            "correct": g_correct,
-            "accuracy_pct": round(g_correct / g_total * 100, 1) if g_total > 0 else None,
+    for row in conf_result:
+        by_confidence[row.level] = {
+            "total": row.total,
+            "correct": row.correct,
+            "accuracy_pct": round(row.correct / row.total * 100, 1) if row.total > 0 else None,
         }
+    for level in ["high", "medium", "low"]:
+        if level not in by_confidence:
+            by_confidence[level] = {"total": 0, "correct": 0, "accuracy_pct": None}
 
-    # Daily accuracy trend
-    daily = {}
-    for p in predictions:
-        day = p.timestamp.strftime("%Y-%m-%d")
-        if day not in daily:
-            daily[day] = {"correct": 0, "total": 0}
-        daily[day]["total"] += 1
-        if p.was_correct:
-            daily[day]["correct"] += 1
-
+    # Daily trend via SQL (limited to last 90 days max for performance)
+    daily_sql = text("""
+        SELECT
+            CAST(timestamp AS DATE) as day,
+            COUNT(*) as total,
+            COUNT(*) FILTER (WHERE was_correct = true) as correct
+        FROM predictions
+        WHERE timestamp >= :since AND was_correct IS NOT NULL
+        GROUP BY CAST(timestamp AS DATE)
+        ORDER BY day
+    """)
+    daily_result = await session.execute(daily_sql, {"since": since})
     daily_trend = [
         {
-            "date": day,
-            "accuracy_pct": round(d["correct"] / d["total"] * 100, 1),
-            "total": d["total"],
+            "date": str(row.day),
+            "accuracy_pct": round(row.correct / row.total * 100, 1),
+            "accuracy": round(row.correct / row.total * 100, 1),
+            "total": row.total,
         }
-        for day, d in sorted(daily.items())
+        for row in daily_result
     ]
 
     overall_pct = round(correct / total * 100, 1)
 
-    return {
+    response = {
         "days": days,
         "total": total,
         "correct": correct,
@@ -93,8 +131,7 @@ async def get_accuracy(
         "total_predictions": total,
         "by_timeframe": by_timeframe,
         "by_confidence": by_confidence,
-        "daily_trend": [
-            {**d, "accuracy": d["accuracy_pct"]}
-            for d in daily_trend
-        ],
+        "daily_trend": daily_trend,
     }
+    _accuracy_cache[days] = (response, time.monotonic() + _ACCURACY_TTL)
+    return response

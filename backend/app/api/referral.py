@@ -2,16 +2,17 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select, func, desc
 
 from app.config import settings
 from app.database import async_session, BotUser, Referral
 from app.api.admin import _verify_telegram_init_data
 from app.bot.referral import get_or_create_referral_code
+from app.dependencies import standard_rate_limit
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/referral", tags=["referral"])
+router = APIRouter(prefix="/api/referral", tags=["referral"], dependencies=[Depends(standard_rate_limit)])
 
 
 @router.get("/info")
@@ -69,7 +70,7 @@ async def get_referral_info(request: Request):
     history = []
     for ref in referrals:
         history.append({
-            "referee_telegram_id": ref.referee_telegram_id,
+            "referee_telegram_id": f"***{str(ref.referee_telegram_id)[-4:]}",
             "bonus_days": ref.referrer_bonus_days,
             "created_at": ref.created_at.isoformat() if ref.created_at else None,
         })

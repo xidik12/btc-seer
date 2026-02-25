@@ -178,7 +178,7 @@ export default function Signals() {
       try {
         const [current, ...histories] = await Promise.all([
           api.getCurrentSignals().catch(() => null),
-          ...TIMEFRAMES.map(tf => api.getSignalHistory(tf, 14)),
+          ...TIMEFRAMES.map(tf => api.getSignalHistory(tf, 14).catch(() => ({ signals: [] }))),
         ])
         setCurrentSignal(current?.signal || current?.signals?.[0] || null)
         const tfMap = {}

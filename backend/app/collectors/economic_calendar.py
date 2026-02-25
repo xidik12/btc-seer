@@ -139,27 +139,90 @@ class EconomicCalendarCollector(BaseCollector):
         return events
 
     async def get_past_events(self, days: int = 7) -> list[dict]:
-        """Return recent past events (stub — could be enriched from DB)."""
+        """Return recent past events across all event types."""
         now = datetime.utcnow()
         start = now - timedelta(days=days)
-        all_events = await self.get_upcoming_events(days=0)
-        # For past events, shift the window
         past = []
+
         for event_def in RECURRING_EVENTS:
+            name = event_def["name"]
+            importance = event_def["importance"]
+
             if event_def.get("weekly_day") is not None:
                 d = start
                 while d <= now:
                     if d.weekday() == event_def["weekly_day"]:
                         past.append({
                             "event_date": d.strftime("%Y-%m-%dT13:30:00Z"),
-                            "event_name": event_def["name"],
+                            "event_name": name,
                             "country": "US",
-                            "importance": event_def["importance"],
-                            "actual": None,
-                            "forecast": None,
-                            "previous": None,
+                            "importance": importance,
+                            "actual": None, "forecast": None, "previous": None,
                             "source": "scheduled",
                         })
                     d += timedelta(days=1)
+            elif event_def.get("first_friday"):
+                # Check months in the past window
+                d = start.replace(day=1)
+                for _ in range(3):
+                    first_day = d.replace(day=1)
+                    day = first_day
+                    while day.weekday() != 4:
+                        day += timedelta(days=1)
+                    if start <= day <= now:
+                        past.append({
+                            "event_date": day.strftime("%Y-%m-%dT13:30:00Z"),
+                            "event_name": name,
+                            "country": "US",
+                            "importance": importance,
+                            "actual": None, "forecast": None, "previous": None,
+                            "source": "scheduled",
+                        })
+                    if d.month == 12:
+                        d = d.replace(year=d.year + 1, month=1)
+                    else:
+                        d = d.replace(month=d.month + 1)
+            elif event_def.get("monthly") and event_def.get("day_range"):
+                lo, hi = event_def["day_range"]
+                mid = (lo + hi) // 2
+                d = start.replace(day=1)
+                for _ in range(3):
+                    try:
+                        target = d.replace(day=mid)
+                    except ValueError:
+                        target = d.replace(day=28)
+                    if start <= target <= now:
+                        past.append({
+                            "event_date": target.strftime("%Y-%m-%dT13:30:00Z"),
+                            "event_name": name,
+                            "country": "US",
+                            "importance": importance,
+                            "actual": None, "forecast": None, "previous": None,
+                            "source": "scheduled",
+                        })
+                    if d.month == 12:
+                        d = d.replace(year=d.year + 1, month=1)
+                    else:
+                        d = d.replace(month=d.month + 1)
+            elif event_def.get("months"):
+                lo, hi = event_def.get("day_range", (15, 20))
+                mid = (lo + hi) // 2
+                for m in event_def["months"]:
+                    try:
+                        target = now.replace(month=m, day=mid)
+                    except ValueError:
+                        continue
+                    for y_offset in [0, -1]:
+                        t = target.replace(year=now.year + y_offset)
+                        if start <= t <= now:
+                            past.append({
+                                "event_date": t.strftime("%Y-%m-%dT13:30:00Z"),
+                                "event_name": name,
+                                "country": "US",
+                                "importance": importance,
+                                "actual": None, "forecast": None, "previous": None,
+                                "source": "scheduled",
+                            })
+
         past.sort(key=lambda e: e["event_date"], reverse=True)
         return past
