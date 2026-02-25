@@ -155,12 +155,11 @@ def require_premium(handler):
     """Decorator that gates a handler behind premium subscription.
 
     Works for both Message handlers and CallbackQuery handlers.
-    Passes through **kwargs (e.g. _from_user_id) to the handler.
     """
     @functools.wraps(handler)
     async def wrapper(event, *args, **kwargs):
         if await check_premium(event):
-            return await handler(event, **kwargs)
+            return await handler(event, *args, **kwargs)
         return None
 
     return wrapper
