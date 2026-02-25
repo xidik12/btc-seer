@@ -105,14 +105,14 @@ async def generate_prediction(timeframes: list[str] | None = None):
             )
             news = result.scalars().all()
 
-            # -- Event Memory: query recent events and historical patterns --
+            # -- Event Memory: query ALL recent events and combine their expected impacts --
             event_memory_data = {}
             try:
-                # Get active events from last hour
-                since_1h = datetime.utcnow() - timedelta(hours=1)
+                # Get active events from last 2 hours (wider window for multi-event combining)
+                since_2h = datetime.utcnow() - timedelta(hours=2)
                 result = await session.execute(
                     select(EventImpact)
-                    .where(EventImpact.timestamp >= since_1h)
+                    .where(EventImpact.timestamp >= since_2h)
                     .order_by(desc(EventImpact.severity))
                 )
                 recent_events = result.scalars().all()
@@ -135,38 +135,68 @@ async def generate_prediction(timeframes: list[str] | None = None):
                         "change_pct_4h": e.change_pct_4h,
                         "change_pct_24h": e.change_pct_24h,
                         "sentiment_was_predictive": e.sentiment_was_predictive,
+                        "timestamp": e.timestamp.isoformat() if e.timestamp else None,
                     }
                     for e in historical_events
                 ]
 
                 if recent_events:
-                    # Use the most severe recent event for pattern matching
-                    top_event = recent_events[0]
-                    similar = event_pattern_matcher.find_similar_events(
-                        category=top_event.category,
-                        keywords=top_event.keywords or "",
-                        past_events=historical_dicts,
-                    )
-                    expected = event_pattern_matcher.get_expected_impact(similar)
+                    # Process ALL active events, not just the top one
+                    events_with_impacts = []
+                    for evt in recent_events:
+                        similar = event_pattern_matcher.find_similar_events(
+                            category=evt.category,
+                            keywords=evt.keywords or "",
+                            past_events=historical_dicts,
+                            severity=evt.severity,
+                        )
+                        expected = event_pattern_matcher.get_expected_impact(
+                            similar, current_severity=evt.severity
+                        )
+                        events_with_impacts.append({
+                            "category": evt.category,
+                            "severity": evt.severity,
+                            "expected_impact": expected,
+                            "event_id": evt.id,
+                        })
 
-                    event_memory_data = {
-                        "expected_1h": expected["expected_1h"],
-                        "expected_4h": expected["expected_4h"],
-                        "expected_24h": expected["expected_24h"],
-                        "confidence": expected["confidence"],
-                        "severity": top_event.severity / 10.0,  # Normalize to 0-1
-                        "avg_sentiment_predictive": expected["avg_sentiment_predictive"],
-                        "active_event_count": float(len(recent_events)),
-                        "sample_size": expected["sample_size"],
-                    }
+                    # Combine all events
+                    if len(events_with_impacts) == 1:
+                        # Single event — use directly
+                        expected = events_with_impacts[0]["expected_impact"]
+                        top_event = recent_events[0]
+                        event_memory_data = {
+                            "expected_1h": expected["expected_1h"],
+                            "expected_4h": expected["expected_4h"],
+                            "expected_24h": expected["expected_24h"],
+                            "confidence": expected["confidence"],
+                            "severity": top_event.severity / 10.0,
+                            "avg_sentiment_predictive": expected["avg_sentiment_predictive"],
+                            "active_event_count": 1.0,
+                            "sample_size": expected["sample_size"],
+                        }
+                    else:
+                        # Multiple events — combine with the multi-event combiner
+                        combined = event_pattern_matcher.combine_multiple_events(events_with_impacts)
+                        top_severity = max(e.severity for e in recent_events)
+                        event_memory_data = {
+                            "expected_1h": combined["expected_1h"],
+                            "expected_4h": combined["expected_4h"],
+                            "expected_24h": combined["expected_24h"],
+                            "confidence": combined["confidence"],
+                            "severity": top_severity / 10.0,
+                            "avg_sentiment_predictive": 0.5,
+                            "active_event_count": float(combined["active_event_count"]),
+                            "sample_size": sum(e["expected_impact"]["sample_size"] for e in events_with_impacts),
+                        }
 
-                    if expected["sample_size"] > 0:
+                    if event_memory_data.get("sample_size", 0) > 0:
+                        cats = list(set(e.category for e in recent_events))
                         logger.info(
-                            f"Event memory: {top_event.category} "
-                            f"(severity={top_event.severity}) — "
-                            f"expected 1h={expected['expected_1h']:+.2f}%, "
-                            f"24h={expected['expected_24h']:+.2f}% "
-                            f"(from {expected['sample_size']} similar events)"
+                            f"Event memory: {len(recent_events)} events ({', '.join(cats)}) — "
+                            f"combined 1h={event_memory_data['expected_1h']:+.2f}%, "
+                            f"24h={event_memory_data['expected_24h']:+.2f}% "
+                            f"(from {event_memory_data['sample_size']} historical samples)"
                         )
             except Exception as e:
                 logger.debug(f"Event memory query error: {e}")
@@ -387,7 +417,7 @@ async def generate_prediction(timeframes: list[str] | None = None):
             logger.debug(f"Whale data aggregation error: {e}")
 
         # Build features (including social media, event memory, funding, dominance)
-        news_data = [{"title": n.title, "source": n.source} for n in news]
+        news_data = [{"title": n.title, "source": n.source, "timestamp": n.timestamp.isoformat() if n.timestamp else None} for n in news]
         features = feature_builder.build_features(
             price_df=price_df,
             news_data=news_data,

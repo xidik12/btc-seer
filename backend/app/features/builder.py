@@ -437,20 +437,59 @@ class FeatureBuilder:
         reddit_data: list[dict] = None,
         influencer_data: list[dict] = None,
     ) -> dict:
-        """Build sentiment features from news, reddit, and influencer social media."""
+        """Build sentiment features from news, reddit, and influencer social media.
+
+        Uses time-windowed sentiment: filters news by timestamp for 1h/4h/24h windows
+        so that each window reflects its actual time period.
+        """
+        from datetime import timedelta
+
         result = {feat: 0.0 for feat in self.SENTIMENT_FEATURES}
+        now = datetime.utcnow()
 
         if news_data:
-            titles = [n.get("title", "") for n in news_data if n.get("title")]
+            # Separate news into time windows using timestamps
+            def _filter_by_window(items, hours):
+                cutoff = now - timedelta(hours=hours)
+                filtered = []
+                for n in items:
+                    ts_str = n.get("timestamp")
+                    if ts_str:
+                        try:
+                            ts = datetime.fromisoformat(ts_str)
+                            if ts >= cutoff:
+                                filtered.append(n)
+                                continue
+                        except (ValueError, TypeError):
+                            pass
+                    # No timestamp — include in all windows (backward compat)
+                    filtered.append(n)
+                return filtered
 
-            if titles:
-                agg = self.sentiment_analyzer.get_aggregate_sentiment(titles)
-                result["news_sentiment_1h"] = agg["mean_score"]
-                result["news_sentiment_4h"] = agg["mean_score"]
-                result["news_sentiment_24h"] = agg["mean_score"]
-                result["news_volume_1h"] = float(agg["volume"])
-                result["news_bullish_pct"] = agg["bullish_pct"]
-                result["news_bearish_pct"] = agg["bearish_pct"]
+            # Window-specific title lists
+            news_1h = _filter_by_window(news_data, 1)
+            news_4h = _filter_by_window(news_data, 4)
+            news_24h = news_data  # All news (already limited to ~50 recent)
+
+            titles_1h = [n.get("title", "") for n in news_1h if n.get("title")]
+            titles_4h = [n.get("title", "") for n in news_4h if n.get("title")]
+            titles_24h = [n.get("title", "") for n in news_24h if n.get("title")]
+
+            # 1h sentiment
+            if titles_1h:
+                agg_1h = self.sentiment_analyzer.get_aggregate_sentiment(titles_1h)
+                result["news_sentiment_1h"] = agg_1h["mean_score"]
+                result["news_volume_1h"] = float(agg_1h["volume"])
+            # 4h sentiment
+            if titles_4h:
+                agg_4h = self.sentiment_analyzer.get_aggregate_sentiment(titles_4h)
+                result["news_sentiment_4h"] = agg_4h["mean_score"]
+            # 24h sentiment (use for bullish/bearish pct as it has most data)
+            if titles_24h:
+                agg_24h = self.sentiment_analyzer.get_aggregate_sentiment(titles_24h)
+                result["news_sentiment_24h"] = agg_24h["mean_score"]
+                result["news_bullish_pct"] = agg_24h["bullish_pct"]
+                result["news_bearish_pct"] = agg_24h["bearish_pct"]
 
         if reddit_data:
             posts = reddit_data if isinstance(reddit_data, list) else reddit_data.get("posts", [])
