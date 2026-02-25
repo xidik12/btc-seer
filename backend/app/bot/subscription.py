@@ -17,6 +17,10 @@ def is_premium(user: BotUser) -> bool:
     if not settings.subscription_enabled:
         return True
 
+    # Admin is always premium
+    if settings.admin_telegram_id and user.telegram_id == settings.admin_telegram_id:
+        return True
+
     now = datetime.utcnow()
 
     # Active paid subscription
@@ -38,6 +42,10 @@ def get_status_text(user: BotUser) -> str:
     """Return human-readable subscription status."""
     if not settings.subscription_enabled:
         return "All features unlocked (beta)"
+
+    # Admin
+    if settings.admin_telegram_id and user.telegram_id == settings.admin_telegram_id:
+        return "Admin (unlimited)"
 
     now = datetime.utcnow()
 
