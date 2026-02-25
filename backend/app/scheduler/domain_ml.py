@@ -223,6 +223,25 @@ async def generate_prediction(timeframes: list[str] | None = None):
         except Exception as e:
             logger.debug(f"Dominance data query error: {e}")
 
+        # Get latest macro data (M2 supply, gold, sp500 for ratio features)
+        macro_raw = None
+        try:
+            async with async_session() as sess:
+                result = await sess.execute(
+                    select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
+                )
+                macro_row = result.scalar_one_or_none()
+                if macro_row:
+                    macro_raw = {
+                        "gold": macro_row.gold,
+                        "sp500": macro_row.sp500,
+                        "m2_supply": macro_row.m2_supply,
+                        "dxy": macro_row.dxy,
+                        "treasury_10y": macro_row.treasury_10y,
+                    }
+        except Exception as e:
+            logger.debug(f"Macro data query error: {e}")
+
         # Get latest on-chain data for features
         onchain_raw = None
         try:
@@ -373,6 +392,7 @@ async def generate_prediction(timeframes: list[str] | None = None):
             price_df=price_df,
             news_data=news_data,
             influencer_data=influencer_data,
+            macro_data=macro_raw,
             event_memory=event_memory_data if event_memory_data else None,
             funding_data=funding_data,
             dominance_data=dominance_data,

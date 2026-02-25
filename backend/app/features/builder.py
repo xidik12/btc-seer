@@ -396,15 +396,23 @@ class FeatureBuilder:
             cycle_length = (next_halving - last_halving).days or 1
             days_since = (now - last_halving).days
             features["halving_cycle_position_norm"] = min(1.0, days_since / cycle_length)
-            features["days_since_halving_norm"] = days_since / HALVING_INTERVAL
+            features["days_since_halving_norm"] = min(1.0, days_since / HALVING_INTERVAL)
 
             # Ratio features from macro data
             if macro_data:
-                gold = macro_data.get("gold", 0) or 0
-                sp500 = macro_data.get("sp500", 0) or 0
+                # Extract price — handle both scalar and nested dict formats
+                def _macro_price(key):
+                    val = macro_data.get(key)
+                    if isinstance(val, dict):
+                        return val.get("price", 0) or 0
+                    return float(val) if val else 0
+
+                gold = _macro_price("gold")
+                sp500 = _macro_price("sp500")
                 features["btc_gold_ratio"] = current_price / gold if gold > 0 else 0
                 features["btc_spx_ratio"] = current_price / sp500 if sp500 > 0 else 0
                 m2 = macro_data.get("m2_supply", 0) or 0
+                m2 = float(m2) if m2 else 0
                 features["m2_ratio"] = current_price / m2 if m2 > 0 else 0
 
             # Price history-based features (set defaults, overridden by extended dataset)

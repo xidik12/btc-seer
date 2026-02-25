@@ -224,8 +224,8 @@ async def run_continuous_learning():
     if retrain_result.get("status") == "retrained":
         # Reset ensemble to reload new weights
         try:
-            import app.scheduler.jobs as jobs_module
-            jobs_module._ensemble = None
+            import app.scheduler.domain_ml as ml_module
+            ml_module._ensemble = None
         except Exception:
             pass
 

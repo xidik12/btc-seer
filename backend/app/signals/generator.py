@@ -59,7 +59,8 @@ class SignalGenerator:
             target_price = current_price + (atr * self.TARGET_ATR_MULTIPLIER * direction_mult)
             stop_loss = current_price - (atr * self.STOP_ATR_MULTIPLIER * direction_mult)
 
-            # If magnitude prediction available, use it for target
+            # If magnitude prediction available, use it for target (capped to sane range)
+            magnitude = max(-30, min(30, magnitude))
             if abs(magnitude) > 0.1:
                 target_price = current_price * (1 + magnitude / 100)
 
