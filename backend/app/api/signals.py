@@ -26,6 +26,7 @@ async def get_current_signals(session: AsyncSession = Depends(get_session)):
     for s in signals:
         sig_dict[s.timeframe] = {
             "id": s.id,
+            "timeframe": s.timeframe,
             "action": s.action,
             "direction": s.direction,
             "confidence": s.confidence,
@@ -65,6 +66,7 @@ async def get_signal_history(
         "signals": [
             {
                 "id": s.id,
+                "timeframe": s.timeframe,
                 "action": s.action,
                 "direction": s.direction,
                 "confidence": s.confidence,

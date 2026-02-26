@@ -28,7 +28,7 @@ function formatMarketCap(val) {
 export default function CryptoHeatmap({ coins = [], loading = false }) {
   const sorted = useMemo(() => {
     return [...coins]
-      .filter((c) => c.market_cap || c.current_price)
+      .filter((c) => c.market_cap || c.price_usd || c.current_price)
       .sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0))
       .slice(0, 12)
   }, [coins])
@@ -99,9 +99,9 @@ export default function CryptoHeatmap({ coins = [], loading = false }) {
                   {change >= 0 ? '+' : ''}{change.toFixed(2)}%
                 </span>
               )}
-              {coin.current_price && (
+              {(coin.price_usd || coin.current_price) && (
                 <span className="text-white/40 text-[9px] relative z-10 mt-1 leading-none tabular-nums">
-                  {formatPricePrecise(coin.current_price)}
+                  {formatPricePrecise(coin.price_usd ?? coin.current_price)}
                 </span>
               )}
             </div>

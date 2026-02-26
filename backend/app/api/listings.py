@@ -58,7 +58,7 @@ async def get_dex_trending(
     """Get trending DEX tokens."""
     result = await session.execute(
         select(DexToken)
-        .where(DexToken.volume_24h > 10000)
+        .where(DexToken.volume_24h.isnot(None), DexToken.volume_24h > 10000)
         .order_by(desc(DexToken.boosts), desc(DexToken.volume_24h))
         .limit(limit)
     )

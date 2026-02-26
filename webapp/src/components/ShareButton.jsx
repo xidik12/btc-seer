@@ -33,7 +33,7 @@ export default function ShareButton({ text, botLink, compact = false }) {
   if (compact) {
     return (
       <button
-        onClick={handleTelegramShare}
+        onClick={(e) => { e.stopPropagation(); handleTelegramShare() }}
         className="p-1.5 rounded-lg bg-accent-blue/10 text-accent-blue hover:bg-accent-blue/20 active:scale-95 transition-all"
         title="Share"
       >

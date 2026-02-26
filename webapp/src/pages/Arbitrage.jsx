@@ -44,10 +44,11 @@ function coinSymbol(coinId) {
 }
 
 function ProfitBadge({ pct }) {
-  const level = pct > 0.3 ? 'high' : pct > 0 ? 'marginal' : 'negative'
+  const p = pct ?? 0
+  const level = p > 0.3 ? 'high' : p > 0 ? 'marginal' : 'negative'
   return (
     <span className={`text-xs font-bold ${PROFIT_COLORS[level]}`}>
-      {pct > 0 ? '+' : ''}{pct?.toFixed(3)}%
+      {p > 0 ? '+' : ''}{p.toFixed(3)}%
     </span>
   )
 }
@@ -114,8 +115,8 @@ function ArbitrageCard({ opp, onExpand, isExpanded }) {
       </div>
 
       <div className="flex items-center justify-between text-[10px] text-text-muted">
-        <span>Spread: {opp.spread_pct?.toFixed(3)}%</span>
-        <span>Fees: ~{opp.estimated_fees_pct?.toFixed(2)}%</span>
+        <span>Spread: {(opp.spread_pct ?? 0).toFixed(3)}%</span>
+        <span>Fees: ~{(opp.estimated_fees_pct ?? 0).toFixed(2)}%</span>
         <span>{formatTimeAgo(opp.timestamp)}</span>
       </div>
 
@@ -125,16 +126,17 @@ function ArbitrageCard({ opp, onExpand, isExpanded }) {
           <h4 className="text-[10px] font-semibold text-text-muted mb-2">All Exchange Prices</h4>
           <div className="space-y-1">
             {Object.entries(opp.exchange_prices)
-              .filter(([, data]) => data?.bid || data?.ask)
-              .sort(([, a], [, b]) => (a.ask || a.bid || 0) - (b.ask || b.bid || 0))
+              .filter(([, data]) => data?.bid || data?.ask || data?.last)
+              .sort(([, a], [, b]) => (a.ask || a.bid || a.last || 0) - (b.ask || b.bid || b.last || 0))
               .map(([exchange, data]) => (
                 <div key={exchange} className="flex items-center justify-between text-[10px]">
                   <span className="text-text-secondary flex items-center capitalize">
                     <ExchangeDot exchange={exchange} />{exchange}
                   </span>
                   <div className="flex gap-3">
-                    {data.bid && <span className="text-accent-green font-mono">{formatCoinPrice(data.bid)}</span>}
-                    {data.ask && <span className="text-accent-red font-mono">{formatCoinPrice(data.ask)}</span>}
+                    {data.bid ? <span className="text-accent-green font-mono">{formatCoinPrice(data.bid)}</span> : null}
+                    {data.ask ? <span className="text-accent-red font-mono">{formatCoinPrice(data.ask)}</span> : null}
+                    {!data.bid && !data.ask && data.last ? <span className="text-text-muted font-mono">{formatCoinPrice(data.last)}</span> : null}
                   </div>
                 </div>
               ))}
@@ -262,14 +264,18 @@ export default function Arbitrage() {
   const [lastUpdate, setLastUpdate] = useState(null)
   const [exchangeCount, setExchangeCount] = useState(0)
 
+  const [error, setError] = useState(null)
+
   const fetchData = useCallback(async () => {
     try {
+      setError(null)
       const data = await api.getArbitrageOpportunities()
       setOpportunities(data?.opportunities || [])
       setExchangeCount(data?.exchanges_count || 0)
       setLastUpdate(Date.now())
     } catch (err) {
       console.error('Arbitrage fetch error:', err)
+      setError(err.message || 'Failed to load arbitrage data')
     } finally {
       setLoading(false)
     }

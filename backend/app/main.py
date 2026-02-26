@@ -208,7 +208,7 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(check_dex_to_cex_migrations, "interval", minutes=30, id="dex_to_cex", **_job_defaults)
 
         # Memecoin discovery
-        scheduler.add_job(discover_memecoins, "interval", minutes=30, id="discover_memes", **_job_defaults)
+        scheduler.add_job(discover_memecoins, "interval", minutes=10, id="discover_memes", **_job_defaults)
         scheduler.add_job(update_memecoin_risk_scores, "interval", minutes=30, id="update_meme_risk", **_job_defaults)
         scheduler.add_job(cleanup_dead_memecoins, "interval", hours=24, id="cleanup_dead_memes", **_job_defaults)
 

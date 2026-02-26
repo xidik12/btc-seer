@@ -16,6 +16,7 @@ Scheduled jobs:
   - cleanup_dead_memecoins()         daily
 """
 
+import asyncio
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -66,8 +67,11 @@ class MemecoinCollector(BaseCollector):
 
         # Source 1: Boost endpoints (paid promos — still useful but not sole source)
         boosts_latest = await self.fetch_json(DEXSCREENER_BOOSTS_LATEST)
+        await asyncio.sleep(0.3)
         boosts_top = await self.fetch_json(DEXSCREENER_BOOSTS_TOP)
+        await asyncio.sleep(0.3)
         profiles_latest = await self.fetch_json(DEXSCREENER_PROFILES_LATEST)
+        await asyncio.sleep(0.3)
 
         for source_name, raw_data in [
             ("boosts_latest", boosts_latest),
@@ -85,6 +89,7 @@ class MemecoinCollector(BaseCollector):
                     token = self._normalize_pair(pair)
                     if token:
                         all_tokens.append(token)
+            await asyncio.sleep(0.3)  # rate-limit: avoid DexScreener 429s
 
         # Deduplicate by address + chain
         seen: set[tuple[str, str]] = set()
@@ -113,10 +118,18 @@ class MemecoinCollector(BaseCollector):
                     stored_count += 1
             await session.commit()
 
-        if stored_count:
-            logger.info(
-                f"MemecoinCollector: discovered {stored_count} new memecoins "
-                f"(from {len(unique)} unique tokens)"
+        logger.info(
+            f"MemecoinCollector: scanned={len(all_tokens)} unique={len(unique)} "
+            f"qualified={len(qualified)} new={stored_count}"
+        )
+        if len(all_tokens) == 0:
+            logger.warning(
+                "MemecoinCollector: zero tokens scanned — all DexScreener API calls may have failed"
+            )
+        elif len(qualified) == 0 and len(unique) > 0:
+            logger.warning(
+                f"MemecoinCollector: {len(unique)} unique tokens found but none qualified "
+                f"(min vol=${MIN_VOLUME_24H}, min liq=${MIN_LIQUIDITY}) — enrichment may have failed"
             )
         return {
             "scanned": len(all_tokens),
@@ -157,7 +170,12 @@ class MemecoinCollector(BaseCollector):
                 addrs = ",".join(t["address"] for t in batch)
                 url = f"https://api.dexscreener.com/tokens/v1/{chain}/{addrs}"
                 data = await self.fetch_json(url)
+                await asyncio.sleep(0.3)  # rate-limit: avoid DexScreener 429s
                 if not data:
+                    logger.warning(
+                        f"MemecoinCollector: enrichment failed for {chain} batch "
+                        f"({len(batch)} tokens) — API returned no data"
+                    )
                     continue
 
                 pairs = data if isinstance(data, list) else data.get("pairs", [])
@@ -185,6 +203,8 @@ class MemecoinCollector(BaseCollector):
                         t["price_usd"] = t.get("price_usd") or info["price"]
                         t["symbol"] = t.get("symbol") or info["symbol"]
                         t["name"] = t.get("name") or info["name"]
+
+                await asyncio.sleep(0.3)  # rate-limit: avoid DexScreener 429s
 
         enriched = len([t for t in need_enrichment if t.get("volume_24h")])
         if enriched:

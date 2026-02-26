@@ -63,7 +63,7 @@ def _institutional_event(holding, prev_btc: float | None) -> dict | None:
         "timestamp": holding.snapshot_date.isoformat() if holding.snapshot_date else None,
         "title": f"{holding.company_name} {action} {abs(delta):,.0f} BTC",
         "description": f"Total: {holding.total_btc:,.0f} BTC | {holding.ticker or ''}",
-        "amount_usd": abs(delta) * (holding.current_value_usd / holding.total_btc) if holding.total_btc else 0,
+        "amount_usd": abs(delta) * (holding.current_value_usd / holding.total_btc) if holding.total_btc and holding.current_value_usd else 0,
         "amount_btc": abs(delta),
         "impact": impact,
         "severity": min(10, max(1, int(abs(delta) / 100))),
@@ -224,11 +224,26 @@ async def get_smart_money_score():
             if h.company_name not in company_latest:
                 company_latest[h.company_name] = h
 
-        for h in company_latest.values():
-            if h.change_btc and h.change_btc > 0:
-                inst_bullish += abs(h.change_btc)
-            elif h.change_btc and h.change_btc < 0:
-                inst_bearish += abs(h.change_btc)
+        # Compute institutional deltas by comparing consecutive snapshots
+        for company, latest_h in company_latest.items():
+            # Try stored change_btc first, then compute from DB snapshots
+            delta = latest_h.change_btc
+            if delta is None and latest_h.total_btc:
+                # Find previous snapshot for this company
+                prev_result = await session.execute(
+                    select(InstitutionalHolding)
+                    .where(InstitutionalHolding.company_name == company)
+                    .where(InstitutionalHolding.id < latest_h.id)
+                    .order_by(desc(InstitutionalHolding.id))
+                    .limit(1)
+                )
+                prev_h = prev_result.scalar_one_or_none()
+                if prev_h and prev_h.total_btc:
+                    delta = latest_h.total_btc - prev_h.total_btc
+            if delta and delta > 0:
+                inst_bullish += abs(delta)
+            elif delta and delta < 0:
+                inst_bearish += abs(delta)
 
     whale_total = whale_bullish + whale_bearish
     whale_score = ((whale_bullish - whale_bearish) / whale_total * 100) if whale_total else 0

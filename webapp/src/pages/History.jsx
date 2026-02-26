@@ -61,6 +61,8 @@ function AccuracyRing({ label, correct, total, size = 80, strokeWidth = 6 }) {
 // ── Streak Badge ──
 
 function StreakBadge({ history }) {
+  const { t } = useTranslation(['market', 'common'])
+
   if (!history?.length) return null
   const evaluated = history.filter(p => p.was_correct !== null)
   if (!evaluated.length) return null
@@ -74,7 +76,6 @@ function StreakBadge({ history }) {
 
   if (streak < 2) return null
   const isWin = first
-  const { t } = useTranslation(['market', 'common'])
   return (
     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
       isWin ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'

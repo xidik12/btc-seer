@@ -11,24 +11,26 @@ const RISK_COLORS = {
 }
 
 function getRiskLevel(score) {
-  if (score < 25) return 'low'
-  if (score < 50) return 'medium'
-  if (score < 75) return 'high'
+  const s = score ?? 0
+  if (s < 25) return 'low'
+  if (s < 50) return 'medium'
+  if (s < 75) return 'high'
   return 'critical'
 }
 
 function RiskBadge({ score }) {
-  const level = getRiskLevel(score)
+  const s = score ?? 0
+  const level = getRiskLevel(s)
   const style = RISK_COLORS[level]
   return (
     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${style.bg} ${style.text}`}>
-      {score}/100 {level.toUpperCase()}
+      {s}/100 {level.toUpperCase()}
     </span>
   )
 }
 
 function RiskBar({ score }) {
-  const pct = Math.min(100, score)
+  const pct = Math.min(100, score ?? 0)
   const color = pct < 25 ? '#22c55e' : pct < 50 ? '#eab308' : pct < 75 ? '#f97316' : '#ef4444'
 
   return (
@@ -135,8 +137,8 @@ export default function Memecoins() {
     fetch()
   }, [tab])
 
-  const safeCount = tokens.filter(t => t.rug_pull_score < 25).length
-  const riskyCount = tokens.filter(t => t.rug_pull_score >= 50).length
+  const safeCount = tokens.filter(t => (t.rug_pull_score ?? 0) < 25).length
+  const riskyCount = tokens.filter(t => (t.rug_pull_score ?? 0) >= 50).length
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-20">
