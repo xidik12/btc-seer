@@ -96,19 +96,21 @@ class BTCTreasuriesCollector(BaseCollector):
                 company = h["company_name"]
                 total_btc = h["total_btc"]
 
+                # Detect changes vs last known snapshot
+                prev_btc = self._last_snapshot.get(company)
+                change_btc = (total_btc - prev_btc) if prev_btc is not None else None
+
                 # Store snapshot
                 holding = InstitutionalHolding(
                     company_name=company,
                     ticker=h.get("ticker"),
                     country=h.get("country"),
                     total_btc=total_btc,
+                    change_btc=change_btc,
                     source="bitcointreasuries",
                     snapshot_date=now,
                 )
                 session.add(holding)
-
-                # Detect changes vs last known snapshot
-                prev_btc = self._last_snapshot.get(company)
                 if prev_btc is not None:
                     delta = total_btc - prev_btc
                     if abs(delta) >= 100:

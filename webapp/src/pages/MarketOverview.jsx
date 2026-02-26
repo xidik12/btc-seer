@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatPricePrecise, formatPercent } from '../utils/format'
-import SubTabBar from '../components/SubTabBar'
 import ForexTable from '../components/ForexTable'
 import CryptoHeatmap from '../components/CryptoHeatmap'
 import EconomicCalendar from '../components/EconomicCalendar'
@@ -98,8 +97,8 @@ function CryptoSection() {
             key={c.coin_id || c.symbol}
             name={c.name || c.symbol}
             icon={c.symbol?.toUpperCase()?.slice(0, 3) || '?'}
-            price={c.current_price}
-            change={c.price_change_24h}
+            price={c.price_usd ?? c.current_price}
+            change={c.change_24h ?? c.price_change_24h}
             rank={i + 1}
           />
         ))}

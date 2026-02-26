@@ -379,7 +379,7 @@ export default function PowerLaw() {
   const renderTab = () => {
     switch (activeTab) {
       case 'main':
-        return <PLDashboard data={tabData.dashboard} />
+        return <MainTab current={current} historical={historical} t={t} />
       case 'curve':
         return <PLCurve data={tabData.curve} />
       case 'gold':

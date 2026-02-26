@@ -64,6 +64,7 @@ async def get_recent_whales(
                 "direction_was_predictive": tx.direction_was_predictive,
                 "from_address": tx.from_address,
                 "to_address": tx.to_address,
+                "chain": tx.chain,
             }
             for tx in txs
         ],

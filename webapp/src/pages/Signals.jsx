@@ -180,7 +180,15 @@ export default function Signals() {
           api.getCurrentSignals().catch(() => null),
           ...TIMEFRAMES.map(tf => api.getSignalHistory(tf, 14).catch(() => ({ signals: [] }))),
         ])
-        setCurrentSignal(current?.signal || current?.signals?.[0] || null)
+        // Backend returns {signals: {"1h": {...}, "4h": {...}, ...}} — extract first signal
+        const sigMap = current?.signals || {}
+        const sigEntries = Object.entries(sigMap)
+        if (sigEntries.length > 0) {
+          const [tf, sig] = sigEntries[0]
+          setCurrentSignal({ ...sig, timeframe: tf })
+        } else {
+          setCurrentSignal(null)
+        }
         const tfMap = {}
         TIMEFRAMES.forEach((tf, i) => {
           tfMap[tf] = histories[i]?.signals || []

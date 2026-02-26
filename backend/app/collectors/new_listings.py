@@ -394,19 +394,30 @@ class NewListingCollector(BaseCollector):
             return listing
 
     async def _fetch_price(self, symbol: str) -> float | None:
-        """Fetch current price for a symbol from Binance ticker."""
-        # Try common USDT pair first
+        """Fetch current price for a symbol from Binance, then CoinGecko fallback."""
+        # Try common USDT pair first via Binance
+        clean = symbol.replace("USDT", "").replace("BUSD", "").upper()
         for quote in ("USDT", "BUSD", "BTC"):
-            pair = symbol.replace("USDT", "").replace("BUSD", "") + quote
-            if pair == symbol:
-                # Already a pair like BTCUSDT
-                pair = symbol
+            pair = clean + quote
             data = await self.fetch_json(TICKER_PRICE_URL, params={"symbol": pair})
             if data and "price" in data:
                 try:
                     return float(data["price"])
                 except (ValueError, TypeError):
                     continue
+        # Fallback: CoinGecko simple price (by symbol)
+        try:
+            cg_url = "https://api.coingecko.com/api/v3/simple/price"
+            cg_data = await self.fetch_json(cg_url, params={
+                "ids": clean.lower(),
+                "vs_currencies": "usd",
+            })
+            if cg_data:
+                for coin_id, prices in cg_data.items():
+                    if "usd" in prices:
+                        return float(prices["usd"])
+        except Exception:
+            pass
         return None
 
     @staticmethod
