@@ -1394,12 +1394,40 @@ def _add_missing_columns(connection):
                     _db_logger.debug(f"Column add skipped {table.name}.{col.name}: {e}")
 
 
+def _safe_create_all(connection):
+    """Create tables one-by-one, skipping 'already exists' errors from partial migrations."""
+    for table in Base.metadata.sorted_tables:
+        try:
+            table.create(connection, checkfirst=True)
+        except Exception as e:
+            if "already exists" in str(e).lower():
+                _db_logger.info(f"Table {table.name}: skipped (already exists)")
+            else:
+                raise
+
+
+def _ensure_indexes(connection):
+    """Recreate any missing indexes (idempotent — skips existing ones)."""
+    for table in Base.metadata.sorted_tables:
+        for idx in table.indexes:
+            try:
+                idx.create(connection)
+            except Exception:
+                pass  # Index already exists — fine
+
+
 async def init_db():
     _db_logger.info(f"Connecting to database: {engine.url!s}")
     try:
+        # Create tables one-by-one to handle partial prior migrations
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(_safe_create_all)
+        # Add missing columns in a separate transaction
+        async with engine.begin() as conn:
             await conn.run_sync(_add_missing_columns)
+        # Recreate any missing indexes (fixes prior drop)
+        async with engine.begin() as conn:
+            await conn.run_sync(_ensure_indexes)
         _db_logger.info("Database tables ready")
     except Exception as e:
         _db_logger.error(f"Database init failed: {e}", exc_info=True)

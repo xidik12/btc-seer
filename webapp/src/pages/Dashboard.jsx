@@ -1,23 +1,25 @@
-import { Component } from 'react'
+import { Component, lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTelegram } from '../hooks/useTelegram'
 import { useSubscription } from '../contexts/SubscriptionContext'
+// Above-the-fold — eager imports
 import PriceWidget from '../components/PriceWidget'
 import PriceChart from '../components/PriceChart'
-import PredictionCard from '../components/PredictionCard'
-import QuantPredictionCard from '../components/QuantPredictionCard'
-import SignalPanel from '../components/SignalPanel'
-import NewsCarousel from '../components/NewsCarousel'
-import InfluencerFeed from '../components/InfluencerFeed'
-import MacroDashboard from '../components/MacroDashboard'
 import TickerTape from '../components/TickerTape'
-import OnChainWidget from '../components/OnChainWidget'
-import DominanceWidget from '../components/DominanceWidget'
-import FearGreedWidget from '../components/FearGreedWidget'
-import SupplyWidget from '../components/SupplyWidget'
 import DataSourceFooter from '../components/DataSourceFooter'
-import DailyBriefingCard from '../components/DailyBriefingCard'
+// Below-the-fold — lazy imports (deferred until near viewport)
+const PredictionCard = lazy(() => import('../components/PredictionCard'))
+const QuantPredictionCard = lazy(() => import('../components/QuantPredictionCard'))
+const SignalPanel = lazy(() => import('../components/SignalPanel'))
+const NewsCarousel = lazy(() => import('../components/NewsCarousel'))
+const InfluencerFeed = lazy(() => import('../components/InfluencerFeed'))
+const MacroDashboard = lazy(() => import('../components/MacroDashboard'))
+const OnChainWidget = lazy(() => import('../components/OnChainWidget'))
+const DominanceWidget = lazy(() => import('../components/DominanceWidget'))
+const FearGreedWidget = lazy(() => import('../components/FearGreedWidget'))
+const SupplyWidget = lazy(() => import('../components/SupplyWidget'))
+const DailyBriefingCard = lazy(() => import('../components/DailyBriefingCard'))
 
 class SafeWrap extends Component {
   constructor(props) {
@@ -46,6 +48,39 @@ class SafeWrap extends Component {
     }
     return this.props.children
   }
+}
+
+function WidgetSkeleton() {
+  return <div className="bg-bg-card rounded-2xl h-24 animate-pulse" />
+}
+
+function LazyWidget({ children }) {
+  const ref = useRef(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  if (!visible) return <div ref={ref}><WidgetSkeleton /></div>
+
+  return (
+    <Suspense fallback={<WidgetSkeleton />}>
+      {children}
+    </Suspense>
+  )
 }
 
 const quickIcons = {
@@ -437,49 +472,71 @@ export default function Dashboard() {
         <>
           {/* Dual Predictions */}
           <div className="space-y-3">
-            <SafeWrap name="AI Prediction" t={t}>
-              <PredictionCard />
-            </SafeWrap>
-            <SafeWrap name="Quant Prediction" t={t}>
-              <QuantPredictionCard />
-            </SafeWrap>
+            <LazyWidget>
+              <SafeWrap name="AI Prediction" t={t}>
+                <PredictionCard />
+              </SafeWrap>
+            </LazyWidget>
+            <LazyWidget>
+              <SafeWrap name="Quant Prediction" t={t}>
+                <QuantPredictionCard />
+              </SafeWrap>
+            </LazyWidget>
           </div>
 
-          <SafeWrap name="DailyBriefing" t={t}>
-            <DailyBriefingCard />
-          </SafeWrap>
+          <LazyWidget>
+            <SafeWrap name="DailyBriefing" t={t}>
+              <DailyBriefingCard />
+            </SafeWrap>
+          </LazyWidget>
 
-          <SafeWrap name="SignalPanel" t={t}>
-            <SignalPanel />
-          </SafeWrap>
+          <LazyWidget>
+            <SafeWrap name="SignalPanel" t={t}>
+              <SignalPanel />
+            </SafeWrap>
+          </LazyWidget>
 
-          <SafeWrap name="FearGreedWidget" t={t}>
-            <FearGreedWidget />
-          </SafeWrap>
+          <LazyWidget>
+            <SafeWrap name="FearGreedWidget" t={t}>
+              <FearGreedWidget />
+            </SafeWrap>
+          </LazyWidget>
 
-          <SafeWrap name="NewsCarousel" t={t}>
-            <NewsCarousel />
-          </SafeWrap>
+          <LazyWidget>
+            <SafeWrap name="NewsCarousel" t={t}>
+              <NewsCarousel />
+            </SafeWrap>
+          </LazyWidget>
 
-          <SafeWrap name="InfluencerFeed" t={t}>
-            <InfluencerFeed />
-          </SafeWrap>
+          <LazyWidget>
+            <SafeWrap name="InfluencerFeed" t={t}>
+              <InfluencerFeed />
+            </SafeWrap>
+          </LazyWidget>
 
-          <SafeWrap name="OnChainWidget" t={t}>
-            <OnChainWidget />
-          </SafeWrap>
+          <LazyWidget>
+            <SafeWrap name="OnChainWidget" t={t}>
+              <OnChainWidget />
+            </SafeWrap>
+          </LazyWidget>
 
-          <SafeWrap name="SupplyWidget" t={t}>
-            <SupplyWidget />
-          </SafeWrap>
+          <LazyWidget>
+            <SafeWrap name="SupplyWidget" t={t}>
+              <SupplyWidget />
+            </SafeWrap>
+          </LazyWidget>
 
-          <SafeWrap name="DominanceWidget" t={t}>
-            <DominanceWidget />
-          </SafeWrap>
+          <LazyWidget>
+            <SafeWrap name="DominanceWidget" t={t}>
+              <DominanceWidget />
+            </SafeWrap>
+          </LazyWidget>
 
-          <SafeWrap name="MacroDashboard" t={t}>
-            <MacroDashboard />
-          </SafeWrap>
+          <LazyWidget>
+            <SafeWrap name="MacroDashboard" t={t}>
+              <MacroDashboard />
+            </SafeWrap>
+          </LazyWidget>
 
           <DataSourceFooter sources={['binance', 'coingecko', 'cryptopanic', 'rss', 'reddit', 'blockchain', 'mempool', 'feargreed', 'alphavantage', 'coinglass', 'defillama', 'deribit', 'ai']} />
 
