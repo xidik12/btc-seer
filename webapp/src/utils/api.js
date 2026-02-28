@@ -391,6 +391,9 @@ export const api = {
   },
   getSmartMoneyScore: () => cachedFetch('/smart-money/score', T60),
 
+  // Dashboard summary (single consolidated call)
+  getDashboardSummary: () => cachedFetch('/dashboard/summary', T30),
+
   // Market Overview (TradingView-style)
   getForexData: () => cachedFetch('/market/forex', T120),
   getCommoditiesData: () => cachedFetch('/market/commodities', T120),

@@ -10,6 +10,8 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.responses import Response
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -143,9 +145,6 @@ async def lifespan(app: FastAPI):
         # Initialize database
         await init_db()
         logger.info("Database initialized")
-
-        # Seed tracked coins (BTC, ETH, SOL, XRP)
-        await seed_tracked_coins()
 
         # Ensure model weights dir exists on persistent volume
         import shutil
@@ -422,16 +421,22 @@ async def lifespan(app: FastAPI):
             # Step 1: Backfill historical data so charts work immediately
             await _safe_run(backfill_historical_prices(), "backfill_historical_prices")
 
-            # Step 2: Critical data first (price, news, macro, on-chain)
+            # Step 2: Critical data first (price, news, macro) — minimum for a useful UI
             await asyncio.gather(
                 _safe_run(collect_price_data(), "collect_price_data"),
                 _safe_run(collect_news_data(), "collect_news_data"),
                 _safe_run(collect_macro_data(), "collect_macro_data"),
-                _safe_run(collect_onchain_data(), "collect_onchain_data"),
             )
 
-            # Secondary data (less urgent, staggered to avoid connection pool saturation)
+            # Mark server ready after core data — everything else loads in background
+            global _data_ready
+            _data_ready = True
+            logger.info("Core data loaded — server ready")
+
+            # Step 3: Seed tracked coins + secondary data (not blocking readiness)
+            await _safe_run(seed_tracked_coins(), "seed_tracked_coins")
             await asyncio.gather(
+                _safe_run(collect_onchain_data(), "collect_onchain_data"),
                 _safe_run(collect_influencer_tweets(), "collect_influencer_tweets"),
                 _safe_run(collect_funding_data(), "collect_funding_data"),
                 _safe_run(collect_dominance_data(), "collect_dominance_data"),
@@ -439,12 +444,7 @@ async def lifespan(app: FastAPI):
                 _safe_run(backfill_whale_transactions(), "backfill_whale_transactions"),
             )
 
-            # Mark server ready after core data — predictions can finish in background
-            global _data_ready
-            _data_ready = True
-            logger.info("Core data loaded — server ready")
-
-            # Step 2b: Secondary collection — parallel
+            # Step 4: Tertiary collection — parallel
             await asyncio.gather(
                 _safe_run(backfill_coin_ohlcv(), "backfill_coin_ohlcv"),
                 _safe_run(check_new_listings(), "check_new_listings"),
@@ -454,10 +454,10 @@ async def lifespan(app: FastAPI):
                 _safe_run(discover_memecoins(), "discover_memecoins"),
             )
 
-            # Step 3: Clean up duplicate predictions
+            # Step 5: Clean up duplicate predictions
             await _safe_run(deduplicate_predictions(), "deduplicate_predictions")
 
-            # Step 4: Generate predictions (data is already collected above)
+            # Step 6: Generate predictions (data is already collected above)
             await asyncio.gather(
                 _safe_run(generate_prediction(), "generate_prediction"),
                 _safe_run(generate_quant_prediction(), "generate_quant_prediction"),
@@ -496,6 +496,16 @@ async def lifespan(app: FastAPI):
     logger.info("BTC Seer shut down")
 
 
+class CachedStaticFiles(StaticFiles):
+    """StaticFiles with immutable cache headers for hashed Vite assets."""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if isinstance(response, (FileResponse, Response)):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
 app = FastAPI(
     title="BTC Seer",
     description="Bitcoin Price Prediction System with ML-powered signals",
@@ -517,6 +527,9 @@ _instrumentator = Instrumentator()
 _instrumentator.instrument(app)
 if os.getenv("EXPOSE_METRICS"):
     _instrumentator.expose(app, endpoint="/metrics")
+
+# GZip compression for all responses > 500 bytes
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # CORS for Mini App
 _cors_origins = [
@@ -615,7 +628,7 @@ async def serve_root():
 
 
 if WEBAPP_DIST.exists():
-    app.mount("/assets", StaticFiles(directory=WEBAPP_DIST / "assets"), name="static")
+    app.mount("/assets", CachedStaticFiles(directory=WEBAPP_DIST / "assets"), name="static")
 
     # Handle 404s by serving static files or the SPA (for client-side routing)
     @app.exception_handler(StarletteHTTPException)
