@@ -50,18 +50,44 @@ export function SubscriptionProvider({ children }) {
     cached || { ...DEFAULT_STATE, loading: true }
   )
 
+  const _retryInBackground = useCallback(async (initData) => {
+    try {
+      const res = await api.registerUser(initData)
+      const user = res?.user
+      if (user) {
+        const newState = {
+          isPremium: !!user.is_premium || !!user.is_admin,
+          isAdmin: !!user.is_admin,
+          tier: user.subscription_status || (user.is_premium ? 'active' : 'none'),
+          daysLeft: user.days_remaining ?? 0,
+          statusText: user.status_text || '',
+          loading: false,
+        }
+        setState(newState)
+        saveCachedState(newState)
+      }
+    } catch {
+      // Silent — user sees free tier until next refresh
+    }
+  }, [])
+
   const fetchStatus = useCallback(async (initData) => {
     if (!initData) {
       setState((s) => ({ ...s, loading: false, isPremium: false, tier: 'none' }))
       return
     }
 
+    // Fast timeout — don't block UI on cold Railway starts
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 3000)
+
     try {
-      const res = await api.registerUser(initData)
+      const res = await api.registerUser(initData, { signal: controller.signal })
+      clearTimeout(timeout)
       const user = res?.user
       if (user) {
         const newState = {
-          isPremium: !!user.is_premium,
+          isPremium: !!user.is_premium || !!user.is_admin,
           isAdmin: !!user.is_admin,
           tier: user.subscription_status || (user.is_premium ? 'active' : 'none'),
           daysLeft: user.days_remaining ?? 0,
@@ -72,7 +98,14 @@ export function SubscriptionProvider({ children }) {
         saveCachedState(newState)
         return
       }
-    } catch {
+    } catch (err) {
+      clearTimeout(timeout)
+      // If aborted due to timeout, use cached state or default and retry in background
+      if (err.name === 'AbortError') {
+        setState((s) => ({ ...s, loading: false }))
+        _retryInBackground(initData)
+        return
+      }
       // Registration failed — try subscription status endpoint
     }
 
@@ -91,7 +124,7 @@ export function SubscriptionProvider({ children }) {
     } catch {
       setState((s) => ({ ...s, loading: false, isPremium: false, tier: 'none' }))
     }
-  }, [])
+  }, [_retryInBackground])
 
   useEffect(() => {
     fetchStatus(tg?.initData)

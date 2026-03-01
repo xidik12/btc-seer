@@ -112,6 +112,27 @@ _startup_error: str | None = None
 _data_ready = False
 
 
+async def _resolve_bot_username():
+    """Resolve bot username from Telegram API (runs in background)."""
+    if not settings.telegram_bot_token or settings.bot_username:
+        return
+    import aiohttp
+    try:
+        async with aiohttp.ClientSession() as client:
+            async with client.get(
+                f"https://api.telegram.org/bot{settings.telegram_bot_token}/getMe",
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as resp:
+                data = await resp.json()
+                if data.get("ok"):
+                    settings.bot_username = data["result"]["username"]
+                    logger.info(f"Bot username resolved: @{settings.bot_username}")
+                else:
+                    logger.warning(f"Failed to resolve bot username: {data}")
+    except Exception as e:
+        logger.warning(f"Could not resolve bot username: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup and shutdown."""
@@ -124,20 +145,8 @@ async def lifespan(app: FastAPI):
     bot_task = None
 
     try:
-        # Resolve bot username from Telegram API
-        if settings.telegram_bot_token and not settings.bot_username:
-            import aiohttp
-            try:
-                async with aiohttp.ClientSession() as client:
-                    async with client.get(f"https://api.telegram.org/bot{settings.telegram_bot_token}/getMe", timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                        data = await resp.json()
-                        if data.get("ok"):
-                            settings.bot_username = data["result"]["username"]
-                            logger.info(f"Bot username resolved: @{settings.bot_username}")
-                        else:
-                            logger.warning(f"Failed to resolve bot username: {data}")
-            except Exception as e:
-                logger.warning(f"Could not resolve bot username: {e}")
+        # Resolve bot username from Telegram API (background — don't block startup)
+        asyncio.create_task(_resolve_bot_username())
 
         if not settings.admin_telegram_id:
             logger.warning("ADMIN_TELEGRAM_ID not set — admin endpoints will be inaccessible")
@@ -145,6 +154,9 @@ async def lifespan(app: FastAPI):
         # Initialize database
         await init_db()
         logger.info("Database initialized")
+
+        global _data_ready
+        _data_ready = True
 
         # Ensure model weights dir exists on persistent volume
         import shutil
@@ -343,51 +355,49 @@ async def lifespan(app: FastAPI):
                 **_job_defaults,
             )
 
-            # Set bot description & command menu
-            try:
-                from aiogram.types import BotCommand
+            async def _setup_and_start_bot(bot, dp):
+                """Set bot commands and start polling (background)."""
+                try:
+                    from aiogram.types import BotCommand
+                    await bot.set_my_description(
+                        "BTC Seer — AI-powered Bitcoin predictions.\n\n"
+                        "Hit /start to begin. I'll analyze 60+ market signals "
+                        "every hour and give you clear price predictions, "
+                        "trading signals, and real-time news sentiment.\n\n"
+                        "Free 7-day trial included."
+                    )
+                    await bot.set_my_short_description(
+                        "AI Bitcoin predictions, trading signals & whale tracking."
+                    )
+                    await bot.set_my_commands([
+                        BotCommand(command="start", description="Start the bot & see the main menu"),
+                        BotCommand(command="predict", description="Latest price predictions"),
+                        BotCommand(command="signal", description="Trading signal with entry & stop-loss"),
+                        BotCommand(command="advisor", description="AI trading advisor & portfolio"),
+                        BotCommand(command="news", description="Real-time crypto news & sentiment"),
+                        BotCommand(command="accuracy", description="Prediction track record"),
+                        BotCommand(command="faq", description="Frequently asked questions"),
+                        BotCommand(command="report", description="Report a bug or issue"),
+                        BotCommand(command="settings", description="Alert frequency preferences"),
+                        BotCommand(command="subscribe", description="View subscription plans"),
+                        BotCommand(command="alert", description="Manage price alerts"),
+                        BotCommand(command="game", description="Prediction game — UP or DOWN?"),
+                        BotCommand(command="smartmoney", description="Smart money score & whale feed"),
+                    ])
+                    logger.info("Bot description & commands set")
+                except Exception as e:
+                    logger.warning(f"set_my_description/commands failed: {e}")
 
-                await bot.set_my_description(
-                    "BTC Seer — AI-powered Bitcoin predictions.\n\n"
-                    "Hit /start to begin. I'll analyze 60+ market signals "
-                    "every hour and give you clear price predictions, "
-                    "trading signals, and real-time news sentiment.\n\n"
-                    "Free 7-day trial included."
-                )
-                await bot.set_my_short_description(
-                    "AI Bitcoin predictions, trading signals & whale tracking."
-                )
-                await bot.set_my_commands([
-                    BotCommand(command="start", description="Start the bot & see the main menu"),
-                    BotCommand(command="predict", description="Latest price predictions"),
-                    BotCommand(command="signal", description="Trading signal with entry & stop-loss"),
-                    BotCommand(command="advisor", description="AI trading advisor & portfolio"),
-                    BotCommand(command="news", description="Real-time crypto news & sentiment"),
-                    BotCommand(command="accuracy", description="Prediction track record"),
-                    BotCommand(command="faq", description="Frequently asked questions"),
-                    BotCommand(command="report", description="Report a bug or issue"),
-                    BotCommand(command="settings", description="Alert frequency preferences"),
-                    BotCommand(command="subscribe", description="View subscription plans"),
-                    BotCommand(command="alert", description="Manage price alerts"),
-                    BotCommand(command="game", description="Prediction game — UP or DOWN?"),
-                    BotCommand(command="smartmoney", description="Smart money score & whale feed"),
-                ])
-                logger.info("Bot description & commands set")
-            except Exception as e:
-                logger.warning(f"set_my_description/commands failed: {e}")
+                try:
+                    await bot.delete_webhook(drop_pending_updates=True)
+                    logger.info("Cleared webhook, starting polling")
+                except Exception as e:
+                    logger.warning(f"delete_webhook failed: {e}")
 
-            # Clear stale webhooks + pending updates before polling
-            try:
-                await bot.delete_webhook(drop_pending_updates=True)
-                logger.info("Cleared webhook, starting polling")
-            except Exception as e:
-                logger.warning(f"delete_webhook failed: {e}")
+                # Brief delay to let previous Railway instance shut down
+                await asyncio.sleep(1)  # Reduced from 3s to 1s
 
-            # Brief delay to let previous Railway instance shut down
-            await asyncio.sleep(3)
-
-            # Start polling in background with conflict detection and retry
-            async def _run_bot_polling():
+                # Start polling with conflict detection and retry
                 retry_delay = 5
                 while True:
                     try:
@@ -403,8 +413,8 @@ async def lifespan(app: FastAPI):
                         await asyncio.sleep(retry_delay)
                         retry_delay = min(retry_delay * 2, 60)
 
-            bot_task = asyncio.create_task(_run_bot_polling())
-            logger.info("Telegram bot started")
+            bot_task = asyncio.create_task(_setup_and_start_bot(bot, dp))
+            logger.info("Telegram bot starting in background")
         else:
             logger.warning("TELEGRAM_BOT_TOKEN not set — bot disabled")
 
@@ -428,10 +438,7 @@ async def lifespan(app: FastAPI):
                 _safe_run(collect_macro_data(), "collect_macro_data"),
             )
 
-            # Mark server ready after core data — everything else loads in background
-            global _data_ready
-            _data_ready = True
-            logger.info("Core data loaded — server ready")
+            logger.info("Core data loaded")
 
             # Step 3: Seed tracked coins + secondary data (not blocking readiness)
             await _safe_run(seed_tracked_coins(), "seed_tracked_coins")

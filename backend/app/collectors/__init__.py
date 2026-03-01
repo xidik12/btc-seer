@@ -1,27 +1,3 @@
-from app.collectors.market import MarketCollector
-from app.collectors.news import NewsCollector
-from app.collectors.fear_greed import FearGreedCollector
-from app.collectors.macro import MacroCollector
-from app.collectors.onchain import OnChainCollector
-from app.collectors.reddit import RedditCollector
-from app.collectors.binance_news import BinanceNewsCollector
-from app.collectors.influencers import InfluencerCollector
-from app.collectors.coins import CoinCollector
-from app.collectors.coin_search import CoinSearchService
-from app.collectors.etf import ETFCollector
-from app.collectors.exchange_flows import ExchangeFlowCollector
-from app.collectors.derivatives_extended import DerivativesExtendedCollector
-from app.collectors.stablecoin import StablecoinCollector
-from app.collectors.whale import WhaleCollector
-from app.collectors.eth_whale import EthWhaleCollector
-from app.collectors.sol_whale import SolWhaleCollector
-from app.collectors.eth_onchain import EthOnChainCollector
-from app.collectors.cryptopanic_v2 import CryptoPanicV2Collector
-from app.collectors.new_listings import NewListingCollector
-from app.collectors.dex_scanner import DexScannerCollector
-from app.collectors.memecoin import MemecoinCollector
-from app.collectors.token_analytics import TokenAnalyticsCollector
-
 __all__ = [
     "MarketCollector",
     "NewsCollector",
@@ -47,3 +23,40 @@ __all__ = [
     "MemecoinCollector",
     "TokenAnalyticsCollector",
 ]
+
+
+_IMPORTS = {
+    "MarketCollector": "app.collectors.market",
+    "NewsCollector": "app.collectors.news",
+    "FearGreedCollector": "app.collectors.fear_greed",
+    "MacroCollector": "app.collectors.macro",
+    "OnChainCollector": "app.collectors.onchain",
+    "RedditCollector": "app.collectors.reddit",
+    "BinanceNewsCollector": "app.collectors.binance_news",
+    "InfluencerCollector": "app.collectors.influencers",
+    "CoinCollector": "app.collectors.coins",
+    "CoinSearchService": "app.collectors.coin_search",
+    "ETFCollector": "app.collectors.etf",
+    "ExchangeFlowCollector": "app.collectors.exchange_flows",
+    "DerivativesExtendedCollector": "app.collectors.derivatives_extended",
+    "StablecoinCollector": "app.collectors.stablecoin",
+    "WhaleCollector": "app.collectors.whale",
+    "EthWhaleCollector": "app.collectors.eth_whale",
+    "SolWhaleCollector": "app.collectors.sol_whale",
+    "EthOnChainCollector": "app.collectors.eth_onchain",
+    "CryptoPanicV2Collector": "app.collectors.cryptopanic_v2",
+    "NewListingCollector": "app.collectors.new_listings",
+    "DexScannerCollector": "app.collectors.dex_scanner",
+    "MemecoinCollector": "app.collectors.memecoin",
+    "TokenAnalyticsCollector": "app.collectors.token_analytics",
+}
+
+
+def __getattr__(name):
+    if name in _IMPORTS:
+        import importlib
+        module = importlib.import_module(_IMPORTS[name])
+        attr = getattr(module, name)
+        globals()[name] = attr  # Cache so __getattr__ is only called once per name
+        return attr
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

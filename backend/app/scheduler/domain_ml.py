@@ -16,40 +16,14 @@ from app.database import (
     PredictionContext, ModelPerformanceLog, PredictionAnalysis,
     timestamp_diff_order,
 )
-from app.collectors import (
-    MarketCollector, ETFCollector, ExchangeFlowCollector,
-    DerivativesExtendedCollector, StablecoinCollector,
-)
-from app.features.builder import FeatureBuilder
-from app.models.ensemble import EnsemblePredictor
-from app.models.event_memory import EventPatternMatcher
-from app.models.quant_predictor import QuantPredictor
-from app.signals.generator import SignalGenerator
-
 logger = logging.getLogger(__name__)
 
-# Global instances needed by ML jobs
-market_collector = MarketCollector()
-etf_collector = ETFCollector()
-exchange_flow_collector = ExchangeFlowCollector()
-derivatives_extended_collector = DerivativesExtendedCollector()
-stablecoin_collector = StablecoinCollector()
-feature_builder = FeatureBuilder()
-signal_generator = SignalGenerator()
-event_pattern_matcher = EventPatternMatcher()
-
-# Lazy-loaded ensemble predictor
-_ensemble: EnsemblePredictor | None = None
-
-
-def get_ensemble() -> EnsemblePredictor:
-    global _ensemble
-    if _ensemble is None:
-        _ensemble = EnsemblePredictor(
-            model_dir=settings.model_dir,
-            num_features=len(feature_builder.ALL_FEATURES),
-        )
-    return _ensemble
+from app.scheduler._singletons import (
+    get_market_collector, get_etf_collector, get_exchange_flow_collector,
+    get_derivatives_extended_collector, get_stablecoin_collector,
+    get_feature_builder, get_signal_generator, get_event_pattern_matcher,
+    get_ensemble,
+)
 
 
 async def _get_price_at(session, target_time: datetime) -> float | None:
@@ -142,15 +116,16 @@ async def generate_prediction(timeframes: list[str] | None = None):
 
                 if recent_events:
                     # Process ALL active events, not just the top one
+                    matcher = get_event_pattern_matcher()
                     events_with_impacts = []
                     for evt in recent_events:
-                        similar = event_pattern_matcher.find_similar_events(
+                        similar = matcher.find_similar_events(
                             category=evt.category,
                             keywords=evt.keywords or "",
                             past_events=historical_dicts,
                             severity=evt.severity,
                         )
-                        expected = event_pattern_matcher.get_expected_impact(
+                        expected = matcher.get_expected_impact(
                             similar, current_severity=evt.severity
                         )
                         events_with_impacts.append({
@@ -177,7 +152,7 @@ async def generate_prediction(timeframes: list[str] | None = None):
                         }
                     else:
                         # Multiple events — combine with the multi-event combiner
-                        combined = event_pattern_matcher.combine_multiple_events(events_with_impacts)
+                        combined = matcher.combine_multiple_events(events_with_impacts)
                         top_severity = max(e.severity for e in recent_events)
                         event_memory_data = {
                             "expected_1h": combined["expected_1h"],
@@ -349,12 +324,16 @@ async def generate_prediction(timeframes: list[str] | None = None):
                 logger.debug(f"{name} collection error: {e}")
                 return None
 
+        deriv = get_derivatives_extended_collector()
+        etf = get_etf_collector()
+        flow = get_exchange_flow_collector()
+        stable = get_stablecoin_collector()
         derivatives_ext_data, etf_data, exchange_flow_data, stablecoin_data_raw = (
             await asyncio.gather(
-                _safe_collect(derivatives_extended_collector, "Derivatives extended"),
-                _safe_collect(etf_collector, "ETF"),
-                _safe_collect(exchange_flow_collector, "Exchange flow"),
-                _safe_collect(stablecoin_collector, "Stablecoin"),
+                _safe_collect(deriv, "Derivatives extended"),
+                _safe_collect(etf, "ETF"),
+                _safe_collect(flow, "Exchange flow"),
+                _safe_collect(stable, "Stablecoin"),
             )
         )
 
@@ -418,7 +397,8 @@ async def generate_prediction(timeframes: list[str] | None = None):
 
         # Build features (including social media, event memory, funding, dominance)
         news_data = [{"title": n.title, "source": n.source, "timestamp": n.timestamp.isoformat() if n.timestamp else None} for n in news]
-        features = feature_builder.build_features(
+        fb = get_feature_builder()
+        features = fb.build_features(
             price_df=price_df,
             news_data=news_data,
             influencer_data=influencer_data,
@@ -436,7 +416,7 @@ async def generate_prediction(timeframes: list[str] | None = None):
         )
 
         # Build REAL feature sequence from Feature table history
-        feature_array = feature_builder.features_to_array(features)
+        feature_array = fb.features_to_array(features)
 
         async with async_session() as sess:
             result = await sess.execute(
@@ -448,7 +428,7 @@ async def generate_prediction(timeframes: list[str] | None = None):
 
         if len(feature_history) >= 10:
             # Use real historical feature snapshots
-            sequence = feature_builder.build_sequence(
+            sequence = fb.build_sequence(
                 [f.feature_data for f in feature_history], lookback=168
             )
         else:
@@ -509,7 +489,7 @@ async def generate_prediction(timeframes: list[str] | None = None):
             logger.debug(f"Pattern adjustment error (non-critical): {e}")
 
         # Generate signals
-        signals = signal_generator.generate(predictions, current_price, atr, volatility)
+        signals = get_signal_generator().generate(predictions, current_price, atr, volatility)
 
         # Store predictions, signals, and context
         async with async_session() as session:
@@ -669,7 +649,7 @@ async def generate_quant_prediction(timeframes: list[str] | None = None):
         # Funding rate from Binance
         funding_rate = None
         try:
-            fr_data = await market_collector.get_funding_rate()
+            fr_data = await get_market_collector().get_funding_rate()
             if fr_data:
                 funding_rate = fr_data.get("funding_rate")
         except Exception as e:
@@ -685,6 +665,7 @@ async def generate_quant_prediction(timeframes: list[str] | None = None):
             }
 
         # Run quant predictor
+        from app.models.quant_predictor import QuantPredictor
         quant = QuantPredictor()
         result = quant.predict(
             price_df=price_df,
@@ -1114,9 +1095,8 @@ async def auto_retrain_models():
         result = await trainer.evaluate_and_retrain_if_needed()
 
         if result.get("retrain"):
-            # Hot-swap: reset ensemble so it reloads with new weights
-            global _ensemble
-            _ensemble = None  # Will reload on next prediction
+            # Hot-swap: clear cached ensemble so it reloads with new weights
+            get_ensemble.cache_clear()
             logger.info(f"Models retrained and ensemble reset: {result}")
         else:
             logger.info(f"Retrain check: {result.get('status')} (accuracy={result.get('accuracy', 'N/A')})")

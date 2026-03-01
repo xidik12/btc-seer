@@ -12,11 +12,6 @@ continue to work without changes.
 
 # ── Market data collection ───────────────────────────────────────
 from app.scheduler.domain_market import (  # noqa: F401
-    market_collector,
-    fear_greed_collector,
-    macro_collector,
-    onchain_collector,
-    feature_builder,
     deep_backfill_historical_prices,
     backfill_historical_prices,
     collect_price_data,

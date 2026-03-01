@@ -5,20 +5,19 @@ import { formatPricePrecise, formatTimeAgo, safeFixed } from '../utils/format.js
 
 const POLL_INTERVAL = 30_000
 
-function useCountdown() {
+function CountdownTimer() {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(id)
   }, [])
-  // Next prediction is at the top of the next hour (UTC)
   const next = new Date(now)
   next.setUTCMinutes(0, 0, 0)
   next.setUTCHours(next.getUTCHours() + 1)
   const diff = Math.max(0, Math.floor((next - now) / 1000))
   const mm = String(Math.floor(diff / 60)).padStart(2, '0')
   const ss = String(diff % 60).padStart(2, '0')
-  return `${mm}:${ss}`
+  return <span className="text-accent-blue text-[10px] font-mono tabular-nums">{mm}:{ss}</span>
 }
 
 export default function PredictionCard() {
@@ -26,7 +25,6 @@ export default function PredictionCard() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const countdown = useCountdown()
 
   const fetchData = useCallback(async () => {
     try {
@@ -89,7 +87,7 @@ export default function PredictionCard() {
           <span className="text-text-muted text-[8px]">{t('prediction.modelDescription')}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-accent-blue text-[10px] font-mono tabular-nums">{countdown}</span>
+          <CountdownTimer />
           {timestamp && (
             <span className="text-text-muted text-[10px]">{formatTimeAgo(timestamp)}</span>
           )}

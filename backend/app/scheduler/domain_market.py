@@ -11,19 +11,12 @@ from app.database import (
     async_session, Price, MacroData, OnChainData, FundingRate,
     BtcDominance, IndicatorSnapshot,
 )
-from app.collectors import (
-    MarketCollector, FearGreedCollector, MacroCollector, OnChainCollector,
+from app.scheduler._singletons import (
+    get_market_collector, get_fear_greed_collector, get_macro_collector,
+    get_onchain_collector, get_feature_builder,
 )
-from app.features.builder import FeatureBuilder
 
 logger = logging.getLogger(__name__)
-
-# Global instances (initialized once)
-market_collector = MarketCollector()
-fear_greed_collector = FearGreedCollector()
-macro_collector = MacroCollector()
-onchain_collector = OnChainCollector()
-feature_builder = FeatureBuilder()
 
 
 async def deep_backfill_historical_prices():
@@ -140,9 +133,10 @@ async def backfill_historical_prices():
                 return
 
         logger.info("Backfill: Starting historical price data fetch from Binance...")
+        mc = get_market_collector()
 
         # Fetch hourly klines (1000 = ~41 days) for short/medium timeframes
-        hourly_klines = await market_collector.get_historical_klines(
+        hourly_klines = await mc.get_historical_klines(
             interval="1h", limit=1000
         )
         if hourly_klines:
@@ -150,7 +144,7 @@ async def backfill_historical_prices():
             logger.info(f"Backfill: Inserted {count} hourly candles")
 
         # Fetch daily klines (1000 = ~2.7 years) for long timeframes
-        daily_klines = await market_collector.get_historical_klines(
+        daily_klines = await mc.get_historical_klines(
             interval="1d", limit=1000
         )
         if daily_klines:
@@ -226,8 +220,9 @@ async def collect_price_data():
     """
     try:
         # Fetch latest closed 1-minute kline for proper OHLC
-        kline_data = await market_collector.fetch_json(
-            market_collector.BINANCE_KLINES_URL,
+        mc = get_market_collector()
+        kline_data = await mc.fetch_json(
+            mc.BINANCE_KLINES_URL,
             params={"symbol": "BTCUSDT", "interval": "1m", "limit": 2},
         )
 
@@ -262,8 +257,9 @@ async def collect_price_data():
 async def collect_macro_data():
     """Collect and store macro market data (runs every hour)."""
     try:
+        macro_collector = get_macro_collector()
         macro_data = await macro_collector.collect()
-        fear_greed = await fear_greed_collector.collect()
+        fear_greed = await get_fear_greed_collector().collect()
 
         def _price(key):
             val = macro_data.get(key)
@@ -369,7 +365,7 @@ async def collect_macro_data():
 async def collect_onchain_data():
     """Collect and store on-chain data (runs every hour)."""
     try:
-        data = await onchain_collector.collect()
+        data = await get_onchain_collector().collect()
 
         async with async_session() as session:
             onchain = OnChainData(
@@ -394,8 +390,9 @@ async def collect_onchain_data():
 async def collect_funding_data():
     """Collect and persist Binance perpetual funding rate & open interest (runs every 30 min)."""
     try:
-        funding = await market_collector.get_funding_rate()
-        oi_data = await market_collector.get_open_interest()
+        mc = get_market_collector()
+        funding = await mc.get_funding_rate()
+        oi_data = await mc.get_open_interest()
 
         if not funding and not oi_data:
             logger.debug("No funding/OI data received")
@@ -424,7 +421,7 @@ async def collect_funding_data():
 async def collect_dominance_data():
     """Collect and persist BTC dominance & global market data (runs every hour)."""
     try:
-        data = await market_collector.get_btc_dominance()
+        data = await get_market_collector().get_btc_dominance()
 
         if not data:
             logger.debug("No dominance data received")

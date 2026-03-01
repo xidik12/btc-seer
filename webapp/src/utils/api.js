@@ -221,9 +221,10 @@ export const api = {
   getPublicConfig: () => cachedFetch('/config/public', T300),
 
   // Auth (no cache)
-  registerUser: (initData) => fetchAPI('/auth/register', {
+  registerUser: (initData, opts = {}) => fetchAPI('/auth/register', {
     method: 'POST',
     headers: { 'X-Telegram-Init-Data': initData },
+    ...(opts.signal ? { signal: opts.signal } : {}),
   }),
   getCurrentUser: (initData) => fetchAPI('/auth/me', {
     headers: { 'X-Telegram-Init-Data': initData },

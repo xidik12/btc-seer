@@ -5,10 +5,10 @@ import { useTelegram } from '../hooks/useTelegram'
 import { useSubscription } from '../contexts/SubscriptionContext'
 // Above-the-fold — eager imports
 import PriceWidget from '../components/PriceWidget'
-import PriceChart from '../components/PriceChart'
 import TickerTape from '../components/TickerTape'
 import DataSourceFooter from '../components/DataSourceFooter'
 // Below-the-fold — lazy imports (deferred until near viewport)
+const PriceChart = lazy(() => import('../components/PriceChart'))
 const PredictionCard = lazy(() => import('../components/PredictionCard'))
 const QuantPredictionCard = lazy(() => import('../components/QuantPredictionCard'))
 const SignalPanel = lazy(() => import('../components/SignalPanel'))
@@ -461,7 +461,9 @@ export default function Dashboard() {
       </SafeWrap>
 
       <SafeWrap name="PriceChart" t={t}>
-        <PriceChart />
+        <Suspense fallback={<WidgetSkeleton />}>
+          <PriceChart />
+        </Suspense>
       </SafeWrap>
 
       {/* Paywall CTA for free users — shown below price */}
