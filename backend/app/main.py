@@ -34,70 +34,6 @@ from app.api import alerts as alerts_api, briefings as briefings_api, game as ga
 from app.api import websocket as websocket_api
 from app.api import calendar as calendar_api
 from app.api import dashboard as dashboard_api
-from app.scheduler.jobs import (
-    backfill_historical_prices,
-    collect_price_data,
-    collect_news_data,
-    collect_macro_data,
-    collect_onchain_data,
-    collect_influencer_tweets,
-    collect_funding_data,
-    collect_dominance_data,
-    save_indicator_snapshot,
-    generate_prediction,
-    generate_prediction_1h,
-    generate_prediction_4h,
-    generate_prediction_24h,
-    deduplicate_predictions,
-    generate_quant_prediction,
-    generate_quant_prediction_1h,
-    generate_quant_prediction_4h,
-    generate_quant_prediction_24h,
-    evaluate_predictions,
-    evaluate_quant_predictions,
-    classify_news_events,
-    evaluate_event_impacts,
-    cleanup_old_data,
-    auto_retrain_models,
-    run_advisor_check,
-    run_trade_management,
-    check_subscription_expiry,
-    collect_whale_transactions,
-    monitor_entity_wallets,
-    evaluate_whale_impacts,
-    backfill_whale_transactions,
-    resolve_unknown_whale_addresses,
-    snapshot_daily_metrics,
-    aggregate_coin_sentiments,
-    evaluate_game_predictions,
-    reset_game_periods,
-)
-from app.scheduler.daily_briefing import generate_daily_briefing
-from app.advisor.feedback import run_training_feedback, run_adaptive_weight_learning
-from app.collectors.coins import collect_coin_prices, seed_tracked_coins
-from app.collectors.coin_ohlcv import collect_coin_ohlcv, backfill_coin_ohlcv
-from app.scheduler.coin_prediction_jobs import (
-    generate_coin_predictions_1h,
-    generate_coin_predictions_4h,
-    generate_coin_predictions_24h,
-    evaluate_coin_predictions,
-)
-from app.collectors.arbitrage import scan_arbitrage
-from app.collectors.new_listings import check_new_listings, check_listing_announcements, evaluate_listing_performance, backfill_recent_announcements, check_coingecko_new
-from app.collectors.dex_scanner import scan_dex_tokens, check_dex_to_cex_migrations
-from app.collectors.memecoin import discover_memecoins, update_memecoin_risk_scores, cleanup_dead_memecoins
-from app.collectors.eth_whale import collect_eth_whale_transactions
-from app.collectors.sol_whale import collect_sol_whale_transactions
-from app.collectors.eth_onchain import collect_multichain_onchain
-from app.collectors.cryptopanic_v2 import collect_cryptopanic_v2
-from app.collectors.sec_edgar import collect_sec_filings
-from app.collectors.btc_treasuries import scrape_btc_treasuries
-from app.collectors.arkham import collect_arkham_transfers
-from app.models.phrase_analyzer import analyze_news_phrases
-from app.models.continuous_learner import run_continuous_learning
-from app.models.ab_tester import evaluate_candidates
-from app.models.pattern_learner import run_pattern_discovery
-from app.scheduler.backup import run_database_backup
 
 logging.basicConfig(
     level=logging.INFO,
@@ -106,6 +42,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler(timezone="utc")
+
+
+def _lazy_job(module: str, func: str):
+    """Create a lazy-loaded async wrapper for a scheduler job function.
+    The actual module is imported only when the job first runs."""
+    async def wrapper(**kwargs):
+        import importlib
+        mod = importlib.import_module(module)
+        fn = getattr(mod, func)
+        return await fn(**kwargs)
+    wrapper.__name__ = func  # for APScheduler job naming
+    return wrapper
 
 
 _startup_error: str | None = None
@@ -182,136 +130,136 @@ async def lifespan(app: FastAPI):
         # Shared APScheduler kwargs — prevent job overlap and handle misfires
         _job_defaults = dict(max_instances=1, coalesce=True, misfire_grace_time=300)
 
-        # Set up scheduled jobs
+        # Set up scheduled jobs (all lazy-imported — modules load on first run)
         # Data collection jobs
-        scheduler.add_job(collect_price_data, "interval", seconds=60, id="collect_price", **_job_defaults)
-        scheduler.add_job(collect_news_data, "interval", minutes=2, id="collect_news", **_job_defaults)
-        scheduler.add_job(collect_macro_data, "interval", hours=1, id="collect_macro", **_job_defaults)
-        scheduler.add_job(collect_onchain_data, "interval", hours=1, id="collect_onchain", **_job_defaults)
-        scheduler.add_job(collect_influencer_tweets, "interval", minutes=10, id="collect_influencers", **_job_defaults)
-        scheduler.add_job(collect_funding_data, "interval", minutes=30, id="collect_funding", **_job_defaults)
-        scheduler.add_job(collect_dominance_data, "interval", hours=1, id="collect_dominance", **_job_defaults)
-        scheduler.add_job(save_indicator_snapshot, "interval", hours=1, id="save_indicators", **_job_defaults)
-        scheduler.add_job(collect_coin_prices, "interval", minutes=2, id="collect_coins", **_job_defaults)
-        scheduler.add_job(collect_coin_ohlcv, "interval", minutes=2, id="collect_ohlcv", **_job_defaults)
-        scheduler.add_job(aggregate_coin_sentiments, "interval", minutes=5, id="aggregate_sentiments", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "collect_price_data"), "interval", seconds=60, id="collect_price", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "collect_news_data"), "interval", minutes=2, id="collect_news", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "collect_macro_data"), "interval", hours=1, id="collect_macro", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "collect_onchain_data"), "interval", hours=1, id="collect_onchain", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "collect_influencer_tweets"), "interval", minutes=10, id="collect_influencers", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "collect_funding_data"), "interval", minutes=30, id="collect_funding", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "collect_dominance_data"), "interval", hours=1, id="collect_dominance", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "save_indicator_snapshot"), "interval", hours=1, id="save_indicators", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.coins", "collect_coin_prices"), "interval", minutes=2, id="collect_coins", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.coin_ohlcv", "collect_coin_ohlcv"), "interval", minutes=2, id="collect_ohlcv", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "aggregate_coin_sentiments"), "interval", minutes=5, id="aggregate_sentiments", **_job_defaults)
 
         # Multi-coin predictions (offset from BTC predictions)
-        scheduler.add_job(generate_coin_predictions_1h, "cron", minute=10, id="coin_predict_1h", **_job_defaults)
-        scheduler.add_job(generate_coin_predictions_4h, "cron", hour="0,4,8,12,16,20", minute=12, id="coin_predict_4h", **_job_defaults)
-        scheduler.add_job(generate_coin_predictions_24h, "cron", hour=0, minute=14, id="coin_predict_24h", **_job_defaults)
-        scheduler.add_job(evaluate_coin_predictions, "cron", minute=15, id="coin_eval", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.coin_prediction_jobs", "generate_coin_predictions_1h"), "cron", minute=10, id="coin_predict_1h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.coin_prediction_jobs", "generate_coin_predictions_4h"), "cron", hour="0,4,8,12,16,20", minute=12, id="coin_predict_4h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.coin_prediction_jobs", "generate_coin_predictions_24h"), "cron", hour=0, minute=14, id="coin_predict_24h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.coin_prediction_jobs", "evaluate_coin_predictions"), "cron", minute=15, id="coin_eval", **_job_defaults)
 
         # Arbitrage scanning (every 2 minutes)
-        scheduler.add_job(scan_arbitrage, "interval", minutes=2, id="scan_arbitrage", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.arbitrage", "scan_arbitrage"), "interval", minutes=2, id="scan_arbitrage", **_job_defaults)
 
         # New listing detection
-        scheduler.add_job(check_new_listings, "interval", minutes=5, id="check_listings", **_job_defaults)
-        scheduler.add_job(check_listing_announcements, "interval", minutes=2, id="check_announcements", **_job_defaults)
-        scheduler.add_job(evaluate_listing_performance, "interval", hours=1, id="eval_listings", **_job_defaults)
-        scheduler.add_job(check_coingecko_new, "interval", minutes=30, id="check_cg_new", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.new_listings", "check_new_listings"), "interval", minutes=5, id="check_listings", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.new_listings", "check_listing_announcements"), "interval", minutes=2, id="check_announcements", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.new_listings", "evaluate_listing_performance"), "interval", hours=1, id="eval_listings", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.new_listings", "check_coingecko_new"), "interval", minutes=30, id="check_cg_new", **_job_defaults)
 
         # DEX scanner
-        scheduler.add_job(scan_dex_tokens, "interval", minutes=5, id="scan_dex", **_job_defaults)
-        scheduler.add_job(check_dex_to_cex_migrations, "interval", minutes=30, id="dex_to_cex", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.dex_scanner", "scan_dex_tokens"), "interval", minutes=5, id="scan_dex", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.dex_scanner", "check_dex_to_cex_migrations"), "interval", minutes=30, id="dex_to_cex", **_job_defaults)
 
         # Memecoin discovery
-        scheduler.add_job(discover_memecoins, "interval", minutes=10, id="discover_memes", **_job_defaults)
-        scheduler.add_job(update_memecoin_risk_scores, "interval", minutes=30, id="update_meme_risk", **_job_defaults)
-        scheduler.add_job(cleanup_dead_memecoins, "interval", hours=24, id="cleanup_dead_memes", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.memecoin", "discover_memecoins"), "interval", minutes=10, id="discover_memes", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.memecoin", "update_memecoin_risk_scores"), "interval", minutes=30, id="update_meme_risk", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.memecoin", "cleanup_dead_memecoins"), "interval", hours=24, id="cleanup_dead_memes", **_job_defaults)
 
         # Multi-chain whale tracking
-        scheduler.add_job(collect_eth_whale_transactions, "interval", minutes=10, id="collect_eth_whales", **_job_defaults)
-        scheduler.add_job(collect_sol_whale_transactions, "interval", minutes=10, id="collect_sol_whales",
+        scheduler.add_job(_lazy_job("app.collectors.eth_whale", "collect_eth_whale_transactions"), "interval", minutes=10, id="collect_eth_whales", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.sol_whale", "collect_sol_whale_transactions"), "interval", minutes=10, id="collect_sol_whales",
                           next_run_time=datetime.utcnow() + timedelta(minutes=2), **_job_defaults)
 
         # Multi-chain on-chain analytics
-        scheduler.add_job(collect_multichain_onchain, "interval", hours=1, id="collect_multichain", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.eth_onchain", "collect_multichain_onchain"), "interval", hours=1, id="collect_multichain", **_job_defaults)
 
         # CryptoPanic V2 (multi-coin news)
-        scheduler.add_job(collect_cryptopanic_v2, "interval", minutes=10, id="cryptopanic_v2", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.cryptopanic_v2", "collect_cryptopanic_v2"), "interval", minutes=10, id="cryptopanic_v2", **_job_defaults)
 
-        scheduler.add_job(collect_whale_transactions, "interval", minutes=10, id="collect_whales", **_job_defaults)
-        scheduler.add_job(monitor_entity_wallets, "interval", minutes=10, id="monitor_entities",
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "collect_whale_transactions"), "interval", minutes=10, id="collect_whales", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "monitor_entity_wallets"), "interval", minutes=10, id="monitor_entities",
                           next_run_time=datetime.utcnow() + timedelta(minutes=5), **_job_defaults)
-        scheduler.add_job(resolve_unknown_whale_addresses, "interval", minutes=30, id="resolve_addresses",
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "resolve_unknown_whale_addresses"), "interval", minutes=30, id="resolve_addresses",
                           next_run_time=datetime.utcnow() + timedelta(minutes=15), **_job_defaults)
 
         # Institutional whale tracking
-        scheduler.add_job(collect_sec_filings, "interval", minutes=30, id="collect_sec_filings", **_job_defaults)
-        scheduler.add_job(scrape_btc_treasuries, "interval", hours=6, id="scrape_btc_treasuries", **_job_defaults)
-        scheduler.add_job(collect_arkham_transfers, "interval", minutes=15, id="collect_arkham_transfers", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.sec_edgar", "collect_sec_filings"), "interval", minutes=30, id="collect_sec_filings", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.btc_treasuries", "scrape_btc_treasuries"), "interval", hours=6, id="scrape_btc_treasuries", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.collectors.arkham", "collect_arkham_transfers"), "interval", minutes=15, id="collect_arkham_transfers", **_job_defaults)
 
         # Prediction jobs — time-aligned cron schedules (UTC)
         # 1h: every hour at :00
-        scheduler.add_job(generate_prediction_1h, "cron", minute=0, id="predict_1h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "generate_prediction_1h"), "cron", minute=0, id="predict_1h", **_job_defaults)
         # 4h: at 00:00, 04:00, 08:00, 12:00, 16:00, 20:00 (minute 2)
-        scheduler.add_job(generate_prediction_4h, "cron", hour="0,4,8,12,16,20", minute=2, id="predict_4h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "generate_prediction_4h"), "cron", hour="0,4,8,12,16,20", minute=2, id="predict_4h", **_job_defaults)
         # 24h: once daily at 00:04
-        scheduler.add_job(generate_prediction_24h, "cron", hour=0, minute=4, id="predict_24h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "generate_prediction_24h"), "cron", hour=0, minute=4, id="predict_24h", **_job_defaults)
 
         # Quant predictions — offset by 1 minute from ML predictions
-        scheduler.add_job(generate_quant_prediction_1h, "cron", minute=1, id="predict_quant_1h", **_job_defaults)
-        scheduler.add_job(generate_quant_prediction_4h, "cron", hour="0,4,8,12,16,20", minute=3, id="predict_quant_4h", **_job_defaults)
-        scheduler.add_job(generate_quant_prediction_24h, "cron", hour=0, minute=5, id="predict_quant_24h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "generate_quant_prediction_1h"), "cron", minute=1, id="predict_quant_1h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "generate_quant_prediction_4h"), "cron", hour="0,4,8,12,16,20", minute=3, id="predict_quant_4h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "generate_quant_prediction_24h"), "cron", hour=0, minute=5, id="predict_quant_24h", **_job_defaults)
 
         # Evaluation jobs — time-aligned
         # 1h: evaluate at :05 every hour
-        scheduler.add_job(evaluate_predictions, "cron", minute=5, kwargs={"timeframe_filter": "1h"}, id="evaluate_1h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "evaluate_predictions"), "cron", minute=5, kwargs={"timeframe_filter": "1h"}, id="evaluate_1h", **_job_defaults)
         # 4h: evaluate at :07 on 4h boundaries
-        scheduler.add_job(evaluate_predictions, "cron", hour="0,4,8,12,16,20", minute=7, kwargs={"timeframe_filter": "4h"}, id="evaluate_4h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "evaluate_predictions"), "cron", hour="0,4,8,12,16,20", minute=7, kwargs={"timeframe_filter": "4h"}, id="evaluate_4h", **_job_defaults)
         # 24h: evaluate at 00:09 daily
-        scheduler.add_job(evaluate_predictions, "cron", hour=0, minute=9, kwargs={"timeframe_filter": "24h"}, id="evaluate_24h", **_job_defaults)
-        scheduler.add_job(evaluate_quant_predictions, "interval", hours=1, id="evaluate_quant", **_job_defaults)
-        scheduler.add_job(classify_news_events, "interval", minutes=5, id="classify_events", **_job_defaults)
-        scheduler.add_job(evaluate_event_impacts, "interval", minutes=30, id="evaluate_events", **_job_defaults)
-        scheduler.add_job(evaluate_whale_impacts, "interval", minutes=30, id="evaluate_whales", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "evaluate_predictions"), "cron", hour=0, minute=9, kwargs={"timeframe_filter": "24h"}, id="evaluate_24h", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "evaluate_quant_predictions"), "interval", hours=1, id="evaluate_quant", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "classify_news_events"), "interval", minutes=5, id="classify_events", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "evaluate_event_impacts"), "interval", minutes=30, id="evaluate_events", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "evaluate_whale_impacts"), "interval", minutes=30, id="evaluate_whales", **_job_defaults)
 
         # Cleanup
-        scheduler.add_job(cleanup_old_data, "interval", hours=24, id="cleanup", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "cleanup_old_data"), "interval", hours=24, id="cleanup", **_job_defaults)
 
         # Auto-retrain: check every 6 hours if models need retraining (more frequent continuous learning)
-        scheduler.add_job(auto_retrain_models, "interval", hours=6, id="auto_retrain", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "auto_retrain_models"), "interval", hours=6, id="auto_retrain", **_job_defaults)
 
         # Phrase analyzer: hourly news phrase correlation analysis
-        scheduler.add_job(analyze_news_phrases, "interval", hours=1, id="analyze_phrases", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.models.phrase_analyzer", "analyze_news_phrases"), "interval", hours=1, id="analyze_phrases", **_job_defaults)
 
         # Continuous learner: adaptive ensemble weights + selective retrain (every 6h)
-        scheduler.add_job(run_continuous_learning, "interval", hours=6, id="continuous_learning", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.models.continuous_learner", "run_continuous_learning"), "interval", hours=6, id="continuous_learning", **_job_defaults)
 
         # A/B testing: evaluate candidate models (every 6h)
-        scheduler.add_job(evaluate_candidates, "interval", hours=6, id="ab_testing", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.models.ab_tester", "evaluate_candidates"), "interval", hours=6, id="ab_testing", **_job_defaults)
 
         # Pattern learning: discover accuracy patterns every 6h
-        scheduler.add_job(run_pattern_discovery, "cron", hour="0,6,12,18", minute=30, id="pattern_learning", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.models.pattern_learner", "run_pattern_discovery"), "cron", hour="0,6,12,18", minute=30, id="pattern_learning", **_job_defaults)
 
         # Advisor jobs
-        scheduler.add_job(run_advisor_check, "interval", minutes=30, id="advisor_check", **_job_defaults)
-        scheduler.add_job(run_trade_management, "interval", minutes=10, id="trade_management", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "run_advisor_check"), "interval", minutes=30, id="advisor_check", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "run_trade_management"), "interval", minutes=10, id="trade_management", **_job_defaults)
 
         # Training feedback loop (daily)
-        scheduler.add_job(run_training_feedback, "interval", hours=24, id="training_feedback", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.advisor.feedback", "run_training_feedback"), "interval", hours=24, id="training_feedback", **_job_defaults)
 
         # Adaptive weight learning (daily, 1h after feedback)
-        scheduler.add_job(run_adaptive_weight_learning, "interval", hours=24, id="adaptive_weights", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.advisor.feedback", "run_adaptive_weight_learning"), "interval", hours=24, id="adaptive_weights", **_job_defaults)
 
         # Subscription expiry check (daily)
-        scheduler.add_job(check_subscription_expiry, "interval", hours=24, id="check_subs", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "check_subscription_expiry"), "interval", hours=24, id="check_subs", **_job_defaults)
 
         # Daily metrics snapshot at 23:55 UTC
-        scheduler.add_job(snapshot_daily_metrics, "cron", hour=23, minute=55, id="snapshot_metrics", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "snapshot_daily_metrics"), "cron", hour=23, minute=55, id="snapshot_metrics", **_job_defaults)
 
         # Database backup
-        scheduler.add_job(run_database_backup, "interval", hours=settings.backup_interval_hours, id="database_backup", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.backup", "run_database_backup"), "interval", hours=settings.backup_interval_hours, id="database_backup", **_job_defaults)
 
         # Daily briefing generation (07:55 UTC)
-        scheduler.add_job(generate_daily_briefing, "cron", hour=7, minute=55, id="generate_briefing", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.daily_briefing", "generate_daily_briefing"), "cron", hour=7, minute=55, id="generate_briefing", **_job_defaults)
 
         # Prediction game evaluation (every hour at :05)
-        scheduler.add_job(evaluate_game_predictions, "cron", minute=5, id="evaluate_game", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "evaluate_game_predictions"), "cron", minute=5, id="evaluate_game", **_job_defaults)
 
         # Game leaderboard period reset (daily at 00:00)
-        scheduler.add_job(reset_game_periods, "cron", hour=0, minute=0, id="reset_game_periods", **_job_defaults)
+        scheduler.add_job(_lazy_job("app.scheduler.jobs", "reset_game_periods"), "cron", hour=0, minute=0, id="reset_game_periods", **_job_defaults)
 
         scheduler.start()
         logger.info("Scheduler started")
@@ -425,6 +373,20 @@ async def lifespan(app: FastAPI):
                 logger.error(f"Startup: {name} failed: {e}", exc_info=True)
 
         async def startup_data_pipeline():
+            # Lazy-import all pipeline dependencies at call time
+            from app.scheduler.jobs import (
+                backfill_historical_prices, collect_price_data, collect_news_data,
+                collect_macro_data, collect_onchain_data, collect_influencer_tweets,
+                collect_funding_data, collect_dominance_data, save_indicator_snapshot,
+                generate_prediction, generate_quant_prediction, classify_news_events,
+                deduplicate_predictions, backfill_whale_transactions,
+            )
+            from app.collectors.coins import collect_coin_prices, seed_tracked_coins
+            from app.collectors.coin_ohlcv import backfill_coin_ohlcv
+            from app.collectors.new_listings import check_new_listings, backfill_recent_announcements, check_coingecko_new
+            from app.collectors.dex_scanner import scan_dex_tokens
+            from app.collectors.memecoin import discover_memecoins
+
             # Step 1: Backfill historical data so charts work immediately
             await _safe_run(backfill_historical_prices(), "backfill_historical_prices")
 
