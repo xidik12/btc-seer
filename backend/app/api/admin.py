@@ -78,8 +78,8 @@ def _verify_telegram_init_data(init_data: str, **kwargs) -> dict:
     if auth_date:
         auth_time = datetime.utcfromtimestamp(int(auth_date))
         age_seconds = (datetime.utcnow() - auth_time).total_seconds()
-        max_age = kwargs.get("max_age", 300)  # default 5 min for admin
-        if age_seconds > max_age:
+        max_age = kwargs.get("max_age", 300)  # default 5 min for admin; 0 = no expiry
+        if max_age > 0 and age_seconds > max_age:
             logger.warning(f"Auth: initData expired (age={age_seconds:.0f}s, max={max_age})")
             raise HTTPException(401, "Session expired — please reopen the app from Telegram")
 
