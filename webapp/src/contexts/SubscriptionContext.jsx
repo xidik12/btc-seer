@@ -79,7 +79,7 @@ export function SubscriptionProvider({ children }) {
 
     // Fast timeout — don't block UI on cold Railway starts
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 3000)
+    const timeout = setTimeout(() => controller.abort(), 1500)
 
     try {
       const res = await api.registerUser(initData, { signal: controller.signal })

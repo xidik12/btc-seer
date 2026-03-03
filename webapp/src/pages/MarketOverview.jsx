@@ -73,26 +73,26 @@ function SectionCard({ title, children }) {
   )
 }
 
-function CryptoSection() {
-  const [coins, setCoins] = useState([])
-  const [loading, setLoading] = useState(true)
+function CryptoSection({ data: coins, setData: setCoins }) {
+  const [loading, setLoading] = useState(coins === null)
 
   useEffect(() => {
+    if (coins !== null) return
     api.getTrackedCoins()
       .then((data) => setCoins(Array.isArray(data) ? data : data?.coins ?? []))
-      .catch(() => {})
+      .catch(() => setCoins([]))
       .finally(() => setLoading(false))
-  }, [])
+  }, [coins, setCoins])
 
   if (loading) return <LoadingSkeleton rows={6} />
 
   return (
     <div className="space-y-3">
       <SectionCard>
-        <CryptoHeatmap coins={coins} loading={loading} />
+        <CryptoHeatmap coins={coins || []} loading={loading} />
       </SectionCard>
       <SectionCard title="Top Assets">
-        {coins.map((c, i) => (
+        {(coins || []).map((c, i) => (
           <AssetRow
             key={c.coin_id || c.symbol}
             name={c.name || c.symbol}
@@ -107,13 +107,13 @@ function CryptoSection() {
   )
 }
 
-function IndicesSection() {
-  const [macro, setMacro] = useState(null)
-  const [loading, setLoading] = useState(true)
+function IndicesSection({ data: macro, setData: setMacro }) {
+  const [loading, setLoading] = useState(macro === null)
 
   useEffect(() => {
-    api.getMacroData().then(setMacro).catch(() => {}).finally(() => setLoading(false))
-  }, [])
+    if (macro !== null) return
+    api.getMacroData().then(setMacro).catch(() => setMacro({})).finally(() => setLoading(false))
+  }, [macro, setMacro])
 
   if (loading) return <LoadingSkeleton rows={7} />
 
@@ -163,13 +163,13 @@ function IndicesSection() {
   )
 }
 
-function CommoditiesSection() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+function CommoditiesSection({ data, setData }) {
+  const [loading, setLoading] = useState(data === null)
 
   useEffect(() => {
-    api.getCommoditiesData().then(setData).catch(() => {}).finally(() => setLoading(false))
-  }, [])
+    if (data !== null) return
+    api.getCommoditiesData().then(setData).catch(() => setData({})).finally(() => setLoading(false))
+  }, [data, setData])
 
   if (loading) return <LoadingSkeleton rows={5} />
 
@@ -198,6 +198,12 @@ function CommoditiesSection() {
 export default function MarketOverview() {
   const { t } = useTranslation('common')
   const [activeTab, setActiveTab] = useState('crypto')
+
+  // Lifted state — cached across tab switches (null = not yet fetched)
+  const [cryptoData, setCryptoData] = useState(null)
+  const [indicesData, setIndicesData] = useState(null)
+  const [forexData, setForexData] = useState(null)
+  const [commoditiesData, setCommoditiesData] = useState(null)
 
   return (
     <div className="px-4 pt-4 space-y-4 pb-4">
@@ -231,10 +237,10 @@ export default function MarketOverview() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'crypto' && <CryptoSection />}
-      {activeTab === 'indices' && <IndicesSection />}
-      {activeTab === 'forex' && <ForexTable />}
-      {activeTab === 'commodities' && <CommoditiesSection />}
+      {activeTab === 'crypto' && <CryptoSection data={cryptoData} setData={setCryptoData} />}
+      {activeTab === 'indices' && <IndicesSection data={indicesData} setData={setIndicesData} />}
+      {activeTab === 'forex' && <ForexTable data={forexData} setData={setForexData} />}
+      {activeTab === 'commodities' && <CommoditiesSection data={commoditiesData} setData={setCommoditiesData} />}
 
       {/* Economic Calendar */}
       <EconomicCalendar />

@@ -5,6 +5,7 @@ import { useLanguageInit } from './i18n/useLanguage'
 import { SubscriptionProvider, useSubscription } from './contexts/SubscriptionContext'
 import NavBar from './components/NavBar'
 import PaywallOverlay from './components/PaywallOverlay'
+import WarmupBanner from './components/WarmupBanner'
 
 // Lazy-load all pages for code splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -108,6 +109,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      <WarmupBanner />
       <SubscriptionProvider>
         <ScrollToTop />
         <div className="min-h-screen bg-bg-primary text-text-primary pb-20">

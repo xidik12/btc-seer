@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -27,29 +27,44 @@ export default function CoinDetail() {
   const [prediction, setPrediction] = useState(null)
   const [signal, setSignal] = useState(null)
   const [sentiment, setSentiment] = useState(null)
+  const initialLoadDone = useRef(false)
 
+  // Initial load: fire all API calls in parallel
   useEffect(() => {
+    if (!coinId) return
+    initialLoadDone.current = false
     setLoading(true)
-    api.getCoinDetail(coinId).then(data => {
-      if (!data.error) setDetail(data)
+
+    Promise.allSettled([
+      api.getCoinDetail(coinId),
+      api.getCoinChart(coinId, 7),
+      api.getCoinPrediction(coinId),
+      api.getCoinSignal(coinId),
+      api.getCoinSentiment(coinId),
+    ]).then(([detailRes, chartRes, predRes, signalRes, sentRes]) => {
+      if (detailRes.status === 'fulfilled' && !detailRes.value.error) {
+        setDetail(detailRes.value)
+      }
+      if (chartRes.status === 'fulfilled') {
+        setChart(chartRes.value.prices || [])
+      }
+      if (predRes.status === 'fulfilled') setPrediction(predRes.value)
+      if (signalRes.status === 'fulfilled') setSignal(signalRes.value)
+      if (sentRes.status === 'fulfilled') setSentiment(sentRes.value)
       setLoading(false)
-    }).catch(() => setLoading(false))
+      initialLoadDone.current = true
+    })
   }, [coinId])
 
+  // Chart period changes only refetch chart data (skip initial mount)
   useEffect(() => {
+    if (!coinId || !initialLoadDone.current) return
     setChartLoading(true)
     api.getCoinChart(coinId, period).then(data => {
       setChart(data.prices || [])
       setChartLoading(false)
     }).catch(() => setChartLoading(false))
   }, [coinId, period])
-
-  useEffect(() => {
-    if (!coinId) return
-    api.getCoinPrediction(coinId).then(setPrediction).catch(() => {})
-    api.getCoinSignal(coinId).then(setSignal).catch(() => {})
-    api.getCoinSentiment(coinId).then(setSentiment).catch(() => {})
-  }, [coinId])
 
   if (loading) {
     return (

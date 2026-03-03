@@ -26,7 +26,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          charts: ['recharts'],
           i18n: ['i18next', 'react-i18next'],
         },
       },

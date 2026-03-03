@@ -155,9 +155,6 @@ async def lifespan(app: FastAPI):
         await init_db()
         logger.info("Database initialized")
 
-        global _data_ready
-        _data_ready = True
-
         # Ensure model weights dir exists on persistent volume
         import shutil
         import os
@@ -473,8 +470,10 @@ async def lifespan(app: FastAPI):
             )
 
         async def _startup_wrapper():
+            global _data_ready
             await startup_data_pipeline()
-            logger.info("Full data pipeline complete")
+            _data_ready = True
+            logger.info("Full data pipeline complete — data_ready=True")
 
         asyncio.create_task(_startup_wrapper())
         logger.info("Startup complete — server ready, data pipeline loading in background")
@@ -599,10 +598,10 @@ app.include_router(dashboard_api.router)
 @app.get("/health")
 async def health():
     if _startup_error:
-        return {"status": "degraded", "error": "Service startup issue. Check server logs."}
+        return {"status": "degraded", "data_ready": False, "error": "Service startup issue. Check server logs."}
     if not _data_ready:
-        return {"status": "warming_up"}
-    return {"status": "ok"}
+        return {"status": "warming_up", "data_ready": False}
+    return {"status": "ok", "data_ready": True}
 
 
 @app.get("/api/config/public")

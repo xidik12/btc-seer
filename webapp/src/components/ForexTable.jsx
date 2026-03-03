@@ -12,9 +12,11 @@ const FOREX_PAIRS = [
   { key: 'nzdusd', name: 'NZD/USD', base: 'NZD', quote: 'USD' },
 ]
 
-export default function ForexTable() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+export default function ForexTable({ data: externalData, setData: setExternalData }) {
+  const [internalData, setInternalData] = useState(null)
+  const data = externalData !== undefined ? externalData : internalData
+  const setData = externalData !== undefined ? setExternalData : setInternalData
+  const [loading, setLoading] = useState(data === null)
 
   const fetchForex = useCallback(async () => {
     try {
@@ -25,13 +27,12 @@ export default function ForexTable() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [setData])
 
   useEffect(() => {
+    if (data !== null) return
     fetchForex()
-    const iv = setInterval(fetchForex, 120_000)
-    return () => clearInterval(iv)
-  }, [fetchForex])
+  }, [data, fetchForex])
 
   if (loading) {
     return (
