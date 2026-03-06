@@ -5,6 +5,7 @@ from sqlalchemy import select, desc, case, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, News
+from app.cache import cache_get, cache_set
 
 router = APIRouter(prefix="/api/news", tags=["news"])
 
@@ -17,6 +18,13 @@ async def get_latest_news(
     session: AsyncSession = Depends(get_session),
 ):
     """Get latest crypto news with sentiment scores."""
+    # Cache only unfiltered requests (the common dashboard case)
+    cache_key = f"news:latest:{limit}" if not source and not language else None
+    if cache_key:
+        cached = await cache_get(cache_key)
+        if cached is not None:
+            return cached
+
     query = select(News).order_by(desc(News.timestamp)).limit(limit)
 
     if source:
@@ -27,7 +35,7 @@ async def get_latest_news(
     result = await session.execute(query)
     news = result.scalars().all()
 
-    return {
+    data = {
         "count": len(news),
         "news": [
             {
@@ -43,6 +51,9 @@ async def get_latest_news(
             for n in news
         ],
     }
+    if cache_key:
+        await cache_set(cache_key, data, 60)
+    return data
 
 
 @router.get("/sentiment")

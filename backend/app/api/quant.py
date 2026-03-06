@@ -5,6 +5,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, QuantPrediction
+from app.cache import cache_get, cache_set
 
 router = APIRouter(prefix="/api/predictions", tags=["predictions"])
 
@@ -12,6 +13,10 @@ router = APIRouter(prefix="/api/predictions", tags=["predictions"])
 @router.get("/quant")
 async def get_quant_prediction(session: AsyncSession = Depends(get_session)):
     """Get the latest quant theory-based prediction with signal breakdown."""
+    cached = await cache_get("pred:quant")
+    if cached is not None:
+        return cached
+
     try:
         result = await session.execute(
             select(QuantPrediction)
@@ -25,7 +30,7 @@ async def get_quant_prediction(session: AsyncSession = Depends(get_session)):
     if not qp:
         return {"prediction": None, "message": "No quant predictions available yet"}
 
-    return {
+    data = {
         "prediction": {
             "timestamp": qp.timestamp.isoformat(),
             "current_price": qp.current_price,
@@ -60,6 +65,8 @@ async def get_quant_prediction(session: AsyncSession = Depends(get_session)):
             "signal_breakdown": qp.signal_breakdown,
         }
     }
+    await cache_set("pred:quant", data, 30)
+    return data
 
 
 @router.get("/quant/history")

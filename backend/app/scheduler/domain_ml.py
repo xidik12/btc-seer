@@ -556,6 +556,10 @@ async def generate_prediction(timeframes: list[str] | None = None):
         summary = ", ".join(f"{tf}={p['direction']}" for tf, p in predictions.items())
         logger.info(f"Prediction generated: {summary}")
 
+        # Invalidate prediction cache
+        from app.cache import cache_delete
+        await cache_delete("pred:current")
+
     except Exception as e:
         logger.error(f"Prediction generation error: {e}", exc_info=True)
 
@@ -712,6 +716,10 @@ async def generate_quant_prediction(timeframes: list[str] | None = None):
             f"action={result.get('action')}, "
             f"{result.get('bullish_signals')}B/{result.get('bearish_signals')}S signals)"
         )
+
+        # Invalidate quant prediction cache
+        from app.cache import cache_delete
+        await cache_delete("pred:quant")
 
     except Exception as e:
         logger.error(f"Quant prediction error: {e}", exc_info=True)

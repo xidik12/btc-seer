@@ -8,6 +8,7 @@ from sqlalchemy import select, desc
 
 from app.database import async_session, DailyBriefing
 from app.dependencies import relaxed_rate_limit
+from app.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/briefings", tags=["briefings"], dependencies=[Depends(relaxed_rate_limit)])
@@ -16,6 +17,10 @@ router = APIRouter(prefix="/api/briefings", tags=["briefings"], dependencies=[De
 @router.get("/latest")
 async def get_latest_briefing():
     """Get the most recent daily briefing."""
+    cached = await cache_get("briefings:latest")
+    if cached is not None:
+        return cached
+
     async with async_session() as session:
         result = await session.execute(
             select(DailyBriefing).order_by(desc(DailyBriefing.date)).limit(1)
@@ -25,7 +30,7 @@ async def get_latest_briefing():
     if not briefing:
         return {"briefing": None}
 
-    return {
+    data = {
         "briefing": {
             "date": briefing.date,
             "timestamp": briefing.timestamp.isoformat() if briefing.timestamp else None,
@@ -39,6 +44,8 @@ async def get_latest_briefing():
             "generation_method": briefing.generation_method,
         },
     }
+    await cache_set("briefings:latest", data, 3600)
+    return data
 
 
 @router.get("/history")

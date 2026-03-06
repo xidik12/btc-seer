@@ -250,6 +250,11 @@ async def collect_price_data():
 
         logger.info(f"Price collected: ${k[4]} (kline OHLC)")
 
+        # Invalidate caches so next request gets fresh data
+        from app.cache import cache_delete
+        await cache_delete("price")
+        await cache_delete("dashboard_summary")
+
     except Exception as e:
         logger.error(f"Price collection error: {e}")
 

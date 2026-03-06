@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, Prediction, PredictionAnalysis, LearnedPattern, ModelPerformanceLog
 from app.dependencies import standard_rate_limit
+from app.cache import cache_get, cache_set
 
 router = APIRouter(prefix="/api/predictions", tags=["predictions"], dependencies=[Depends(standard_rate_limit)])
 
@@ -13,6 +14,9 @@ router = APIRouter(prefix="/api/predictions", tags=["predictions"], dependencies
 @router.get("/current")
 async def get_current_predictions(request: Request, session: AsyncSession = Depends(get_session)):
     """Get the latest predictions for all timeframes."""
+    cached = await cache_get("pred:current")
+    if cached is not None:
+        return cached
 
     result = await session.execute(
         select(Prediction)
@@ -34,10 +38,11 @@ async def get_current_predictions(request: Request, session: AsyncSession = Depe
             "predicted_change_pct": p.predicted_change_pct,
             "current_price": p.current_price,
             "timestamp": p.timestamp.isoformat(),
-            "model_outputs": p.model_outputs,
         }
 
-    return {"predictions": pred_dict}
+    data = {"predictions": pred_dict}
+    await cache_set("pred:current", data, 30)
+    return data
 
 
 @router.get("/history")

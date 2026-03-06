@@ -5,6 +5,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, Signal
+from app.cache import cache_get, cache_set
 
 router = APIRouter(prefix="/api/signals", tags=["signals"])
 
@@ -12,6 +13,10 @@ router = APIRouter(prefix="/api/signals", tags=["signals"])
 @router.get("/current")
 async def get_current_signals(session: AsyncSession = Depends(get_session)):
     """Get the latest trading signals for all timeframes."""
+    cached = await cache_get("signals:current")
+    if cached is not None:
+        return cached
+
     result = await session.execute(
         select(Signal)
         .order_by(desc(Signal.timestamp))
@@ -38,7 +43,9 @@ async def get_current_signals(session: AsyncSession = Depends(get_session)):
             "timestamp": s.timestamp.isoformat(),
         }
 
-    return {"signals": sig_dict}
+    data = {"signals": sig_dict}
+    await cache_set("signals:current", data, 30)
+    return data
 
 
 @router.get("/history")

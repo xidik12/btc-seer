@@ -116,6 +116,12 @@ async def collect_news_data():
 
         logger.info(f"News: {len(all_items)} fetched, {new_count} new (deduped)")
 
+        # Invalidate news caches
+        if new_count > 0:
+            from app.cache import cache_delete
+            await cache_delete("news:latest:20")
+            await cache_delete("news:latest:30")
+
     except Exception as e:
         logger.error(f"News collection error: {e}")
 

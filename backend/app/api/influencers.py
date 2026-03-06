@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, desc, func
+from sqlalchemy import select, desc, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, InfluencerTweet
+from app.cache import cache_get, cache_set
 
 router = APIRouter(prefix="/api/influencers", tags=["influencers"])
 
@@ -16,6 +17,13 @@ async def get_latest_tweets(
     session: AsyncSession = Depends(get_session),
 ):
     """Get latest tweets from influential crypto people."""
+    # Cache only unfiltered requests
+    cache_key = f"influencers:latest:{limit}" if not category else None
+    if cache_key:
+        cached = await cache_get(cache_key)
+        if cached is not None:
+            return cached
+
     query = select(InfluencerTweet).order_by(desc(InfluencerTweet.timestamp)).limit(limit)
 
     if category:
@@ -24,7 +32,7 @@ async def get_latest_tweets(
     result = await session.execute(query)
     tweets = result.scalars().all()
 
-    return {
+    data = {
         "count": len(tweets),
         "tweets": [
             {
@@ -43,6 +51,9 @@ async def get_latest_tweets(
             for t in tweets
         ],
     }
+    if cache_key:
+        await cache_set(cache_key, data, 60)
+    return data
 
 
 @router.get("/sentiment")
@@ -51,16 +62,33 @@ async def get_influencer_sentiment(
     session: AsyncSession = Depends(get_session),
 ):
     """Get aggregated sentiment from influential people over time period."""
+    cached = await cache_get(f"influencers:sentiment:{hours}")
+    if cached is not None:
+        return cached
+
     since = datetime.utcnow() - timedelta(hours=hours)
 
+    # Use SQL aggregation instead of loading all rows into Python
+    bullish_case = func.sum(case((InfluencerTweet.sentiment_score > 0.1, 1), else_=0))
+    bearish_case = func.sum(case((InfluencerTweet.sentiment_score < -0.1, 1), else_=0))
+
+    # Global aggregates
     result = await session.execute(
-        select(InfluencerTweet)
+        select(
+            func.count(InfluencerTweet.id).label("total"),
+            func.avg(InfluencerTweet.sentiment_score).label("avg_score"),
+            func.sum(InfluencerTweet.sentiment_score * InfluencerTweet.weight).label("weighted_sum"),
+            func.sum(InfluencerTweet.weight).label("weight_sum"),
+            bullish_case.label("bull"),
+            bearish_case.label("bear"),
+        )
         .where(InfluencerTweet.timestamp >= since)
         .where(InfluencerTweet.sentiment_score.isnot(None))
     )
-    tweets = result.scalars().all()
+    row = result.one()
+    total = row.total or 0
 
-    if not tweets:
+    if total == 0:
         return {
             "hours": hours,
             "count": 0,
@@ -68,42 +96,39 @@ async def get_influencer_sentiment(
             "weighted_sentiment": None,
             "bullish_count": 0,
             "bearish_count": 0,
+            "by_category": {},
         }
 
-    # Calculate weighted average sentiment
-    total_weighted = sum(t.sentiment_score * t.weight for t in tweets)
-    total_weight = sum(t.weight for t in tweets)
-    weighted_avg = total_weighted / total_weight if total_weight else 0
+    avg_score = round(float(row.avg_score), 4) if row.avg_score else None
+    weight_sum = float(row.weight_sum) if row.weight_sum else 0
+    weighted_avg = round(float(row.weighted_sum) / weight_sum, 4) if weight_sum else 0
 
-    # Simple average
-    simple_avg = sum(t.sentiment_score for t in tweets) / len(tweets)
-
-    # Bullish/bearish counts
-    bullish = sum(1 for t in tweets if t.sentiment_score > 0.1)
-    bearish = sum(1 for t in tweets if t.sentiment_score < -0.1)
-
-    # By category
-    by_category = {}
-    for tweet in tweets:
-        cat = tweet.category
-        if cat not in by_category:
-            by_category[cat] = []
-        by_category[cat].append(tweet.sentiment_score)
-
+    # Per-category breakdown via SQL GROUP BY
+    cat_result = await session.execute(
+        select(
+            InfluencerTweet.category,
+            func.avg(InfluencerTweet.sentiment_score).label("avg_s"),
+        )
+        .where(InfluencerTweet.timestamp >= since)
+        .where(InfluencerTweet.sentiment_score.isnot(None))
+        .group_by(InfluencerTweet.category)
+    )
     category_sentiment = {
-        cat: round(sum(scores) / len(scores), 4)
-        for cat, scores in by_category.items()
+        cr.category: round(float(cr.avg_s), 4) if cr.avg_s else None
+        for cr in cat_result.all()
     }
 
-    return {
+    data = {
         "hours": hours,
-        "count": len(tweets),
-        "avg_sentiment": round(simple_avg, 4),
-        "weighted_sentiment": round(weighted_avg, 4),
-        "bullish_count": bullish,
-        "bearish_count": bearish,
+        "count": total,
+        "avg_sentiment": avg_score,
+        "weighted_sentiment": weighted_avg,
+        "bullish_count": int(row.bull or 0),
+        "bearish_count": int(row.bear or 0),
         "by_category": category_sentiment,
     }
+    await cache_set(f"influencers:sentiment:{hours}", data, 120)
+    return data
 
 
 @router.get("/top-influencers")

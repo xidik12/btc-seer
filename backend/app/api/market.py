@@ -1,5 +1,4 @@
 import logging
-import time
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
@@ -10,31 +9,22 @@ from app.database import get_session, Price, MacroData, OnChainData, FundingRate
 from app.collectors.market import MarketCollector
 from app.collectors.onchain import OnChainCollector
 from app.collectors.macro import MacroCollector
+import time
+from app.cache import cache_get as _get_cached, cache_set as _set_cache_async
 
 logger = logging.getLogger(__name__)
 
-# ── Simple TTL cache for expensive endpoints ──
-_cache: dict[str, tuple[dict, float]] = {}
-
-
-def _get_cached(key: str) -> dict | None:
-    if key in _cache:
-        data, expires = _cache[key]
-        if time.monotonic() < expires:
-            return data
-        del _cache[key]
-    return None
-
-
-def _set_cache(key: str, data, ttl: int) -> None:
-    _cache[key] = (data, time.monotonic() + ttl)
+# Local in-process cache for ORM objects (can't JSON-serialize to Redis)
+_orm_cache: dict[str, tuple[object, float]] = {}
 
 
 async def _get_macro_trio(session: AsyncSession):
     """Fetch latest, 1h-ago, and 24h-ago MacroData rows with shared cache."""
-    cached = _get_cached("_macro_trio")
-    if cached is not None:
-        return cached
+    if "_macro_trio" in _orm_cache:
+        data, expires = _orm_cache["_macro_trio"]
+        if time.monotonic() < expires:
+            return data
+        del _orm_cache["_macro_trio"]
 
     result = await session.execute(
         select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
@@ -59,7 +49,7 @@ async def _get_macro_trio(session: AsyncSession):
     )
     daily_macro = daily_result.scalar_one_or_none()
 
-    _set_cache("_macro_trio", (macro, prev_macro, daily_macro), 120)
+    _orm_cache["_macro_trio"] = ((macro, prev_macro, daily_macro), time.monotonic() + 120)
     return macro, prev_macro, daily_macro
 
 
@@ -86,6 +76,10 @@ _BINANCE_FALLBACK = {
 @router.get("/price")
 async def get_current_price(session: AsyncSession = Depends(get_session)):
     """Get latest BTC price data."""
+    cached = await _get_cached("price")
+    if cached is not None:
+        return cached
+
     result = await session.execute(
         select(Price).order_by(desc(Price.timestamp)).limit(1)
     )
@@ -110,7 +104,7 @@ async def get_current_price(session: AsyncSession = Depends(get_session)):
         change_24h = price.close - price_24h.close
         change_24h_pct = (change_24h / price_24h.close) * 100
 
-    return {
+    data = {
         "price": price.close,
         "open": price.open,
         "high": price.high,
@@ -120,6 +114,8 @@ async def get_current_price(session: AsyncSession = Depends(get_session)):
         "change_24h_pct": round(change_24h_pct, 2) if change_24h_pct else None,
         "timestamp": price.timestamp.isoformat(),
     }
+    await _set_cache_async("price", data, 15)
+    return data
 
 
 @router.get("/stats")
@@ -131,7 +127,7 @@ async def get_price_stats(
 
     Timeframes: 1m, 5m, 15m, 1h, 4h, 1d (day), 1w (week), 1mo (month), 1y (year), all (lifetime)
     """
-    cached = _get_cached(f"stats:{timeframe}")
+    cached = await _get_cached(f"stats:{timeframe}")
     if cached is not None:
         return cached
 
@@ -231,7 +227,7 @@ async def get_price_stats(
                     "period_end": candles[-1]["timestamp"],
                     "source": "binance_api",
                 }
-                _set_cache(f"stats:{timeframe}", result, 30)
+                await _set_cache_async(f"stats:{timeframe}", result, 30)
                 return result
         except Exception as e:
             logger.warning(f"Binance fallback failed: {e}")
@@ -280,7 +276,7 @@ async def get_price_stats(
         "period_start": first_price.timestamp.isoformat(),
         "period_end": current.timestamp.isoformat(),
     }
-    _set_cache(f"stats:{timeframe}", result, 30)
+    await _set_cache_async(f"stats:{timeframe}", result, 30)
     return result
 
 
@@ -289,7 +285,7 @@ async def get_indicators(
     session: AsyncSession = Depends(get_session),
 ):
     """Get current technical indicators calculated from recent price data."""
-    cached = _get_cached("indicators")
+    cached = await _get_cached("indicators")
     if cached is not None:
         return cached
 
@@ -431,7 +427,7 @@ async def get_indicators(
             "long_term": int(latest.get("trend_long", 0)),
         },
     }
-    _set_cache("indicators", result, 120)
+    await _set_cache_async("indicators", result, 120)
     return result
 
 
@@ -441,7 +437,7 @@ async def get_candles(
     session: AsyncSession = Depends(get_session),
 ):
     """Get historical candle data with automatic downsampling."""
-    cached = _get_cached(f"candles:{hours}")
+    cached = await _get_cached(f"candles:{hours}")
     if cached is not None:
         return cached
 
@@ -474,7 +470,7 @@ async def get_candles(
         "total_raw": len(prices),
         "candles": candles,
     }
-    _set_cache(f"candles:{hours}", result_data, 60)
+    await _set_cache_async(f"candles:{hours}", result_data, 60)
     return result_data
 
 
@@ -493,7 +489,7 @@ def build_macro_item(current_val, prev_val, daily_val):
 @router.get("/macro")
 async def get_macro_data(session: AsyncSession = Depends(get_session)):
     """Get latest macro market data with price changes."""
-    cached = _get_cached("macro")
+    cached = await _get_cached("macro")
     if cached is not None:
         return cached
 
@@ -546,14 +542,14 @@ async def get_macro_data(session: AsyncSession = Depends(get_session)):
     result["fear_greed_label"] = macro.fear_greed_label
     result["timestamp"] = macro.timestamp.isoformat()
 
-    _set_cache("macro", result, 300)
+    await _set_cache_async("macro", result, 300)
     return result
 
 
 @router.get("/onchain")
 async def get_onchain_data(session: AsyncSession = Depends(get_session)):
     """Get latest on-chain metrics."""
-    cached = _get_cached("onchain")
+    cached = await _get_cached("onchain")
     if cached is not None:
         return cached
 
@@ -613,7 +609,7 @@ async def get_onchain_data(session: AsyncSession = Depends(get_session)):
         "large_tx_count": onchain.large_tx_count,
         "timestamp": onchain.timestamp.isoformat(),
     }
-    _set_cache("onchain", result, 300)
+    await _set_cache_async("onchain", result, 300)
     return result
 
 
@@ -623,7 +619,7 @@ async def get_funding_data(
     session: AsyncSession = Depends(get_session),
 ):
     """Get historical funding rate and open interest data."""
-    cached = _get_cached(f"funding:{hours}")
+    cached = await _get_cached(f"funding:{hours}")
     if cached is not None:
         return cached
 
@@ -659,7 +655,7 @@ async def get_funding_data(
         ],
         "count": len(records),
     }
-    _set_cache(f"funding:{hours}", result, 120)
+    await _set_cache_async(f"funding:{hours}", result, 120)
     return result
 
 
@@ -669,7 +665,7 @@ async def get_dominance_data(
     session: AsyncSession = Depends(get_session),
 ):
     """Get historical BTC dominance data."""
-    cached = _get_cached(f"dominance:{days}")
+    cached = await _get_cached(f"dominance:{days}")
     if cached is not None:
         return cached
 
@@ -729,7 +725,7 @@ async def get_dominance_data(
         ],
         "count": len(records),
     }
-    _set_cache(f"dominance:{days}", result, 300)
+    await _set_cache_async(f"dominance:{days}", result, 300)
     return result
 
 
@@ -738,7 +734,7 @@ async def get_fear_greed(
     days: int = Query(30, ge=1, le=365),
 ):
     """Get Fear & Greed Index from alternative.me (free API)."""
-    cached = _get_cached(f"fear_greed:{days}")
+    cached = await _get_cached(f"fear_greed:{days}")
     if cached is not None:
         return cached
 
@@ -774,7 +770,7 @@ async def get_fear_greed(
             },
             "history": history,
         }
-        _set_cache(f"fear_greed:{days}", result, 300)
+        await _set_cache_async(f"fear_greed:{days}", result, 300)
         return result
     except Exception as e:
         logger.warning(f"Fear & Greed fetch failed: {e}")
@@ -787,7 +783,7 @@ async def get_indicator_history(
     session: AsyncSession = Depends(get_session),
 ):
     """Get historical indicator snapshots for trend analysis."""
-    cached = _get_cached(f"indicator_history:{hours}")
+    cached = await _get_cached(f"indicator_history:{hours}")
     if cached is not None:
         return cached
 
@@ -814,14 +810,14 @@ async def get_indicator_history(
         ],
         "count": len(snapshots),
     }
-    _set_cache(f"indicator_history:{hours}", data, 300)
+    await _set_cache_async(f"indicator_history:{hours}", data, 300)
     return data
 
 
 @router.get("/supply")
 async def get_btc_supply():
     """Get Bitcoin supply data: total mined, remaining, halving info, milestones."""
-    cached = _get_cached("supply")
+    cached = await _get_cached("supply")
     if cached is not None:
         return cached
 
@@ -879,7 +875,7 @@ async def get_btc_supply():
             {"year": 2140, "reward": 0, "total_mined_approx": 21_000_000},
         ],
     }
-    _set_cache("supply", result, 600)
+    await _set_cache_async("supply", result, 600)
     return result
 
 
@@ -896,7 +892,7 @@ NEW_MACRO_KEYS = [
 @router.get("/forex")
 async def get_forex_data(session: AsyncSession = Depends(get_session)):
     """Get forex pairs with price and changes."""
-    cached = _get_cached("forex")
+    cached = await _get_cached("forex")
     if cached is not None:
         return cached
 
@@ -915,14 +911,14 @@ async def get_forex_data(session: AsyncSession = Depends(get_session)):
         )
 
     data["timestamp"] = macro.timestamp.isoformat()
-    _set_cache("forex", data, 300)
+    await _set_cache_async("forex", data, 300)
     return data
 
 
 @router.get("/commodities")
 async def get_commodities_data(session: AsyncSession = Depends(get_session)):
     """Get commodities with price and changes."""
-    cached = _get_cached("commodities")
+    cached = await _get_cached("commodities")
     if cached is not None:
         return cached
 
@@ -941,14 +937,14 @@ async def get_commodities_data(session: AsyncSession = Depends(get_session)):
         )
 
     data["timestamp"] = macro.timestamp.isoformat()
-    _set_cache("commodities", data, 300)
+    await _set_cache_async("commodities", data, 300)
     return data
 
 
 @router.get("/yields")
 async def get_yield_curve(session: AsyncSession = Depends(get_session)):
     """Get treasury yield curve (2Y, 5Y, 10Y, 30Y) with 30-day history."""
-    cached = _get_cached("yields")
+    cached = await _get_cached("yields")
     if cached is not None:
         return cached
 
@@ -988,14 +984,14 @@ async def get_yield_curve(session: AsyncSession = Depends(get_session)):
         "history": history,
         "timestamp": macro.timestamp.isoformat() if macro else None,
     }
-    _set_cache("yields", data, 300)
+    await _set_cache_async("yields", data, 300)
     return data
 
 
 @router.get("/ta-summary")
 async def get_ta_summary(session: AsyncSession = Depends(get_session)):
     """Get TradingView-style TA summary rating."""
-    cached = _get_cached("ta_summary")
+    cached = await _get_cached("ta_summary")
     if cached is not None:
         return cached
 
@@ -1009,5 +1005,5 @@ async def get_ta_summary(session: AsyncSession = Depends(get_session)):
         return {"error": "Failed to compute TA summary"}
 
     result = TASummaryRating.compute(indicators)
-    _set_cache("ta_summary", result, 60)
+    await _set_cache_async("ta_summary", result, 60)
     return result
