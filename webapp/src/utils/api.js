@@ -4,6 +4,13 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api'
 const _cache = new Map()
 const _inflight = new Map()
 
+/** Synchronous read from cache — returns data or undefined */
+export function getCached(endpoint) {
+  const entry = _cache.get(endpoint)
+  if (entry && Date.now() < entry.expiry) return entry.data
+  return undefined
+}
+
 function cachedFetch(endpoint, ttl, options = {}) {
   const key = endpoint
   // Only cache GET requests (no body, no method or method=GET)
@@ -90,7 +97,7 @@ export const api = {
   getCurrentPrice: () => cachedFetch('/market/price', T15),
   getPriceStats: (timeframe = '1d') => cachedFetch(`/market/stats?timeframe=${timeframe}`, T15),
   getCandles: (hours = 168) => cachedFetch(`/market/candles?hours=${hours}`, T30),
-  getIndicators: () => cachedFetch('/market/indicators', T30),
+  getIndicators: () => cachedFetch('/market/indicators', T60),
   getMacroData: () => cachedFetch('/market/macro', T120),
   getOnchainData: () => cachedFetch('/market/onchain', T120),
   getFundingHistory: (hours = 168) => cachedFetch(`/market/funding?hours=${hours}`, T60),

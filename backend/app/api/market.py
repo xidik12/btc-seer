@@ -325,10 +325,19 @@ async def get_indicators(
 
     current_price = safe(latest["close"])
 
-    # Fetch BTC dominance
+    # Read BTC dominance from DB (scheduler writes it hourly) — no live API call
     btc_dom = None
     try:
-        btc_dom = await _market_collector.get_btc_dominance()
+        dom_result = await session.execute(
+            select(BtcDominance).order_by(desc(BtcDominance.timestamp)).limit(1)
+        )
+        dom_row = dom_result.scalar_one_or_none()
+        if dom_row:
+            btc_dom = {
+                "btc_dominance": dom_row.btc_dominance,
+                "eth_dominance": dom_row.eth_dominance,
+                "total_market_cap": dom_row.total_market_cap,
+            }
     except Exception:
         pass
 
@@ -422,7 +431,7 @@ async def get_indicators(
             "long_term": int(latest.get("trend_long", 0)),
         },
     }
-    _set_cache("indicators", result, 60)
+    _set_cache("indicators", result, 120)
     return result
 
 

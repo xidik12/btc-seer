@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
+import useCachedFetch from '../hooks/useCachedFetch'
 import { formatPricePrecise, formatPrice, formatTimeAgo } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
 import SubTabBar from '../components/SubTabBar'
@@ -169,15 +170,9 @@ function bbExplain(pos, width, t) {
 
 function IndicatorHistory() {
   const { t } = useTranslation(['market', 'common'])
-  const [histData, setHistData] = useState(null)
-  const [histLoading, setHistLoading] = useState(true)
-
-  useEffect(() => {
-    api.getIndicatorHistory()
-      .then(d => setHistData(d))
-      .catch(() => {})
-      .finally(() => setHistLoading(false))
-  }, [])
+  const { data: histData, loading: histLoading } = useCachedFetch(
+    api.getIndicatorHistory, '/market/indicator-history'
+  )
 
   if (histLoading) {
     return (
@@ -273,23 +268,9 @@ function IndicatorHistory() {
 export default function Technical() {
   const { t } = useTranslation(['market', 'common'])
   const tabs = useMemo(() => ANALYSIS_TABS.map(tab => ({ ...tab, label: t(tab.labelKey, { ns: 'common' }) })), [t])
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await api.getIndicators()
-      if (res?.error) { setError(res.error) } else { setData(res); setError(null) }
-    } catch (err) { setError(err.message) }
-    finally { setLoading(false) }
-  }, [])
-
-  useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, POLL_INTERVAL)
-    return () => clearInterval(interval)
-  }, [fetchData])
+  const { data, loading, error, refresh: fetchData } = useCachedFetch(
+    api.getIndicators, '/market/indicators', POLL_INTERVAL
+  )
 
   if (loading) {
     return (

@@ -1,5 +1,5 @@
 import { Component, lazy, Suspense, useEffect } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, useNavigationType } from 'react-router-dom'
 import { useTelegram } from './hooks/useTelegram'
 import { useLanguageInit } from './i18n/useLanguage'
 import { SubscriptionProvider, useSubscription } from './contexts/SubscriptionContext'
@@ -41,6 +41,29 @@ const Briefing = lazy(() => import('./pages/Briefing'))
 const PredictionGame = lazy(() => import('./pages/PredictionGame'))
 const SmartMoney = lazy(() => import('./pages/SmartMoney'))
 const MarketOverview = lazy(() => import('./pages/MarketOverview'))
+
+// Prefetch top page chunks during idle time
+const PAGE_PREFETCHES = [
+  () => import('./pages/Dashboard'),
+  () => import('./pages/Technical'),
+  () => import('./pages/Signals'),
+  () => import('./pages/News'),
+  () => import('./pages/History'),
+  () => import('./pages/PowerLaw'),
+  () => import('./pages/Liquidations'),
+]
+
+function usePrefetchPages() {
+  useEffect(() => {
+    const ric = typeof requestIdleCallback === 'function' ? requestIdleCallback : (cb) => setTimeout(cb, 200)
+    const id = ric(() => {
+      PAGE_PREFETCHES.forEach(load => load())
+    })
+    return () => {
+      if (typeof cancelIdleCallback === 'function') cancelIdleCallback(id)
+    }
+  }, [])
+}
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -92,7 +115,10 @@ function PageLoader() {
 
 function ScrollToTop() {
   const { pathname } = useLocation()
-  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  const navType = useNavigationType()
+  useEffect(() => {
+    if (navType === 'PUSH') window.scrollTo(0, 0)
+  }, [pathname, navType])
   return null
 }
 
@@ -104,8 +130,8 @@ function PremiumRoute({ children }) {
 }
 
 export default function App() {
-  const location = useLocation()
   useLanguageInit()
+  usePrefetchPages()
 
   return (
     <ErrorBoundary>
@@ -113,7 +139,7 @@ export default function App() {
       <SubscriptionProvider>
         <ScrollToTop />
         <div className="min-h-screen bg-bg-primary text-text-primary pb-20">
-          <div key={location.pathname} className="page-enter">
+          <div className="page-enter">
           <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Free routes */}
