@@ -1,5 +1,6 @@
 """News collection jobs: news, influencer tweets, event classification, sentiment aggregation."""
 
+import asyncio
 import logging
 from datetime import datetime, timedelta
 
@@ -72,7 +73,7 @@ async def collect_news_data():
             existing_titles = {row[0].lower().strip() for row in result.all()}
 
         analyzer = SentimentAnalyzer()
-        analyzer.load_multilingual()
+        await asyncio.to_thread(analyzer.load_multilingual)
         new_count = 0
 
         async with async_session() as session:
@@ -153,7 +154,7 @@ async def collect_influencer_tweets():
             existing_texts = {row[0].lower().strip() for row in result.all()}
 
         analyzer = SentimentAnalyzer()
-        analyzer.load_multilingual()
+        await asyncio.to_thread(analyzer.load_multilingual)
         new_count = 0
 
         async with async_session() as session:
