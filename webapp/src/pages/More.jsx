@@ -79,6 +79,21 @@ const menuItems = [
     descKey: 'nav.forward',
   },
   {
+    path: '/address-distribution',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="4" rx="1" />
+        <rect x="14" y="10" width="7" height="3" rx="1" />
+        <rect x="3" y="13" width="7" height="5" rx="1" />
+        <rect x="3" y="20" width="4" height="2" rx="0.5" />
+        <rect x="14" y="16" width="5" height="2" rx="0.5" />
+      </svg>
+    ),
+    labelKey: 'link.addressDist',
+    descKey: 'nav.forward',
+  },
+  {
     path: '/news',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">

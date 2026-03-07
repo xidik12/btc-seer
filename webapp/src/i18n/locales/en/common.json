@@ -90,7 +90,8 @@
     "briefing": "Daily Briefing",
     "game": "Prediction Game",
     "smartMoney": "Smart Money",
-    "markets": "Markets"
+    "markets": "Markets",
+    "addressDist": "Address Distribution"
   },
   "btn": {
     "cancel": "Cancel",

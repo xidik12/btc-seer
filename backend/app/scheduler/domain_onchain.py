@@ -174,6 +174,25 @@ async def resolve_unknown_whale_addresses():
         await resolver.close()
 
 
+async def collect_address_distribution():
+    """Collect and cache Bitcoin address distribution (runs every 6 hours)."""
+    from app.collectors.address_distribution import AddressDistributionCollector
+    from app.cache import cache_set
+    from datetime import datetime
+
+    collector = AddressDistributionCollector()
+    try:
+        data = await collector.collect()
+        data["timestamp"] = datetime.utcnow().isoformat()
+        await cache_set("btc:address_distribution", data, 21600)  # 6h TTL
+        total = data.get("total_with_balance", 0)
+        logger.info(f"Address distribution collected: {total:,} addresses with balance")
+    except Exception as e:
+        logger.error(f"Address distribution collection error: {e}")
+    finally:
+        await collector.close()
+
+
 async def collect_whale_transactions():
     """Collect and store large BTC transactions (runs every 10 min).
 

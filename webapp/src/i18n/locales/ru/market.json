@@ -568,7 +568,13 @@
     "insightShortCluster": "Зона сжатия шортов всего {{pct}}% выше цены (${{volume}}). Рост может вызвать каскад.",
     "long": "в лонге",
     "short": "в шорте",
-    "currentLabel": "Текущая"
+    "currentLabel": "Текущая",
+    "feedTab": "Лента",
+    "heatmapTab": "Тепловая карта",
+    "feedSummary": "{{longCount}} LONG / {{shortCount}} SHORT ликвидировано — ${{totalUsd}} всего",
+    "longLiq": "LONG ЛИК",
+    "shortLiq": "SHORT ЛИК",
+    "feedEmpty": "Пока нет событий ликвидации"
   },
   "events": {
     "title": "Память событий",
@@ -681,6 +687,19 @@
       "viewOnMempool": "Посмотреть на mempool.space",
       "txCount": "{{count}} транзакций китов",
       "noTxs": "Транзакции китов для этого адреса не найдены"
-    }
+    },
+    "feedTab": "Лента",
+    "transactionsTab": "Транзакции",
+    "institutionalTab": "Институциональные",
+    "feedEmpty": "Пока нет сделок китов"
+  },
+  "addressDist": {
+    "title": "Распределение адресов",
+    "totalAddresses": "Всего адресов",
+    "totalWithBalance": "С балансом",
+    "bucket": "Категория",
+    "count": "Адреса",
+    "percentage": "Доля",
+    "btcRange": "Диапазон BTC"
   }
 }

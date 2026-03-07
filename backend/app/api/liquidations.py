@@ -240,6 +240,27 @@ async def get_liquidation_levels(session: AsyncSession = Depends(get_session)):
     return data
 
 
+@router.get("/feed")
+async def get_liquidation_feed(limit: int = 100):
+    """Live liquidation events feed — individual forced liquidation orders."""
+    cached = await cache_get("liq:live_feed")
+    if cached is not None:
+        events = cached.get("events", [])[:limit]
+        return {"events": events, "count": len(events), "timestamp": cached.get("timestamp")}
+
+    # On-demand fallback
+    from app.collectors.liquidation_feed import LiquidationFeedCollector
+
+    collector = LiquidationFeedCollector()
+    try:
+        data = await collector.collect(limit=limit)
+        data["timestamp"] = datetime.utcnow().isoformat()
+        await cache_set("liq:live_feed", data, 300)  # 5 min TTL
+        return {"events": data["events"][:limit], "count": len(data["events"]), "timestamp": data["timestamp"]}
+    finally:
+        await collector.close()
+
+
 @router.get("/stats")
 async def get_liquidation_stats(session: AsyncSession = Depends(get_session)):
     """OI, long/short ratios, funding rate, and top trader ratios."""

@@ -568,7 +568,13 @@
     "insightShortCluster": "Short squeeze zone just {{pct}}% above price (${{volume}}). A pump could cascade.",
     "long": "long",
     "short": "short",
-    "currentLabel": "Current"
+    "currentLabel": "Current",
+    "feedTab": "Live Feed",
+    "heatmapTab": "Heatmap",
+    "feedSummary": "{{longCount}} LONG / {{shortCount}} SHORT liquidated — ${{totalUsd}} total",
+    "longLiq": "LONG LIQ",
+    "shortLiq": "SHORT LIQ",
+    "feedEmpty": "No liquidation events yet"
   },
   "events": {
     "title": "Event Memory",
@@ -681,6 +687,19 @@
       "viewOnMempool": "View on mempool.space",
       "txCount": "{{count}} whale transactions",
       "noTxs": "No whale transactions found for this address"
-    }
+    },
+    "feedTab": "Feed",
+    "transactionsTab": "Transactions",
+    "institutionalTab": "Institutional",
+    "feedEmpty": "No whale trades yet"
+  },
+  "addressDist": {
+    "title": "Address Distribution",
+    "totalAddresses": "Total Addresses",
+    "totalWithBalance": "With Balance",
+    "bucket": "Category",
+    "count": "Addresses",
+    "percentage": "Share",
+    "btcRange": "BTC Range"
   }
 }

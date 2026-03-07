@@ -41,6 +41,7 @@ const Briefing = lazy(() => import('./pages/Briefing'))
 const PredictionGame = lazy(() => import('./pages/PredictionGame'))
 const SmartMoney = lazy(() => import('./pages/SmartMoney'))
 const MarketOverview = lazy(() => import('./pages/MarketOverview'))
+const AddressDistribution = lazy(() => import('./pages/AddressDistribution'))
 
 // Prefetch top page chunks during idle time
 const PAGE_PREFETCHES = [
@@ -178,6 +179,7 @@ export default function App() {
             <Route path="/game" element={<PremiumRoute><PredictionGame /></PremiumRoute>} />
             <Route path="/smart-money" element={<PremiumRoute><SmartMoney /></PremiumRoute>} />
             <Route path="/markets" element={<PremiumRoute><MarketOverview /></PremiumRoute>} />
+            <Route path="/address-distribution" element={<PremiumRoute><AddressDistribution /></PremiumRoute>} />
           </Routes>
           </Suspense>
           </div>

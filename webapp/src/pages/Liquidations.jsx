@@ -616,6 +616,114 @@ function FundingOIChart({ fundingData, t }) {
   )
 }
 
+// ── Live Liquidation Feed ──
+
+function LiquidationFeedTab({ t }) {
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchFeed = useCallback(async () => {
+    try {
+      const data = await api.getLiquidationFeed(100)
+      setEvents(data?.events || [])
+    } catch (err) {
+      console.error('Liquidation feed error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchFeed()
+    const interval = setInterval(fetchFeed, 30_000)
+    return () => clearInterval(interval)
+  }, [fetchFeed])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="w-6 h-6 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="text-center text-text-muted text-sm py-12">
+        {t('market:liquidations.feedEmpty')}
+      </div>
+    )
+  }
+
+  // Summary stats
+  const longCount = events.filter(e => e.position === 'LONG').length
+  const shortCount = events.filter(e => e.position === 'SHORT').length
+  const totalUsd = events.reduce((sum, e) => sum + (e.usd_value || 0), 0)
+
+  return (
+    <div className="space-y-2">
+      {/* Summary bar */}
+      <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
+        <p className="text-text-muted text-[10px]">
+          {t('market:liquidations.feedSummary', {
+            longCount,
+            shortCount,
+            totalUsd: formatNumber(totalUsd),
+          })}
+        </p>
+      </div>
+
+      {/* Event cards */}
+      {events.map((event, i) => {
+        const isLong = event.position === 'LONG'
+        const pillColor = isLong ? 'bg-accent-red/15 text-accent-red border-accent-red/20' : 'bg-accent-green/15 text-accent-green border-accent-green/20'
+        const pillLabel = isLong ? t('market:liquidations.longLiq') : t('market:liquidations.shortLiq')
+        const timeAgo = event.timestamp ? formatTimeAgo(event.timestamp) : ''
+
+        return (
+          <div key={`${event.timestamp}-${event.price}-${i}`} className="bg-bg-card rounded-lg px-3 py-2 border border-white/5 flex items-center gap-2.5 slide-up">
+            {/* Position pill */}
+            <span className={`text-[9px] font-bold px-2 py-1 rounded-md border shrink-0 ${pillColor}`}>
+              {pillLabel}
+            </span>
+
+            {/* Details */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 text-[10px]">
+                <span className="text-text-muted">{event.exchange}</span>
+                <span className="text-text-muted">@</span>
+                <span className="text-text-primary font-medium tabular-nums">${event.price?.toLocaleString()}</span>
+                <span className="text-text-muted">{timeAgo}</span>
+              </div>
+            </div>
+
+            {/* Amount */}
+            <div className="text-right shrink-0">
+              <div className="text-text-primary text-sm font-bold tabular-nums">
+                {event.qty_btc?.toFixed(3)} BTC
+              </div>
+              <div className="text-text-muted text-[9px] tabular-nums">
+                ${formatNumber(event.usd_value || 0)}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Utility ──
+
+function formatTimeAgo(ts) {
+  if (!ts) return ''
+  const diff = (Date.now() - new Date(ts).getTime()) / 1000
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
+}
+
 // ── Main Page ──
 
 export default function Liquidations() {
@@ -626,6 +734,7 @@ export default function Liquidations() {
   const [stats, setStats] = useState(null)
   const [fundingData, setFundingData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [viewTab, setViewTab] = useState('heatmap')
 
   const fetchData = useCallback(async () => {
     try {
@@ -675,23 +784,46 @@ export default function Liquidations() {
       <SubTabBar tabs={tabs} />
       <h1 className="text-lg font-bold">{t('market:liquidations.title')}</h1>
 
-      <SummaryCard data={mapData} t={t} />
-      <RiskMeter longPct={longPct} shortPct={shortPct} fundingRate={fundingRate} t={t} />
-      <LiquidationHeatmap data={mapData} t={t} />
-      <KeyLevels data={mapData} t={t} />
-      <FundingOIChart fundingData={fundingData} t={t} />
-      <TradingInsight data={mapData} stats={stats} t={t} />
-      <LeverageTable levels={levels} currentPrice={mapData?.current_price} t={t} />
-      <StatsGrid stats={stats} t={t} />
-
-      <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('market:liquidations.howToUseTitle')}</h3>
-        <div className="text-text-muted text-[11px] space-y-2">
-          <p>{t('market:liquidations.howToUse.paragraph1')}</p>
-          <p>{t('market:liquidations.howToUse.paragraph2')}</p>
-          <p>{t('market:liquidations.howToUse.paragraph3')}</p>
-        </div>
+      {/* View toggle: Heatmap | Live Feed */}
+      <div className="flex gap-2">
+        {['heatmap', 'feed'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setViewTab(tab)}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              viewTab === tab
+                ? 'bg-accent-blue/20 border-accent-blue text-accent-blue'
+                : 'bg-bg-card border-white/5 text-text-muted'
+            }`}
+          >
+            {tab === 'heatmap' ? t('market:liquidations.heatmapTab') : t('market:liquidations.feedTab')}
+          </button>
+        ))}
       </div>
+
+      {viewTab === 'feed' ? (
+        <LiquidationFeedTab t={t} />
+      ) : (
+        <>
+          <SummaryCard data={mapData} t={t} />
+          <RiskMeter longPct={longPct} shortPct={shortPct} fundingRate={fundingRate} t={t} />
+          <LiquidationHeatmap data={mapData} t={t} />
+          <KeyLevels data={mapData} t={t} />
+          <FundingOIChart fundingData={fundingData} t={t} />
+          <TradingInsight data={mapData} stats={stats} t={t} />
+          <LeverageTable levels={levels} currentPrice={mapData?.current_price} t={t} />
+          <StatsGrid stats={stats} t={t} />
+
+          <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+            <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('market:liquidations.howToUseTitle')}</h3>
+            <div className="text-text-muted text-[11px] space-y-2">
+              <p>{t('market:liquidations.howToUse.paragraph1')}</p>
+              <p>{t('market:liquidations.howToUse.paragraph2')}</p>
+              <p>{t('market:liquidations.howToUse.paragraph3')}</p>
+            </div>
+          </div>
+        </>
+      )}
 
       <DataSourceFooter sources={['binance', 'coinglass']} />
     </div>

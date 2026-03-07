@@ -137,6 +137,12 @@ export const api = {
   getLiquidationLevels: () => cachedFetch('/liquidations/levels', T60),
   getLiquidationStats: () => cachedFetch('/liquidations/stats', T60),
 
+  // Liquidation Feed
+  getLiquidationFeed: (limit = 100) => cachedFetch(`/liquidations/feed?limit=${limit}`, T30),
+
+  // Address Distribution
+  getAddressDistribution: () => cachedFetch('/onchain/address-distribution', T300),
+
   // Events
   getRecentEvents: (hours = 24) => cachedFetch(`/events/recent?hours=${hours}`, T60),
   getEventCategoryStats: () => cachedFetch('/events/category-stats', T60),

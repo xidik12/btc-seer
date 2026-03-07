@@ -23,6 +23,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.config import settings
 from app.database import init_db, async_session
 from app.api import predictions, signals, news, market, history, influencers, events, quant, coins, whales, marketing
+from app.api import address_distribution as address_distribution_api
 from app.api import charts as charts_api
 from app.api import support as support_api
 from app.api import advisor as advisor_api
@@ -169,6 +170,12 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(_lazy_job("app.collectors.memecoin", "cleanup_dead_memecoins"), "interval", hours=24, id="cleanup_dead_memes", **_job_defaults)
 
         # Multi-chain whale tracking
+        # Address distribution (every 6 hours)
+        scheduler.add_job(_lazy_job("app.scheduler.domain_onchain", "collect_address_distribution"), "interval", hours=6, id="collect_addr_dist", **_job_defaults)
+
+        # Live liquidation feed (every 30 seconds)
+        scheduler.add_job(_lazy_job("app.scheduler.domain_market", "collect_liquidation_feed"), "interval", seconds=30, id="collect_liq_feed", **_job_defaults)
+
         scheduler.add_job(_lazy_job("app.collectors.eth_whale", "collect_eth_whale_transactions"), "interval", minutes=10, id="collect_eth_whales", **_job_defaults)
         scheduler.add_job(_lazy_job("app.collectors.sol_whale", "collect_sol_whale_transactions"), "interval", minutes=10, id="collect_sol_whales",
                           next_run_time=datetime.utcnow() + timedelta(minutes=2), **_job_defaults)
@@ -569,6 +576,7 @@ app.include_router(smartmoney_api.router)
 app.include_router(websocket_api.router)
 app.include_router(calendar_api.router)
 app.include_router(dashboard_api.router)
+app.include_router(address_distribution_api.router)
 
 
 @app.get("/health")

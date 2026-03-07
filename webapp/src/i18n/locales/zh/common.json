@@ -89,7 +89,8 @@
     "alerts": "价格提醒",
     "briefing": "每日简报",
     "game": "预测游戏",
-    "smartMoney": "聪明资金"
+    "smartMoney": "聪明资金",
+    "addressDist": "地址分布"
   },
   "btn": {
     "cancel": "取消",

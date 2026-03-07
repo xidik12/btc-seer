@@ -450,6 +450,52 @@ async def collect_dominance_data():
         logger.error(f"Dominance collection error: {e}")
 
 
+async def collect_liquidation_feed():
+    """Collect live liquidation events from Binance (runs every 30 seconds)."""
+    import json
+    from app.collectors.liquidation_feed import LiquidationFeedCollector
+
+    collector = LiquidationFeedCollector()
+    try:
+        data = await collector.collect(limit=100)
+        new_events = data.get("events", [])
+        if not new_events:
+            return
+
+        # Merge with existing Redis data, dedup by timestamp+price+qty, keep latest 200
+        from app.redis_client import get_redis
+        r = await get_redis()
+        existing_raw = await r.get("c:liq:live_feed")
+        existing_events = []
+        if existing_raw:
+            try:
+                existing_events = json.loads(existing_raw).get("events", [])
+            except Exception:
+                pass
+
+        # Dedup key: timestamp + price + qty_btc + position
+        seen = set()
+        merged = []
+        for event in new_events + existing_events:
+            key = (event.get("timestamp"), event.get("price"), event.get("qty_btc"), event.get("position"))
+            if key not in seen:
+                seen.add(key)
+                merged.append(event)
+
+        # Sort newest first, keep 200
+        merged.sort(key=lambda e: e.get("timestamp", ""), reverse=True)
+        merged = merged[:200]
+
+        cache_data = {"events": merged, "timestamp": datetime.utcnow().isoformat()}
+        await r.set("c:liq:live_feed", json.dumps(cache_data, default=str), ex=300)
+
+        logger.info(f"Liquidation feed updated: {len(new_events)} new, {len(merged)} total")
+    except Exception as e:
+        logger.error(f"Liquidation feed collection error: {e}")
+    finally:
+        await collector.close()
+
+
 async def save_indicator_snapshot():
     """Compute and persist a full technical indicator snapshot (runs every hour).
 

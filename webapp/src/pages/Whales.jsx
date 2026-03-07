@@ -10,6 +10,7 @@ const MARKET_TABS = [
   { path: '/elliott-wave', labelKey: 'common:link.elliottWave' },
   { path: '/events', labelKey: 'common:link.events' },
   { path: '/whales', labelKey: 'common:link.whales' },
+  { path: '/address-distribution', labelKey: 'common:link.addressDist' },
   { path: '/tools', labelKey: 'common:link.tools' },
 ]
 
@@ -305,6 +306,96 @@ function WhaleCard({ tx, t, onAddressClick }) {
   )
 }
 
+function LiveWhaleFeed({ t }) {
+  const [trades, setTrades] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [prevIds, setPrevIds] = useState(new Set())
+
+  const fetchFeed = useCallback(async () => {
+    try {
+      const data = await api.getRecentWhales(1, 50)
+      const txList = data?.transactions || []
+      setTrades(txList)
+
+      // Track new entries for animation
+      const newIds = new Set(txList.map(tx => tx.tx_hash || tx.id))
+      setPrevIds(newIds)
+    } catch (err) {
+      console.error('Whale feed error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchFeed()
+    const interval = setInterval(fetchFeed, 30_000) // 30s
+    return () => clearInterval(interval)
+  }, [fetchFeed])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="w-6 h-6 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (trades.length === 0) {
+    return (
+      <div className="text-center text-text-muted text-sm py-12">
+        {t('market:whales.feedEmpty')}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {trades.map(tx => {
+        const isOut = tx.direction === 'exchange_out'
+        const isIn = tx.direction === 'exchange_in'
+        const dirColor = isOut ? 'text-accent-green' : isIn ? 'text-accent-red' : 'text-text-muted'
+        const dirBg = isOut ? 'bg-accent-green/10' : isIn ? 'bg-accent-red/10' : 'bg-white/5'
+        const dirArrow = isOut ? '▲' : isIn ? '▼' : '●'
+        const dirLabel = isOut ? 'OUT' : isIn ? 'IN' : '—'
+        const entity = tx.entity_name || tx.from_entity || tx.to_entity || ''
+
+        return (
+          <div key={tx.tx_hash || tx.id} className={`${dirBg} rounded-lg px-3 py-2 flex items-center gap-2.5 slide-up`}>
+            {/* Direction arrow */}
+            <span className={`text-base font-bold ${dirColor} shrink-0`}>{dirArrow}</span>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${dirColor} ${dirBg} border border-current/20`}>
+                  {dirLabel}
+                </span>
+                {entity && entity !== 'unknown' && (
+                  <span className="text-[10px] text-accent-blue font-medium truncate">{entity}</span>
+                )}
+                <span className="text-text-muted text-[9px]">{formatTimeAgo(tx.timestamp)}</span>
+              </div>
+            </div>
+
+            {/* Amount */}
+            <div className="text-right shrink-0">
+              <div className="text-text-primary text-sm font-bold tabular-nums">
+                {tx.amount_btc?.toLocaleString()} BTC
+              </div>
+              {tx.amount_usd && (
+                <div className="text-text-muted text-[9px] tabular-nums">
+                  ${safeFixed(tx.amount_usd / 1e6, 1)}M
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function InstitutionalTab({ t }) {
   const [holdings, setHoldings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -377,7 +468,7 @@ export default function Whales() {
   const [transactions, setTransactions] = useState([])
   const [filter, setFilter] = useState('all')
   const [chainFilter, setChainFilter] = useState('all')
-  const [mainTab, setMainTab] = useState('transactions')
+  const [mainTab, setMainTab] = useState('feed')
   const [loading, setLoading] = useState(true)
   const [selectedAddress, setSelectedAddress] = useState(null)
 
@@ -437,9 +528,9 @@ export default function Whales() {
 
       <h1 className="text-lg font-bold mt-3 mb-3">{t('market:whales.title')}</h1>
 
-      {/* Main Tab: Transactions | Institutional */}
+      {/* Main Tab: Feed | Transactions | Institutional */}
       <div className="flex gap-2 mb-3">
-        {['transactions', 'institutional'].map(tab => (
+        {['feed', 'transactions', 'institutional'].map(tab => (
           <button
             key={tab}
             onClick={() => setMainTab(tab)}
@@ -449,12 +540,14 @@ export default function Whales() {
                 : 'bg-bg-card border-white/5 text-text-muted'
             }`}
           >
-            {tab === 'transactions' ? 'Transactions' : 'Institutional'}
+            {tab === 'feed' ? t('market:whales.feedTab') : tab === 'transactions' ? t('market:whales.transactionsTab') : t('market:whales.institutionalTab')}
           </button>
         ))}
       </div>
 
-      {mainTab === 'institutional' ? (
+      {mainTab === 'feed' ? (
+        <LiveWhaleFeed t={t} />
+      ) : mainTab === 'institutional' ? (
         <InstitutionalTab t={t} />
       ) : (
       <>

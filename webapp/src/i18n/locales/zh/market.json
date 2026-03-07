@@ -568,7 +568,13 @@
     "insightShortCluster": "空头挤压区域仅距价格{{pct}}%（${{volume}}）。上涨可能引发连锁。",
     "long": "做多",
     "short": "做空",
-    "currentLabel": "当前"
+    "currentLabel": "当前",
+    "feedTab": "实时动态",
+    "heatmapTab": "热力图",
+    "feedSummary": "{{longCount}} LONG / {{shortCount}} SHORT 清算 — ${{totalUsd}} 总计",
+    "longLiq": "多头清算",
+    "shortLiq": "空头清算",
+    "feedEmpty": "暂无清算事件"
   },
   "events": {
     "title": "事件记忆",
@@ -681,6 +687,19 @@
       "viewOnMempool": "在 mempool.space 上查看",
       "txCount": "{{count}} 笔鲸鱼交易",
       "noTxs": "未找到该地址的鲸鱼交易"
-    }
+    },
+    "feedTab": "动态",
+    "transactionsTab": "交易",
+    "institutionalTab": "机构",
+    "feedEmpty": "暂无鲸鱼交易"
+  },
+  "addressDist": {
+    "title": "地址分布",
+    "totalAddresses": "总地址数",
+    "totalWithBalance": "有余额",
+    "bucket": "类别",
+    "count": "地址数",
+    "percentage": "占比",
+    "btcRange": "BTC范围"
   }
 }
