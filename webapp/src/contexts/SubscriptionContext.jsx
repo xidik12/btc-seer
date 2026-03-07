@@ -51,23 +51,28 @@ export function SubscriptionProvider({ children }) {
   )
 
   const _retryInBackground = useCallback(async (initData) => {
-    try {
-      const res = await api.registerUser(initData)
-      const user = res?.user
-      if (user) {
-        const newState = {
-          isPremium: !!user.is_premium || !!user.is_admin,
-          isAdmin: !!user.is_admin,
-          tier: user.subscription_status || (user.is_premium ? 'active' : 'none'),
-          daysLeft: user.days_remaining ?? 0,
-          statusText: user.status_text || '',
-          loading: false,
+    // Retry up to 3 times with increasing delays (cold start recovery)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, attempt * 2000))
+      try {
+        const res = await api.registerUser(initData)
+        const user = res?.user
+        if (user) {
+          const newState = {
+            isPremium: !!user.is_premium || !!user.is_admin,
+            isAdmin: !!user.is_admin,
+            tier: user.subscription_status || (user.is_premium ? 'active' : 'none'),
+            daysLeft: user.days_remaining ?? 0,
+            statusText: user.status_text || '',
+            loading: false,
+          }
+          setState(newState)
+          saveCachedState(newState)
+          return
         }
-        setState(newState)
-        saveCachedState(newState)
+      } catch {
+        // Retry on next iteration
       }
-    } catch {
-      // Silent — user sees free tier until next refresh
     }
   }, [])
 
@@ -77,9 +82,9 @@ export function SubscriptionProvider({ children }) {
       return
     }
 
-    // Fast timeout — don't block UI on cold Railway starts
+    // Timeout for cold Railway starts — 5s gives enough time for warm worker
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 1500)
+    const timeout = setTimeout(() => controller.abort(), 5000)
 
     try {
       const res = await api.registerUser(initData, { signal: controller.signal })
@@ -111,18 +116,20 @@ export function SubscriptionProvider({ children }) {
 
     try {
       const sub = await api.getSubscriptionStatus(initData)
-      const newState = {
-        isPremium: !!sub?.is_premium,
-        isAdmin: false,
-        tier: sub?.tier || 'none',
-        daysLeft: sub?.days_remaining ?? 0,
-        statusText: sub?.status_text || '',
-        loading: false,
-      }
-      setState(newState)
-      saveCachedState(newState)
+      setState((prev) => {
+        const newState = {
+          isPremium: !!sub?.is_premium || prev.isAdmin,
+          isAdmin: prev.isAdmin,  // preserve admin from cache — never downgrade here
+          tier: sub?.tier || 'none',
+          daysLeft: sub?.days_remaining ?? 0,
+          statusText: sub?.status_text || '',
+          loading: false,
+        }
+        saveCachedState(newState)
+        return newState
+      })
     } catch {
-      setState((s) => ({ ...s, loading: false, isPremium: false, tier: 'none' }))
+      setState((s) => ({ ...s, loading: false }))  // preserve all existing state
     }
   }, [_retryInBackground])
 
