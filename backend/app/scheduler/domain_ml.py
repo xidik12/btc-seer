@@ -438,10 +438,11 @@ async def generate_prediction(timeframes: list[str] | None = None):
         # Collect price history for TimesFM (last 512 hours)
         price_history = [float(p.close) for p in prices[-512:]]
 
-        # Run ensemble prediction with fallback
+        # Run ensemble prediction with fallback (in thread to avoid blocking event loop)
         try:
             ensemble = get_ensemble()
-            predictions = ensemble.predict(
+            predictions = await asyncio.to_thread(
+                ensemble.predict,
                 feature_sequence=sequence,
                 current_features=feature_array,
                 news_data=news_data,
@@ -668,10 +669,11 @@ async def generate_quant_prediction(timeframes: list[str] | None = None):
                 "active_addresses": onchain_row.active_addresses,
             }
 
-        # Run quant predictor
+        # Run quant predictor (in thread to avoid blocking event loop)
         from app.models.quant_predictor import QuantPredictor
         quant = QuantPredictor()
-        result = quant.predict(
+        result = await asyncio.to_thread(
+            quant.predict,
             price_df=price_df,
             current_price=current_price,
             macro_data=macro_data,

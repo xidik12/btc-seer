@@ -373,6 +373,7 @@ async def lifespan(app: FastAPI):
                 logger.error(f"Startup: {name} failed: {e}", exc_info=True)
 
         async def startup_data_pipeline():
+            global _data_ready
             # Lazy-import all pipeline dependencies at call time
             from app.scheduler.jobs import (
                 backfill_historical_prices, collect_price_data, collect_news_data,

@@ -35,4 +35,4 @@ RUN mkdir -p ml/data /data /data/weights /data/backups
 ENV PORT=8000
 EXPOSE 8000
 
-CMD gunicorn app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --bind 0.0.0.0:${PORT} --timeout 600 --graceful-timeout 30
+CMD gunicorn app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --bind 0.0.0.0:${PORT} --timeout 0 --graceful-timeout 30
