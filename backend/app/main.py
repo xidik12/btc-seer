@@ -21,7 +21,7 @@ from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
-from app.database import init_db
+from app.database import init_db, async_session
 from app.api import predictions, signals, news, market, history, influencers, events, quant, coins, whales, marketing
 from app.api import charts as charts_api
 from app.api import support as support_api
@@ -398,6 +398,8 @@ async def lifespan(app: FastAPI):
             )
 
             logger.info("Core data loaded")
+            _data_ready = True
+            logger.info("data_ready=True (core data available, secondary loading in background)")
 
             # Step 3: Seed tracked coins + secondary data (not blocking readiness)
             await _safe_run(seed_tracked_coins(), "seed_tracked_coins")
@@ -433,9 +435,20 @@ async def lifespan(app: FastAPI):
 
         async def _startup_wrapper():
             global _data_ready
+            # Brief yield so the server can start handling requests first.
+            await asyncio.sleep(1)
             await startup_data_pipeline()
             _data_ready = True
             logger.info("Full data pipeline complete — data_ready=True")
+
+            # Pre-warm dashboard summary cache so first user gets instant response
+            try:
+                from app.api.dashboard import get_dashboard_summary
+                async with async_session() as s:
+                    await get_dashboard_summary(s)
+                logger.info("Dashboard summary cache pre-warmed")
+            except Exception as e:
+                logger.warning(f"Dashboard cache pre-warm failed: {e}")
 
         asyncio.create_task(_startup_wrapper())
         logger.info("Startup complete — server ready, data pipeline loading in background")
