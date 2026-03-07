@@ -6,6 +6,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, MemeToken
+from app.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,10 @@ async def get_trending_memecoins(
     session: AsyncSession = Depends(get_session),
 ):
     """Get trending memecoins with risk scores. Includes both active and graduated tokens."""
+    cached = await cache_get(f"meme:trending:{limit}")
+    if cached is not None:
+        return cached
+
     result = await session.execute(
         select(MemeToken)
         .where(MemeToken.status.in_(["active", "graduated"]))
@@ -27,10 +32,12 @@ async def get_trending_memecoins(
     )
     tokens = result.scalars().all()
 
-    return {
+    data = {
         "count": len(tokens),
         "tokens": [_format_meme(t) for t in tokens],
     }
+    await cache_set(f"meme:trending:{limit}", data, 60)
+    return data
 
 
 @router.get("/{address}/risk")
@@ -77,6 +84,10 @@ async def get_memecoin_leaderboard(
     session: AsyncSession = Depends(get_session),
 ):
     """Top performers and biggest losers among memecoins."""
+    cached = await cache_get("meme:leaderboard")
+    if cached is not None:
+        return cached
+
     # Top by volume
     result = await session.execute(
         select(MemeToken)
@@ -106,11 +117,13 @@ async def get_memecoin_leaderboard(
     )
     dead = result.scalars().all()
 
-    return {
+    data = {
         "top_volume": [_format_meme(t) for t in top_volume],
         "safest": [_format_meme(t) for t in safest],
         "recently_dead": [_format_meme(t) for t in dead],
     }
+    await cache_set("meme:leaderboard", data, 120)
+    return data
 
 
 def _format_meme(t: MemeToken) -> dict:

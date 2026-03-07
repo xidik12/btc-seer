@@ -15,6 +15,7 @@ from app.database import (
     MacroData, OnChainData, ApiKey, ApiUsageLog,
 )
 from app.api.powerlaw import power_law_fair_value, CORRIDOR, get_valuation_label, BTC_GENESIS
+from app.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,10 @@ router = APIRouter(prefix="/api/v1", tags=["public-api-v1"])
 @router.get("/price")
 async def get_price(session: AsyncSession = Depends(get_session)):
     """Get current BTC price."""
+    cached = await cache_get("v1:price")
+    if cached is not None:
+        return cached
+
     result = await session.execute(
         select(Price).order_by(desc(Price.timestamp)).limit(1)
     )
@@ -33,13 +38,15 @@ async def get_price(session: AsyncSession = Depends(get_session)):
     if not row:
         return {"error": "No price data available"}
 
-    return {
+    data = {
         "price": row.close,
         "high_24h": row.high,
         "low_24h": row.low,
         "volume": row.volume,
         "timestamp": row.timestamp.isoformat(),
     }
+    await cache_set("v1:price", data, 15)
+    return data
 
 
 @router.get("/price/history")
@@ -138,6 +145,10 @@ async def get_quant_prediction(session: AsyncSession = Depends(get_session)):
 @router.get("/market/macro")
 async def get_macro(session: AsyncSession = Depends(get_session)):
     """Get latest macro market data (DXY, Gold, S&P500, Fear & Greed)."""
+    cached = await cache_get("v1:macro")
+    if cached is not None:
+        return cached
+
     result = await session.execute(
         select(MacroData).order_by(desc(MacroData.timestamp)).limit(1)
     )
@@ -145,7 +156,7 @@ async def get_macro(session: AsyncSession = Depends(get_session)):
     if not row:
         return {"error": "No macro data available"}
 
-    return {
+    data = {
         "dxy": row.dxy,
         "gold": row.gold,
         "sp500": row.sp500,
@@ -154,11 +165,17 @@ async def get_macro(session: AsyncSession = Depends(get_session)):
         "fear_greed_label": row.fear_greed_label,
         "timestamp": row.timestamp.isoformat(),
     }
+    await cache_set("v1:macro", data, 60)
+    return data
 
 
 @router.get("/market/onchain")
 async def get_onchain(session: AsyncSession = Depends(get_session)):
     """Get latest on-chain data (hash rate, mempool, active addresses)."""
+    cached = await cache_get("v1:onchain")
+    if cached is not None:
+        return cached
+
     result = await session.execute(
         select(OnChainData).order_by(desc(OnChainData.timestamp)).limit(1)
     )
@@ -166,7 +183,7 @@ async def get_onchain(session: AsyncSession = Depends(get_session)):
     if not row:
         return {"error": "No on-chain data available"}
 
-    return {
+    data = {
         "hash_rate": row.hash_rate,
         "difficulty": row.difficulty,
         "mempool_size": row.mempool_size,
@@ -176,6 +193,8 @@ async def get_onchain(session: AsyncSession = Depends(get_session)):
         "large_tx_count": row.large_tx_count,
         "timestamp": row.timestamp.isoformat(),
     }
+    await cache_set("v1:onchain", data, 60)
+    return data
 
 
 # ── Power Law ──────────────────────────────────────────────────
@@ -183,6 +202,10 @@ async def get_onchain(session: AsyncSession = Depends(get_session)):
 @router.get("/powerlaw")
 async def get_power_law(session: AsyncSession = Depends(get_session)):
     """Get BTC Power Law fair value and corridor position."""
+    cached = await cache_get("v1:powerlaw")
+    if cached is not None:
+        return cached
+
     result = await session.execute(
         select(Price).order_by(desc(Price.timestamp)).limit(1)
     )
@@ -194,7 +217,7 @@ async def get_power_law(session: AsyncSession = Depends(get_session)):
     bands = {name: round(fair_value * mult, 2) for name, mult in CORRIDOR.items()}
     deviation_pct = ((current_price - fair_value) / fair_value * 100) if current_price and fair_value else 0
 
-    return {
+    data = {
         "current_price": current_price,
         "fair_value": round(fair_value, 2),
         "deviation_pct": round(deviation_pct, 2),
@@ -203,6 +226,8 @@ async def get_power_law(session: AsyncSession = Depends(get_session)):
         "days_since_genesis": (now - BTC_GENESIS).days,
         "timestamp": now.isoformat(),
     }
+    await cache_set("v1:powerlaw", data, 60)
+    return data
 
 
 # ── Usage ──────────────────────────────────────────────────────

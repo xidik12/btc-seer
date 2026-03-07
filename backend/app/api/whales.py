@@ -1,5 +1,4 @@
 import asyncio
-import time
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
@@ -7,12 +6,9 @@ from sqlalchemy import select, desc, func, and_, case, literal_column, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, WhaleTransaction, AddressLabel
+from app.cache import cache_get, cache_set
 
 router = APIRouter(prefix="/api/whales", tags=["whales"])
-
-# ── TTL cache for expensive stats endpoint ──
-_stats_cache: tuple[dict, float] | None = None
-_STATS_TTL = 60  # seconds
 
 
 @router.get("/recent")
@@ -140,11 +136,9 @@ async def get_whale_stats(
     session: AsyncSession = Depends(get_session),
 ):
     """Get whale transaction statistics for 24h and 7d (SQL aggregation)."""
-    global _stats_cache
-    if _stats_cache is not None:
-        data, expires = _stats_cache
-        if time.monotonic() < expires:
-            return data
+    cached = await cache_get("whales:stats")
+    if cached is not None:
+        return cached
 
     now = datetime.utcnow()
     since_24h = now - timedelta(hours=24)
@@ -259,7 +253,7 @@ async def get_whale_stats(
         "predictive_accuracy": accuracy,
         "total_evaluated": total_evaluated,
     }
-    _stats_cache = (response, time.monotonic() + _STATS_TTL)
+    await cache_set("whales:stats", response, 60)
     return response
 
 

@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, Price, MacroData
 from app.models.power_law_engine import PowerLawEngine, RatioModel
+from app.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
@@ -416,6 +417,10 @@ def _build_ratio_calculations(asset: str, model, actual_ratio: float, model_rati
 @router.get("/current")
 async def get_power_law_current(session: AsyncSession = Depends(get_session)):
     """Current BTC price vs Power Law fair value."""
+    cached = await cache_get("pl:current")
+    if cached is not None:
+        return cached
+
     engine = await _get_engine(session)
 
     # Get latest price
@@ -443,7 +448,7 @@ async def get_power_law_current(session: AsyncSession = Depends(get_session)):
     )
     corridor_position = max(0, min(1, corridor_position))
 
-    return {
+    data = {
         "current_price": current_price,
         "fair_value": round(fair_value, 2),
         "deviation_pct": round(deviation_pct, 2),
@@ -465,6 +470,8 @@ async def get_power_law_current(session: AsyncSession = Depends(get_session)):
         },
         "timestamp": now.isoformat(),
     }
+    await cache_set("pl:current", data, 60)
+    return data
 
 
 @router.get("/historical")
@@ -473,6 +480,11 @@ async def get_power_law_historical(
     session: AsyncSession = Depends(get_session),
 ):
     """Historical Power Law curve + actual BTC price for charting."""
+    cache_key = f"pl:hist:{days}"
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     engine = await _get_engine(session)
     now = datetime.utcnow()
 
@@ -509,7 +521,7 @@ async def get_power_law_historical(
     for point in curve_points:
         point["actual_price"] = daily_prices.get(point["date"])
 
-    return {
+    data = {
         "days": days,
         "points": curve_points,
         "parameters": {
@@ -520,6 +532,8 @@ async def get_power_law_historical(
             "corridor_multipliers": CORRIDOR,
         },
     }
+    await cache_set(cache_key, data, 300)
+    return data
 
 
 # ════════════════════════════════════════════════════════════════
@@ -565,6 +579,10 @@ async def _get_latest_macro(session: AsyncSession) -> MacroData | None:
 @router.get("/dashboard")
 async def get_power_law_dashboard(session: AsyncSession = Depends(get_session)):
     """Main b1m.io-style dashboard: stats, projections, milestones."""
+    cached = await cache_get("pl:dashboard")
+    if cached is not None:
+        return cached
+
     current_price = await _get_current_price(session)
     if not current_price:
         return {"error": "No price data available"}
@@ -575,6 +593,7 @@ async def get_power_law_dashboard(session: AsyncSession = Depends(get_session)):
     stats["change_24h"] = change_24h
     stats["calculations"] = _build_dashboard_calculations(engine, current_price, stats)
 
+    await cache_set("pl:dashboard", stats, 60)
     return stats
 
 
@@ -583,6 +602,10 @@ async def get_power_law_curve(
     session: AsyncSession = Depends(get_session),
 ):
     """Full power law curve from 2011 to 2045 with model line, bands, and actual price."""
+    cached = await cache_get("pl:curve")
+    if cached is not None:
+        return cached
+
     engine = await _get_engine(session)
     now = datetime.utcnow()
 
@@ -625,7 +648,7 @@ async def get_power_law_curve(
     today_fv = engine.fair_value(now)
     current_price = await _get_current_price(session)
 
-    return {
+    data = {
         "points": curve_points,
         "today": {
             "date": now.strftime("%Y-%m-%d"),
@@ -634,11 +657,17 @@ async def get_power_law_curve(
             "days_since_genesis": today_day,
         },
     }
+    await cache_set("pl:curve", data, 300)
+    return data
 
 
 @router.get("/gold")
 async def get_power_law_gold(session: AsyncSession = Depends(get_session)):
     """BTC/Gold ratio analysis with power law model fitted from data."""
+    cached = await cache_get("pl:gold")
+    if cached is not None:
+        return cached
+
     current_price = await _get_current_price(session)
     macro = await _get_latest_macro(session)
 
@@ -679,12 +708,17 @@ async def get_power_law_gold(session: AsyncSession = Depends(get_session)):
         "timestamp": datetime.utcnow().isoformat(),
     }
     response["calculations"] = _build_ratio_calculations("gold", ratio_model, btc_in_oz, model_oz, gold_price, current_price)
+    await cache_set("pl:gold", response, 300)
     return response
 
 
 @router.get("/m2")
 async def get_power_law_m2(session: AsyncSession = Depends(get_session)):
     """BTC/M2 money supply ratio analysis fitted from data."""
+    cached = await cache_get("pl:m2")
+    if cached is not None:
+        return cached
+
     current_price = await _get_current_price(session)
     macro = await _get_latest_macro(session)
 
@@ -732,12 +766,17 @@ async def get_power_law_m2(session: AsyncSession = Depends(get_session)):
         "timestamp": datetime.utcnow().isoformat(),
     }
     response["calculations"] = _build_ratio_calculations("m2", ratio_model, btc_m2_index, model_index, m2_supply, current_price)
+    await cache_set("pl:m2", response, 300)
     return response
 
 
 @router.get("/spx")
 async def get_power_law_spx(session: AsyncSession = Depends(get_session)):
     """BTC/S&P 500 ratio analysis fitted from data."""
+    cached = await cache_get("pl:spx")
+    if cached is not None:
+        return cached
+
     current_price = await _get_current_price(session)
     macro = await _get_latest_macro(session)
 
@@ -778,12 +817,17 @@ async def get_power_law_spx(session: AsyncSession = Depends(get_session)):
         "timestamp": datetime.utcnow().isoformat(),
     }
     response["calculations"] = _build_ratio_calculations("spx", ratio_model, btc_spx_ratio, model_ratio, spx_price, current_price)
+    await cache_set("pl:spx", response, 300)
     return response
 
 
 @router.get("/assets")
 async def get_power_law_assets():
     """Asset class comparison: annual returns table."""
+    cached = await cache_get("pl:assets")
+    if cached is not None:
+        return cached
+
     path = DATA_DIR / "asset_returns.json"
     if not path.exists():
         return {"error": "Asset returns data not available"}
@@ -810,18 +854,24 @@ async def get_power_law_assets():
         if best_asset:
             win_counts[best_asset] = win_counts.get(best_asset, 0) + 1
 
-    return {
+    data = {
         "years": years,
         "assets": assets,
         "yearly_winners": yearly_winners,
         "win_counts": win_counts,
         "total_years": len(years),
     }
+    await cache_set("pl:assets", data, 3600)
+    return data
 
 
 @router.get("/milestones")
 async def get_power_law_milestones():
     """Bitcoin milestones timeline from genesis to present."""
+    cached = await cache_get("pl:milestones")
+    if cached is not None:
+        return cached
+
     path = DATA_DIR / "btc_milestones.json"
     if not path.exists():
         return {"error": "Milestones data not available"}
@@ -837,12 +887,14 @@ async def get_power_law_milestones():
             eras[cat] = []
         eras[cat].append(m)
 
-    return {
+    data = {
         "milestones": milestones,
         "total": len(milestones),
         "categories": list(eras.keys()),
         "by_category": eras,
     }
+    await cache_set("pl:milestones", data, 3600)
+    return data
 
 
 @router.get("/calculator")

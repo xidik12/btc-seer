@@ -1,4 +1,3 @@
-import time
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
@@ -6,12 +5,9 @@ from sqlalchemy import select, func, case, cast, Date, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, Prediction
+from app.cache import cache_get, cache_set
 
 router = APIRouter(prefix="/api/history", tags=["history"])
-
-# ── TTL cache ──
-_accuracy_cache: dict[int, tuple[dict, float]] = {}
-_ACCURACY_TTL = 60  # seconds
 
 
 @router.get("/accuracy")
@@ -20,11 +16,9 @@ async def get_accuracy(
     session: AsyncSession = Depends(get_session),
 ):
     """Get prediction accuracy statistics (SQL aggregation, cached 60s)."""
-    # Check cache
-    if days in _accuracy_cache:
-        data, expires = _accuracy_cache[days]
-        if time.monotonic() < expires:
-            return data
+    cached = await cache_get(f"history:accuracy:{days}")
+    if cached is not None:
+        return cached
 
     since = datetime.utcnow() - timedelta(days=days)
 
@@ -133,5 +127,5 @@ async def get_accuracy(
         "by_confidence": by_confidence,
         "daily_trend": daily_trend,
     }
-    _accuracy_cache[days] = (response, time.monotonic() + _ACCURACY_TTL)
+    await cache_set(f"history:accuracy:{days}", response, 60)
     return response

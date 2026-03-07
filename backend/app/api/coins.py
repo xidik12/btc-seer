@@ -1,5 +1,4 @@
 import logging
-import time
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
@@ -9,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, CoinInfo, CoinPrice, CoinSentiment, CoinPrediction, CoinSignal, CoinFeature
 from app.collectors.coin_search import CoinSearchService
+from app.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
@@ -16,19 +16,13 @@ router = APIRouter(prefix="/api/coins", tags=["coins"])
 
 _search_service = CoinSearchService()
 
-# ── TTL cache for tracked coins ──
-_tracked_cache: tuple[dict, float] | None = None
-_TRACKED_TTL = 30  # seconds
-
 
 @router.get("/tracked")
 async def get_tracked_coins(session: AsyncSession = Depends(get_session)):
     """List tracked coins with latest prices (batch queries, cached 30s)."""
-    global _tracked_cache
-    if _tracked_cache is not None:
-        data, expires = _tracked_cache
-        if time.monotonic() < expires:
-            return data
+    cached = await cache_get("coins:tracked")
+    if cached is not None:
+        return cached
 
     result = await session.execute(
         select(CoinInfo).where(CoinInfo.is_tracked == True)
@@ -91,7 +85,7 @@ async def get_tracked_coins(session: AsyncSession = Depends(get_session)):
         })
 
     response = {"coins": tracked}
-    _tracked_cache = (response, time.monotonic() + _TRACKED_TTL)
+    await cache_set("coins:tracked", response, 30)
     return response
 
 

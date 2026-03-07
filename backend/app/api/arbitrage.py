@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, ExchangeTicker, ArbitrageOpportunity
 from app.collectors.arbitrage import EXCHANGE_FEES, DEFAULT_FEE_PCT, EXCHANGE_META
+from app.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,10 @@ async def get_current_opportunities(
 ):
     """Return all arbitrage opportunities detected in the last 5 minutes,
     sorted by net_profit_pct descending."""
+    cached = await cache_get("arb:current")
+    if cached is not None:
+        return cached
+
     cutoff = datetime.utcnow() - timedelta(minutes=5)
 
     result = await session.execute(
@@ -64,12 +69,14 @@ async def get_current_opportunities(
             "timestamp": row.timestamp.isoformat(),
         })
 
-    return {
+    data = {
         "count": len(opportunities),
         "actionable": sum(1 for o in opportunities if o["is_actionable"]),
         "exchanges_count": len(EXCHANGE_META),
         "opportunities": opportunities,
     }
+    await cache_set("arb:current", data, 30)
+    return data
 
 
 # ---------------------------------------------------------------------------
@@ -200,6 +207,10 @@ async def get_arbitrage_analytics(
     session: AsyncSession = Depends(get_session),
 ):
     """Analytics: average spread by coin, best exchange pairs, opportunity frequency."""
+    cached = await cache_get(f"arb:analytics:{hours}")
+    if cached is not None:
+        return cached
+
     cutoff = datetime.utcnow() - timedelta(hours=hours)
 
     result = await session.execute(
@@ -264,7 +275,7 @@ async def get_arbitrage_analytics(
         pairs.append(ps)
     pairs.sort(key=lambda x: x["avg_profit"], reverse=True)
 
-    return {
+    data = {
         "hours": hours,
         "total_opportunities": len(rows),
         "total_actionable": sum(1 for r in rows if r.is_actionable),
@@ -273,6 +284,8 @@ async def get_arbitrage_analytics(
         "exchange_fees": EXCHANGE_FEES,
         "exchange_meta": EXCHANGE_META,
     }
+    await cache_set(f"arb:analytics:{hours}", data, 120)
+    return data
 
 
 # ---------------------------------------------------------------------------

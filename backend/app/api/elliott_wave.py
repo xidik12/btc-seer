@@ -14,13 +14,14 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, Price
+from app.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/elliott-wave", tags=["elliott-wave"])
 
-# Backend cache: {timeframe: {"data": ..., "ts": epoch, "wave_changed_at": epoch}}
-_analysis_cache: dict[str, dict] = {}
+# Local wave-change tracker (tracks when wave label last changed, not for response caching)
+_wave_change_tracker: dict[str, str] = {}  # {timeframe: wave_changed_at_iso}
 
 FIB_RETRACEMENT_RATIOS = [0.236, 0.382, 0.5, 0.618, 0.786]
 FIB_EXTENSION_RATIOS = [1.0, 1.272, 1.618, 2.618, 4.236]
@@ -724,14 +725,10 @@ async def get_elliott_wave_current(
     session: AsyncSession = Depends(get_session),
 ):
     """Current Elliott Wave analysis for BTC with 5-minute caching."""
-    global _analysis_cache
-
-    # Check cache (5 minutes)
-    cache_key = timeframe
-    now_ts = time.time()
-    cached = _analysis_cache.get(cache_key)
-    if cached and (now_ts - cached["ts"]) < 300:
-        return cached["data"]
+    cache_key = f"ew:current:{timeframe}"
+    cached = await cache_get(cache_key)
+    if cached is not None:
+        return cached
 
     cfg = TIMEFRAME_CONFIG[timeframe]
     since = datetime.utcnow() - timedelta(days=cfg["days"])
@@ -771,12 +768,14 @@ async def get_elliott_wave_current(
     analysis.pop("swings", None)
 
     # Track when wave count last changed
-    prev_wave = cached["data"]["wave_count"]["current_wave"] if cached and "data" in cached else None
+    prev_wave = _wave_change_tracker.get(timeframe)
     new_wave = analysis.get("wave_count", {}).get("current_wave")
-    if cached and prev_wave == new_wave:
-        last_changed = cached.get("wave_changed_at", datetime.utcnow().isoformat())
+    if prev_wave == new_wave and timeframe in _wave_change_tracker:
+        last_changed = _wave_change_tracker.get(f"{timeframe}:at", datetime.utcnow().isoformat())
     else:
         last_changed = datetime.utcnow().isoformat()
+        _wave_change_tracker[timeframe] = new_wave
+        _wave_change_tracker[f"{timeframe}:at"] = last_changed
 
     response = {
         "current_price": current_price,
@@ -785,13 +784,7 @@ async def get_elliott_wave_current(
         **analysis,
     }
 
-    # Update cache
-    _analysis_cache[cache_key] = {
-        "data": response,
-        "ts": now_ts,
-        "wave_changed_at": last_changed,
-    }
-
+    await cache_set(cache_key, response, 300)
     return response
 
 
@@ -802,6 +795,11 @@ async def get_elliott_wave_historical(
     session: AsyncSession = Depends(get_session),
 ):
     """Historical wave data for charting."""
+    hist_cache_key = f"ew:hist:{timeframe}:{days}"
+    cached = await cache_get(hist_cache_key)
+    if cached is not None:
+        return cached
+
     cfg = TIMEFRAME_CONFIG[timeframe]
     since = datetime.utcnow() - timedelta(days=days)
     result = await session.execute(
@@ -865,9 +863,11 @@ async def get_elliott_wave_historical(
     for lvl in analysis["fibonacci_targets"].get("resistance_levels", []):
         fib_levels.append({**lvl, "type": "resistance"})
 
-    return {
+    data = {
         "days": days,
         "points": points,
         "waves": analysis["wave_count"]["waves"],
         "fib_levels": fib_levels,
     }
+    await cache_set(hist_cache_key, data, 300)
+    return data

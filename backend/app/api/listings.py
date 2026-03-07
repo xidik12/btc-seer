@@ -6,6 +6,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, NewListing, DexToken
+from app.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,10 @@ async def get_recent_listings(
     session: AsyncSession = Depends(get_session),
 ):
     """Get recent new exchange listings."""
+    cached = await cache_get(f"listings:recent:{hours}:{limit}")
+    if cached is not None:
+        return cached
+
     since = datetime.utcnow() - timedelta(hours=hours)
     result = await session.execute(
         select(NewListing)
@@ -28,7 +33,7 @@ async def get_recent_listings(
     )
     listings = result.scalars().all()
 
-    return {
+    data = {
         "count": len(listings),
         "listings": [
             {
@@ -48,6 +53,8 @@ async def get_recent_listings(
             for l in listings
         ],
     }
+    await cache_set(f"listings:recent:{hours}:{limit}", data, 120)
+    return data
 
 
 @router.get("/dex-trending")
@@ -56,6 +63,10 @@ async def get_dex_trending(
     session: AsyncSession = Depends(get_session),
 ):
     """Get trending DEX tokens."""
+    cached = await cache_get(f"listings:dex:{limit}")
+    if cached is not None:
+        return cached
+
     result = await session.execute(
         select(DexToken)
         .where(DexToken.volume_24h.isnot(None), DexToken.volume_24h > 10000)
@@ -64,7 +75,7 @@ async def get_dex_trending(
     )
     tokens = result.scalars().all()
 
-    return {
+    data = {
         "count": len(tokens),
         "tokens": [
             {
@@ -84,6 +95,8 @@ async def get_dex_trending(
             for t in tokens
         ],
     }
+    await cache_set(f"listings:dex:{limit}", data, 60)
+    return data
 
 
 @router.get("/dex-to-cex")

@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, FundingRate, Price
 from app.collectors.market import MarketCollector
+from app.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +120,10 @@ def _compute_liquidation_bins(
 @router.get("/map")
 async def get_liquidation_map(session: AsyncSession = Depends(get_session)):
     """Main liquidation heatmap data — bins of estimated liquidation volumes."""
+    cached = await cache_get("liq:map")
+    if cached is not None:
+        return cached
+
     collector = MarketCollector()
     try:
         # Fetch data in parallel-ish (sequential but fast)
@@ -184,12 +189,14 @@ async def get_liquidation_map(session: AsyncSession = Depends(get_session)):
                 "distance_pct": round((nearest_short["price"] - current_price) / current_price * 100, 2),
             }
 
-        return {
+        data = {
             "current_price": current_price,
             "bins": bins,
             "summary": summary,
             "timestamp": datetime.utcnow().isoformat(),
         }
+        await cache_set("liq:map", data, 60)
+        return data
     finally:
         await collector.close()
 
@@ -197,6 +204,10 @@ async def get_liquidation_map(session: AsyncSession = Depends(get_session)):
 @router.get("/levels")
 async def get_liquidation_levels(session: AsyncSession = Depends(get_session)):
     """Simple table of liquidation prices for each leverage tier at current price."""
+    cached = await cache_get("liq:levels")
+    if cached is not None:
+        return cached
+
     result = await session.execute(
         select(Price).order_by(desc(Price.timestamp)).limit(1)
     )
@@ -220,16 +231,22 @@ async def get_liquidation_levels(session: AsyncSession = Depends(get_session)):
             "short_distance_pct": round((short_liq - current_price) / current_price * 100, 2),
         })
 
-    return {
+    data = {
         "current_price": round(current_price, 2),
         "levels": levels,
         "timestamp": datetime.utcnow().isoformat(),
     }
+    await cache_set("liq:levels", data, 30)
+    return data
 
 
 @router.get("/stats")
 async def get_liquidation_stats(session: AsyncSession = Depends(get_session)):
     """OI, long/short ratios, funding rate, and top trader ratios."""
+    cached = await cache_get("liq:stats")
+    if cached is not None:
+        return cached
+
     collector = MarketCollector()
     try:
         oi_data = await collector.get_open_interest()
@@ -253,7 +270,7 @@ async def get_liquidation_stats(session: AsyncSession = Depends(get_session)):
         )
         db_funding = recent.scalar_one_or_none()
 
-        return {
+        data = {
             "current_price": round(current_price, 2),
             "open_interest_btc": round(oi_btc, 4),
             "open_interest_usd": round(oi_usd, 2),
@@ -263,5 +280,7 @@ async def get_liquidation_stats(session: AsyncSession = Depends(get_session)):
             "mark_price": funding["mark_price"] if funding else (db_funding.mark_price if db_funding else None),
             "timestamp": datetime.utcnow().isoformat(),
         }
+        await cache_set("liq:stats", data, 60)
+        return data
     finally:
         await collector.close()

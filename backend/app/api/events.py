@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, EventImpact
 from app.models.event_memory import EventPatternMatcher
+from app.cache import cache_get, cache_set
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 pattern_matcher = EventPatternMatcher()
@@ -18,6 +19,10 @@ async def get_recent_events(
     session: AsyncSession = Depends(get_session),
 ):
     """Get recent classified events with their measured price impacts."""
+    cached = await cache_get(f"events:recent:{hours}:{limit}")
+    if cached is not None:
+        return cached
+
     since = datetime.utcnow() - timedelta(hours=hours)
 
     result = await session.execute(
@@ -28,7 +33,7 @@ async def get_recent_events(
     )
     events = result.scalars().all()
 
-    return {
+    data = {
         "count": len(events),
         "events": [
             {
@@ -51,6 +56,8 @@ async def get_recent_events(
             for e in events
         ],
     }
+    await cache_set(f"events:recent:{hours}:{limit}", data, 60)
+    return data
 
 
 @router.get("/category-stats")
@@ -62,6 +69,10 @@ async def get_category_stats(
     This shows the system's learned knowledge: how each type of event
     historically affects BTC price.
     """
+    cached = await cache_get("events:cat_stats")
+    if cached is not None:
+        return cached
+
     result = await session.execute(
         select(EventImpact).where(EventImpact.evaluated_1h == True)
     )
@@ -95,10 +106,12 @@ async def get_category_stats(
     else:
         categories_list = []
 
-    return {
+    data = {
         "total_events_evaluated": len(events),
         "categories": categories_list,
     }
+    await cache_set("events:cat_stats", data, 300)
+    return data
 
 
 @router.get("/memory")
@@ -106,6 +119,10 @@ async def get_event_memory_status(
     session: AsyncSession = Depends(get_session),
 ):
     """Get the overall status of the event memory system."""
+    cached = await cache_get("events:memory")
+    if cached is not None:
+        return cached
+
     total = await session.execute(select(func.count(EventImpact.id)))
     total_count = total.scalar()
 
@@ -143,7 +160,7 @@ async def get_event_memory_status(
     recent_count = recent_count_result.scalar() or 0
     avg_per_day = round(recent_count / 7, 1)
 
-    return {
+    data = {
         "total_events": total_count,
         "evaluated_events": evaluated_count,
         "sentiment_predictive_count": predictive_count,
@@ -154,3 +171,5 @@ async def get_event_memory_status(
         "avg_per_day": avg_per_day,
         "most_impactful_category": most_impactful,
     }
+    await cache_set("events:memory", data, 300)
+    return data

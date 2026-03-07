@@ -13,6 +13,7 @@ from app.database import (
 from app.api.admin import _verify_telegram_init_data
 from app.bot.subscription import is_premium
 from app.dependencies import standard_rate_limit
+from app.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/smart-money", tags=["smart-money"], dependencies=[Depends(standard_rate_limit)])
@@ -189,6 +190,10 @@ async def get_smart_money_feed(
 @router.get("/score")
 async def get_smart_money_score():
     """24h weighted smart money sentiment score (-100 to +100)."""
+    cached = await cache_get("smartmoney:score")
+    if cached is not None:
+        return cached
+
     cutoff = datetime.utcnow() - timedelta(hours=24)
 
     whale_bullish = 0
@@ -266,7 +271,7 @@ async def get_smart_money_score():
     else:
         label = "Strong Bearish"
 
-    return {
+    data = {
         "score": round(composite, 1),
         "label": label,
         "whale_score": round(whale_score, 1),
@@ -276,3 +281,5 @@ async def get_smart_money_score():
         "institutional_buy_btc": inst_bullish,
         "institutional_sell_btc": inst_bearish,
     }
+    await cache_set("smartmoney:score", data, 60)
+    return data
