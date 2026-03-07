@@ -4,7 +4,6 @@ Detects swing points, labels impulse/corrective wave patterns,
 calculates Fibonacci projections, and detects RSI/MACD divergences.
 """
 import logging
-import time
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -826,11 +825,6 @@ async def get_elliott_wave_historical(
 
     # Build swing set for quick lookup
     swing_indices = {s["index"] for s in swings}
-    swing_labels = {}
-    for w in analysis["wave_count"]["waves"]:
-        # Find the swing point closest to wave start/end dates
-        pass  # labels are already in waves
-
     # Daily points for the chart
     points = []
     for i, row in df.iterrows():
