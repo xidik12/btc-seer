@@ -596,6 +596,17 @@ async def get_power_law_dashboard(session: AsyncSession = Depends(get_session)):
     # ── Address Distribution Overlay ──
     # Enrich dashboard with on-chain adoption metrics from cached address data
     addr_dist = await cache_get("btc:address_distribution")
+    if not addr_dist:
+        # On-demand fallback if scheduler hasn't populated the cache yet
+        try:
+            from app.collectors.address_distribution import AddressDistributionCollector
+            collector = AddressDistributionCollector()
+            addr_dist = await collector.collect()
+            await collector.close()
+            if addr_dist and addr_dist.get("buckets"):
+                await cache_set("btc:address_distribution", addr_dist, 6 * 3600)
+        except Exception:
+            logger.warning("Address distribution on-demand fetch failed")
     if addr_dist and addr_dist.get("buckets"):
         buckets = {b["label"]: b for b in addr_dist["buckets"]}
         total = addr_dist.get("total_with_balance", 1) or 1
