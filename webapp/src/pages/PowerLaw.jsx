@@ -225,7 +225,52 @@ function PowerLawChart({ historicalData, t }) {
   )
 }
 
-function MainTab({ current, historical, t }) {
+const SIGNAL_STYLES = {
+  high_accumulation: { label: 'High Accumulation', color: 'text-accent-green', dot: 'bg-accent-green' },
+  moderate: { label: 'Moderate', color: 'text-accent-yellow', dot: 'bg-accent-yellow' },
+  distribution: { label: 'Distribution', color: 'text-accent-red', dot: 'bg-accent-red' },
+}
+
+function AdoptionOverlay({ data, t }) {
+  if (!data) return null
+  const signal = SIGNAL_STYLES[data.whale_signal] || SIGNAL_STYLES.moderate
+
+  const metrics = [
+    { label: t('market:powerLaw.adoption.totalAddresses'), value: data.total_addresses?.toLocaleString() },
+    { label: t('market:powerLaw.adoption.whaleCount'), value: data.whale_count?.toLocaleString() },
+    { label: t('market:powerLaw.adoption.whalePct'), value: `${data.whale_concentration_pct}%` },
+    { label: t('market:powerLaw.adoption.topHolders'), value: data.top_holders?.toLocaleString() },
+    { label: t('market:powerLaw.adoption.topHoldersPct'), value: `${data.top_holders_pct}%` },
+    { label: t('market:powerLaw.adoption.shrimpDominance'), value: `${data.shrimp_dominance_pct}%` },
+  ]
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-text-secondary text-xs font-semibold">{t('market:powerLaw.adoption.title').toUpperCase()}</h3>
+        <div className="flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-full ${signal.dot} animate-pulse`} />
+          <span className={`text-[10px] font-semibold ${signal.color}`}>
+            {t(`market:powerLaw.adoption.signal.${data.whale_signal}`, signal.label)}
+          </span>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {metrics.map((m) => (
+          <div key={m.label} className="text-center">
+            <div className="text-text-muted text-[9px] font-medium mb-0.5">{m.label}</div>
+            <div className="text-text-primary text-xs font-bold tabular-nums">{m.value || '--'}</div>
+          </div>
+        ))}
+      </div>
+      <p className="text-text-muted text-[9px] mt-3">
+        {t('market:powerLaw.adoption.explain')}
+      </p>
+    </div>
+  )
+}
+
+function MainTab({ current, historical, dashboard, t }) {
   const valStyle = VALUATION_COLORS[current?.valuation] || VALUATION_COLORS['Above Fair Value']
 
   return (
@@ -274,6 +319,9 @@ function MainTab({ current, historical, t }) {
 
       {/* Stats Grid */}
       {current && <StatsGrid data={current} t={t} />}
+
+      {/* On-Chain Adoption Overlay */}
+      <AdoptionOverlay data={dashboard?.address_distribution} t={t} />
 
       {/* Educational Section */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
@@ -379,7 +427,7 @@ export default function PowerLaw() {
   const renderTab = () => {
     switch (activeTab) {
       case 'main':
-        return <MainTab current={current} historical={historical} t={t} />
+        return <MainTab current={current} historical={historical} dashboard={tabData.dashboard} t={t} />
       case 'curve':
         return <PLCurve data={tabData.curve} />
       case 'gold':

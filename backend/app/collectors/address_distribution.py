@@ -1,76 +1,94 @@
-"""Bitcoin address distribution collector — fetches address balance buckets from Blockchair."""
+"""Bitcoin address distribution collector — scrapes BitInfoCharts for balance buckets."""
 
 import logging
+import re
 from app.collectors.base import BaseCollector
 
 logger = logging.getLogger(__name__)
 
-# Address distribution buckets (label, min BTC, max BTC or None for unlimited)
+# Our display buckets: (label, min_btc, max_btc or None)
 BUCKETS = [
     ("Shrimp",       0,       0.1),
     ("Crab",         0.1,     1),
     ("Octopus",      1,       10),
     ("Fish",         10,      50),
     ("Dolphin",      50,      100),
-    ("Shark",        100,     1000),
-    ("Whale",        1000,    5000),
-    ("Humpback",     5000,    10000),
-    ("Mega Whale",   10000,   None),
+    ("Shark",        100,     1_000),
+    ("Whale",        1_000,   5_000),
+    ("Humpback",     5_000,   10_000),
+    ("Mega Whale",   10_000,  None),
 ]
-
-# Blockchair stats fields mapping: field_name -> (min_btc, max_btc) in satoshis
-BLOCKCHAIR_FIELDS = {
-    "hodling_addresses_count_0.001": (0, 0.001),
-    "hodling_addresses_count_0.01": (0.001, 0.01),
-    "hodling_addresses_count_0.1": (0.01, 0.1),
-    "hodling_addresses_count_1": (0.1, 1),
-    "hodling_addresses_count_10": (1, 10),
-    "hodling_addresses_count_100": (10, 100),
-    "hodling_addresses_count_1000": (100, 1000),
-    "hodling_addresses_count_10000": (1000, 10000),
-    "hodling_addresses_count_100000": (10000, 100000),
-}
 
 
 class AddressDistributionCollector(BaseCollector):
-    """Fetches Bitcoin address distribution from Blockchair stats API."""
+    """Scrapes Bitcoin address distribution from BitInfoCharts."""
 
-    BLOCKCHAIR_URL = "https://api.blockchair.com/bitcoin/stats"
+    URL = "https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html"
 
     async def collect(self) -> dict:
-        data = await self.fetch_json(self.BLOCKCHAIR_URL)
-        if not data or "data" not in data:
-            logger.warning("Blockchair stats returned no data")
+        session = await self.get_session()
+        try:
+            async with session.get(
+                self.URL,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; BTCSeer/1.0)"},
+            ) as resp:
+                if resp.status != 200:
+                    logger.warning(f"BitInfoCharts returned {resp.status}")
+                    return {"buckets": [], "total_addresses": 0, "total_with_balance": 0}
+                html = await resp.text()
+        except Exception as e:
+            logger.error(f"BitInfoCharts fetch error: {e}")
             return {"buckets": [], "total_addresses": 0, "total_with_balance": 0}
 
-        stats = data["data"]
+        # Parse raw tiers from HTML table
+        # Matches: (0 - 0.00001) or [0.001 - 0.01) with data-val count
+        pattern = r"<td[^>]*>[\[\(]([\d.,]+)\s*-\s*([\d.,]+)[\]\)]?</td><td[^>]*data-val='(\d+)'>"
+        matches = re.findall(pattern, html)
 
-        # Raw counts from Blockchair
-        raw = {}
-        for field, (lo, hi) in BLOCKCHAIR_FIELDS.items():
-            raw[(lo, hi)] = stats.get(field, 0) or 0
+        if not matches:
+            logger.warning("BitInfoCharts: could not parse distribution table")
+            return {"buckets": [], "total_addresses": 0, "total_with_balance": 0}
 
-        # Aggregate into our 9 buckets
+        # Build raw tiers: list of (lo_btc, hi_btc, count)
+        raw_tiers = []
+        for lo_str, hi_str, count_str in matches:
+            lo = float(lo_str.replace(",", ""))
+            hi = float(hi_str.replace(",", ""))
+            count = int(count_str)
+            raw_tiers.append((lo, hi, count))
+
+        # Aggregate raw tiers into our 9 display buckets
         buckets = []
         total_with_balance = 0
 
         for label, bmin, bmax in BUCKETS:
             count = 0
-            for (lo, hi), val in raw.items():
-                # Check overlap: bucket [bmin, bmax) overlaps with raw range [lo, hi)
-                if bmax is None:
-                    # Mega Whale: bmin+ — include any raw range where hi > bmin
-                    if hi > bmin:
-                        count += val
-                elif lo >= bmin and hi <= (bmax if bmax else float('inf')):
+            for lo, hi, val in raw_tiers:
+                if val == 0:
+                    continue
+
+                # Skip dust tier (0 - 0.00001) for "with balance" count
+                # but still include in Shrimp bucket
+
+                # Determine overlap between raw tier [lo, hi) and bucket [bmin, bmax)
+                eff_max = bmax if bmax is not None else float("inf")
+
+                if lo >= eff_max or hi <= bmin:
+                    # No overlap
+                    continue
+
+                if lo >= bmin and hi <= eff_max:
+                    # Fully contained
                     count += val
-                elif lo < bmin < hi:
-                    # Partial overlap — approximate proportionally
-                    overlap = min(hi, bmax or hi) - bmin
-                    total_range = hi - lo
-                    count += int(val * (overlap / total_range)) if total_range > 0 else 0
-                elif lo < (bmax or float('inf')) and hi > bmin and lo >= bmin:
-                    count += val
+                else:
+                    # Partial overlap — approximate proportionally (log scale would be better
+                    # but linear is fine for display purposes)
+                    overlap_lo = max(lo, bmin)
+                    overlap_hi = min(hi, eff_max)
+                    tier_range = hi - lo
+                    if tier_range > 0:
+                        fraction = (overlap_hi - overlap_lo) / tier_range
+                        count += int(val * fraction)
 
             total_with_balance += count
             btc_range = f"{bmin}+" if bmax is None else f"{bmin}-{bmax}"
@@ -78,17 +96,15 @@ class AddressDistributionCollector(BaseCollector):
                 "label": label,
                 "btc_range": btc_range,
                 "count": count,
-                "pct": 0,  # calculated below
+                "pct": 0,
             })
 
         # Calculate percentages
         for b in buckets:
             b["pct"] = round(b["count"] / total_with_balance * 100, 2) if total_with_balance > 0 else 0
 
-        total_addresses = stats.get("hodling_addresses", 0) or total_with_balance
-
         return {
             "buckets": buckets,
-            "total_addresses": total_addresses,
+            "total_addresses": total_with_balance,
             "total_with_balance": total_with_balance,
         }

@@ -376,6 +376,21 @@
       "todayModel": "Today's Model Price",
       "todayActual": "Today's Actual Price"
     },
+    "adoption": {
+      "title": "On-Chain Adoption",
+      "totalAddresses": "Total Addresses",
+      "whaleCount": "Whales (1K+ BTC)",
+      "whalePct": "Whale Concentration",
+      "topHolders": "Top Holders (100+)",
+      "topHoldersPct": "Top Holders %",
+      "shrimpDominance": "Shrimp Dominance",
+      "explain": "Address distribution reflects Bitcoin adoption — the Power Law model assumes adoption grows predictably over time. Whale accumulation often signals conviction at current prices, while shrimp growth tracks retail interest.",
+      "signal": {
+        "high_accumulation": "High Accumulation",
+        "moderate": "Moderate",
+        "distribution": "Distribution"
+      }
+    },
     "gold": {
       "title": "BTC / Gold Analysis",
       "btcInGold": "BTC in Gold (oz)",

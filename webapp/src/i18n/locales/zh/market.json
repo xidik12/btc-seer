@@ -376,6 +376,21 @@
       "todayModel": "今日模型价格",
       "todayActual": "今日实际价格"
     },
+    "adoption": {
+      "title": "链上采用率",
+      "totalAddresses": "总地址数",
+      "whaleCount": "巨鲸 (1K+ BTC)",
+      "whalePct": "巨鲸集中度",
+      "topHolders": "大户 (100+)",
+      "topHoldersPct": "大户占比",
+      "shrimpDominance": "散户占比",
+      "explain": "地址分布反映了比特币的采用率——幂律模型假设采用率随时间可预测增长。巨鲸积累通常表明对当前价格的信心，散户增长则追踪零售兴趣。",
+      "signal": {
+        "high_accumulation": "高度积累",
+        "moderate": "适度",
+        "distribution": "分散中"
+      }
+    },
     "gold": {
       "title": "BTC / 黄金分析",
       "btcInGold": "BTC折合黄金（盎司）",

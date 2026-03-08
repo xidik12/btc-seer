@@ -593,6 +593,43 @@ async def get_power_law_dashboard(session: AsyncSession = Depends(get_session)):
     stats["change_24h"] = change_24h
     stats["calculations"] = _build_dashboard_calculations(engine, current_price, stats)
 
+    # ── Address Distribution Overlay ──
+    # Enrich dashboard with on-chain adoption metrics from cached address data
+    addr_dist = await cache_get("btc:address_distribution")
+    if addr_dist and addr_dist.get("buckets"):
+        buckets = {b["label"]: b for b in addr_dist["buckets"]}
+        total = addr_dist.get("total_with_balance", 1) or 1
+
+        whale_count = sum(
+            buckets.get(t, {}).get("count", 0)
+            for t in ["Whale", "Humpback", "Mega Whale"]
+        )
+        shark_count = buckets.get("Shark", {}).get("count", 0)
+        shrimp_count = buckets.get("Shrimp", {}).get("count", 0)
+        whale_ratio = whale_count / total
+        top_holder_count = whale_count + shark_count
+
+        # Whale concentration signal
+        # Historical context: whale ratio < 0.005% = high accumulation (bullish)
+        if whale_ratio < 0.00005:
+            whale_signal = "high_accumulation"
+        elif whale_ratio < 0.0001:
+            whale_signal = "moderate"
+        else:
+            whale_signal = "distribution"
+
+        stats["address_distribution"] = {
+            "total_addresses": addr_dist.get("total_with_balance", 0),
+            "whale_count": whale_count,
+            "whale_concentration_pct": round(whale_ratio * 100, 4),
+            "top_holders": top_holder_count,
+            "top_holders_pct": round(top_holder_count / total * 100, 4),
+            "shrimp_count": shrimp_count,
+            "shrimp_dominance_pct": round(shrimp_count / total * 100, 2),
+            "whale_signal": whale_signal,
+            "buckets": addr_dist["buckets"],
+        }
+
     await cache_set("pl:dashboard", stats, 60)
     return stats
 
