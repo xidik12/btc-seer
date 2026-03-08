@@ -71,10 +71,14 @@ function LoadingPlaceholder() {
 
 function CorridorGauge({ position, bands, currentPrice, t }) {
   const pct = Math.max(0, Math.min(100, position * 100))
+  const gaugeRef = useRef(null)
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('market:powerLaw.corridorPosition').toUpperCase()}</h3>
+    <div ref={gaugeRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-text-secondary text-xs font-semibold">{t('market:powerLaw.corridorPosition').toUpperCase()}</h3>
+        <CardShareButton cardRef={gaugeRef} label="Corridor Position" filename="corridor.png" />
+      </div>
       <div className="relative h-4 bg-gradient-to-r from-accent-green/30 via-accent-yellow/30 to-accent-red/30 rounded-full">
         <div
           className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg border-2 border-accent-blue transition-all duration-700"
@@ -122,6 +126,8 @@ function StatsGrid({ data, t }) {
 }
 
 function PowerLawChart({ historicalData, t }) {
+  const chartRef = useRef(null)
+
   if (!historicalData?.points?.length) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5 h-64 flex items-center justify-center">
@@ -143,12 +149,15 @@ function PowerLawChart({ historicalData, t }) {
   const { data: visibleData, bindGestures, isZoomed, resetZoom } = useChartZoom(chartData)
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+    <div ref={chartRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-text-secondary text-xs font-semibold">{t('market:powerLaw.title').toUpperCase()}</h3>
-        {isZoomed && (
-          <button onClick={resetZoom} className="text-[10px] text-accent-blue">{t('common:btn.resetZoom')}</button>
-        )}
+        <div className="flex items-center gap-2">
+          <CardShareButton cardRef={chartRef} label="Power Law Chart" filename="powerlaw-chart.png" />
+          {isZoomed && (
+            <button onClick={resetZoom} className="text-[10px] text-accent-blue">{t('common:btn.resetZoom')}</button>
+          )}
+        </div>
       </div>
       <div {...bindGestures}>
       <ResponsiveContainer width="100%" height={310}>
@@ -247,15 +256,17 @@ const BUCKET_COLORS = [
 ]
 
 function AdoptionOverlay({ data, t }) {
+  const cardRef = useRef(null)
   if (!data) return null
   const signal = SIGNAL_STYLES[data.whale_signal] || SIGNAL_STYLES.moderate
   const maxCount = Math.max(...(data.buckets || []).map(b => b.count || 0), 1)
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-text-secondary text-xs font-semibold">{t('market:powerLaw.adoption.title').toUpperCase()}</h3>
         <div className="flex items-center gap-1.5">
+          <CardShareButton cardRef={cardRef} label="On-Chain Adoption" filename="adoption.png" />
           <span className={`w-2 h-2 rounded-full ${signal.dot} animate-pulse`} />
           <span className={`text-[10px] font-semibold ${signal.color}`}>
             {t(`market:powerLaw.adoption.signal.${data.whale_signal}`, signal.label)}
