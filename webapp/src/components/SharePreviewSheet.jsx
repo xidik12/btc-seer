@@ -2,8 +2,44 @@ import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getBotUsernameSync } from '../utils/botConfig'
 
+/** Convert a data URL to a Blob (works everywhere, no fetch needed) */
+function dataUrlToBlob(dataUrl) {
+  const [header, b64] = dataUrl.split(',')
+  const mime = header.match(/:(.*?);/)[1]
+  const bin = atob(b64)
+  const u8 = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i)
+  return new Blob([u8], { type: mime })
+}
+
+/** Trigger a file download — works in Telegram WebView and regular browsers */
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const fname = filename || 'btc-seer.png'
+
+  // <a download> with blob URL (works in most browsers including some WebViews)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fname
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+
+  // If in Telegram WebView, <a download> may silently fail.
+  // Open image in a new window where user can long-press → Save Image
+  if (window.Telegram?.WebApp) {
+    setTimeout(() => {
+      window.open(url, '_blank')
+    }, 300)
+  }
+
+  // Cleanup blob URL after delay
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
 /**
- * Bottom sheet showing image preview + share actions (Telegram / Download / More).
+ * Bottom sheet showing image preview + share actions (Share / Download / Copy Link).
  */
 export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
   const { t } = useTranslation('common')
@@ -24,25 +60,24 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
   const handleShareImage = useCallback(async () => {
     if (!previewUrl) return
     try {
-      const res = await fetch(previewUrl)
-      const blob = await res.blob()
+      const blob = dataUrlToBlob(previewUrl)
       const file = new File([blob], filename || 'btc-seer.png', { type: 'image/png' })
 
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'BTC Seer',
-          text: 'BTC Seer Analysis',
-        })
-      } else {
-        // Fallback: download
-        const a = document.createElement('a')
-        a.href = previewUrl
-        a.download = filename || 'btc-seer.png'
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
+      // Try Web Share API with files (works in native mobile browsers)
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'BTC Seer' })
+        return
       }
+
+      // Fallback: try share without files (text only)
+      if (navigator.share) {
+        const bot = getBotUsernameSync() || 'BTC_Seer_Bot'
+        await navigator.share({ title: 'BTC Seer', url: `https://t.me/${bot}` })
+        return
+      }
+
+      // Last resort: download the image
+      triggerDownload(blob, filename)
     } catch (err) {
       if (err.name !== 'AbortError') console.error('Share failed:', err)
     }
@@ -50,12 +85,8 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
 
   const handleDownload = useCallback(() => {
     if (!previewUrl) return
-    const a = document.createElement('a')
-    a.href = previewUrl
-    a.download = filename || 'btc-seer.png'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    const blob = dataUrlToBlob(previewUrl)
+    triggerDownload(blob, filename)
   }, [previewUrl, filename])
 
   const [copied, setCopied] = useState(false)
