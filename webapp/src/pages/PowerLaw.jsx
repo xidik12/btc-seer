@@ -232,6 +232,8 @@ const SIGNAL_STYLES = {
 }
 
 const BUCKET_COLORS = [
+  'bg-slate-500/20 text-slate-400',
+  'bg-zinc-500/20 text-zinc-400',
   'bg-blue-500/20 text-blue-400',
   'bg-cyan-500/20 text-cyan-400',
   'bg-teal-500/20 text-teal-400',

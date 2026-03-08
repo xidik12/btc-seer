@@ -19,6 +19,8 @@ const TABS = [
 ]
 
 const BUCKET_COLORS = [
+  '#94a3b8', // Dust — slate
+  '#a1a1aa', // Micro — zinc
   '#6366f1', // Shrimp — indigo
   '#8b5cf6', // Crab — violet
   '#a78bfa', // Octopus — light violet

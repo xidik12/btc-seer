@@ -8,7 +8,9 @@ logger = logging.getLogger(__name__)
 
 # Our display buckets: (label, min_btc, max_btc or None)
 BUCKETS = [
-    ("Shrimp",       0,       0.1),
+    ("Dust",         0,       0.001),
+    ("Micro",        0.001,   0.01),
+    ("Shrimp",       0.01,    0.1),
     ("Crab",         0.1,     1),
     ("Octopus",      1,       10),
     ("Fish",         10,      50),
@@ -57,7 +59,7 @@ class AddressDistributionCollector(BaseCollector):
             count = int(count_str)
             raw_tiers.append((lo, hi, count))
 
-        # Aggregate raw tiers into our 9 display buckets
+        # Aggregate raw tiers into our 11 display buckets
         buckets = []
         total_with_balance = 0
 
