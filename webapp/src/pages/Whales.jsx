@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatTimeAgo, safeFixed } from '../utils/format'
 import SubTabBar from '../components/SubTabBar'
+import CardShareButton from '../components/CardShareButton'
 
 const MARKET_TABS = [
   { path: '/liquidations', labelKey: 'common:link.liquidations' },
@@ -471,6 +472,7 @@ export default function Whales() {
   const [mainTab, setMainTab] = useState('feed')
   const [loading, setLoading] = useState(true)
   const [selectedAddress, setSelectedAddress] = useState(null)
+  const statsRef = useRef(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -552,7 +554,11 @@ export default function Whales() {
       ) : (
       <>
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
+      <div ref={statsRef} className="grid grid-cols-2 gap-2 mb-3">
+        <div className="bg-bg-card rounded-xl p-3 border border-white/5 col-span-2 flex items-center justify-between">
+          <h3 className="text-text-secondary text-xs font-semibold">{t('market:whales.stats.count24h')} ({periodLabel})</h3>
+          <CardShareButton cardRef={statsRef} label="Whale Activity" filename="whales.png" />
+        </div>
         <div className="bg-bg-card rounded-xl p-3 border border-white/5">
           <p className="text-text-muted text-[10px]">{t('market:whales.stats.count24h')} ({periodLabel})</p>
           <p className="text-text-primary text-lg font-bold">{s.count ?? '--'}</p>

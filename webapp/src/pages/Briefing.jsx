@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import DOMPurify from 'dompurify'
 import { api } from '../utils/api'
+import CardShareButton from '../components/CardShareButton'
 
 const SENTIMENT_COLORS = {
   bullish: 'text-accent-green',
@@ -15,6 +16,7 @@ export default function Briefing() {
   const [history, setHistory] = useState([])
   const [selectedDate, setSelectedDate] = useState(null)
   const [loading, setLoading] = useState(true)
+  const summaryRef = useRef(null)
 
   useEffect(() => {
     Promise.all([
@@ -76,12 +78,15 @@ export default function Briefing() {
       {briefing ? (
         <>
           {/* Summary header */}
-          <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <div ref={summaryRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
             <div className="flex items-center justify-between mb-2">
               <span className="text-text-muted text-xs">{briefing.date}</span>
-              <span className={`text-xs font-semibold ${sentColor}`}>
-                {briefing.overall_sentiment?.charAt(0).toUpperCase() + briefing.overall_sentiment?.slice(1)}
-              </span>
+              <div className="flex items-center gap-2">
+                <CardShareButton cardRef={summaryRef} label="BTC Briefing" filename="briefing.png" />
+                <span className={`text-xs font-semibold ${sentColor}`}>
+                  {briefing.overall_sentiment?.charAt(0).toUpperCase() + briefing.overall_sentiment?.slice(1)}
+                </span>
+              </div>
             </div>
             <div className="flex items-baseline gap-2 mb-3">
               <span className="text-text-primary font-bold text-2xl">

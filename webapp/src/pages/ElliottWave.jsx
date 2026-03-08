@@ -4,6 +4,7 @@ import { api } from '../utils/api'
 import { formatPrice } from '../utils/format'
 import SubTabBar from '../components/SubTabBar'
 import DataSourceFooter from '../components/DataSourceFooter'
+import CardShareButton from '../components/CardShareButton'
 import { useChartZoom } from '../hooks/useChartZoom'
 
 const POLL_INTERVAL = 60_000
@@ -61,12 +62,13 @@ function DirectionBadge({ direction, pattern, confidence, t }) {
 }
 
 function WaveStatusCard({ data, t }) {
+  const cardRef = useRef(null)
   if (!data) return null
 
   const { wave_count, confidence, current_price } = data
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
       <div className="flex items-center justify-between mb-3">
         <div>
           <div className="text-text-muted text-[10px] font-medium">{t('common:price.btcPrice').toUpperCase()}</div>
@@ -74,9 +76,12 @@ function WaveStatusCard({ data, t }) {
             {current_price ? formatPrice(current_price) : '--'}
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-text-muted text-[10px] font-medium">{t('market:elliott.currentWave').toUpperCase()}</div>
-          <div className="text-accent-blue text-2xl font-bold">{wave_count?.current_wave || '?'}</div>
+        <div className="flex items-center gap-2">
+          <CardShareButton cardRef={cardRef} label="Elliott Wave" filename="elliott-wave.png" />
+          <div className="text-right">
+            <div className="text-text-muted text-[10px] font-medium">{t('market:elliott.currentWave').toUpperCase()}</div>
+            <div className="text-accent-blue text-2xl font-bold">{wave_count?.current_wave || '?'}</div>
+          </div>
         </div>
       </div>
       <DirectionBadge

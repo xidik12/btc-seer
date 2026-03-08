@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import useCachedFetch from '../hooks/useCachedFetch'
@@ -8,6 +8,7 @@ import SubTabBar from '../components/SubTabBar'
 import TASummaryGauge from '../components/TASummaryGauge'
 import YieldCurveChart from '../components/YieldCurveChart'
 import DataSourceFooter from '../components/DataSourceFooter'
+import CardShareButton from '../components/CardShareButton'
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -268,6 +269,7 @@ function IndicatorHistory() {
 export default function Technical() {
   const { t } = useTranslation(['market', 'common'])
   const tabs = useMemo(() => ANALYSIS_TABS.map(tab => ({ ...tab, label: t(tab.labelKey, { ns: 'common' }) })), [t])
+  const overallRef = useRef(null)
   const { data, loading, error, refresh: fetchData } = useCachedFetch(
     api.getIndicators, '/market/indicators', POLL_INTERVAL
   )
@@ -366,10 +368,13 @@ export default function Technical() {
       <YieldCurveChart />
 
       {/* ── Overall Summary ── */}
-      <div className={`rounded-2xl p-4 border ${overallBg}`}>
+      <div ref={overallRef} className={`rounded-2xl p-4 border ${overallBg}`}>
         <div className="flex items-center justify-between mb-1">
           <span className="text-text-secondary text-xs">{t('technical.overallSignal')}</span>
-          <span className={`text-lg font-bold ${overallColor}`}>{overallLabel}</span>
+          <div className="flex items-center gap-2">
+            <CardShareButton cardRef={overallRef} label="Technical Analysis" filename="technical.png" />
+            <span className={`text-lg font-bold ${overallColor}`}>{overallLabel}</span>
+          </div>
         </div>
         <div className="flex items-center gap-3 text-xs mb-2">
           <span className="text-accent-green">{t('technical.buyCount', { count: bullCount })}</span>

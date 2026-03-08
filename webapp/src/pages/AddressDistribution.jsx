@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatNumber } from '../utils/format'
 import SubTabBar from '../components/SubTabBar'
+import CardShareButton from '../components/CardShareButton'
 import {
   ResponsiveContainer,
   BarChart,
@@ -36,6 +37,7 @@ export default function AddressDistribution() {
   const { t } = useTranslation(['market', 'common'])
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const chartRef = useRef(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -99,7 +101,11 @@ export default function AddressDistribution() {
 
       {/* Bar Chart */}
       {buckets.length > 0 && (
-        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+        <div ref={chartRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-text-secondary text-xs font-semibold">{t('market:addressDist.title').toUpperCase()}</h3>
+            <CardShareButton cardRef={chartRef} label="Address Distribution" filename="address-dist.png" />
+          </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>

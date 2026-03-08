@@ -296,6 +296,11 @@
     "joinCouncil": "Join BTC Seer Council",
     "councilDesc": "Community chat — signals, insights & discussions"
   },
+  "share": {
+    "download": "Download",
+    "more": "More",
+    "shareImage": "Share as image"
+  },
   "dataSources": {
     "title": "Data Sources",
     "liveData": "All statistics are calculated from real-time data",

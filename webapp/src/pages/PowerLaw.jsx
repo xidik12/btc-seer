@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatPrice } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
+import CardShareButton from '../components/CardShareButton'
 import SubTabBar from '../components/SubTabBar'
 import DataSourceFooter from '../components/DataSourceFooter'
 import {
@@ -311,12 +312,13 @@ function AdoptionOverlay({ data, t }) {
 
 function MainTab({ current, historical, dashboard, t }) {
   const valStyle = VALUATION_COLORS[current?.valuation] || VALUATION_COLORS['Above Fair Value']
+  const valuationRef = useRef(null)
 
   return (
     <>
       {/* Valuation Card */}
       {current && (
-        <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
+        <div ref={valuationRef} className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
           <div className="flex items-center justify-between mb-3">
             <div>
               <div className="text-text-muted text-[10px] font-medium">{t('market:powerLaw.currentPrice').toUpperCase()}</div>
@@ -336,9 +338,12 @@ function MainTab({ current, historical, dashboard, t }) {
             <span className={`text-xs font-bold px-2 py-1 rounded border ${valStyle.bg} ${valStyle.border} ${valStyle.text}`}>
               {t(`market:powerLaw.valuation.${current.valuation}`, current.valuation)}
             </span>
-            <span className={`text-sm font-bold tabular-nums ${current.deviation_pct > 0 ? 'text-accent-red' : 'text-accent-green'}`}>
-              {current.deviation_pct > 0 ? '+' : ''}{current.deviation_pct?.toFixed(1)}%
-            </span>
+            <div className="flex items-center gap-2">
+              <CardShareButton cardRef={valuationRef} label="Power Law" filename="powerlaw.png" />
+              <span className={`text-sm font-bold tabular-nums ${current.deviation_pct > 0 ? 'text-accent-red' : 'text-accent-green'}`}>
+                {current.deviation_pct > 0 ? '+' : ''}{current.deviation_pct?.toFixed(1)}%
+              </span>
+            </div>
           </div>
         </div>
       )}

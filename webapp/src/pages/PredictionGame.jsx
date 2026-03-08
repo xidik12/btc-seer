@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, memo } from 'react'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTelegram } from '../hooks/useTelegram'
 import { api } from '../utils/api'
 import ShareButton from '../components/ShareButton'
+import CardShareButton from '../components/CardShareButton'
 import { gameShareText } from '../utils/shareTemplates'
 
 const PERIOD_TABS = ['all_time', 'weekly', 'monthly']
@@ -194,6 +195,7 @@ export default function PredictionGame() {
   const [showHistory, setShowHistory] = useState(false)
   const [refCode, setRefCode] = useState(null)
   const [locked, setLocked] = useState(false)
+  const predictionRef = useRef(null)
 
   const initData = tg?.initData
 
@@ -302,13 +304,16 @@ export default function PredictionGame() {
           </div>
         </div>
       ) : (
-        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+        <div ref={predictionRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold">{t('game.yourPrediction')}</h3>
+            <div className="flex items-center gap-2">
+            <CardShareButton cardRef={predictionRef} label="Prediction" filename="prediction.png" />
             <ShareButton
               compact
               text={gameShareText(current, profile, refCode)}
             />
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <span className={`text-2xl font-bold ${current.direction === 'up' ? 'text-accent-green' : 'text-accent-red'}`}>

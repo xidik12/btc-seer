@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatPrice, formatNumber } from '../utils/format'
 import { useChartZoom } from '../hooks/useChartZoom'
 import SubTabBar from '../components/SubTabBar'
 import DataSourceFooter from '../components/DataSourceFooter'
+import CardShareButton from '../components/CardShareButton'
 import {
   ResponsiveContainer,
   BarChart,
@@ -111,11 +112,12 @@ function RiskMeter({ longPct, shortPct, fundingRate, t }) {
 // ── Summary Card ──
 
 function SummaryCard({ data, t }) {
+  const cardRef = useRef(null)
   if (!data?.summary) return null
   const { current_price, summary } = data
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
       <div className="flex items-center justify-between mb-3">
         <div>
           <div className="text-text-muted text-[10px] font-medium">{t('common:price.btcPrice').toUpperCase()}</div>
@@ -123,10 +125,13 @@ function SummaryCard({ data, t }) {
             {formatPrice(current_price)}
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-text-muted text-[10px] font-medium">{t('market:liquidations.openInterest').toUpperCase()}</div>
-          <div className="text-text-primary text-xl font-bold tabular-nums">
-            ${formatNumber(summary.total_oi_usd)}
+        <div className="flex items-center gap-2">
+          <CardShareButton cardRef={cardRef} label="Liquidations" filename="liquidations.png" />
+          <div className="text-right">
+            <div className="text-text-muted text-[10px] font-medium">{t('market:liquidations.openInterest').toUpperCase()}</div>
+            <div className="text-text-primary text-xl font-bold tabular-nums">
+              ${formatNumber(summary.total_oi_usd)}
+            </div>
           </div>
         </div>
       </div>

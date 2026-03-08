@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
 import { formatPrice, formatTime, formatDate, formatTimeAgo, getActionColor, getActionBg } from '../utils/format'
 import SubTabBar from '../components/SubTabBar'
 import DataSourceFooter from '../components/DataSourceFooter'
+import CardShareButton from '../components/CardShareButton'
 
 const TIMEFRAMES = ['1h', '4h', '24h']
 const ANALYSIS_TABS = [
@@ -12,6 +13,7 @@ const ANALYSIS_TABS = [
 ]
 
 function LiveSignalCard({ signal, t }) {
+  const cardRef = useRef(null)
   if (!signal) return null
 
   const isBuy = signal.action?.includes('buy')
@@ -19,7 +21,7 @@ function LiveSignalCard({ signal, t }) {
   const bgColor = isBuy ? 'bg-accent-green/5' : signal.action?.includes('sell') ? 'bg-accent-red/5' : 'bg-accent-yellow/5'
 
   return (
-    <div className={`rounded-2xl p-4 border-2 ${borderColor} ${bgColor} slide-up`}>
+    <div ref={cardRef} className={`rounded-2xl p-4 border-2 ${borderColor} ${bgColor} slide-up`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-blue/15 text-accent-blue font-bold animate-pulse">
@@ -29,7 +31,10 @@ function LiveSignalCard({ signal, t }) {
             {signal.action?.replace('_', ' ')}
           </span>
         </div>
-        <span className="text-text-muted text-[10px]">{signal.timeframe?.toUpperCase()}</span>
+        <div className="flex items-center gap-2">
+          <CardShareButton cardRef={cardRef} label="Trading Signal" filename="signal.png" />
+          <span className="text-text-muted text-[10px]">{signal.timeframe?.toUpperCase()}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 text-xs mb-3">

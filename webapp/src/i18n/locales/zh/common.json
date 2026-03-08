@@ -294,6 +294,11 @@
     "joinCouncil": "加入 BTC Seer 理事会",
     "councilDesc": "社区聊天 — 信号、洞察与讨论"
   },
+  "share": {
+    "download": "下载",
+    "more": "更多",
+    "shareImage": "分享图片"
+  },
   "dataSources": {
     "title": "数据来源",
     "liveData": "所有统计数据均基于实时数据计算",
