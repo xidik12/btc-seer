@@ -15,6 +15,12 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
+  // Lock body scroll when sheet is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
   const handleTelegram = useCallback(() => {
     const bot = getBotUsernameSync() || 'BTC_Seer_Bot'
     const url = `https://t.me/share/url?url=${encodeURIComponent(`https://t.me/${bot}`)}&text=${encodeURIComponent('Check out this BTC Seer analysis!')}`
@@ -68,8 +74,20 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
 
       {/* Sheet */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-secondary rounded-t-2xl p-4 pb-8 slide-up max-h-[85vh] overflow-y-auto">
-        {/* Handle */}
-        <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-4" />
+        {/* Header with handle + close */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="w-8" />
+          <div className="w-10 h-1 bg-white/20 rounded-full" />
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-text-secondary hover:text-text-primary active:scale-90 transition-all"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
 
         {/* Preview Image */}
         <div className="rounded-xl overflow-hidden mb-4 border border-white/10">
@@ -81,7 +99,7 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2 mb-3">
           {/* Telegram */}
           <button
             onClick={handleTelegram}
@@ -122,6 +140,14 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
             <span className="text-[10px] font-semibold text-text-secondary">{t('share.more')}</span>
           </button>
         </div>
+
+        {/* Cancel button */}
+        <button
+          onClick={onClose}
+          className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-text-muted text-sm font-medium active:scale-[0.98] transition-all"
+        >
+          {t('share.cancel', 'Cancel')}
+        </button>
       </div>
     </>
   )

@@ -297,7 +297,8 @@
   "share": {
     "download": "Скачать",
     "more": "Ещё",
-    "shareImage": "Поделиться картинкой"
+    "shareImage": "Поделиться картинкой",
+    "cancel": "Отмена"
   },
   "dataSources": {
     "title": "Источники данных",

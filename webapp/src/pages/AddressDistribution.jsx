@@ -38,6 +38,7 @@ export default function AddressDistribution() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const chartRef = useRef(null)
+  const tableRef = useRef(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -147,7 +148,11 @@ export default function AddressDistribution() {
 
       {/* Table */}
       {buckets.length > 0 && (
-        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+        <div ref={tableRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-text-secondary text-xs font-semibold">{t('market:addressDist.bucket').toUpperCase()}</h3>
+            <CardShareButton cardRef={tableRef} label="BTC Distribution" filename="btc-distribution.png" />
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>

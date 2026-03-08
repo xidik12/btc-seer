@@ -554,32 +554,34 @@ export default function Whales() {
       ) : (
       <>
       {/* Stats Grid */}
-      <div ref={statsRef} className="grid grid-cols-2 gap-2 mb-3">
-        <div className="bg-bg-card rounded-xl p-3 border border-white/5 col-span-2 flex items-center justify-between">
-          <h3 className="text-text-secondary text-xs font-semibold">{t('market:whales.stats.count24h')} ({periodLabel})</h3>
+      <div ref={statsRef} className="bg-bg-card rounded-2xl p-3 border border-white/5 mb-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-text-secondary text-xs font-semibold">{t('market:whales.title').toUpperCase()}</h3>
           <CardShareButton cardRef={statsRef} label="Whale Activity" filename="whales.png" />
         </div>
-        <div className="bg-bg-card rounded-xl p-3 border border-white/5">
+        <div className="grid grid-cols-2 gap-2">
+        <div className="bg-bg-hover rounded-xl p-3 text-center">
           <p className="text-text-muted text-[10px]">{t('market:whales.stats.count24h')} ({periodLabel})</p>
           <p className="text-text-primary text-lg font-bold">{s.count ?? '--'}</p>
         </div>
-        <div className="bg-bg-card rounded-xl p-3 border border-white/5">
+        <div className="bg-bg-hover rounded-xl p-3 text-center">
           <p className="text-text-muted text-[10px]">{t('market:whales.stats.netFlow')}</p>
           <p className={`text-lg font-bold ${(s.net_flow_btc || 0) > 0 ? 'text-accent-red' : (s.net_flow_btc || 0) < 0 ? 'text-accent-green' : 'text-text-primary'}`}>
             {s.net_flow_btc != null ? `${s.net_flow_btc > 0 ? '+' : ''}${s.net_flow_btc.toLocaleString()}` : '--'}
           </p>
         </div>
-        <div className="bg-bg-card rounded-xl p-3 border border-white/5">
+        <div className="bg-bg-hover rounded-xl p-3 text-center">
           <p className="text-text-muted text-[10px]">{t('market:whales.stats.avgSize')}</p>
           <p className="text-text-primary text-lg font-bold">
             {s.avg_btc ? `${s.avg_btc.toLocaleString()}` : '--'}
           </p>
         </div>
-        <div className="bg-bg-card rounded-xl p-3 border border-white/5">
+        <div className="bg-bg-hover rounded-xl p-3 text-center">
           <p className="text-text-muted text-[10px]">{t('market:whales.stats.mostActive')}</p>
           <p className="text-text-primary text-sm font-bold truncate">
             {s.most_active_entity || '--'}
           </p>
+        </div>
         </div>
       </div>
 

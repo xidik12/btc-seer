@@ -299,7 +299,8 @@
   "share": {
     "download": "Download",
     "more": "More",
-    "shareImage": "Share as image"
+    "shareImage": "Share as image",
+    "cancel": "Cancel"
   },
   "dataSources": {
     "title": "Data Sources",

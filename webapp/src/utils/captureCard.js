@@ -2,6 +2,9 @@ import { domToPng } from 'modern-screenshot'
 
 /**
  * Capture a card DOM element as a branded PNG data URL.
+ * Captures the ORIGINAL element (preserving all computed styles),
+ * then overlays a watermark via canvas.
+ *
  * @param {HTMLElement} element - The card element to capture
  * @param {string} label - Label for the watermark (e.g. "Power Law")
  * @returns {Promise<string>} data URL of the PNG
@@ -12,80 +15,80 @@ export async function captureCard(element, label = '') {
   // Wait for animations to settle
   await new Promise((resolve) => requestAnimationFrame(resolve))
 
-  const width = element.offsetWidth
-  const clone = element.cloneNode(true)
-
-  // Fix glassmorphism: replace backdrop-filter with solid bg
-  clone.querySelectorAll('*').forEach((el) => {
-    const style = el.style
-    if (style.backdropFilter) style.backdropFilter = 'none'
-    if (style.webkitBackdropFilter) style.webkitBackdropFilter = 'none'
+  // Capture the original element directly — keeps all computed styles
+  const rawDataUrl = await domToPng(element, {
+    scale: 2,
+    backgroundColor: '#0f0f14',
+    style: {
+      // Override glassmorphism for clean render
+      backdropFilter: 'none',
+      webkitBackdropFilter: 'none',
+    },
+    filter: (node) => {
+      // Hide the share button itself from the capture
+      if (node?.dataset?.shareBtn === 'true') return false
+      return true
+    },
   })
 
-  // Walk all elements with bg-bg-card class and solidify
-  const walker = (node) => {
-    if (node.nodeType !== 1) return
-    if (node.className && typeof node.className === 'string' && node.className.includes('bg-bg-card')) {
-      node.style.backdropFilter = 'none'
-      node.style.webkitBackdropFilter = 'none'
-      node.style.backgroundColor = '#22222e'
+  // Add watermark via canvas
+  return addWatermark(rawDataUrl, label)
+}
+
+/**
+ * Overlay a branded watermark bar at the bottom of the image.
+ */
+function addWatermark(dataUrl, label) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const barHeight = 48
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height + barHeight
+
+      const ctx = canvas.getContext('2d')
+
+      // Background
+      ctx.fillStyle = '#0f0f14'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      // Original image
+      ctx.drawImage(img, 0, 0)
+
+      // Watermark bar
+      ctx.fillStyle = '#16161e'
+      ctx.fillRect(0, img.height, canvas.width, barHeight)
+
+      // Separator line
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(0, img.height)
+      ctx.lineTo(canvas.width, img.height)
+      ctx.stroke()
+
+      // Left text: ₿ BTC Seer
+      ctx.fillStyle = '#c8a84e'
+      ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('\u20BF BTC Seer', 24, img.height + barHeight / 2)
+
+      // Right text: label · date
+      const dateStr = new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+      const rightText = label ? `${label} \u00B7 ${dateStr}` : dateStr
+      ctx.fillStyle = '#9090a8'
+      ctx.font = '20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      const rightWidth = ctx.measureText(rightText).width
+      ctx.fillText(rightText, canvas.width - rightWidth - 24, img.height + barHeight / 2)
+
+      resolve(canvas.toDataURL('image/png'))
     }
-    for (const child of node.children) walker(child)
-  }
-  walker(clone)
-
-  // Solidify the root element too
-  clone.style.backdropFilter = 'none'
-  clone.style.webkitBackdropFilter = 'none'
-  if (clone.className && typeof clone.className === 'string' && clone.className.includes('bg-bg-card')) {
-    clone.style.backgroundColor = '#22222e'
-  }
-
-  // Inject watermark bar at bottom
-  const watermark = document.createElement('div')
-  watermark.style.cssText = `
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    margin-top: 8px;
-    border-top: 1px solid rgba(255,255,255,0.06);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  `
-  const left = document.createElement('span')
-  left.textContent = '\u20BF BTC Seer'
-  left.style.cssText = 'color: #c8a84e; font-size: 11px; font-weight: 700; letter-spacing: 0.02em;'
-
-  const right = document.createElement('span')
-  const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  right.textContent = label ? `${label} \u00B7 ${dateStr}` : dateStr
-  right.style.cssText = 'color: #9090a8; font-size: 10px;'
-
-  watermark.appendChild(left)
-  watermark.appendChild(right)
-  clone.appendChild(watermark)
-
-  // Position clone off-screen for rendering
-  clone.style.position = 'fixed'
-  clone.style.left = '-9999px'
-  clone.style.top = '0'
-  clone.style.width = `${width}px`
-  clone.style.zIndex = '-1'
-  document.body.appendChild(clone)
-
-  try {
-    const dataUrl = await domToPng(clone, {
-      scale: 2,
-      backgroundColor: '#0f0f14',
-      width,
-      style: {
-        // Ensure no backdrop-filter on root
-        backdropFilter: 'none',
-        webkitBackdropFilter: 'none',
-      },
-    })
-    return dataUrl
-  } finally {
-    document.body.removeChild(clone)
-  }
+    img.onerror = reject
+    img.src = dataUrl
+  })
 }

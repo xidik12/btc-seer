@@ -15,6 +15,7 @@ export default function CardShareButton({ cardRef, label, filename }) {
   return (
     <>
       <button
+        data-share-btn="true"
         onClick={(e) => { e.stopPropagation(); capture(cardRef, label) }}
         disabled={capturing}
         className="p-1.5 rounded-lg bg-accent-blue/10 text-accent-blue hover:bg-accent-blue/20 active:scale-95 transition-all disabled:opacity-50"
@@ -31,11 +32,13 @@ export default function CardShareButton({ cardRef, label, filename }) {
         )}
       </button>
 
-      <SharePreviewSheet
-        previewUrl={previewUrl}
-        filename={filename}
-        onClose={clearPreview}
-      />
+      {previewUrl && (
+        <SharePreviewSheet
+          previewUrl={previewUrl}
+          filename={filename}
+          onClose={clearPreview}
+        />
+      )}
     </>
   )
 }
