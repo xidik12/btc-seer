@@ -89,10 +89,16 @@ function GaugeBar({ value, min, max, zones, label, explanation }) {
   )
 }
 
-function Section({ title, color, explain, children }) {
+function Section({ title, color, explain, shareLabel, shareFilename, children }) {
+  const sectionRef = useRef(null)
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className={`text-sm font-semibold mb-1 ${color || 'text-text-primary'}`}>{title}</h3>
+    <div ref={sectionRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className={`text-sm font-semibold ${color || 'text-text-primary'}`}>{title}</h3>
+        {shareLabel && (
+          <CardShareButton cardRef={sectionRef} label={shareLabel} filename={shareFilename || 'technical.png'} />
+        )}
+      </div>
       {explain && (
         <p className="text-text-muted text-[10px] leading-relaxed mb-3">{explain}</p>
       )}
@@ -200,6 +206,7 @@ function IndicatorHistory() {
       title={t('market:technical.indicatorHistory.title')}
       color="text-accent-blue"
       explain={t('market:technical.indicatorHistory.explain')}
+      shareLabel="Indicator History" shareFilename="indicator-history.png"
     >
       {isZoomed && (
         <button onClick={resetZoom} className="text-[10px] text-accent-blue mb-2">{t('market:technical.indicatorHistory.resetZoom')}</button>
@@ -398,6 +405,7 @@ export default function Technical() {
         title={t('technical.trend.title')}
         color="text-accent-blue"
         explain={t('technical.trend.explain')}
+        shareLabel="Trend" shareFilename="trend.png"
       >
         {[
           { label: t('technical.trend.shortTerm'), val: trend.short_term, what: t('technical.trend.whatShort') },
@@ -420,6 +428,7 @@ export default function Technical() {
         title={t('technical.rsi.title')}
         color="text-accent-blue"
         explain={t('technical.rsi.explain')}
+        shareLabel="RSI" shareFilename="rsi.png"
       >
         <GaugeBar
           value={mom.rsi}
@@ -454,6 +463,7 @@ export default function Technical() {
         title={t('technical.macd.title')}
         color="text-accent-purple"
         explain={t('technical.macd.explain')}
+        shareLabel="MACD" shareFilename="macd.png"
       >
         <IndicatorRow label={t('technical.macd.line')} value={mom.macd} signal={getMacdSignal(mom.macd)} t={t}
           description={mom.macd != null ? (mom.macd > 0 ? t('technical.macd.lineDescPositive') : t('technical.macd.lineDescNegative')) : null}
@@ -471,6 +481,7 @@ export default function Technical() {
         title={t('technical.movingAverages.title')}
         color="text-accent-blue"
         explain={t('technical.movingAverages.explain')}
+        shareLabel="Moving Averages" shareFilename="moving-averages.png"
       >
         {[
           { label: 'EMA 9', val: ma.ema_9, descKey: 'technical.movingAverages.ema9Desc' },
@@ -503,6 +514,7 @@ export default function Technical() {
         title={t('technical.bollinger.title')}
         color="text-accent-yellow"
         explain={t('technical.bollinger.explain')}
+        shareLabel="Bollinger Bands" shareFilename="bollinger.png"
       >
         <IndicatorRow label={t('technical.bollinger.upper')} value={vol.bb_upper ? formatPricePrecise(vol.bb_upper) : null} t={t}
           description={t('technical.bollinger.upperDesc')}
@@ -540,6 +552,7 @@ export default function Technical() {
         title={t('technical.volume.title')}
         color="text-accent-green"
         explain={t('technical.volume.explain')}
+        shareLabel="Volume" shareFilename="volume.png"
       >
         {volume.volume_ratio != null && (
         <IndicatorRow label={t('technical.volume.ratio')} value={volume.volume_ratio} signal={getVolSignal(volume.volume_ratio)} t={t}
@@ -568,6 +581,7 @@ export default function Technical() {
         title={t('technical.supportResistance.title')}
         color="text-accent-red"
         explain={t('technical.supportResistance.explain')}
+        shareLabel="Support & Resistance" shareFilename="support-resistance.png"
       >
         <IndicatorRow label={t('technical.supportResistance.resistance')} value={levels.resistance_1 ? formatPricePrecise(levels.resistance_1) : null} t={t}
           description={levels.resistance_1 && price ? t('technical.supportResistance.resistanceDesc', { price: formatPrice(levels.resistance_1), distanceText: price < levels.resistance_1 ? t('technical.supportResistance.resistanceBelow', { amount: (levels.resistance_1 - price).toFixed(0) }) : t('technical.supportResistance.resistanceAbove') }) : t('technical.supportResistance.resistanceDescDefault')}
@@ -585,6 +599,7 @@ export default function Technical() {
         title={t('technical.trendStrength.title')}
         color="text-accent-purple"
         explain={t('technical.trendStrength.explain')}
+        shareLabel="Trend Strength" shareFilename="trend-strength.png"
       >
         <GaugeBar
           value={mom.adx || 0}
@@ -622,6 +637,7 @@ export default function Technical() {
           title={t('technical.btcDominance.title')}
           color="text-accent-yellow"
           explain={t('technical.btcDominance.explain')}
+          shareLabel="BTC Dominance" shareFilename="btc-dominance.png"
         >
           <GaugeBar
             value={btcDom.btc_dominance || 0}
@@ -663,6 +679,7 @@ export default function Technical() {
         title={t('technical.stochRsi.title')}
         color="text-accent-purple"
         explain={t('technical.stochRsi.explain')}
+        shareLabel="Stochastic RSI" shareFilename="stoch-rsi.png"
       >
         <GaugeBar
           value={stochRsi.k || 0}
@@ -700,6 +717,7 @@ export default function Technical() {
         title={t('technical.williamsR.title')}
         color="text-accent-red"
         explain={t('technical.williamsR.explain')}
+        shareLabel="Williams %R" shareFilename="williams-r.png"
       >
         <GaugeBar
           value={williamsR != null ? williamsR + 100 : 50}
@@ -729,6 +747,7 @@ export default function Technical() {
         title={t('technical.ichimoku.title')}
         color="text-accent-green"
         explain={t('technical.ichimoku.explain')}
+        shareLabel="Ichimoku Cloud" shareFilename="ichimoku.png"
       >
         <IndicatorRow label={t('technical.ichimoku.tenkan')} value={ichimoku.tenkan ? formatPricePrecise(ichimoku.tenkan) : null} t={t}
           signal={price && ichimoku.tenkan ? (price > ichimoku.tenkan ? 'bullish' : 'bearish') : null}
@@ -770,6 +789,7 @@ export default function Technical() {
         title={t('technical.candlestick.title')}
         color="text-accent-yellow"
         explain={t('technical.candlestick.explain')}
+        shareLabel="Candlestick" shareFilename="candlestick.png"
       >
         {(() => {
           const active = []
@@ -806,6 +826,7 @@ export default function Technical() {
         title={t('technical.advanced.title')}
         color="text-accent-blue"
         explain={t('technical.advanced.explain')}
+        shareLabel="Advanced Metrics" shareFilename="advanced.png"
       >
         <IndicatorRow label={t('technical.advanced.mayer')} value={adv.mayer_multiple} t={t}
           signal={adv.mayer_multiple > 2.4 ? 'bearish' : adv.mayer_multiple < 0.8 ? 'bullish' : 'neutral'}
@@ -847,6 +868,7 @@ export default function Technical() {
         title={t('technical.rateOfChange.title')}
         color="text-text-secondary"
         explain={t('technical.rateOfChange.explain')}
+        shareLabel="Rate of Change" shareFilename="roc.png"
       >
         {[
           { label: t('technical.rateOfChange.last1h'), val: mom.roc_1, periodKey: 'technical.rateOfChange.period1h' },

@@ -17,6 +17,8 @@ export default function Briefing() {
   const [selectedDate, setSelectedDate] = useState(null)
   const [loading, setLoading] = useState(true)
   const summaryRef = useRef(null)
+  const snapshotRef = useRef(null)
+  const contentRef = useRef(null)
 
   useEffect(() => {
     Promise.all([
@@ -112,36 +114,46 @@ export default function Briefing() {
 
           {/* Data snapshot widgets */}
           {briefing.data_snapshot && (
-            <div className="grid grid-cols-2 gap-2">
-              {briefing.data_snapshot.fear_greed != null && (
-                <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-                  <p className="text-text-muted text-[10px]">{t('briefing.fearGreed')}</p>
-                  <p className="text-text-primary font-bold text-lg">{briefing.data_snapshot.fear_greed}</p>
-                </div>
-              )}
-              {briefing.data_snapshot.whale_count != null && (
-                <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-                  <p className="text-text-muted text-[10px]">{t('briefing.whaleTxs')}</p>
-                  <p className="text-text-primary font-bold text-lg">{briefing.data_snapshot.whale_count}</p>
-                </div>
-              )}
-              {briefing.data_snapshot.accuracy != null && (
-                <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-                  <p className="text-text-muted text-[10px]">{t('briefing.aiAccuracy')}</p>
-                  <p className="text-text-primary font-bold text-lg">{Math.round(briefing.data_snapshot.accuracy)}%</p>
-                </div>
-              )}
-              {briefing.data_snapshot.arb_count != null && (
-                <div className="bg-bg-card rounded-xl p-3 border border-white/5">
-                  <p className="text-text-muted text-[10px]">{t('briefing.arbOpps')}</p>
-                  <p className="text-text-primary font-bold text-lg">{briefing.data_snapshot.arb_count}</p>
-                </div>
-              )}
+            <div ref={snapshotRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-text-secondary text-xs font-semibold">{t('briefing.title').toUpperCase()}</h3>
+                <CardShareButton cardRef={snapshotRef} label="BTC Data Snapshot" filename="data-snapshot.png" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {briefing.data_snapshot.fear_greed != null && (
+                  <div className="bg-bg-hover rounded-xl p-3">
+                    <p className="text-text-muted text-[10px]">{t('briefing.fearGreed')}</p>
+                    <p className="text-text-primary font-bold text-lg">{briefing.data_snapshot.fear_greed}</p>
+                  </div>
+                )}
+                {briefing.data_snapshot.whale_count != null && (
+                  <div className="bg-bg-hover rounded-xl p-3">
+                    <p className="text-text-muted text-[10px]">{t('briefing.whaleTxs')}</p>
+                    <p className="text-text-primary font-bold text-lg">{briefing.data_snapshot.whale_count}</p>
+                  </div>
+                )}
+                {briefing.data_snapshot.accuracy != null && (
+                  <div className="bg-bg-hover rounded-xl p-3">
+                    <p className="text-text-muted text-[10px]">{t('briefing.aiAccuracy')}</p>
+                    <p className="text-text-primary font-bold text-lg">{Math.round(briefing.data_snapshot.accuracy)}%</p>
+                  </div>
+                )}
+                {briefing.data_snapshot.arb_count != null && (
+                  <div className="bg-bg-hover rounded-xl p-3">
+                    <p className="text-text-muted text-[10px]">{t('briefing.arbOpps')}</p>
+                    <p className="text-text-primary font-bold text-lg">{briefing.data_snapshot.arb_count}</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {/* Full content */}
-          <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <div ref={contentRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-text-secondary text-xs font-semibold">{t('briefing.sentiment').toUpperCase()}</h3>
+              <CardShareButton cardRef={contentRef} label="Daily Briefing" filename="daily-briefing.png" />
+            </div>
             <div
               className="text-text-secondary text-xs leading-relaxed space-y-2 briefing-content"
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(briefing.summary_html || '') }}

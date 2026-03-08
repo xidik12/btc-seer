@@ -235,7 +235,7 @@ function WaveChart({ historicalData, currentData, timeframe, t }) {
             Reset zoom
           </button>
         ) : (
-          <span className="ml-auto text-[#454555] text-[9px]">{t('market:elliott.title')}</span>
+          <div className="flex items-center gap-2 ml-auto"><CardShareButton cardRef={containerRef} label="Elliott Wave Chart" filename="elliott-chart.png" /><span className="text-[#454555] text-[9px]">{t('market:elliott.title')}</span></div>
         )}
       </div>
 
@@ -408,6 +408,7 @@ function WaveChart({ historicalData, currentData, timeframe, t }) {
 }
 
 function FibTargets({ targets, t }) {
+  const cardRef = useRef(null)
   if (!targets) return null
 
   const { support_levels = [], resistance_levels = [] } = targets
@@ -415,8 +416,8 @@ function FibTargets({ targets, t }) {
   if (!support_levels.length && !resistance_levels.length) return null
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('market:elliott.fibTargets').toUpperCase()}</h3>
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-3"><h3 className="text-text-secondary text-xs font-semibold">{t('market:elliott.fibTargets').toUpperCase()}</h3><CardShareButton cardRef={cardRef} label="Fibonacci Targets" filename="fib-targets.png" /></div>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <div className="text-accent-green text-[10px] font-semibold mb-2">{t('market:powerLaw.support').toUpperCase()}</div>
@@ -450,11 +451,12 @@ function FibTargets({ targets, t }) {
 }
 
 function DivergenceAlerts({ divergences, t }) {
+  const cardRef = useRef(null)
   if (!divergences?.length) return null
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('market:elliott.divergence').toUpperCase()}</h3>
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-3"><h3 className="text-text-secondary text-xs font-semibold">{t('market:elliott.divergence').toUpperCase()}</h3><CardShareButton cardRef={cardRef} label="Divergence Alerts" filename="divergence-alerts.png" /></div>
       <div className="space-y-2">
         {divergences.map((d, i) => {
           const isBullish = d.type === 'bullish'
@@ -489,6 +491,7 @@ function DivergenceAlerts({ divergences, t }) {
 }
 
 function StatsGrid({ data, t }) {
+  const cardRef = useRef(null)
   if (!data) return null
 
   const wc = data.wave_count || {}
@@ -513,13 +516,16 @@ function StatsGrid({ data, t }) {
   }
 
   return (
-    <div className="grid grid-cols-3 gap-2">
-      {stats.map((s) => (
-        <div key={s.labelKey} className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-          <div className="text-text-muted text-[9px] font-medium mb-1">{labelMap[s.labelKey]}</div>
-          <div className="text-text-primary text-sm font-bold capitalize">{s.value}</div>
-        </div>
-      ))}
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-2"><h3 className="text-text-secondary text-xs font-semibold">{t('market:elliott.title').toUpperCase()}</h3><CardShareButton cardRef={cardRef} label="Elliott Wave Stats" filename="elliott-stats.png" /></div>
+      <div className="grid grid-cols-3 gap-2">
+        {stats.map((s) => (
+          <div key={s.labelKey} className="bg-bg-hover rounded-xl p-3 text-center">
+            <div className="text-text-muted text-[9px] font-medium mb-1">{labelMap[s.labelKey]}</div>
+            <div className="text-text-primary text-sm font-bold capitalize">{s.value}</div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -531,6 +537,7 @@ export default function ElliottWave() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [timeframe, setTimeframe] = useState('4h')
+  const waveSummaryRef = useRef(null)
 
   const MARKET_TABS = [
     { path: '/liquidations', label: t('common:link.liquidations') },
@@ -608,8 +615,8 @@ export default function ElliottWave() {
       <StatsGrid data={current} t={t} />
 
       {current?.wave_count && (
-        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-          <h3 className="text-text-secondary text-xs font-semibold mb-2">{String(t('market:elliott.waveStatus')).toUpperCase()}</h3>
+        <div ref={waveSummaryRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <div className="flex items-center justify-between mb-2"><h3 className="text-text-secondary text-xs font-semibold">{String(t('market:elliott.waveStatus')).toUpperCase()}</h3><CardShareButton cardRef={waveSummaryRef} label="Wave Status Summary" filename="wave-summary.png" /></div>
           <p className="text-text-muted text-[11px] leading-relaxed">
             {(() => {
               const wc = current.wave_count

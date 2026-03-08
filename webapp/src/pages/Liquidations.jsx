@@ -49,6 +49,7 @@ function liqIntensityColor(volume, maxVolume, type) {
 // ── Risk Meter ──
 
 function RiskMeter({ longPct, shortPct, fundingRate, t }) {
+  const cardRef = useRef(null)
   // Determine overall market risk direction
   const isLongHeavy = longPct > shortPct
   const imbalance = Math.abs(longPct - shortPct)
@@ -73,9 +74,9 @@ function RiskMeter({ longPct, shortPct, fundingRate, t }) {
   const needlePct = Math.max(5, Math.min(95, needlePos))
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.riskMeter').toUpperCase()}</h3>
+        <div className="flex items-center gap-2"><h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.riskMeter').toUpperCase()}</h3><CardShareButton cardRef={cardRef} label="Risk Meter" filename="risk-meter.png" /></div>
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
           riskColor === 'text-accent-red' ? 'bg-accent-red/10 border-accent-red/30' :
           riskColor === 'text-accent-green' ? 'bg-accent-green/10 border-accent-green/30' :
@@ -164,6 +165,7 @@ function SummaryCard({ data, t }) {
 // ── Heatmap with intensity colors ──
 
 function LiquidationHeatmap({ data, t }) {
+  const cardRef = useRef(null)
   if (!data?.bins?.length) {
     return (
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5 h-[420px] flex items-center justify-center">
@@ -190,9 +192,9 @@ function LiquidationHeatmap({ data, t }) {
   const { data: visibleData, bindGestures, isZoomed, resetZoom } = useChartZoom(chartData)
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.heatmap').toUpperCase()}</h3>
+        <div className="flex items-center gap-2"><h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.heatmap').toUpperCase()}</h3><CardShareButton cardRef={cardRef} label="Liquidation Heatmap" filename="liq-heatmap.png" /></div>
         {isZoomed ? (
           <button onClick={resetZoom} className="text-[10px] text-accent-blue">{t('common:btn.resetZoom')}</button>
         ) : (
@@ -282,11 +284,12 @@ function LiquidationHeatmap({ data, t }) {
 // ── Leverage Table ──
 
 function LeverageTable({ levels, currentPrice, t }) {
+  const cardRef = useRef(null)
   if (!levels?.levels?.length) return null
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('market:liquidations.liquidationByLeverage')}</h3>
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-3"><h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.liquidationByLeverage')}</h3><CardShareButton cardRef={cardRef} label="Leverage Table" filename="leverage-table.png" /></div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -334,6 +337,7 @@ function LeverageTable({ levels, currentPrice, t }) {
 // ── Key Levels ──
 
 function KeyLevels({ data, t }) {
+  const cardRef = useRef(null)
   if (!data?.summary) return null
   const { summary, current_price } = data
   const longCluster = summary.nearest_long_cluster
@@ -342,8 +346,8 @@ function KeyLevels({ data, t }) {
   if (!longCluster && !shortCluster) return null
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('market:liquidations.nearestClusters')}</h3>
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-3"><h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.nearestClusters')}</h3><CardShareButton cardRef={cardRef} label="Key Levels" filename="key-levels.png" /></div>
       <div className="space-y-2">
         {longCluster && (
           <div className="flex items-center justify-between p-3 rounded-xl bg-accent-red/5 border border-accent-red/15">
@@ -444,6 +448,7 @@ function StatsGrid({ stats, t }) {
 // ── Trading Insight ──
 
 function TradingInsight({ data, stats, t }) {
+  const cardRef = useRef(null)
   if (!data?.summary || !stats) return null
 
   const { summary } = data
@@ -516,8 +521,8 @@ function TradingInsight({ data, stats, t }) {
   if (!insights.length) return null
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-3">{t('market:liquidations.tradingInsights')}</h3>
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-3"><h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.tradingInsights')}</h3><CardShareButton cardRef={cardRef} label="Trading Insights" filename="trading-insights.png" /></div>
       <div className="space-y-2">
         {insights.map((ins, i) => (
           <div key={i} className="flex items-start gap-2 text-[11px]">
@@ -533,6 +538,7 @@ function TradingInsight({ data, stats, t }) {
 // ── Funding Rate + OI History ──
 
 function FundingOIChart({ fundingData, t }) {
+  const cardRef = useRef(null)
   if (!fundingData?.history?.length) return null
 
   const chartData = fundingData.history.map((d) => ({
@@ -544,9 +550,9 @@ function FundingOIChart({ fundingData, t }) {
   const { data: visibleData, bindGestures, isZoomed, resetZoom } = useChartZoom(chartData)
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
       <div className="flex items-center justify-between mb-1">
-        <h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.fundingOiChart')}</h3>
+        <div className="flex items-center gap-2"><h3 className="text-text-secondary text-xs font-semibold">{t('market:liquidations.fundingOiChart')}</h3><CardShareButton cardRef={cardRef} label="Funding & OI" filename="funding-oi.png" /></div>
         {isZoomed && (
           <button onClick={resetZoom} className="text-[10px] text-accent-blue">{t('market:liquidations.reset')}</button>
         )}

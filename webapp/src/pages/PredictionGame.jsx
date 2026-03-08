@@ -196,6 +196,9 @@ export default function PredictionGame() {
   const [refCode, setRefCode] = useState(null)
   const [locked, setLocked] = useState(false)
   const predictionRef = useRef(null)
+  const consensusRef = useRef(null)
+  const statsRef = useRef(null)
+  const leaderboardRef = useRef(null)
 
   const initData = tg?.initData
 
@@ -338,8 +341,8 @@ export default function PredictionGame() {
 
       {/* Community Consensus */}
       {consensus && consensus.total > 0 && (
-        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-          <h3 className="text-sm font-semibold mb-2">{t('game.consensus')}</h3>
+        <div ref={consensusRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <div className="flex items-center justify-between mb-2"><h3 className="text-sm font-semibold">{t('game.consensus')}</h3><CardShareButton cardRef={consensusRef} label="Community Consensus" filename="consensus.png" /></div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-accent-green text-xs font-semibold w-12">{upPct}%</span>
             <div className="flex-1 h-3 bg-bg-primary rounded-full overflow-hidden flex">
@@ -354,8 +357,8 @@ export default function PredictionGame() {
 
       {/* User Stats */}
       {profile && (
-        <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-          <h3 className="text-sm font-semibold mb-2">{t('game.yourStats')}</h3>
+        <div ref={statsRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+          <div className="flex items-center justify-between mb-2"><h3 className="text-sm font-semibold">{t('game.yourStats')}</h3><CardShareButton cardRef={statsRef} label="My Stats" filename="game-stats.png" /></div>
           <div className="grid grid-cols-3 gap-2 mb-2">
             <div className="bg-bg-secondary rounded-xl p-2 text-center">
               <p className="text-text-primary font-bold text-lg">{profile.total_points}</p>
@@ -388,8 +391,8 @@ export default function PredictionGame() {
       )}
 
       {/* Leaderboard */}
-      <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-sm font-semibold mb-2">{t('game.leaderboard')}</h3>
+      <div ref={leaderboardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+        <div className="flex items-center justify-between mb-2"><h3 className="text-sm font-semibold">{t('game.leaderboard')}</h3><CardShareButton cardRef={leaderboardRef} label="Leaderboard" filename="leaderboard.png" /></div>
         <div className="flex gap-1 mb-3">
           {PERIOD_TABS.map((p) => (
             <button

@@ -83,6 +83,7 @@ function LiveSignalCard({ signal, t }) {
 }
 
 function WinLossRecord({ signals, t }) {
+  const cardRef = useRef(null)
   const evaluated = signals.filter(s => s.was_correct != null)
   if (!evaluated.length) return null
 
@@ -91,8 +92,8 @@ function WinLossRecord({ signals, t }) {
   const winPct = (wins / evaluated.length) * 100
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-      <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('signals.performance').toUpperCase()}</h3>
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
+      <div className="flex items-center justify-between mb-2"><h3 className="text-text-secondary text-xs font-semibold">{t('signals.performance').toUpperCase()}</h3><CardShareButton cardRef={cardRef} label="Signal Performance" filename="signal-performance.png" /></div>
       <div className="flex h-2.5 rounded-full overflow-hidden mb-2">
         <div className="bg-accent-green transition-all duration-500" style={{ width: `${winPct}%` }} />
         <div className="bg-accent-red transition-all duration-500" style={{ width: `${100 - winPct}%` }} />
