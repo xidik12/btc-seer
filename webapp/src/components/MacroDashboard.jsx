@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import { formatPricePrecise, formatPercent } from '../utils/format.js'
+import CardShareButton from './CardShareButton'
 
 const CORE_ITEMS = [
   { key: 'dxy', labelKey: 'macro.dxy', icon: '$' },
@@ -122,6 +123,7 @@ export default function MacroDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showAll, setShowAll] = useState(false)
+  const cardRef = useRef(null)
 
   const fetchMacro = useCallback(async () => {
     try {
@@ -144,15 +146,18 @@ export default function MacroDashboard() {
   const items = showAll ? [...CORE_ITEMS, ...EXTENDED_ITEMS] : CORE_ITEMS
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 slide-up">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 slide-up">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-text-primary font-semibold text-sm">
           {t('macro.title')}
         </h3>
         {!loading && !error && (
-          <span className="text-text-muted text-[10px]">
-            {t('macro.updatesEvery5m')}
-          </span>
+          <div className="flex items-center gap-2">
+            <CardShareButton cardRef={cardRef} label="Macro Dashboard" filename="macro.png" />
+            <span className="text-text-muted text-[10px]">
+              {t('macro.updatesEvery5m')}
+            </span>
+          </div>
         )}
       </div>
 

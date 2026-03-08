@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import {
@@ -12,6 +12,7 @@ import {
   getActionBg,
   safeFixed,
 } from '../utils/format.js'
+import CardShareButton from './CardShareButton'
 
 const POLL_INTERVAL = 60_000
 
@@ -61,6 +62,7 @@ export default function SignalPanel() {
   const [signal, setSignal] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const cardRef = useRef(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -132,10 +134,11 @@ export default function SignalPanel() {
       : 'bg-accent-red'
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
-      <h3 className="text-text-primary text-sm font-semibold mb-3">
-        {t('signalPanel.title')}
-      </h3>
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-text-primary text-sm font-semibold">{t('signalPanel.title')}</h3>
+        <CardShareButton cardRef={cardRef} label="Signal Panel" filename="signal-panel.png" />
+      </div>
 
       {/* Action Badge */}
       <div className="flex justify-center mb-4">

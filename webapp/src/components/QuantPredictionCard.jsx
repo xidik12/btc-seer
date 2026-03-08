@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import CardShareButton from './CardShareButton'
 import { api } from '../utils/api.js'
 import {
   formatPricePrecise,
@@ -93,6 +94,7 @@ export default function QuantPredictionCard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [expanded, setExpanded] = useState(false)
+  const cardRef = useRef(null)
 
   const ACTION_STYLES = getActionStyles(t)
 
@@ -148,7 +150,7 @@ export default function QuantPredictionCard() {
   const preds = data.predictions || {}
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -157,11 +159,14 @@ export default function QuantPredictionCard() {
             {actionStyle.label}
           </span>
         </div>
-        {data.timestamp && (
-          <span className="text-text-muted text-[10px]">
-            {formatTimeAgo(data.timestamp)}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          <CardShareButton cardRef={cardRef} label="Quant Prediction" filename="quant-prediction.png" />
+          {data.timestamp && (
+            <span className="text-text-muted text-[10px]">
+              {formatTimeAgo(data.timestamp)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Composite Score Bar */}

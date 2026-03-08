@@ -1,4 +1,6 @@
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import CardShareButton from '../CardShareButton'
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -13,6 +15,7 @@ import {
 
 export default function PLCurve({ data }) {
   const { t } = useTranslation(['market', 'common'])
+  const cardRef = useRef(null)
 
   if (!data || !data.points?.length) {
     return (
@@ -34,7 +37,11 @@ export default function PLCurve({ data }) {
   const todayDate = data.today?.date
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" ref={cardRef}>
+      <div className="flex items-center justify-between mb-1">
+        <div />
+        <CardShareButton cardRef={cardRef} label="Power Law Curve" filename="powerlaw-curve.png" />
+      </div>
       {/* Today Summary */}
       {data.today && (
         <div className="bg-bg-card rounded-2xl p-4 border border-white/5">

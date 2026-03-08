@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip } from 'recharts'
+import CardShareButton from './CardShareButton'
 import { api } from '../utils/api.js'
 import {
   formatPrice,
@@ -29,6 +30,7 @@ export default function PriceWidget() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const cardRef = useRef(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -91,7 +93,7 @@ export default function PriceWidget() {
   }))
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 slide-up">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 slide-up">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -106,6 +108,7 @@ export default function PriceWidget() {
             />
             <span className="text-text-muted text-[10px]">{t('common:app.live')}</span>
           </div>
+          <CardShareButton cardRef={cardRef} label="BTC Price" filename="btc-price.png" />
         </div>
         {updatedAt && (
           <span className="text-text-muted text-xs">

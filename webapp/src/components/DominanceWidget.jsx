@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import { formatPercent } from '../utils/format.js'
 import { useChartZoom } from '../hooks/useChartZoom'
+import CardShareButton from './CardShareButton'
 import {
   ResponsiveContainer,
   AreaChart,
@@ -59,6 +60,7 @@ export default function DominanceWidget() {
 
   const isUp = change24h != null ? change24h >= 0 : true
   const { data: visibleHistory, bindGestures, isZoomed, resetZoom } = useChartZoom(history)
+  const cardRef = useRef(null)
 
   if (loading) {
     return (
@@ -97,10 +99,11 @@ export default function DominanceWidget() {
   }
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 slide-up">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 slide-up">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-text-primary font-semibold text-sm">{t('dominance.title')}</h3>
         <div className="flex items-center gap-2">
+          <CardShareButton cardRef={cardRef} label="BTC Dominance" filename="btc-dominance.png" />
           {isZoomed && (
             <button onClick={resetZoom} className="text-[10px] text-accent-blue">{t('common:btn.resetZoom')}</button>
           )}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ComposedChart,
@@ -14,6 +14,7 @@ import {
   LineChart,
 } from 'recharts'
 import { api } from '../utils/api.js'
+import CardShareButton from './CardShareButton'
 import {
   formatPricePrecise,
   formatPrice,
@@ -233,6 +234,7 @@ export default function PriceChart() {
   }, [candles])
 
   const { data: visibleChartData, bindGestures, isZoomed, resetZoom } = useChartZoom(chartData)
+  const cardRef = useRef(null)
 
   const isPositive = (stats?.change ?? 0) >= 0
   const accentColor = isPositive ? '#00d68f' : '#ff4d6a'
@@ -268,7 +270,7 @@ export default function PriceChart() {
   const toggleOverlay = (key) => setOverlays((o) => ({ ...o, [key]: !o[key] }))
 
   return (
-    <div className="bg-bg-card rounded-2xl overflow-hidden slide-up">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl overflow-hidden slide-up">
       {/* Header */}
       <div className="px-4 pt-3 pb-2">
         <div className="flex items-center justify-between mb-2">
@@ -286,6 +288,7 @@ export default function PriceChart() {
               <span>L <span className="text-accent-red">{formatPrice(stats.low)}</span></span>
             </div>
           )}
+          <CardShareButton cardRef={cardRef} label="BTC Chart" filename="btc-chart.png" />
         </div>
 
         {/* Timeframe buttons */}

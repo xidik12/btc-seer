@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
+import CardShareButton from './CardShareButton'
 
 function getColor(value) {
   if (value <= 20) return '#ff4d6a'
@@ -92,6 +93,7 @@ export default function FearGreedWidget() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const cardRef = useRef(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -141,8 +143,11 @@ export default function FearGreedWidget() {
   const history = (data?.history || []).slice(0, 7).reverse()
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
-      <h3 className="text-text-primary text-sm font-semibold mb-1">{t('fearGreed.title')}</h3>
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-text-primary text-sm font-semibold">{t('fearGreed.title')}</h3>
+        <CardShareButton cardRef={cardRef} label="Fear & Greed" filename="fear-greed.png" />
+      </div>
 
       <GaugeArc value={value} />
 

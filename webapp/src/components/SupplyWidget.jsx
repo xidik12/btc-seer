@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api'
+import CardShareButton from './CardShareButton'
 
 // Halving countdown (reused from HalvingWidget logic)
 const HALVING_DATE = new Date('2028-04-23T00:00:00Z')
@@ -66,6 +67,7 @@ export default function SupplyWidget() {
   const [supply, setSupply] = useState(null)
   const [time, setTime] = useState(getTimeLeft)
   const [error, setError] = useState(false)
+  const cardRef = useRef(null)
 
   useEffect(() => {
     let mounted = true
@@ -104,11 +106,14 @@ export default function SupplyWidget() {
   const schedule = supply?.supply_schedule ?? []
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 slide-up space-y-3">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 slide-up space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-text-primary font-semibold text-sm">{t('supply.title')}</h3>
-        <span className="text-text-muted text-[10px]">{t('supply.cap21M')}</span>
+        <div className="flex items-center gap-2">
+          <CardShareButton cardRef={cardRef} label="BTC Supply" filename="btc-supply.png" />
+          <span className="text-text-muted text-[10px]">{t('supply.cap21M')}</span>
+        </div>
       </div>
 
       {/* Donut + Stats */}

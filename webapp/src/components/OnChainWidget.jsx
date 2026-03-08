@@ -1,13 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../utils/api.js'
 import { formatNumber, safeFixed } from '../utils/format.js'
+import CardShareButton from './CardShareButton'
 
 export default function OnChainWidget() {
   const { t } = useTranslation('dashboard')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const cardRef = useRef(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -80,10 +82,13 @@ export default function OnChainWidget() {
   ]
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 slide-up">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 slide-up">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-text-primary font-semibold text-sm">{t('onChain.title')}</h3>
-        <span className="text-text-muted text-[10px]">{t('onChain.whaleWatching')}</span>
+        <div className="flex items-center gap-2">
+          <CardShareButton cardRef={cardRef} label="On-Chain Data" filename="onchain.png" />
+          <span className="text-text-muted text-[10px]">{t('onChain.whaleWatching')}</span>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {metrics.map((m) => (

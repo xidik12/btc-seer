@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../utils/api'
 import { safeFixed } from '../../utils/format'
+import CardShareButton from '../CardShareButton'
 
 export default function PLCalculator() {
   const { t } = useTranslation(['market', 'common'])
+  const cardRef = useRef(null)
   const [expenses, setExpenses] = useState('3000')
   const [years, setYears] = useState('30')
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -33,12 +35,15 @@ export default function PLCalculator() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" ref={cardRef}>
       {/* Input Form */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-3">
-          {t('market:powerLaw.calculator.title')}
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-text-secondary text-xs font-semibold">
+            {t('market:powerLaw.calculator.title')}
+          </h3>
+          <CardShareButton cardRef={cardRef} label="Price Calculator" filename="price-calculator.png" />
+        </div>
 
         <div className="space-y-3">
           <div>

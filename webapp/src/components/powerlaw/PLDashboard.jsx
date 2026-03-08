@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { safeFixed } from '../../utils/format'
 import CalculationModal, { ClickableStat } from './CalculationModal'
+import CardShareButton from '../CardShareButton'
 
 function ProjectionCard({ label, value, calcKey, calculations, onShowCalc }) {
   const hasCalc = calculations && calcKey && calculations[calcKey]
@@ -31,6 +32,7 @@ export default function PLDashboard({ data }) {
   const { t } = useTranslation(['market', 'common'])
   const [activeCalc, setActiveCalc] = useState(null)
   const [activeLabel, setActiveLabel] = useState('')
+  const cardRef = useRef(null)
 
   const showCalc = (key, label) => {
     if (data?.calculations?.[key]) {
@@ -52,9 +54,13 @@ export default function PLDashboard({ data }) {
   const calcs = data.calculations || {}
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" ref={cardRef}>
       {/* Price Header */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
+        <div className="flex items-center justify-between mb-2">
+          <div />
+          <CardShareButton cardRef={cardRef} label="Power Law Dashboard" filename="powerlaw-dashboard.png" />
+        </div>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-text-muted text-[10px]">{t('market:powerLaw.dashboard.btcPrice')}</div>

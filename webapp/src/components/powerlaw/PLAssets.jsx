@@ -1,4 +1,6 @@
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import CardShareButton from '../CardShareButton'
 
 function getReturnColor(val) {
   if (val === undefined || val === null) return 'text-text-muted'
@@ -20,6 +22,7 @@ function getReturnBg(val) {
 
 export default function PLAssets({ data }) {
   const { t } = useTranslation(['market', 'common'])
+  const cardRef = useRef(null)
 
   if (!data || data.error || !data.years?.length) {
     return (
@@ -32,7 +35,11 @@ export default function PLAssets({ data }) {
   const assetNames = Object.keys(data.assets)
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" ref={cardRef}>
+      <div className="flex items-center justify-between mb-1">
+        <div />
+        <CardShareButton cardRef={cardRef} label="Asset Comparison" filename="asset-comparison.png" />
+      </div>
       {/* Win Count Summary */}
       <div className="grid grid-cols-4 gap-2">
         {assetNames.map(name => {

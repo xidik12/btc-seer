@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
+import CardShareButton from './CardShareButton'
 
 const SENTIMENT_BADGES = {
   bullish: { label: 'Bullish', color: 'text-accent-green bg-accent-green/10 border-accent-green/20' },
@@ -11,6 +12,7 @@ const SENTIMENT_BADGES = {
 export default function DailyBriefingCard() {
   const navigate = useNavigate()
   const [briefing, setBriefing] = useState(null)
+  const cardRef = useRef(null)
 
   useEffect(() => {
     api.getLatestBriefing()
@@ -29,11 +31,13 @@ export default function DailyBriefingCard() {
 
   return (
     <div
+      ref={cardRef}
       onClick={() => navigate('/briefing')}
       className="bg-bg-card rounded-2xl p-4 border border-white/5 cursor-pointer hover:border-accent-blue/20 transition-colors slide-up"
     >
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-text-primary font-semibold text-sm">Daily Briefing</h3>
+        <CardShareButton cardRef={cardRef} label="Daily Briefing" filename="daily-briefing.png" />
         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${badge.color}`}>
           {badge.label}
         </span>

@@ -1,4 +1,6 @@
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import CardShareButton from '../CardShareButton'
 
 const CATEGORY_COLORS = {
   genesis: { bg: 'bg-purple-500/10', border: 'border-purple-500/30', dot: 'bg-purple-500' },
@@ -40,6 +42,7 @@ function MilestoneCard({ milestone }) {
 
 export default function PLMilestones({ data }) {
   const { t } = useTranslation(['market', 'common'])
+  const cardRef = useRef(null)
 
   if (!data || data.error || !data.milestones?.length) {
     return (
@@ -50,12 +53,15 @@ export default function PLMilestones({ data }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" ref={cardRef}>
       {/* Summary */}
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
-        <h3 className="text-text-secondary text-xs font-semibold mb-2">
-          {t('market:powerLaw.milestones.title')}
-        </h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-text-secondary text-xs font-semibold">
+            {t('market:powerLaw.milestones.title')}
+          </h3>
+          <CardShareButton cardRef={cardRef} label="BTC Milestones" filename="btc-milestones.png" />
+        </div>
         <div className="flex flex-wrap gap-2">
           {data.categories?.map(cat => {
             const colors = CATEGORY_COLORS[cat] || CATEGORY_COLORS.technical

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import CardShareButton from './CardShareButton'
 import { api } from '../utils/api.js'
 import { formatPricePrecise, formatTimeAgo, safeFixed } from '../utils/format.js'
 
@@ -25,6 +26,7 @@ export default function PredictionCard() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const cardRef = useRef(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -80,13 +82,14 @@ export default function PredictionCard() {
   const timestamp = rows.find((r) => r.timestamp)?.timestamp
 
   return (
-    <div className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
+    <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-accent-blue">{t('prediction.aiModel')}</span>
           <span className="text-text-muted text-[8px]">{t('prediction.modelDescription')}</span>
         </div>
         <div className="flex items-center gap-2">
+          <CardShareButton cardRef={cardRef} label="AI Prediction" filename="ai-prediction.png" />
           <CountdownTimer />
           {timestamp && (
             <span className="text-text-muted text-[10px]">{formatTimeAgo(timestamp)}</span>
