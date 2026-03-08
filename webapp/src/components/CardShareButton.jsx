@@ -18,16 +18,16 @@ export default function CardShareButton({ cardRef, label, filename }) {
         data-share-btn="true"
         onClick={(e) => { e.stopPropagation(); capture(cardRef, label) }}
         disabled={capturing}
-        className="p-1.5 rounded-lg bg-accent-blue/10 text-accent-blue hover:bg-accent-blue/20 active:scale-95 transition-all disabled:opacity-50"
+        className="p-1.5 rounded-lg bg-white/5 text-text-muted hover:text-accent-blue hover:bg-accent-blue/10 active:scale-90 transition-all disabled:opacity-50"
         title="Share as image"
       >
         {capturing ? (
-          <div className="w-4 h-4 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
+          <div className="w-3.5 h-3.5 border-2 border-accent-blue border-t-transparent rounded-full animate-spin" />
         ) : (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <polyline points="21 15 16 10 5 21" />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+            <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
+            <polyline points="16 6 12 2 8 6" />
+            <line x1="12" y1="2" x2="12" y2="15" />
           </svg>
         )}
       </button>
