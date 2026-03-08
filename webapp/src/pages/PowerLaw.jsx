@@ -231,18 +231,22 @@ const SIGNAL_STYLES = {
   distribution: { label: 'Distribution', color: 'text-accent-red', dot: 'bg-accent-red' },
 }
 
+const BUCKET_COLORS = [
+  'bg-blue-500/20 text-blue-400',
+  'bg-cyan-500/20 text-cyan-400',
+  'bg-teal-500/20 text-teal-400',
+  'bg-green-500/20 text-green-400',
+  'bg-lime-500/20 text-lime-400',
+  'bg-yellow-500/20 text-yellow-400',
+  'bg-orange-500/20 text-orange-400',
+  'bg-red-500/20 text-red-400',
+  'bg-purple-500/20 text-purple-400',
+]
+
 function AdoptionOverlay({ data, t }) {
   if (!data) return null
   const signal = SIGNAL_STYLES[data.whale_signal] || SIGNAL_STYLES.moderate
-
-  const metrics = [
-    { label: t('market:powerLaw.adoption.totalAddresses'), value: data.total_addresses?.toLocaleString() },
-    { label: t('market:powerLaw.adoption.whaleCount'), value: data.whale_count?.toLocaleString() },
-    { label: t('market:powerLaw.adoption.whalePct'), value: `${data.whale_concentration_pct}%` },
-    { label: t('market:powerLaw.adoption.topHolders'), value: data.top_holders?.toLocaleString() },
-    { label: t('market:powerLaw.adoption.topHoldersPct'), value: `${data.top_holders_pct}%` },
-    { label: t('market:powerLaw.adoption.shrimpDominance'), value: `${data.shrimp_dominance_pct}%` },
-  ]
+  const maxCount = Math.max(...(data.buckets || []).map(b => b.count || 0), 1)
 
   return (
     <div className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
@@ -255,14 +259,47 @@ function AdoptionOverlay({ data, t }) {
           </span>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        {metrics.map((m) => (
-          <div key={m.label} className="text-center">
-            <div className="text-text-muted text-[9px] font-medium mb-0.5">{m.label}</div>
-            <div className="text-text-primary text-xs font-bold tabular-nums">{m.value || '--'}</div>
-          </div>
-        ))}
+
+      {/* Summary row */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <div className="text-center">
+          <div className="text-text-muted text-[9px]">{t('market:powerLaw.adoption.totalAddresses')}</div>
+          <div className="text-text-primary text-sm font-bold tabular-nums">{data.total_addresses?.toLocaleString()}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-text-muted text-[9px]">{t('market:powerLaw.adoption.whaleCount')}</div>
+          <div className="text-text-primary text-sm font-bold tabular-nums">{data.whale_count?.toLocaleString()}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-text-muted text-[9px]">{t('market:powerLaw.adoption.shrimpDominance')}</div>
+          <div className="text-text-primary text-sm font-bold tabular-nums">{data.shrimp_dominance_pct}%</div>
+        </div>
       </div>
+
+      {/* Full bucket breakdown */}
+      {data.buckets?.length > 0 && (
+        <div className="space-y-1.5">
+          {data.buckets.map((b, i) => (
+            <div key={b.label} className="flex items-center gap-2">
+              <span className={`text-[9px] font-semibold w-[70px] text-right shrink-0 ${BUCKET_COLORS[i]?.split(' ')[1] || 'text-text-muted'}`}>
+                {b.label}
+              </span>
+              <span className="text-text-muted text-[9px] w-[65px] shrink-0">{b.btc_range} BTC</span>
+              <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${BUCKET_COLORS[i]?.split(' ')[0] || 'bg-accent-blue/20'}`}
+                  style={{ width: `${Math.max(1, Math.log10(b.count + 1) / Math.log10(maxCount + 1) * 100)}%` }}
+                />
+              </div>
+              <span className="text-text-primary text-[10px] font-bold tabular-nums w-[72px] text-right shrink-0">
+                {b.count?.toLocaleString()}
+              </span>
+              <span className="text-text-muted text-[9px] w-[38px] text-right shrink-0">{b.pct}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <p className="text-text-muted text-[9px] mt-3">
         {t('market:powerLaw.adoption.explain')}
       </p>
