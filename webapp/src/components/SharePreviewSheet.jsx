@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getBotUsernameSync } from '../utils/botConfig'
 
@@ -21,16 +21,32 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  const handleTelegram = useCallback(() => {
-    const bot = getBotUsernameSync() || 'BTC_Seer_Bot'
-    const url = `https://t.me/share/url?url=${encodeURIComponent(`https://t.me/${bot}`)}&text=${encodeURIComponent('Check out this BTC Seer analysis!')}`
-    const tg = window.Telegram?.WebApp
-    if (tg?.openTelegramLink) {
-      tg.openTelegramLink(url)
-    } else {
-      window.open(url, '_blank')
+  const handleShareImage = useCallback(async () => {
+    if (!previewUrl) return
+    try {
+      const res = await fetch(previewUrl)
+      const blob = await res.blob()
+      const file = new File([blob], filename || 'btc-seer.png', { type: 'image/png' })
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'BTC Seer',
+          text: 'BTC Seer Analysis',
+        })
+      } else {
+        // Fallback: download
+        const a = document.createElement('a')
+        a.href = previewUrl
+        a.download = filename || 'btc-seer.png'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('Share failed:', err)
     }
-  }, [])
+  }, [previewUrl, filename])
 
   const handleDownload = useCallback(() => {
     if (!previewUrl) return
@@ -42,28 +58,17 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
     document.body.removeChild(a)
   }, [previewUrl, filename])
 
-  const handleNativeShare = useCallback(async () => {
-    if (!previewUrl) return
+  const [copied, setCopied] = useState(false)
+  const handleCopyLink = useCallback(async () => {
     try {
-      const res = await fetch(previewUrl)
-      const blob = await res.blob()
-      const file = new File([blob], filename || 'btc-seer.png', { type: 'image/png' })
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'BTC Seer',
-          text: 'Check out this BTC Seer analysis!',
-        })
-      } else {
-        // Fallback: copy link
-        const bot = getBotUsernameSync() || 'BTC_Seer_Bot'
-        await navigator.clipboard.writeText(`https://t.me/${bot}`)
-      }
+      const bot = getBotUsernameSync() || 'BTC_Seer_Bot'
+      await navigator.clipboard.writeText(`https://t.me/${bot}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      if (err.name !== 'AbortError') console.error('Share failed:', err)
+      console.error('Copy failed:', err)
     }
-  }, [previewUrl, filename])
+  }, [])
 
   if (!previewUrl) return null
 
@@ -100,16 +105,16 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
 
         {/* Action Buttons */}
         <div className="grid grid-cols-3 gap-2 mb-3">
-          {/* Telegram */}
+          {/* Share Image */}
           <button
-            onClick={handleTelegram}
+            onClick={handleShareImage}
             className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-[#2AABEE]/15 border border-[#2AABEE]/30 active:scale-95 transition-all"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="#2AABEE" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
               <path d="M22 2L11 13" />
               <path d="M22 2L15 22L11 13L2 9L22 2Z" />
             </svg>
-            <span className="text-[10px] font-semibold text-[#2AABEE]">Telegram</span>
+            <span className="text-[10px] font-semibold text-[#2AABEE]">{t('share.shareImage')}</span>
           </button>
 
           {/* Download */}
@@ -125,19 +130,24 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
             <span className="text-[10px] font-semibold text-accent-blue">{t('share.download')}</span>
           </button>
 
-          {/* More (native share) */}
+          {/* Copy Link */}
           <button
-            onClick={handleNativeShare}
+            onClick={handleCopyLink}
             className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-white/5 border border-white/10 active:scale-95 transition-all"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-text-secondary">
-              <circle cx="18" cy="5" r="3" />
-              <circle cx="6" cy="12" r="3" />
-              <circle cx="18" cy="19" r="3" />
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-            </svg>
-            <span className="text-[10px] font-semibold text-text-secondary">{t('share.more')}</span>
+            {copied ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-accent-green">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-text-secondary">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+              </svg>
+            )}
+            <span className={`text-[10px] font-semibold ${copied ? 'text-accent-green' : 'text-text-secondary'}`}>
+              {copied ? 'Copied!' : t('share.more')}
+            </span>
           </button>
         </div>
 
