@@ -1,5 +1,11 @@
+import logging
+import secrets
+
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 from pathlib import Path
+
+_config_logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -101,6 +107,16 @@ class Settings(BaseSettings):
     jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = 24
+
+    @model_validator(mode="after")
+    def _ensure_jwt_secret(self) -> "Settings":
+        if not self.jwt_secret_key:
+            self.jwt_secret_key = secrets.token_urlsafe(32)
+            _config_logger.warning(
+                "JWT_SECRET_KEY not set — generated a random secret. "
+                "Set JWT_SECRET_KEY in your environment for stable tokens across restarts."
+            )
+        return self
 
     @property
     def is_postgres(self) -> bool:

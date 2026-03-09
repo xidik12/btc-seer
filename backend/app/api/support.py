@@ -7,7 +7,7 @@ from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, SupportTicket, UserFeedback
-from app.api.admin import _verify_telegram_init_data
+from app.telegram_auth import _verify_telegram_init_data
 from app.config import settings
 
 logger = logging.getLogger(__name__)

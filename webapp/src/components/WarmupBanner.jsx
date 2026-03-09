@@ -11,9 +11,10 @@ export default function WarmupBanner() {
   useEffect(() => {
     let cancelled = false
 
+    const API_BASE = import.meta.env.VITE_API_URL || '/api'
     async function checkHealth() {
       try {
-        const res = await fetch('/api/health')
+        const res = await fetch(`${API_BASE}/health`)
         if (!res.ok) return
         const data = await res.json()
         if (cancelled) return

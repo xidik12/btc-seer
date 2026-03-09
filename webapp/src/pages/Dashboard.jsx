@@ -368,15 +368,6 @@ function DashboardPaywallCTA() {
   const { tier } = useSubscription()
   const hadTrial = tier === 'expired' || tier === 'trial_expired'
 
-  const tg = window.Telegram?.WebApp
-  const openCommunity = () => {
-    if (tg?.openTelegramLink) {
-      tg.openTelegramLink('https://t.me/+-72wnR04tPUyZmIy')
-    } else {
-      window.open('https://t.me/+-72wnR04tPUyZmIy', '_blank')
-    }
-  }
-
   return (
     <div className="space-y-4">
       {hadTrial && (
@@ -417,24 +408,7 @@ function DashboardPaywallCTA() {
       </div>
 
       {/* Community CTA */}
-      <button
-        onClick={openCommunity}
-        className="w-full flex items-center gap-3 bg-bg-card rounded-xl border border-accent-blue/15 p-4 hover:border-accent-blue/30 transition-colors text-left"
-      >
-        <div className="w-9 h-9 rounded-full bg-accent-blue/10 flex items-center justify-center shrink-0">
-          <svg className="w-5 h-5 text-accent-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 2L11 13" />
-            <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-          </svg>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-text-primary text-sm font-medium">{t('paywall.joinCouncil')}</p>
-          <p className="text-text-muted text-[10px]">{t('paywall.councilDesc')}</p>
-        </div>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-text-muted shrink-0">
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
-      </button>
+      <CouncilCTA />
     </div>
   )
 }

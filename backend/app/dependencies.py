@@ -28,6 +28,19 @@ def _inmem_rate_check(ip: str, limit: int, window: int):
         )
     bucket.append(now)
 
+    # Prune empty bucket to avoid memory leak
+    if not bucket:
+        _inmem_buckets.pop(ip, None)
+
+    # Periodic bulk cleanup when too many keys accumulate
+    if len(_inmem_buckets) > 10000:
+        stale_keys = [
+            k for k, v in _inmem_buckets.items()
+            if not v or v[-1] < now - window
+        ]
+        for k in stale_keys:
+            del _inmem_buckets[k]
+
 
 async def rate_limit(
     request: Request,

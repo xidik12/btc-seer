@@ -16,7 +16,7 @@ from app.database import (
     WhaleTransaction, BotUser, PaymentHistory, Referral,
     TradeResult, SupportTicket, PortfolioState,
 )
-from app.api.admin import _verify_telegram_init_data
+from app.telegram_auth import _verify_telegram_init_data
 from app.config import settings
 
 logger = logging.getLogger(__name__)

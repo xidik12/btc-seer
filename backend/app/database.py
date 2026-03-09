@@ -18,8 +18,8 @@ def _create_engine():
         return create_async_engine(
             url,
             echo=False,
-            pool_size=20,
-            max_overflow=40,
+            pool_size=10,
+            max_overflow=20,
             pool_pre_ping=True,
             pool_recycle=1800,
             pool_timeout=10,

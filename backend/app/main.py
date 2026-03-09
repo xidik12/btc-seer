@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.responses import Response
+from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -405,9 +406,7 @@ async def lifespan(app: FastAPI):
                 _safe_run(collect_macro_data(), "collect_macro_data"),
             )
 
-            logger.info("Core data loaded")
-            _data_ready = True
-            logger.info("data_ready=True (core data available, secondary loading in background)")
+            logger.info("Core data loaded — continuing pipeline...")
 
             # Step 3: Seed tracked coins + secondary data (not blocking readiness)
             await _safe_run(seed_tracked_coins(), "seed_tracked_coins")
@@ -540,6 +539,15 @@ app.add_middleware(
 # API Key authentication middleware (for /api/v1/ public endpoints)
 from app.middleware.auth import APIKeyMiddleware
 app.add_middleware(APIKeyMiddleware)
+
+
+@app.middleware("http")
+async def timeout_middleware(request: Request, call_next):
+    try:
+        return await asyncio.wait_for(call_next(request), timeout=60.0)
+    except asyncio.TimeoutError:
+        return JSONResponse({"error": "Request timeout"}, status_code=504)
+
 
 # Include API routers
 app.include_router(predictions.router)

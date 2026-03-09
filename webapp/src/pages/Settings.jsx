@@ -144,7 +144,7 @@ export default function Settings() {
 
     try {
       // Get invoice link from backend
-      const { invoice_link } = await api.createInvoice(selectedTier.key)
+      const { invoice_link } = await api.createInvoice(tg?.initData || '', selectedTier.key)
 
       if (!invoice_link) {
         throw new Error('No invoice link received')

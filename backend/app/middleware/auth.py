@@ -1,6 +1,6 @@
 """API Key authentication middleware for public API monetization.
 
-Extracts API key from X-API-Key header or ?api_key= query param.
+Extracts API key from X-API-Key header.
 Skips auth for internal webapp requests (non-/api/v1/ paths).
 Validates key, checks tier permissions, enforces rate limits, logs usage.
 
@@ -66,13 +66,13 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         if not settings.api_key_enabled:
             return await call_next(request)
 
-        # Extract API key from header or query param
-        api_key = request.headers.get("X-API-Key") or request.query_params.get("api_key")
+        # Extract API key from header only
+        api_key = request.headers.get("X-API-Key")
 
         if not api_key:
             return JSONResponse(
                 status_code=401,
-                content={"error": "API key required. Pass via X-API-Key header or ?api_key= param."},
+                content={"error": "API key required. Pass via X-API-Key header."},
             )
 
         # Validate key

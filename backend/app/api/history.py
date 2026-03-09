@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func, case, cast, Date, text
+from sqlalchemy import select, func, case, cast, Date, text, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session, Prediction
@@ -26,7 +26,7 @@ async def get_accuracy(
     overall_result = await session.execute(
         select(
             func.count().label("total"),
-            func.count().filter(Prediction.was_correct == True).label("correct"),
+            func.sum(case((Prediction.was_correct == True, 1), else_=0)).label("correct"),
         )
         .where(Prediction.timestamp >= since)
         .where(Prediction.was_correct.isnot(None))
@@ -48,7 +48,7 @@ async def get_accuracy(
         select(
             Prediction.timeframe,
             func.count().label("total"),
-            func.count().filter(Prediction.was_correct == True).label("correct"),
+            func.sum(case((Prediction.was_correct == True, 1), else_=0)).label("correct"),
         )
         .where(Prediction.timestamp >= since)
         .where(Prediction.was_correct.isnot(None))
@@ -75,7 +75,7 @@ async def get_accuracy(
                 else_="low",
             ).label("level"),
             func.count().label("total"),
-            func.count().filter(Prediction.was_correct == True).label("correct"),
+            func.sum(case((Prediction.was_correct == True, 1), else_=0)).label("correct"),
         )
         .where(Prediction.timestamp >= since)
         .where(Prediction.was_correct.isnot(None))
@@ -97,7 +97,7 @@ async def get_accuracy(
         SELECT
             CAST(timestamp AS DATE) as day,
             COUNT(*) as total,
-            COUNT(*) FILTER (WHERE was_correct = true) as correct
+            SUM(CASE WHEN was_correct = true THEN 1 ELSE 0 END) as correct
         FROM predictions
         WHERE timestamp >= :since AND was_correct IS NOT NULL
         GROUP BY CAST(timestamp AS DATE)

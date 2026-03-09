@@ -7,7 +7,7 @@ from sqlalchemy import select, func, desc
 
 from app.config import settings
 from app.database import async_session, BotUser, Referral
-from app.api.admin import _verify_telegram_init_data
+from app.telegram_auth import _verify_telegram_init_data
 from app.bot.referral import get_or_create_referral_code
 from app.dependencies import standard_rate_limit
 

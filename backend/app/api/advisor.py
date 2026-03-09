@@ -10,7 +10,7 @@ from app.database import (
     Prediction, Signal, QuantPrediction, IndicatorSnapshot, EventImpact,
     WhaleTransaction,
 )
-from app.api.admin import _verify_telegram_init_data
+from app.telegram_auth import _verify_telegram_init_data
 from app.dependencies import standard_rate_limit
 
 router = APIRouter(prefix="/api/advisor", tags=["advisor"], dependencies=[Depends(standard_rate_limit)])
@@ -333,69 +333,68 @@ async def close_trade(trade_id: int, body: TradeClose, request: Request):
     caller_id = _get_authenticated_user(request)
 
     async with async_session() as session:
+        # Lock the row to prevent race conditions
         result = await session.execute(
-            select(TradeAdvice).where(TradeAdvice.id == trade_id)
+            select(TradeAdvice).where(TradeAdvice.id == trade_id).with_for_update()
         )
         trade = result.scalar_one_or_none()
 
-    if not trade:
-        raise HTTPException(404, "Trade not found")
-    if trade.telegram_id != caller_id:
-        raise HTTPException(403, "Not authorized to close this trade")
-    if trade.status in ("closed", "cancelled"):
-        raise HTTPException(400, f"Trade is already {trade.status}")
+        if not trade:
+            raise HTTPException(404, "Trade not found")
+        if trade.telegram_id != caller_id:
+            raise HTTPException(403, "Not authorized to close this trade")
+        if trade.status in ("closed", "cancelled"):
+            raise HTTPException(400, f"Trade is already {trade.status}")
 
-    # For mock trades, record result directly without portfolio impact
-    if trade.is_mock:
-        async with async_session() as session:
-            result = await session.execute(
-                select(TradeAdvice).where(TradeAdvice.id == trade_id)
-            )
-            t = result.scalar_one()
-
+        # For mock trades, record result directly without portfolio impact
+        if trade.is_mock:
             # Calculate PnL
-            if t.direction == "LONG":
-                pnl_pct = ((body.exit_price - t.entry_price) / t.entry_price) * 100
+            if trade.direction == "LONG":
+                pnl_pct = ((body.exit_price - trade.entry_price) / trade.entry_price) * 100
             else:
-                pnl_pct = ((t.entry_price - body.exit_price) / t.entry_price) * 100
-            pnl_pct_leveraged = pnl_pct * t.leverage
-            pnl_usdt = t.position_size_usdt * (pnl_pct_leveraged / 100)
+                pnl_pct = ((trade.entry_price - body.exit_price) / trade.entry_price) * 100
+            pnl_pct_leveraged = pnl_pct * trade.leverage
+            pnl_usdt = trade.position_size_usdt * (pnl_pct_leveraged / 100)
 
             trade_result = TradeResult(
                 trade_advice_id=trade_id,
-                telegram_id=t.telegram_id,
-                direction=t.direction,
-                entry_price=t.entry_price,
+                telegram_id=trade.telegram_id,
+                direction=trade.direction,
+                entry_price=trade.entry_price,
                 exit_price=body.exit_price,
-                leverage=t.leverage,
-                position_size_usdt=t.position_size_usdt,
+                leverage=trade.leverage,
+                position_size_usdt=trade.position_size_usdt,
                 pnl_usdt=pnl_usdt,
                 pnl_pct=pnl_pct,
                 pnl_pct_leveraged=pnl_pct_leveraged,
                 was_winner=pnl_usdt > 0,
                 close_reason=body.reason,
-                duration_minutes=int((datetime.utcnow() - (t.opened_at or t.timestamp)).total_seconds() / 60) if t.opened_at else 0,
+                duration_minutes=int((datetime.utcnow() - (trade.opened_at or trade.timestamp)).total_seconds() / 60) if trade.opened_at else 0,
             )
             session.add(trade_result)
 
-            t.status = "closed"
-            t.closed_at = datetime.utcnow()
-            t.close_reason = body.reason
+            trade.status = "closed"
+            trade.closed_at = datetime.utcnow()
+            trade.close_reason = body.reason
             await session.commit()
             await session.refresh(trade_result)
 
-        return {
-            "trade_id": trade_id,
-            "pnl_usdt": trade_result.pnl_usdt,
-            "pnl_pct_leveraged": trade_result.pnl_pct_leveraged,
-            "was_winner": trade_result.was_winner,
-            "balance_after": None,
-        }
+            return {
+                "trade_id": trade_id,
+                "pnl_usdt": trade_result.pnl_usdt,
+                "pnl_pct_leveraged": trade_result.pnl_pct_leveraged,
+                "was_winner": trade_result.was_winner,
+                "balance_after": None,
+            }
 
+        # Real trade — save telegram_id before session closes
+        telegram_id = trade.telegram_id
+
+    # For real trades, use the portfolio module (manages its own session)
     from app.advisor.portfolio import record_trade_result
 
     trade_result = await record_trade_result(
-        telegram_id=trade.telegram_id,
+        telegram_id=telegram_id,
         trade_id=trade_id,
         exit_price=body.exit_price,
         reason=body.reason,

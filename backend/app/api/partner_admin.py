@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import async_session, Partner, PartnerReferral, BotUser
-from app.api.admin import _verify_telegram_init_data
+from app.telegram_auth import _verify_telegram_init_data
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin/partners", tags=["partner-admin"])

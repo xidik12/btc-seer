@@ -254,7 +254,9 @@ export const api = {
   }),
 
   // Subscription (no cache)
-  createInvoice: (tier) => fetchAPI(`/subscription/create-invoice?tier=${tier}`),
+  createInvoice: (initData, tier) => fetchAPI(`/subscription/create-invoice?tier=${tier}`, {
+    headers: { 'X-Telegram-Init-Data': initData },
+  }),
   getSubscriptionStatus: (initData) => fetchAPI('/subscription/status', {
     headers: { 'X-Telegram-Init-Data': initData },
   }),

@@ -235,7 +235,7 @@ async def get_whale_stats(
     accuracy_result = await session.execute(
         select(
             func.count().label("total"),
-            func.count().filter(WhaleTransaction.direction_was_predictive == True).label("predictive"),
+            func.sum(case((WhaleTransaction.direction_was_predictive == True, 1), else_=0)).label("predictive"),
         )
         .where(
             WhaleTransaction.evaluated_1h == True,

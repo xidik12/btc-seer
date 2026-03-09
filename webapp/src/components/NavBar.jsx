@@ -14,7 +14,7 @@ export default function NavBar() {
     <nav className="fixed bottom-0 left-0 right-0 bg-bg-secondary/95 backdrop-blur-md border-t border-white/5 flex justify-around items-center h-14 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       {/* Back */}
       <button
-        onClick={() => { hapticFeedback?.selectionChanged(); navigate(-1) }}
+        onClick={() => { hapticFeedback?.selectionChanged(); window.history.length > 1 ? navigate(-1) : navigate('/') }}
         disabled={isHome}
         className={`flex flex-col items-center gap-0.5 px-6 py-2 transition-all duration-200 ${
           isHome ? 'text-accent-yellow/20' : 'text-accent-yellow/60 hover:text-accent-yellow active:scale-90'

@@ -10,7 +10,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.database import async_session, BotUser, PaymentHistory
-from app.api.admin import _verify_telegram_init_data
+from app.telegram_auth import _verify_telegram_init_data
 from app.bot.subscription import is_premium, get_status_text
 from app.dependencies import strict_rate_limit
 

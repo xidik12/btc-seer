@@ -84,15 +84,11 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 24, color: 'white', fontFamily: 'monospace' }}>
+        <div style={{ padding: 24, color: 'white', fontFamily: 'sans-serif', textAlign: 'center' }}>
           <h2 style={{ color: '#ff4d6a' }}>Something went wrong</h2>
-          <pre style={{ fontSize: 12, color: '#aaa', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-            {this.state.error?.message}
-            {'\n\n'}
-            {this.state.error?.stack}
-            {'\n\n'}
-            {this.state.errorInfo?.componentStack}
-          </pre>
+          <p style={{ fontSize: 14, color: '#aaa', marginTop: 8 }}>
+            Something went wrong. Please refresh the app.
+          </p>
           <button
             onClick={() => window.location.reload()}
             style={{ marginTop: 16, padding: '8px 16px', background: '#4a9eff', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer' }}

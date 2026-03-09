@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import DOMPurify from 'dompurify'
 
 const I = (children, sm) => (
   <svg className={sm ? 'w-4 h-4 text-accent-blue' : 'w-5 h-5 text-accent-blue'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -113,10 +114,10 @@ export default function About() {
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
         <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('about:whatIs.title')}</h3>
         <div className="text-text-muted text-[11px] space-y-2">
-          <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p1') }} />
-          <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p2') }} />
-          <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p3') }} />
-          <p dangerouslySetInnerHTML={{ __html: t('about:whatIs.p4') }} />
+          <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t('about:whatIs.p1')) }} />
+          <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t('about:whatIs.p2')) }} />
+          <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t('about:whatIs.p3')) }} />
+          <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t('about:whatIs.p4')) }} />
         </div>
       </div>
 
@@ -337,7 +338,7 @@ export default function About() {
           <div className="flex items-center gap-3">
             <img src="/incognito-generation.png" alt="Incognito Generation" className="w-10 h-10 rounded-lg" />
             <div>
-              <p dangerouslySetInnerHTML={{ __html: t('about:credits.createdBy') }} />
+              <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t('about:credits.createdBy')) }} />
               <p className="text-[10px] mt-0.5">{t('about:credits.projectNote')}</p>
             </div>
           </div>
