@@ -61,20 +61,27 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  // ── Share Image (Send to Chat in TG, Web Share API elsewhere) ──
+  // ── Share Image (Upload + Telegram share dialog, or Web Share API elsewhere) ──
   const handleShareImage = useCallback(async () => {
     if (!previewUrl || loading) return
 
     if (isTelegramWebView) {
-      // Send image directly to user's bot chat
       setLoading('share')
       try {
-        await api.sendImageToChat(getInitData(), previewUrl)
-        setToast({ type: 'success', text: t('share.sentToChat', 'Image sent to your chat!') })
-        setTimeout(onClose, 1200)
+        // Upload image to get a public HTTPS URL
+        const { url: relativePath } = await api.uploadShareImage(getInitData(), previewUrl)
+        const fullUrl = `${window.location.origin}${relativePath}`
+
+        // Open Telegram's native share dialog — user picks the chat
+        const bot = getBotUsernameSync() || 'BTC_Seer_Bot'
+        const shareText = `BTC analysis from @${bot}`
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(fullUrl)}&text=${encodeURIComponent(shareText)}`
+
+        window.Telegram.WebApp.openTelegramLink(shareUrl)
+        onClose()
       } catch (err) {
-        console.error('Send to chat failed:', err)
-        setToast({ type: 'error', text: t('share.sendFailed', 'Failed to send image') })
+        console.error('Share failed:', err)
+        setToast({ type: 'error', text: t('share.sendFailed', 'Failed to share image') })
       } finally {
         setLoading(null)
       }
@@ -215,7 +222,7 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
               </svg>
             )}
             <span className="text-[10px] font-semibold text-[#2AABEE]">
-              {isTelegramWebView ? t('share.sendToChat', 'Send to Chat') : t('share.shareImage')}
+              {t('share.shareImage', 'Share')}
             </span>
           </button>
 
