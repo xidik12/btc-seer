@@ -29,7 +29,7 @@ COPY backend/ .
 COPY --from=frontend-build /webapp/dist /webapp/dist
 
 # Create data directories (Railway volume mounts at /data)
-RUN mkdir -p ml/data /data /data/weights /data/backups
+RUN mkdir -p ml/data /data /data/weights /data/backups /data/uploads
 
 # Railway provides PORT env var
 ENV PORT=8000

@@ -1,9 +1,21 @@
 import { domToPng } from 'modern-screenshot'
+import { getBotUsernameSync } from './botConfig'
+
+const isAndroid = /android/i.test(navigator.userAgent)
+
+/** Lazy-load html2canvas only when needed (Android) */
+let _html2canvas = null
+async function getHtml2Canvas() {
+  if (!_html2canvas) {
+    _html2canvas = (await import('html2canvas')).default
+  }
+  return _html2canvas
+}
 
 /**
  * Capture a card DOM element as a branded PNG data URL.
- * Captures the ORIGINAL element (preserving all computed styles),
- * then overlays a watermark via canvas.
+ * Uses html2canvas on Android (SVG foreignObject is broken in Android WebView),
+ * and modern-screenshot on iOS/desktop where it works perfectly.
  *
  * @param {HTMLElement} element - The card element to capture
  * @param {string} label - Label for the watermark (e.g. "Power Law")
@@ -15,34 +27,49 @@ export async function captureCard(element, label = '') {
   // Wait for animations to settle
   await new Promise((resolve) => requestAnimationFrame(resolve))
 
-  // Capture the original element directly — keeps all computed styles
-  const rawDataUrl = await domToPng(element, {
-    scale: 2,
-    backgroundColor: '#0f0f14',
-    style: {
-      // Override glassmorphism for clean render
-      backdropFilter: 'none',
-      webkitBackdropFilter: 'none',
-    },
-    filter: (node) => {
-      // Hide the share button itself from the capture
-      if (node?.dataset?.shareBtn === 'true') return false
-      return true
-    },
-  })
+  let rawDataUrl
 
-  // Add watermark via canvas
+  if (isAndroid) {
+    // html2canvas re-parses CSS and paints to canvas directly —
+    // works reliably on Android WebView where foreignObject fails
+    const html2canvas = await getHtml2Canvas()
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      backgroundColor: '#0f0f14',
+      useCORS: true,
+      logging: false,
+      ignoreElements: (el) => el?.dataset?.shareBtn === 'true',
+    })
+    rawDataUrl = canvas.toDataURL('image/png')
+  } else {
+    // modern-screenshot works great on iOS / desktop
+    rawDataUrl = await domToPng(element, {
+      scale: 2,
+      backgroundColor: '#0f0f14',
+      style: {
+        backdropFilter: 'none',
+        webkitBackdropFilter: 'none',
+      },
+      filter: (node) => {
+        if (node?.dataset?.shareBtn === 'true') return false
+        return true
+      },
+    })
+  }
+
   return addWatermark(rawDataUrl, label)
 }
 
 /**
  * Overlay a branded watermark bar at the bottom of the image.
+ * Line 1: "₿ BTC Seer" (left) + "Label · Date" (right)
+ * Line 2: "t.me/BTC_Seer_Bot" (left)
  */
 function addWatermark(dataUrl, label) {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => {
-      const barHeight = 48
+      const barHeight = 72
       const canvas = document.createElement('canvas')
       canvas.width = img.width
       canvas.height = img.height + barHeight
@@ -68,13 +95,15 @@ function addWatermark(dataUrl, label) {
       ctx.lineTo(canvas.width, img.height)
       ctx.stroke()
 
-      // Left text: ₿ BTC Seer
+      const botUsername = getBotUsernameSync() || 'BTC_Seer_Bot'
+
+      // Line 1 left: ₿ BTC Seer
       ctx.fillStyle = '#c8a84e'
       ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       ctx.textBaseline = 'middle'
-      ctx.fillText('\u20BF BTC Seer', 24, img.height + barHeight / 2)
+      ctx.fillText('\u20BF BTC Seer', 24, img.height + barHeight * 0.33)
 
-      // Right text: label · date
+      // Line 1 right: Label · Date
       const dateStr = new Date().toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -84,7 +113,12 @@ function addWatermark(dataUrl, label) {
       ctx.fillStyle = '#9090a8'
       ctx.font = '20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       const rightWidth = ctx.measureText(rightText).width
-      ctx.fillText(rightText, canvas.width - rightWidth - 24, img.height + barHeight / 2)
+      ctx.fillText(rightText, canvas.width - rightWidth - 24, img.height + barHeight * 0.33)
+
+      // Line 2: bot link
+      ctx.fillStyle = '#6e6e88'
+      ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText(`t.me/${botUsername}`, 24, img.height + barHeight * 0.72)
 
       resolve(canvas.toDataURL('image/png'))
     }

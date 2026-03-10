@@ -410,6 +410,18 @@ export const api = {
   // Dashboard summary (single consolidated call)
   getDashboardSummary: () => cachedFetch('/dashboard/summary', T30),
 
+  // Share (image upload + send to Telegram chat)
+  uploadShareImage: (initData, imageDataUrl) => fetchAPI('/share/upload', {
+    method: 'POST',
+    headers: { 'X-Telegram-Init-Data': initData },
+    body: JSON.stringify({ image: imageDataUrl }),
+  }),
+  sendImageToChat: (initData, imageDataUrl) => fetchAPI('/share/send-to-chat', {
+    method: 'POST',
+    headers: { 'X-Telegram-Init-Data': initData },
+    body: JSON.stringify({ image: imageDataUrl }),
+  }),
+
   // Market Overview (TradingView-style)
   getForexData: () => cachedFetch('/market/forex', T120),
   getCommoditiesData: () => cachedFetch('/market/commodities', T120),

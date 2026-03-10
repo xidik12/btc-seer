@@ -33,6 +33,7 @@ from app.api import powerlaw, public_api, liquidations, elliott_wave, subscripti
 from app.api import arbitrage as arbitrage_api, listings as listings_api, memecoins as memecoins_api
 from app.api import partner_admin as partner_admin_api, partner_dashboard as partner_dashboard_api
 from app.api import alerts as alerts_api, briefings as briefings_api, game as game_api, smartmoney as smartmoney_api
+from app.api import share as share_api
 from app.api import websocket as websocket_api
 from app.api import calendar as calendar_api
 from app.api import dashboard as dashboard_api
@@ -226,6 +227,18 @@ async def lifespan(app: FastAPI):
         # Cleanup
         scheduler.add_job(_lazy_job("app.scheduler.jobs", "cleanup_old_data"), "interval", hours=24, id="cleanup", **_job_defaults)
 
+        # Clean up temp share uploads older than 1 hour (every 30 min)
+        async def _cleanup_share_uploads():
+            import time
+            uploads = Path("/data/uploads")
+            if not uploads.exists():
+                return
+            cutoff = time.time() - 3600
+            for f in uploads.iterdir():
+                if f.is_file() and f.stat().st_mtime < cutoff:
+                    f.unlink(missing_ok=True)
+        scheduler.add_job(_cleanup_share_uploads, "interval", minutes=30, id="cleanup_share_uploads", **_job_defaults)
+
         # Auto-retrain: check every 6 hours if models need retraining (more frequent continuous learning)
         scheduler.add_job(_lazy_job("app.scheduler.jobs", "auto_retrain_models"), "interval", hours=6, id="auto_retrain", **_job_defaults)
 
@@ -278,6 +291,7 @@ async def lifespan(app: FastAPI):
             from app.bot.alerts import AlertSender
 
             bot, dp = create_bot()
+            app.state.bot = bot
             alert_sender = AlertSender(bot)
 
             # Add alert job
@@ -585,6 +599,12 @@ app.include_router(websocket_api.router)
 app.include_router(calendar_api.router)
 app.include_router(dashboard_api.router)
 app.include_router(address_distribution_api.router)
+app.include_router(share_api.router)
+
+# Mount share uploads directory (served as static files for HTTPS download)
+_uploads_dir = Path("/data/uploads")
+_uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 
 
 @app.get("/health")
