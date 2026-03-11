@@ -68,12 +68,25 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
     if (isTelegramWebView) {
       setLoading('share')
       try {
-        // Upload image and get share ID for inline query
+        // Upload image and get share ID
         const { id: shareId } = await api.uploadShareImage(getInitData(), previewUrl)
 
-        // Open Telegram's inline share — user picks chat, bot sends the actual image
-        const chatTypes = ['users', 'bots', 'groups', 'channels']
-        window.Telegram.WebApp.switchInlineQuery(shareId, chatTypes)
+        // Try inline query first (sends actual image, no URL visible)
+        if (window.Telegram.WebApp.switchInlineQuery) {
+          try {
+            window.Telegram.WebApp.switchInlineQuery(shareId, ['users', 'bots', 'groups', 'channels'])
+            onClose()
+            return
+          } catch (_) {
+            // Inline mode not enabled or not supported — fall through
+          }
+        }
+
+        // Fallback: share the OG view page (shows image card in preview)
+        const viewUrl = `${window.location.origin}/api/share/view/${shareId}`
+        window.Telegram.WebApp.openTelegramLink(
+          `https://t.me/share/url?url=${encodeURIComponent(viewUrl)}`
+        )
         onClose()
       } catch (err) {
         console.error('Share failed:', err)

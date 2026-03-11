@@ -70,9 +70,9 @@ async def share_view_page(share_id: str, request: Request):
         '<meta property="og:image:height" content="1080">'
         '<meta property="og:type" content="website">'
         '<meta name="twitter:card" content="summary_large_image">'
-        f'<meta http-equiv="refresh" content="0;url={bot_url}">'
         "<title>BTC Seer</title></head>"
-        f'<body><p>Redirecting to <a href="{bot_url}">BTC Seer</a>...</p></body></html>'
+        f'<body><script>window.location.href="{bot_url}";</script>'
+        f'<p><a href="{bot_url}">Open BTC Seer</a></p></body></html>'
     )
     return HTMLResponse(content=html)
 
