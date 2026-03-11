@@ -6,6 +6,7 @@ from io import BytesIO
 from pathlib import Path
 
 from fastapi import APIRouter, Request, HTTPException
+from fastapi.responses import HTMLResponse
 
 from app.telegram_auth import _verify_telegram_init_data
 
@@ -42,7 +43,38 @@ async def upload_share_image(request: Request):
     filepath = UPLOADS_DIR / filename
     filepath.write_bytes(img_bytes)
 
-    return {"url": f"/uploads/{filename}"}
+    return {"url": f"/uploads/{filename}", "id": filename.replace(".png", "")}
+
+
+@router.get("/view/{share_id}")
+async def share_view_page(share_id: str, request: Request):
+    """HTML page with OG meta tags so Telegram renders a rich image card."""
+    if not share_id.isalnum() or len(share_id) > 40:
+        raise HTTPException(status_code=404)
+
+    filename = f"{share_id}.png"
+    if not (UPLOADS_DIR / filename).exists():
+        raise HTTPException(status_code=404)
+
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("host", request.url.netloc)
+    image_url = f"{scheme}://{host}/uploads/{filename}"
+    bot_url = "https://t.me/BTC_Seer_Bot"
+
+    html = (
+        "<!DOCTYPE html><html><head>"
+        '<meta property="og:title" content="BTC Seer Analysis">'
+        '<meta property="og:description" content="AI-powered Bitcoin market intelligence">'
+        f'<meta property="og:image" content="{image_url}">'
+        '<meta property="og:image:width" content="1080">'
+        '<meta property="og:image:height" content="1080">'
+        '<meta property="og:type" content="website">'
+        '<meta name="twitter:card" content="summary_large_image">'
+        f'<meta http-equiv="refresh" content="0;url={bot_url}">'
+        "<title>BTC Seer</title></head>"
+        f'<body><p>Redirecting to <a href="{bot_url}">BTC Seer</a>...</p></body></html>'
+    )
+    return HTMLResponse(content=html)
 
 
 @router.post("/send-to-chat")

@@ -68,14 +68,12 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
     if (isTelegramWebView) {
       setLoading('share')
       try {
-        // Upload image to get a public HTTPS URL
-        const { url: relativePath } = await api.uploadShareImage(getInitData(), previewUrl)
-        const fullUrl = `${window.location.origin}${relativePath}`
+        // Upload image and get share ID for the OG-tagged view page
+        const { id: shareId } = await api.uploadShareImage(getInitData(), previewUrl)
+        const viewUrl = `${window.location.origin}/api/share/view/${shareId}`
 
-        // Open Telegram's native share dialog — user picks the chat
-        const bot = getBotUsernameSync() || 'BTC_Seer_Bot'
-        const shareText = `BTC analysis from @${bot}`
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(fullUrl)}&text=${encodeURIComponent(shareText)}`
+        // Open Telegram's native share dialog — rich card preview + bot link
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(viewUrl)}`
 
         window.Telegram.WebApp.openTelegramLink(shareUrl)
         onClose()
