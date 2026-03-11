@@ -2,8 +2,13 @@ import logging
 import time
 from datetime import datetime
 
+from pathlib import Path
+
 from aiogram import Bot, Dispatcher, F, Router, BaseMiddleware
-from aiogram.types import CallbackQuery, Message, PreCheckoutQuery, LabeledPrice
+from aiogram.types import (
+    CallbackQuery, Message, PreCheckoutQuery, LabeledPrice,
+    InlineQuery, InlineQueryResultPhoto,
+)
 from sqlalchemy import select, desc, update
 
 from app.config import settings
@@ -586,6 +591,41 @@ async def cb_timeframe(callback: CallbackQuery):
         await callback.answer("Failed to load prediction.", show_alert=True)
 
 
+# ── Inline query router (share images via inline mode) ──
+inline_router = Router()
+UPLOADS_DIR = Path("/data/uploads")
+
+
+@inline_router.inline_query()
+async def handle_inline_share(query: InlineQuery):
+    """Return uploaded share image as an inline photo result."""
+    share_id = query.query.strip()
+    if not share_id or not share_id.isalnum() or len(share_id) > 40:
+        await query.answer([], cache_time=1)
+        return
+
+    filename = f"{share_id}.png"
+    if not (UPLOADS_DIR / filename).exists():
+        await query.answer([], cache_time=1)
+        return
+
+    base_url = settings.telegram_webapp_url.rstrip("/")
+    if not base_url:
+        await query.answer([], cache_time=1)
+        return
+
+    photo_url = f"{base_url}/uploads/{filename}"
+    result = InlineQueryResultPhoto(
+        id=share_id,
+        photo_url=photo_url,
+        thumbnail_url=photo_url,
+        photo_width=1080,
+        photo_height=1080,
+        caption="🔮 BTC Seer — AI Bitcoin Analysis\nhttps://t.me/BTC_Seer_Bot",
+    )
+    await query.answer([result], cache_time=300)
+
+
 def create_bot() -> tuple[Bot, Dispatcher]:
     """Create and configure the Telegram bot."""
     bot = Bot(token=settings.telegram_bot_token)
@@ -598,5 +638,6 @@ def create_bot() -> tuple[Bot, Dispatcher]:
     dp.include_router(payment_router)  # Payment handlers first (pre_checkout must be fast)
     dp.include_router(commands_router)
     dp.include_router(callback_router)
+    dp.include_router(inline_router)
 
     return bot, dp

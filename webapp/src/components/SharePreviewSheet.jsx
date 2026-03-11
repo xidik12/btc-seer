@@ -68,14 +68,12 @@ export default function SharePreviewSheet({ previewUrl, filename, onClose }) {
     if (isTelegramWebView) {
       setLoading('share')
       try {
-        // Upload image and get share ID for the OG-tagged view page
+        // Upload image and get share ID for inline query
         const { id: shareId } = await api.uploadShareImage(getInitData(), previewUrl)
-        const viewUrl = `${window.location.origin}/api/share/view/${shareId}`
 
-        // Open Telegram's native share dialog — rich card preview + bot link
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(viewUrl)}`
-
-        window.Telegram.WebApp.openTelegramLink(shareUrl)
+        // Open Telegram's inline share — user picks chat, bot sends the actual image
+        const chatTypes = ['users', 'bots', 'groups', 'channels']
+        window.Telegram.WebApp.switchInlineQuery(shareId, chatTypes)
         onClose()
       } catch (err) {
         console.error('Share failed:', err)
