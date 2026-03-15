@@ -213,8 +213,11 @@ class EnsemblePredictor:
             adjusted_prob = 0.5 + (base_prob - 0.5) * modifier
             adjusted_prob = max(0.05, min(0.95, adjusted_prob))
 
-            # Confidence scoring — based on signal strength, model agreement, training status
+            # Extract per-model confidence scores
             xgb_conf = xgb_pred_tf.get("confidence", 0)
+            tft_conf = tft_tf.get("confidence", 0)
+            lstm_conf = lstm_tf.get("confidence", 0)
+            tfm_conf = tfm_tf.get("confidence", 0)
             signal_strength = abs(adjusted_prob - 0.5) * 2  # 0-1 scale
 
             # Base: proportional to signal strength (no free 30-point floor)

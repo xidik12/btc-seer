@@ -18,10 +18,21 @@ async def get_current_predictions(request: Request, session: AsyncSession = Depe
     if cached is not None:
         return cached
 
+    # Fetch latest prediction per timeframe using a subquery
+    # This ensures we get the most recent 1h, 4h, 24h, 1w, 1mo even if
+    # 1h predictions run more frequently
+    from sqlalchemy import func
+    subq = (
+        select(
+            Prediction.timeframe,
+            func.max(Prediction.id).label("max_id")
+        )
+        .group_by(Prediction.timeframe)
+        .subquery()
+    )
     result = await session.execute(
         select(Prediction)
-        .order_by(desc(Prediction.timestamp))
-        .limit(5)
+        .join(subq, Prediction.id == subq.c.max_id)
     )
     predictions = result.scalars().all()
 

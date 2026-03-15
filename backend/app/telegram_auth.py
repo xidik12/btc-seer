@@ -95,17 +95,21 @@ async def require_premium(request: Request):
     from sqlalchemy import select, text
 
     async with async_session() as session:
-        # Check if user has active subscription
+        # Check if user has active subscription (uses bot_users table)
         result = await session.execute(
-            text("SELECT tier, expires_at FROM subscriptions WHERE telegram_id = :tid"),
+            text("SELECT subscription_tier, subscription_end, trial_end FROM bot_users WHERE telegram_id = :tid"),
             {"tid": int(telegram_id)}
         )
         row = result.first()
         if not row:
             raise HTTPException(403, "Premium subscription required")
 
-        tier, expires = row
-        if tier not in ("premium", "pro", "trial") or (expires and expires < datetime.now(timezone.utc)):
+        tier, sub_end, trial_end = row
+        now = datetime.now(timezone.utc)
+        # Check active subscription or active trial
+        has_active_sub = tier in ("premium", "pro") and (not sub_end or sub_end > now)
+        has_active_trial = tier == "trial" and trial_end and trial_end > now
+        if not (has_active_sub or has_active_trial):
             raise HTTPException(403, "Premium subscription required")
 
     return telegram_id

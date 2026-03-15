@@ -98,8 +98,14 @@ INFLUENCERS = {
         "category": "government",
         "weight": 10,
     },
-    "GaryGensler": {
-        "name": "Gary Gensler",
+    "SECGov": {
+        "name": "SEC",
+        "role": "Securities and Exchange Commission",
+        "category": "regulator",
+        "weight": 9,
+    },
+    "PaulAtkins": {
+        "name": "Paul Atkins",
         "role": "SEC Chairman",
         "category": "regulator",
         "weight": 9,
