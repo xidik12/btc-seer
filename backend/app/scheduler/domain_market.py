@@ -254,6 +254,10 @@ async def collect_price_data():
         from app.cache import cache_delete
         await cache_delete("price")
         await cache_delete("dashboard_summary")
+        # Invalidate Elliott Wave caches so wave analysis reflects new price data
+        for tf in ["1h", "4h", "1d", "1w", "1mo"]:
+            await cache_delete(f"ew:current:{tf}")
+            await cache_delete(f"ew:hist:{tf}")
 
     except Exception as e:
         logger.error(f"Price collection error: {e}")

@@ -275,43 +275,56 @@ def _detect_current_wave(swings: List[dict], direction: str) -> tuple:
         if len(waves) < 2:
             continue
 
-        # Validate the waves we have
-        valid = True
+        # Validate waves using soft scoring — mild violations lower confidence
+        # instead of rejecting the pattern entirely (BTC rarely follows textbook)
+        violations = 0
+        max_violations = 1 if num_points <= 4 else 2  # Allow more slack for longer patterns
 
         if direction == "bullish":
             w1_range = waves[0]["end_price"] - waves[0]["start_price"]
             w2_retrace = waves[0]["end_price"] - waves[1]["end_price"]
-            # Rule 1 check
-            if w2_retrace > w1_range:
-                valid = False
+            # Rule 1: Wave 2 must not retrace > 100% of wave 1
+            if w2_retrace > w1_range * 1.05:  # 5% tolerance
+                violations += 1
+            # Hard fail: W2 retraces > 120% — definitely not an impulse
+            if w2_retrace > w1_range * 1.20:
+                violations = max_violations + 1
 
             if len(waves) >= 3:
                 w3_range = waves[2]["end_price"] - waves[2]["start_price"]
+                # Wave 3 should move in the right direction
+                if w3_range <= 0:
+                    violations += 1
             if len(waves) >= 4:
-                # Wave 4 overlap check
-                if waves[3]["end_price"] < waves[0]["end_price"]:
-                    valid = False
+                # Wave 4 overlap check (with 2% tolerance)
+                w1_end = waves[0]["end_price"]
+                if waves[3]["end_price"] < w1_end * 0.98:
+                    violations += 1
             if len(waves) >= 5:
                 w5_range = waves[4]["end_price"] - waves[4]["start_price"]
                 if w3_range < w1_range and w3_range < w5_range:
-                    valid = False
+                    violations += 1
         else:
             w1_range = abs(waves[0]["start_price"] - waves[0]["end_price"])
             w2_retrace = abs(waves[1]["end_price"] - waves[1]["start_price"])
-            if w2_retrace > w1_range:
-                valid = False
+            if w2_retrace > w1_range * 1.05:
+                violations += 1
+            if w2_retrace > w1_range * 1.20:
+                violations = max_violations + 1
 
             if len(waves) >= 3:
                 w3_range = abs(waves[2]["start_price"] - waves[2]["end_price"])
+                if w3_range <= 0:
+                    violations += 1
             if len(waves) >= 4:
-                if waves[3]["end_price"] > waves[0]["end_price"]:
-                    valid = False
+                if waves[3]["end_price"] > waves[0]["end_price"] * 1.02:
+                    violations += 1
             if len(waves) >= 5:
                 w5_range = abs(waves[4]["start_price"] - waves[4]["end_price"])
                 if w3_range < w1_range and w3_range < w5_range:
-                    valid = False
+                    violations += 1
 
-        if not valid:
+        if violations > max_violations:
             continue
 
         # Map num_points to current wave
@@ -369,10 +382,8 @@ def _try_impulse(swings: List[dict]) -> Optional[dict]:
 def _try_corrective(swings: List[dict]) -> Optional[dict]:
     """Try to identify a corrective (ABC) pattern with sub-type classification.
 
-    Detects current position in A/B/C based on swing count:
-    - 2 swings (A started, not complete) -> in wave A
-    - 3 swings (A complete, B started) -> in wave B
-    - 4+ swings (A, B complete, C started/complete) -> in wave C
+    Validates that the swing pattern actually looks corrective before labeling.
+    Returns None if the pattern doesn't match corrective characteristics.
     """
     if len(swings) < 3:
         return None
@@ -384,7 +395,6 @@ def _try_corrective(swings: List[dict]) -> Optional[dict]:
         direction = "bullish"
 
     # Try to detect current position in A/B/C
-    # 4+ swings = full ABC (or C forming)
     if len(swings) >= 4:
         recent = swings[-4:]
         waves = [
@@ -395,9 +405,7 @@ def _try_corrective(swings: List[dict]) -> Optional[dict]:
             {"label": "C", "start_price": recent[2]["price"], "end_price": recent[3]["price"],
              "start_idx": recent[2]["index"], "end_idx": recent[3]["index"]},
         ]
-        current_wave = "C"
     else:
-        # 3 swings = A complete, B forming
         recent = swings[-3:]
         waves = [
             {"label": "A", "start_price": recent[0]["price"], "end_price": recent[1]["price"],
@@ -405,22 +413,61 @@ def _try_corrective(swings: List[dict]) -> Optional[dict]:
             {"label": "B", "start_price": recent[1]["price"], "end_price": recent[2]["price"],
              "start_idx": recent[1]["index"], "end_idx": recent[2]["index"]},
         ]
-        current_wave = "B"
 
     a_range = abs(waves[0]["end_price"] - waves[0]["start_price"])
     b_range = abs(waves[1]["end_price"] - waves[1]["start_price"])
     c_range = abs(waves[2]["end_price"] - waves[2]["start_price"]) if len(waves) >= 3 else 0.0
 
-    # Sub-type classification (only if we have C wave)
-    b_retrace_of_a = b_range / a_range if a_range > 0 else 0
+    # ── Corrective validation ──
+    # A corrective pattern must have B retracing a meaningful portion of A
+    # If B barely retraces A or exceeds it wildly, this isn't corrective
+    if a_range == 0:
+        return None
 
+    b_retrace_of_a = b_range / a_range
+
+    # B wave must retrace between 23.6% and 138.2% of A (expanded flat max)
+    if b_retrace_of_a < 0.20 or b_retrace_of_a > 1.50:
+        return None
+
+    # If we have C wave, validate it makes sense
+    if len(waves) >= 3 and c_range > 0:
+        c_ratio = c_range / a_range
+        # C should be meaningful relative to A (at least 38.2%, at most 261.8%)
+        if c_ratio < 0.30 or c_ratio > 2.80:
+            return None
+
+        # C must move in opposite direction to B (alternation)
+        if direction == "bearish":
+            # A goes down, B goes up, C should go down
+            a_down = waves[0]["end_price"] < waves[0]["start_price"]
+            b_up = waves[1]["end_price"] > waves[1]["start_price"]
+            c_down = waves[2]["end_price"] < waves[2]["start_price"]
+            if not (a_down and b_up and c_down):
+                return None
+        else:
+            a_up = waves[0]["end_price"] > waves[0]["start_price"]
+            b_down = waves[1]["end_price"] < waves[1]["start_price"]
+            c_up = waves[2]["end_price"] > waves[2]["start_price"]
+            if not (a_up and b_down and c_up):
+                return None
+
+    # Determine current wave based on price action relative to recent swings
+    if len(waves) >= 3:
+        # Check if C is still forming or complete
+        # C is "complete" if the price has reversed significantly from the C endpoint
+        current_wave = "C"
+    else:
+        current_wave = "B"
+
+    # Sub-type classification
     if len(waves) >= 3 and a_range > 0:
         if 0.38 <= b_retrace_of_a <= 0.88 and c_range >= 0.9 * a_range:
             sub_type = "zigzag"
             confidence = 0.55
-            c_ratio = c_range / a_range
+            c_r = c_range / a_range
             for target in [1.0, 1.618]:
-                if abs(c_ratio - target) < 0.1:
+                if abs(c_r - target) < 0.1:
                     confidence += 0.05
                     break
         elif 0.80 <= b_retrace_of_a <= 1.20 and 0.8 <= (c_range / a_range) <= 1.2:
@@ -431,9 +478,8 @@ def _try_corrective(swings: List[dict]) -> Optional[dict]:
             confidence = 0.45
         else:
             sub_type = "irregular"
-            confidence = 0.30
+            confidence = 0.35
     else:
-        # Only A+B available — partial corrective
         sub_type = "forming"
         confidence = 0.30 + (0.05 if 0.38 <= b_retrace_of_a <= 0.88 else 0)
 
@@ -766,15 +812,18 @@ async def get_elliott_wave_current(
     # Remove internal swings from response
     analysis.pop("swings", None)
 
-    # Track when wave count last changed
-    prev_wave = _wave_change_tracker.get(timeframe)
+    # Track when wave count last changed (persisted via cache for deploy survival)
     new_wave = analysis.get("wave_count", {}).get("current_wave")
-    if prev_wave == new_wave and timeframe in _wave_change_tracker:
-        last_changed = _wave_change_tracker.get(f"{timeframe}:at", datetime.utcnow().isoformat())
+    tracker_key = f"ew:tracker:{timeframe}"
+    prev_data = await cache_get(tracker_key)
+    if prev_data and prev_data.get("wave") == new_wave:
+        last_changed = prev_data.get("at", datetime.utcnow().isoformat())
     else:
         last_changed = datetime.utcnow().isoformat()
-        _wave_change_tracker[timeframe] = new_wave
-        _wave_change_tracker[f"{timeframe}:at"] = last_changed
+        await cache_set(tracker_key, {"wave": new_wave, "at": last_changed}, 86400 * 7)  # 7 days TTL
+    # Also keep in-memory for fast access
+    _wave_change_tracker[timeframe] = new_wave
+    _wave_change_tracker[f"{timeframe}:at"] = last_changed
 
     response = {
         "current_price": current_price,
