@@ -18,7 +18,7 @@ function CountdownTimer() {
   const diff = Math.max(0, Math.floor((next - now) / 1000))
   const mm = String(Math.floor(diff / 60)).padStart(2, '0')
   const ss = String(diff % 60).padStart(2, '0')
-  return <span className="text-accent-blue text-[10px] font-mono tabular-nums">{mm}:{ss}</span>
+  return <span className="text-accent-blue text-xs font-mono tabular-nums">{mm}:{ss}</span>
 }
 
 export default function PredictionCard() {
@@ -85,14 +85,14 @@ export default function PredictionCard() {
     <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 gradient-border slide-up">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-accent-blue">{t('prediction.aiModel')}</span>
-          <span className="text-text-muted text-[8px]">{t('prediction.modelDescription')}</span>
+          <span className="text-xs font-bold text-accent-blue">{t('prediction.aiModel')}</span>
+          <span className="text-text-muted text-xs">{t('prediction.modelDescription')}</span>
         </div>
         <div className="flex items-center gap-2">
           <CardShareButton cardRef={cardRef} label="AI Prediction" filename="ai-prediction.png" />
           <CountdownTimer />
           {timestamp && (
-            <span className="text-text-muted text-[10px]">{formatTimeAgo(timestamp)}</span>
+            <span className="text-text-muted text-xs">{formatTimeAgo(timestamp)}</span>
           )}
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function PredictionCard() {
               <div key={row.timeframe} className="rounded-lg px-3 py-2 border border-white/5 bg-bg-secondary">
                 <div className="flex items-center justify-between">
                   <span className="text-text-muted text-xs font-semibold">{tfLabels[row.timeframe]}</span>
-                  <span className="text-text-muted text-[10px]">{t('prediction.pending', { defaultValue: 'Pending' })}</span>
+                  <span className="text-text-muted text-xs">{t('prediction.pending', { defaultValue: 'Pending' })}</span>
                 </div>
               </div>
             )
@@ -139,7 +139,7 @@ export default function PredictionCard() {
                         {isUp ? t('common:direction.bullish') : isDown ? t('common:direction.bearish') : t('common:direction.neutral')}
                       </span>
                     )}
-                    <span className={`text-[10px] ${accent} opacity-70`}>
+                    <span className={`text-xs ${accent} opacity-70`}>
                       ({changePct > 0 ? '+' : ''}{safeFixed(changePct, 2)}%)
                     </span>
                   </div>
@@ -151,7 +151,7 @@ export default function PredictionCard() {
                       style={{ width: `${Math.min(confidence, 100)}%` }}
                     />
                   </div>
-                  <span className="text-text-muted text-[10px] tabular-nums w-7 text-right">
+                  <span className="text-text-muted text-xs tabular-nums w-7 text-right">
                     {safeFixed(confidence, 0)}%
                   </span>
                 </div>

@@ -44,9 +44,9 @@ function IndicatorRow({ label, value, unit, signal, description, t }) {
           <span className={`text-sm font-semibold tabular-nums ${signalColor}`}>
             {typeof value === 'number' ? value.toFixed(2) : value}
           </span>
-          {unit && <span className="text-text-muted text-[9px]">{unit}</span>}
+          {unit && <span className="text-text-muted text-xs">{unit}</span>}
           {signal && t && (
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
               signal === 'bullish' ? 'bg-accent-green/15 text-accent-green' :
               signal === 'bearish' ? 'bg-accent-red/15 text-accent-red' :
               'bg-accent-yellow/15 text-accent-yellow'
@@ -57,7 +57,7 @@ function IndicatorRow({ label, value, unit, signal, description, t }) {
         </div>
       </div>
       {description && (
-        <p className="text-text-muted text-[10px] mt-1 leading-relaxed">{description}</p>
+        <p className="text-text-muted text-xs mt-1 leading-relaxed">{description}</p>
       )}
     </div>
   )
@@ -83,7 +83,7 @@ function GaugeBar({ value, min, max, zones, label, explanation }) {
         />
       </div>
       {explanation && (
-        <p className="text-text-muted text-[10px] mt-2 leading-relaxed">{explanation}</p>
+        <p className="text-text-muted text-xs mt-2 leading-relaxed">{explanation}</p>
       )}
     </div>
   )
@@ -100,7 +100,7 @@ function Section({ title, color, explain, shareLabel, shareFilename, children })
         )}
       </div>
       {explain && (
-        <p className="text-text-muted text-[10px] leading-relaxed mb-3">{explain}</p>
+        <p className="text-text-muted text-xs leading-relaxed mb-3">{explain}</p>
       )}
       {children}
     </div>
@@ -209,7 +209,7 @@ function IndicatorHistory() {
       shareLabel="Indicator History" shareFilename="indicator-history.png"
     >
       {isZoomed && (
-        <button onClick={resetZoom} className="text-[10px] text-accent-blue mb-2">{t('market:technical.indicatorHistory.resetZoom')}</button>
+        <button onClick={resetZoom} className="text-xs text-accent-blue mb-2">{t('market:technical.indicatorHistory.resetZoom')}</button>
       )}
       <div className="h-[200px]" {...bindGestures}>
         <ResponsiveContainer width="100%" height="100%">
@@ -217,7 +217,7 @@ function IndicatorHistory() {
             <CartesianGrid strokeDasharray="3 6" stroke="#1e1e30" vertical={false} />
             <XAxis
               dataKey="time"
-              tick={{ fontSize: 9, fill: '#5a5a70' }}
+              tick={{ fontSize: 10, fill: '#5a5a70' }}
               tickFormatter={(v) => v?.slice(11, 16) || v?.slice(5, 10) || ''}
               axisLine={false}
               tickLine={false}
@@ -226,7 +226,7 @@ function IndicatorHistory() {
             <YAxis
               yAxisId="rsi"
               domain={[0, 100]}
-              tick={{ fontSize: 9, fill: '#5a5a70' }}
+              tick={{ fontSize: 10, fill: '#5a5a70' }}
               axisLine={false}
               tickLine={false}
             />
@@ -258,7 +258,7 @@ function IndicatorHistory() {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="flex justify-center gap-4 mt-2 text-[9px]">
+      <div className="flex justify-center gap-4 mt-2 text-xs">
         <span className="flex items-center gap-1">
           <span className="w-3 h-0.5 bg-accent-blue inline-block rounded" /> RSI
         </span>
@@ -266,7 +266,7 @@ function IndicatorHistory() {
           <span className="w-3 h-0.5 bg-accent-purple inline-block rounded" /> MACD
         </span>
       </div>
-      <p className="text-text-muted text-[9px] text-center mt-1">{t('common:chart.pinchZoom')}</p>
+      <p className="text-text-muted text-xs text-center mt-1">{t('common:chart.pinchZoom')}</p>
     </Section>
   )
 }
@@ -365,7 +365,7 @@ export default function Technical() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">{t('technical.title')}</h1>
         {data?.timestamp && (
-          <span className="text-text-muted text-[10px]">{formatTimeAgo(data.timestamp)}</span>
+          <span className="text-text-muted text-xs">{formatTimeAgo(data.timestamp)}</span>
         )}
       </div>
 
@@ -391,7 +391,7 @@ export default function Technical() {
           <span className="text-accent-yellow">{t('technical.neutralCount', { count: neutralCount })}</span>
           <span className="text-text-muted ml-auto">{t('technical.ofTotal', { total: signals.length })}</span>
         </div>
-        <p className="text-text-muted text-[10px] leading-relaxed">{overallExplain}</p>
+        <p className="text-text-muted text-xs leading-relaxed">{overallExplain}</p>
         {price && (
           <div className="mt-2 pt-2 border-t border-white/10">
             <span className="text-text-muted text-xs">{t('technical.btcPrice')}: </span>
@@ -442,7 +442,7 @@ export default function Technical() {
           ]}
           explanation={rsiExplain(mom.rsi, t)}
         />
-        <div className="flex justify-between text-[9px] text-text-muted -mt-1 mb-2">
+        <div className="flex justify-between text-xs text-text-muted -mt-1 mb-2">
           <span>{t('technical.rsi.oversold')}</span>
           <span>{t('technical.rsi.neutral')}</span>
           <span>{t('technical.rsi.overbought')}</span>
@@ -540,7 +540,7 @@ export default function Technical() {
           ]}
           explanation={bbExplain(vol.bb_position, vol.bb_width, t)}
         />
-        <div className="flex justify-between text-[9px] text-text-muted -mt-1">
+        <div className="flex justify-between text-xs text-text-muted -mt-1">
           <span>{t('technical.bollinger.nearFloor')}</span>
           <span>{t('technical.bollinger.middleFair')}</span>
           <span>{t('technical.bollinger.nearCeiling')}</span>
@@ -618,7 +618,7 @@ export default function Technical() {
             : t('technical.trendStrength.adxNoTrend', { value: mom.adx?.toFixed(0) })
           }
         />
-        <div className="flex justify-between text-[9px] text-text-muted -mt-1 mb-2">
+        <div className="flex justify-between text-xs text-text-muted -mt-1 mb-2">
           <span>{t('technical.trendStrength.noTrend')}</span>
           <span>{t('technical.trendStrength.moderateTrend')}</span>
           <span>{t('technical.trendStrength.strongTrend')}</span>
@@ -655,7 +655,7 @@ export default function Technical() {
               : t('technical.btcDominance.gaugeLow', { value: btcDom.btc_dominance.toFixed(1) })
             }
           />
-          <div className="flex justify-between text-[9px] text-text-muted -mt-1 mb-2">
+          <div className="flex justify-between text-xs text-text-muted -mt-1 mb-2">
             <span>{t('technical.btcDominance.altcoinSeason')}</span>
             <span>{t('technical.btcDominance.normal')}</span>
             <span>{t('technical.btcDominance.btcSeason')}</span>
@@ -697,7 +697,7 @@ export default function Technical() {
             : t('technical.stochRsi.gaugeNeutral', { value: stochRsi.k?.toFixed(0) })
           }
         />
-        <div className="flex justify-between text-[9px] text-text-muted -mt-1 mb-2">
+        <div className="flex justify-between text-xs text-text-muted -mt-1 mb-2">
           <span>{t('technical.stochRsi.buyZone')}</span>
           <span>{t('technical.stochRsi.neutral')}</span>
           <span>{t('technical.stochRsi.sellZone')}</span>
@@ -735,7 +735,7 @@ export default function Technical() {
             : t('technical.williamsR.gaugeNeutral', { value: williamsR?.toFixed(0) })
           }
         />
-        <div className="flex justify-between text-[9px] text-text-muted -mt-1">
+        <div className="flex justify-between text-xs text-text-muted -mt-1">
           <span>{t('technical.williamsR.nearLows')}</span>
           <span>{t('technical.williamsR.midRange')}</span>
           <span>{t('technical.williamsR.nearHighs')}</span>
@@ -903,7 +903,7 @@ export default function Technical() {
 
       <DataSourceFooter sources={['binance', 'coingecko', 'ta']} />
 
-      <p className="text-text-muted text-[10px] text-center pb-4 leading-relaxed">
+      <p className="text-text-muted text-xs text-center pb-4 leading-relaxed">
         {t('technical.updatesEveryMinute')}
       </p>
     </div>

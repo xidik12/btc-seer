@@ -106,7 +106,7 @@ export default function PriceWidget() {
                 isPositive ? 'bg-accent-green' : 'bg-accent-red'
               } pulse-glow`}
             />
-            <span className="text-text-muted text-[10px]">{t('common:app.live')}</span>
+            <span className="text-text-muted text-xs">{t('common:app.live')}</span>
           </div>
           <CardShareButton cardRef={cardRef} label="BTC Price" filename="btc-price.png" />
         </div>
@@ -139,11 +139,11 @@ export default function PriceWidget() {
       {/* High / Low */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-bg-hover/50 rounded-lg px-3 py-2">
-          <div className="text-text-muted text-[10px] uppercase tracking-wide mb-1">{t('common:price.high')}</div>
+          <div className="text-text-muted text-xs uppercase tracking-wide mb-1">{t('common:price.high')}</div>
           <div className="text-text-primary text-sm font-semibold">{formatPrice(high)}</div>
         </div>
         <div className="bg-bg-hover/50 rounded-lg px-3 py-2">
-          <div className="text-text-muted text-[10px] uppercase tracking-wide mb-1">{t('common:price.low')}</div>
+          <div className="text-text-muted text-xs uppercase tracking-wide mb-1">{t('common:price.low')}</div>
           <div className="text-text-primary text-sm font-semibold">{formatPrice(low)}</div>
         </div>
       </div>

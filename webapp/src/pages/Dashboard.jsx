@@ -39,7 +39,7 @@ class SafeWrap extends Component {
           <p className="text-accent-red text-xs">{this.props.t('common:widget.failedToLoad', { name: this.props.name })}</p>
           <button
             onClick={() => this.setState({ hasError: false })}
-            className="text-accent-blue text-[10px] mt-1 underline"
+            className="text-accent-blue text-xs mt-1 underline"
           >
             {this.props.t('common:app.retry')}
           </button>
@@ -309,7 +309,7 @@ function QuickAccessGrid() {
           : cat.links
         return (
           <div key={cat.titleKey}>
-            <h3 className="text-accent-yellow text-[10px] font-semibold uppercase tracking-wider mb-1.5 px-1">{t(cat.titleKey)}</h3>
+            <h3 className="text-accent-yellow text-xs font-semibold uppercase tracking-wider mb-1.5 px-1">{t(cat.titleKey)}</h3>
             <div className="grid grid-cols-4 gap-2">
               {links.map((link) => (
                 <button
@@ -318,7 +318,7 @@ function QuickAccessGrid() {
                   className="bg-bg-card rounded-xl border border-accent-yellow/10 p-3 flex flex-col items-center gap-1.5 hover:border-accent-yellow/25 active:scale-95 transition-all"
                 >
                   <span className="w-5 h-5 text-accent-yellow">{quickIcons[link.icon]}</span>
-                  <span className="text-[10px] text-accent-yellow/80 font-medium leading-tight text-center">{t(link.labelKey)}</span>
+                  <span className="text-xs text-accent-yellow/80 font-medium leading-tight text-center">{t(link.labelKey)}</span>
                 </button>
               ))}
             </div>
@@ -353,7 +353,7 @@ function CouncilCTA() {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-text-primary text-sm font-medium">{t('paywall.joinCouncil')}</p>
-        <p className="text-text-muted text-[10px]">{t('paywall.councilDesc')}</p>
+        <p className="text-text-muted text-xs">{t('paywall.councilDesc')}</p>
       </div>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4 text-text-muted shrink-0">
         <polyline points="9 18 15 12 9 6" />
@@ -521,7 +521,7 @@ export default function Dashboard() {
         </>
       )}
 
-      <p className="text-text-muted text-[10px] text-center pb-4 leading-relaxed">
+      <p className="text-text-muted text-xs text-center pb-4 leading-relaxed">
         {t('common:app.disclaimer')}
       </p>
     </div>

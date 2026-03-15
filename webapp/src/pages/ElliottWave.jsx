@@ -46,16 +46,16 @@ function DirectionBadge({ direction, pattern, confidence, t }) {
       <span className={`text-xs font-bold px-2 py-1 rounded border bg-${color}/10 border-${color}/30 text-${color} uppercase`}>
         {direction === 'bullish' ? t('market:elliott.directionBullish') : direction === 'bearish' ? t('market:elliott.directionBearish') : t('market:elliott.directionNeutral')}
       </span>
-      <span className="text-text-muted text-[10px] capitalize">{pattern === 'impulse' ? t('market:elliott.impulse') : pattern === 'corrective' ? t('market:elliott.corrective') : pattern}</span>
+      <span className="text-text-muted text-xs capitalize">{pattern === 'impulse' ? t('market:elliott.impulse') : pattern === 'corrective' ? t('market:elliott.corrective') : pattern}</span>
       <div className="flex items-center gap-1 ml-auto">
-        <span className="text-text-muted text-[9px]">{t('common:confidence')}</span>
+        <span className="text-text-muted text-xs">{t('common:confidence')}</span>
         <div className="w-16 h-1.5 bg-bg-hover rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full bg-${color}`}
             style={{ width: `${(confidence * 100)}%` }}
           />
         </div>
-        <span className="text-text-secondary text-[10px] font-bold tabular-nums">{(confidence * 100).toFixed(0)}%</span>
+        <span className="text-text-secondary text-xs font-bold tabular-nums">{(confidence * 100).toFixed(0)}%</span>
       </div>
     </div>
   )
@@ -71,7 +71,7 @@ function WaveStatusCard({ data, t }) {
     <div ref={cardRef} className="bg-bg-card rounded-2xl p-4 border border-white/5 slide-up">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <div className="text-text-muted text-[10px] font-medium">{t('common:price.btcPrice').toUpperCase()}</div>
+          <div className="text-text-muted text-xs font-medium">{t('common:price.btcPrice').toUpperCase()}</div>
           <div className="text-text-primary text-xl font-bold tabular-nums">
             {current_price ? formatPrice(current_price) : '--'}
           </div>
@@ -79,7 +79,7 @@ function WaveStatusCard({ data, t }) {
         <div className="flex items-center gap-2">
           <CardShareButton cardRef={cardRef} label="Elliott Wave" filename="elliott-wave.png" />
           <div className="text-right">
-            <div className="text-text-muted text-[10px] font-medium">{t('market:elliott.currentWave').toUpperCase()}</div>
+            <div className="text-text-muted text-xs font-medium">{t('market:elliott.currentWave').toUpperCase()}</div>
             <div className="text-accent-blue text-2xl font-bold">{wave_count?.current_wave || '?'}</div>
           </div>
         </div>
@@ -223,19 +223,19 @@ function WaveChart({ historicalData, currentData, timeframe, t }) {
     >
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.05]">
-        <span className="text-[#c8c8d0] text-[11px] font-bold tracking-wide">BTC / USDT</span>
-        <span className="text-[#3a3a4a] text-[9px] select-none">·</span>
-        <span className="text-[#6b6b80] text-[9px] font-semibold">{timeframe.toUpperCase()}</span>
+        <span className="text-[#c8c8d0] text-xs font-bold tracking-wide">BTC / USDT</span>
+        <span className="text-[#3a3a4a] text-xs select-none">·</span>
+        <span className="text-[#6b6b80] text-xs font-semibold">{timeframe.toUpperCase()}</span>
         {isZoomed ? (
           <button
             onTouchEnd={(e) => { e.stopPropagation(); resetZoom() }}
             onClick={(e) => { e.stopPropagation(); resetZoom() }}
-            className="ml-auto px-2 py-0.5 rounded-full bg-accent-blue/20 text-accent-blue text-[9px] font-semibold border border-accent-blue/30"
+            className="ml-auto px-2 py-0.5 rounded-full bg-accent-blue/20 text-accent-blue text-xs font-semibold border border-accent-blue/30"
           >
             Reset zoom
           </button>
         ) : (
-          <div className="flex items-center gap-2 ml-auto"><CardShareButton cardRef={containerRef} label="Elliott Wave Chart" filename="elliott-chart.png" /><span className="text-[#454555] text-[9px]">{t('market:elliott.title')}</span></div>
+          <div className="flex items-center gap-2 ml-auto"><CardShareButton cardRef={containerRef} label="Elliott Wave Chart" filename="elliott-chart.png" /><span className="text-[#454555] text-xs">{t('market:elliott.title')}</span></div>
         )}
       </div>
 
@@ -281,7 +281,7 @@ function WaveChart({ historicalData, currentData, timeframe, t }) {
             <g key={i}>
               <line x1={ML} y1={y} x2={ML + CW} y2={y}
                 stroke={col} strokeWidth={0.55} strokeDasharray="3 5" opacity={0.75} />
-              <text x={ML + CW + 3} y={y - 1} fill={col} fontSize={7} fontFamily="monospace" fontWeight="700">
+              <text x={ML + CW + 3} y={y - 1} fill={col} fontSize={10} fontFamily="monospace" fontWeight="700">
                 {fib.ratio}
               </text>
               <text x={ML + CW + 3} y={y + 8} fill={col} fontSize={6.5} fontFamily="monospace" opacity={0.8}>
@@ -372,7 +372,7 @@ function WaveChart({ historicalData, currentData, timeframe, t }) {
             : ''
           return (
             <text key={i} x={xOf(i)} y={MAIN_H + 5}
-              textAnchor="middle" fill="#3a3a52" fontSize={8} fontFamily="monospace">
+              textAnchor="middle" fill="#3a3a52" fontSize={10} fontFamily="monospace">
               {dateStr}
             </text>
           )
@@ -394,12 +394,12 @@ function WaveChart({ historicalData, currentData, timeframe, t }) {
           )
         })}
 
-        <text x={ML + 3} y={OSC_TOP + 9} fill="#3a3a52" fontSize={7} fontFamily="monospace">
+        <text x={ML + 3} y={OSC_TOP + 9} fill="#3a3a52" fontSize={10} fontFamily="monospace">
           MOMENTUM
         </text>
       </svg>
       {!isZoomed && (
-        <div className="px-3 pb-2 text-[9px] text-[#3a3a52] text-center select-none">
+        <div className="px-3 pb-2 text-xs text-[#3a3a52] text-center select-none">
           Pinch to zoom · Drag to pan
         </div>
       )}
@@ -420,10 +420,10 @@ function FibTargets({ targets, t }) {
       <div className="flex items-center justify-between mb-3"><h3 className="text-text-secondary text-xs font-semibold">{t('market:elliott.fibTargets').toUpperCase()}</h3><CardShareButton cardRef={cardRef} label="Fibonacci Targets" filename="fib-targets.png" /></div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <div className="text-accent-green text-[10px] font-semibold mb-2">{t('market:powerLaw.support').toUpperCase()}</div>
+          <div className="text-accent-green text-xs font-semibold mb-2">{t('market:powerLaw.support').toUpperCase()}</div>
           <div className="space-y-1">
             {support_levels.slice(0, 5).map((lvl, i) => (
-              <div key={i} className="flex items-center justify-between text-[11px]">
+              <div key={i} className="flex items-center justify-between text-xs">
                 <span className="text-text-muted">{lvl.ratio}</span>
                 <span className="text-accent-green font-mono font-medium tabular-nums">
                   ${lvl.price?.toLocaleString()}
@@ -433,10 +433,10 @@ function FibTargets({ targets, t }) {
           </div>
         </div>
         <div>
-          <div className="text-accent-red text-[10px] font-semibold mb-2">{t('market:powerLaw.resistance').toUpperCase()}</div>
+          <div className="text-accent-red text-xs font-semibold mb-2">{t('market:powerLaw.resistance').toUpperCase()}</div>
           <div className="space-y-1">
             {resistance_levels.slice(0, 5).map((lvl, i) => (
-              <div key={i} className="flex items-center justify-between text-[11px]">
+              <div key={i} className="flex items-center justify-between text-xs">
                 <span className="text-text-muted">{lvl.ratio}</span>
                 <span className="text-accent-red font-mono font-medium tabular-nums">
                   ${lvl.price?.toLocaleString()}
@@ -471,7 +471,7 @@ function DivergenceAlerts({ divergences, t }) {
                 <span className={`text-xs font-bold ${isBullish ? 'text-accent-green' : 'text-accent-red'}`}>
                   {isBullish ? t('common:direction.bullish').toUpperCase() : t('common:direction.bearish').toUpperCase()}
                 </span>
-                <span className="text-text-secondary text-[11px]">{d.indicator}</span>
+                <span className="text-text-secondary text-xs">{d.indicator}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-12 h-1.5 bg-bg-hover rounded-full overflow-hidden">
@@ -480,7 +480,7 @@ function DivergenceAlerts({ divergences, t }) {
                     style={{ width: `${d.strength * 100}%` }}
                   />
                 </div>
-                <span className="text-text-muted text-[10px] tabular-nums">${d.price?.toLocaleString()}</span>
+                <span className="text-text-muted text-xs tabular-nums">${d.price?.toLocaleString()}</span>
               </div>
             </div>
           )
@@ -521,7 +521,7 @@ function StatsGrid({ data, t }) {
       <div className="grid grid-cols-3 gap-2">
         {stats.map((s) => (
           <div key={s.labelKey} className="bg-bg-hover rounded-xl p-3 text-center">
-            <div className="text-text-muted text-[9px] font-medium mb-1">{labelMap[s.labelKey]}</div>
+            <div className="text-text-muted text-xs font-medium mb-1">{labelMap[s.labelKey]}</div>
             <div className="text-text-primary text-sm font-bold capitalize">{s.value}</div>
           </div>
         ))}
@@ -617,7 +617,7 @@ export default function ElliottWave() {
       {current?.wave_count && (
         <div ref={waveSummaryRef} className="bg-bg-card rounded-2xl p-4 border border-white/5">
           <div className="flex items-center justify-between mb-2"><h3 className="text-text-secondary text-xs font-semibold">{String(t('market:elliott.waveStatus')).toUpperCase()}</h3><CardShareButton cardRef={waveSummaryRef} label="Wave Status Summary" filename="wave-summary.png" /></div>
-          <p className="text-text-muted text-[11px] leading-relaxed">
+          <p className="text-text-muted text-xs leading-relaxed">
             {(() => {
               const wc = current.wave_count
               const dir = wc.direction === 'bullish' ? t('market:elliott.directionBullish').toLowerCase() : wc.direction === 'bearish' ? t('market:elliott.directionBearish').toLowerCase() : t('market:elliott.directionNeutral').toLowerCase()
@@ -642,7 +642,7 @@ export default function ElliottWave() {
 
       <div className="bg-bg-card rounded-2xl p-4 border border-white/5">
         <h3 className="text-text-secondary text-xs font-semibold mb-2">{t('market:elliott.title').toUpperCase()}</h3>
-        <div className="text-text-muted text-[11px] space-y-2">
+        <div className="text-text-muted text-xs space-y-2">
           <p>{t('market:elliott.theoryDescription')}</p>
           <p>{t('market:elliott.threeRules')}</p>
           <p>{t('market:elliott.fibRatios')}</p>

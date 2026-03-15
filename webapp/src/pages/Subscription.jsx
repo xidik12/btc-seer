@@ -129,7 +129,7 @@ export default function Subscription() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-text-primary text-xs font-medium capitalize">{p.tier} &middot; {p.days}{t('subscriptionPage.daysShort')}</p>
-                  <p className="text-text-muted text-[10px]">{formatDate(p.created_at, i18n.language)}</p>
+                  <p className="text-text-muted text-xs">{formatDate(p.created_at, i18n.language)}</p>
                 </div>
                 <span className="text-text-primary text-xs font-semibold shrink-0">{p.stars_amount} {t('subscription.stars')}</span>
               </div>
@@ -148,7 +148,7 @@ export default function Subscription() {
             </svg>
           </div>
           <div>
-            <p className="text-text-muted text-[10px]">{t('subscriptionPage.memberSince')}</p>
+            <p className="text-text-muted text-xs">{t('subscriptionPage.memberSince')}</p>
             <p className="text-text-primary text-xs font-medium">{formatDate(data.joined_at, i18n.language)}</p>
           </div>
         </div>

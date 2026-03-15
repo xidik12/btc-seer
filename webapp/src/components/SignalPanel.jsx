@@ -186,13 +186,13 @@ export default function SignalPanel() {
           />
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-text-muted text-[10px]">{t('signalPanel.low')}</span>
-          <span className="text-text-muted text-[10px]">{t('signalPanel.high')}</span>
+          <span className="text-text-muted text-xs">{t('signalPanel.low')}</span>
+          <span className="text-text-muted text-xs">{t('signalPanel.high')}</span>
         </div>
       </div>
 
       {/* Disclaimer */}
-      <p className="text-text-muted text-[10px] leading-relaxed border-t border-white/5 pt-3">
+      <p className="text-text-muted text-xs leading-relaxed border-t border-white/5 pt-3">
         {t('signalPanel.disclaimer')}
       </p>
     </div>

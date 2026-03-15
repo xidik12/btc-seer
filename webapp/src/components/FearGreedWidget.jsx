@@ -82,8 +82,8 @@ function GaugeArc({ value, size = 160 }) {
       <line x1={cx} y1={cy} x2={needleX} y2={needleY} stroke="#ffffff" strokeWidth={2} strokeLinecap="round" className="transition-all duration-700" />
       <circle cx={cx} cy={cy} r={3.5} fill="#ffffff" />
 
-      <text x={strokeWidth / 2 + 2} y={cy + 14} fill="#5a5a70" fontSize="9" textAnchor="start">0</text>
-      <text x={size - strokeWidth / 2 - 2} y={cy + 14} fill="#5a5a70" fontSize="9" textAnchor="end">100</text>
+      <text x={strokeWidth / 2 + 2} y={cy + 14} fill="#5a5a70" fontSize="10" textAnchor="start">0</text>
+      <text x={size - strokeWidth / 2 - 2} y={cy + 14} fill="#5a5a70" fontSize="10" textAnchor="end">100</text>
     </svg>
   )
 }
@@ -156,7 +156,7 @@ export default function FearGreedWidget() {
         <p className={`text-sm font-medium mt-0.5 ${textClass}`}>{label}</p>
       </div>
 
-      <p className="text-text-muted text-[10px] mt-2 text-center">
+      <p className="text-text-muted text-xs mt-2 text-center">
         {value <= 25 ? t('fearGreed.tipExtremeFear')
           : value <= 45 ? t('fearGreed.tipFear')
           : value <= 55 ? t('fearGreed.tipNeutral')
@@ -166,7 +166,7 @@ export default function FearGreedWidget() {
 
       {history.length > 1 && (
         <div className="mt-3">
-          <p className="text-text-muted text-[9px] font-medium mb-1.5">{t('fearGreed.last7Days')}</p>
+          <p className="text-text-muted text-xs font-medium mb-1.5">{t('fearGreed.last7Days')}</p>
           <div className="flex items-end gap-1 h-8">
             {history.map((h, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-0.5">

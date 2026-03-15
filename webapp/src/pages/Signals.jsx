@@ -24,7 +24,7 @@ function LiveSignalCard({ signal, t }) {
     <div ref={cardRef} className={`rounded-2xl p-4 border-2 ${borderColor} ${bgColor} slide-up`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-blue/15 text-accent-blue font-bold animate-pulse">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-accent-blue/15 text-accent-blue font-bold animate-pulse">
             {t('signals.liveSignal')}
           </span>
           <span className={`text-sm font-bold uppercase ${getActionColor(signal.action)}`}>
@@ -33,28 +33,28 @@ function LiveSignalCard({ signal, t }) {
         </div>
         <div className="flex items-center gap-2">
           <CardShareButton cardRef={cardRef} label="Trading Signal" filename="signal.png" />
-          <span className="text-text-muted text-[10px]">{signal.timeframe?.toUpperCase()}</span>
+          <span className="text-text-muted text-xs">{signal.timeframe?.toUpperCase()}</span>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 text-xs mb-3">
         <div>
-          <div className="text-text-muted text-[9px]">{t('signals.entry')}</div>
+          <div className="text-text-muted text-xs">{t('signals.entry')}</div>
           <div className="font-mono font-semibold text-sm">{formatPrice(signal.entry_price)}</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">{t('signals.target')}</div>
+          <div className="text-text-muted text-xs">{t('signals.target')}</div>
           <div className="font-mono font-semibold text-sm text-accent-green">{formatPrice(signal.target_price)}</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">{t('signals.stopLoss')}</div>
+          <div className="text-text-muted text-xs">{t('signals.stopLoss')}</div>
           <div className="font-mono font-semibold text-sm text-accent-red">{formatPrice(signal.stop_loss)}</div>
         </div>
       </div>
 
       <div className="flex items-center gap-4 mb-2">
         <div className="flex-1">
-          <div className="flex items-center justify-between text-[9px] text-text-muted mb-0.5">
+          <div className="flex items-center justify-between text-xs text-text-muted mb-0.5">
             <span>{t('signals.confidence')}</span>
             <span className="font-mono">{signal.confidence?.toFixed(0)}%</span>
           </div>
@@ -68,13 +68,13 @@ function LiveSignalCard({ signal, t }) {
           </div>
         </div>
         <div className="text-right">
-          <div className="text-text-muted text-[9px]">{t('signals.risk')}</div>
+          <div className="text-text-muted text-xs">{t('signals.risk')}</div>
           <div className="text-text-primary text-xs font-bold">{signal.risk_rating}/10</div>
         </div>
       </div>
 
       {signal.reasoning && (
-        <p className="text-text-muted text-[10px] leading-relaxed mt-2 pt-2 border-t border-white/5">
+        <p className="text-text-muted text-xs leading-relaxed mt-2 pt-2 border-t border-white/5">
           {signal.reasoning}
         </p>
       )}
@@ -98,7 +98,7 @@ function WinLossRecord({ signals, t }) {
         <div className="bg-accent-green transition-all duration-500" style={{ width: `${winPct}%` }} />
         <div className="bg-accent-red transition-all duration-500" style={{ width: `${100 - winPct}%` }} />
       </div>
-      <div className="flex justify-between text-[10px]">
+      <div className="flex justify-between text-xs">
         <span className="text-accent-green font-bold">{t('signals.winsLabel', { count: wins, pct: winPct.toFixed(0) })}</span>
         <span className="text-text-muted">{evaluated.length} {t('signals.evaluated')}</span>
         <span className="text-accent-red font-bold">{t('signals.lossesLabel', { count: losses, pct: (100 - winPct).toFixed(0) })}</span>
@@ -121,42 +121,42 @@ function SignalCard({ signal, t }) {
             {signal.action?.replace('_', ' ')}
           </span>
           {signal.was_correct != null && (
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
+            <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
               signal.was_correct ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
             }`}>
               {signal.was_correct ? t('signals.win') : t('signals.loss')}
             </span>
           )}
         </div>
-        <span className="text-text-muted text-[10px]">{formatTimeAgo(signal.timestamp)}</span>
+        <span className="text-text-muted text-xs">{formatTimeAgo(signal.timestamp)}</span>
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-xs">
         <div>
-          <div className="text-text-muted text-[9px]">{t('signals.entry')}</div>
+          <div className="text-text-muted text-xs">{t('signals.entry')}</div>
           <div className="font-mono tabular-nums">{formatPrice(signal.entry_price)}</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">{t('signals.target')}</div>
+          <div className="text-text-muted text-xs">{t('signals.target')}</div>
           <div className="font-mono text-accent-green tabular-nums">{formatPrice(signal.target_price)}</div>
         </div>
         <div>
-          <div className="text-text-muted text-[9px]">{t('signals.stopLoss')}</div>
+          <div className="text-text-muted text-xs">{t('signals.stopLoss')}</div>
           <div className="font-mono text-accent-red tabular-nums">{formatPrice(signal.stop_loss)}</div>
         </div>
       </div>
 
       {expanded && (
         <div className="mt-2 pt-2 border-t border-white/5 space-y-1.5">
-          <div className="flex items-center justify-between text-[10px]">
+          <div className="flex items-center justify-between text-xs">
             <span className="text-text-muted">{t('signals.confidence')}: {signal.confidence?.toFixed(0)}%</span>
             <span className="text-text-muted">{t('signals.risk')}: {signal.risk_rating}/10</span>
           </div>
-          <div className="text-text-muted text-[10px]">
+          <div className="text-text-muted text-xs">
             {formatDate(signal.timestamp)} {formatTime(signal.timestamp)}
           </div>
           {signal.reasoning && (
-            <p className="text-text-muted text-[10px] leading-relaxed">{signal.reasoning}</p>
+            <p className="text-text-muted text-xs leading-relaxed">{signal.reasoning}</p>
           )}
         </div>
       )}
@@ -255,17 +255,17 @@ export default function Signals() {
       {stats.evaluated > 0 && (
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-            <div className="text-text-muted text-[9px]">{t('signals.title')}</div>
+            <div className="text-text-muted text-xs">{t('signals.title')}</div>
             <div className="text-text-primary text-sm font-bold">{stats.total}</div>
           </div>
           <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-            <div className="text-text-muted text-[9px]">{t('portfolio.winRate')}</div>
+            <div className="text-text-muted text-xs">{t('portfolio.winRate')}</div>
             <div className="text-accent-green text-sm font-bold">
               {stats.evaluated > 0 ? `${(stats.wins / stats.evaluated * 100).toFixed(0)}%` : '--'}
             </div>
           </div>
           <div className="bg-bg-card rounded-xl p-3 border border-white/5 text-center">
-            <div className="text-text-muted text-[9px]">{t('signals.winLossLabel')}</div>
+            <div className="text-text-muted text-xs">{t('signals.winLossLabel')}</div>
             <div className="text-text-primary text-sm font-bold">{stats.wins} / {stats.losses}</div>
           </div>
         </div>

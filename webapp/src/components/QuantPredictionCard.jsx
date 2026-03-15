@@ -58,7 +58,7 @@ function SignalBreakdown({ breakdown, expanded, t }) {
 
   return (
     <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
-      <p className="text-text-muted text-[10px] font-semibold tracking-wider mb-2">
+      <p className="text-text-muted text-xs font-semibold tracking-wider mb-2">
         {t('dashboard:prediction.signalBreakdown').toUpperCase()} ({signals.length} {t('dashboard:prediction.activeSignals')})
       </p>
       {signals.map(([name, sig]) => {
@@ -70,16 +70,16 @@ function SignalBreakdown({ breakdown, expanded, t }) {
         const label = name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 
         return (
-          <div key={name} className="flex items-start gap-2 text-[11px]">
+          <div key={name} className="flex items-start gap-2 text-xs">
             <span className={`${color} font-bold w-3 text-center shrink-0`}>{arrow}</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <span className="text-text-secondary font-medium">{label}</span>
-                <span className="text-text-muted text-[10px] tabular-nums">
+                <span className="text-text-muted text-xs tabular-nums">
                   {(sig.confidence * 100).toFixed(0)}%
                 </span>
               </div>
-              <p className="text-text-muted text-[10px] truncate">{sig.reasoning}</p>
+              <p className="text-text-muted text-xs truncate">{sig.reasoning}</p>
             </div>
           </div>
         )
@@ -155,14 +155,14 @@ export default function QuantPredictionCard() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <h3 className="text-text-primary text-sm font-semibold">{t('prediction.quantTitle')}</h3>
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${actionStyle.bg} ${actionStyle.border} ${actionStyle.color}`}>
+          <span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${actionStyle.bg} ${actionStyle.border} ${actionStyle.color}`}>
             {actionStyle.label}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <CardShareButton cardRef={cardRef} label="Quant Prediction" filename="quant-prediction.png" />
           {data.timestamp && (
-            <span className="text-text-muted text-[10px]">
+            <span className="text-text-muted text-xs">
               {formatTimeAgo(data.timestamp)}
             </span>
           )}
@@ -172,19 +172,19 @@ export default function QuantPredictionCard() {
       {/* Composite Score Bar */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-text-muted text-[10px]">{t('common:direction.bearish')}</span>
+          <span className="text-text-muted text-xs">{t('common:direction.bearish')}</span>
           <span className={`text-xs font-bold tabular-nums ${isUp ? 'text-accent-green' : 'text-accent-red'}`}>
             {score > 0 ? '+' : ''}{score.toFixed(0)}
           </span>
-          <span className="text-text-muted text-[10px]">{t('common:direction.bullish')}</span>
+          <span className="text-text-muted text-xs">{t('common:direction.bullish')}</span>
         </div>
         <ScoreBar score={score} />
         <div className="flex items-center justify-between mt-1.5">
-          <span className="text-text-muted text-[10px]">
+          <span className="text-text-muted text-xs">
             {data.bullish_signals || 0}{t('prediction.bullishShort')} / {data.bearish_signals || 0}{t('prediction.bearishShort')}
             {data.agreement_ratio ? ` (${(data.agreement_ratio * 100).toFixed(0)}% ${t('prediction.agreement')})` : ''}
           </span>
-          <span className="text-text-muted text-[10px] tabular-nums">
+          <span className="text-text-muted text-xs tabular-nums">
             {data.active_signals || 0}/{Object.keys(data.signal_breakdown || {}).length} {t('prediction.activeSignals')}
           </span>
         </div>
@@ -232,7 +232,7 @@ export default function QuantPredictionCard() {
                       style={{ width: `${Math.min(data.confidence || 0, 100)}%` }}
                     />
                   </div>
-                  <span className="text-text-muted text-[10px] tabular-nums w-7 text-right">
+                  <span className="text-text-muted text-xs tabular-nums w-7 text-right">
                     {(data.confidence || 0).toFixed(0)}%
                   </span>
                 </div>
@@ -245,7 +245,7 @@ export default function QuantPredictionCard() {
       {/* Expand/collapse signal breakdown */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full mt-2 text-center text-accent-blue text-[11px] hover:underline"
+        className="w-full mt-2 text-center text-accent-blue text-xs hover:underline"
       >
         {expanded ? t('prediction.hideBreakdown') : t('prediction.showBreakdown')}
       </button>
