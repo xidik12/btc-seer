@@ -68,13 +68,13 @@ async def make_prediction(body: PredictBody, request: Request):
             if not user or not is_premium(user):
                 raise HTTPException(403, f"{body.timeframe} predictions require Premium")
 
-        # Check for existing prediction this round
+        # Check for existing prediction this round (pending or already resolved)
         result = await session.execute(
             select(UserPrediction).where(
                 UserPrediction.telegram_id == telegram_id,
                 UserPrediction.round_date == today,
                 UserPrediction.timeframe == body.timeframe,
-                UserPrediction.status == "pending",
+                UserPrediction.status.in_(["pending", "resolved"]),
             )
         )
         existing = result.scalar_one_or_none()
@@ -111,8 +111,7 @@ async def make_prediction(body: PredictBody, request: Request):
         )
         session.add(prediction)
 
-        # Update profile prediction count
-        profile.total_predictions = (profile.total_predictions or 0) + 1
+        # Update username (total_predictions incremented on evaluation, not submit)
         if username:
             profile.username = username
 
@@ -135,12 +134,12 @@ async def get_game_status(request: Request):
     today = datetime.utcnow().strftime("%Y-%m-%d")
 
     async with async_session() as session:
-        # Current prediction
+        # Current prediction (pending or already resolved today)
         result = await session.execute(
             select(UserPrediction).where(
                 UserPrediction.telegram_id == telegram_id,
                 UserPrediction.round_date == today,
-                UserPrediction.status == "pending",
+                UserPrediction.status.in_(["pending", "resolved"]),
             ).order_by(desc(UserPrediction.timestamp)).limit(1)
         )
         current = result.scalar_one_or_none()
@@ -219,6 +218,7 @@ async def get_leaderboard(period: str = "all_time", limit: int = Query(20, ge=1,
         "leaderboard": [
             {
                 "rank": i + 1,
+                "telegram_id": p.telegram_id,
                 "username": p.username or "Anonymous",
                 "total_points": p.total_points,
                 "weekly_points": p.weekly_points,

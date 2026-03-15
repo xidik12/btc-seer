@@ -267,6 +267,9 @@ async def lifespan(app: FastAPI):
         # Subscription expiry check (daily)
         scheduler.add_job(_lazy_job("app.scheduler.jobs", "check_subscription_expiry"), "interval", hours=24, id="check_subs", **_job_defaults)
 
+        # Onboarding drip sequence for trial users (daily at 09:00 UTC)
+        scheduler.add_job(_lazy_job("app.scheduler.domain_marketing", "send_onboarding_drip"), "cron", hour=9, minute=0, id="onboarding_drip", **_job_defaults)
+
         # Daily metrics snapshot at 23:55 UTC
         scheduler.add_job(_lazy_job("app.scheduler.jobs", "snapshot_daily_metrics"), "cron", hour=23, minute=55, id="snapshot_metrics", **_job_defaults)
 
@@ -281,6 +284,9 @@ async def lifespan(app: FastAPI):
 
         # Game leaderboard period reset (daily at 00:00)
         scheduler.add_job(_lazy_job("app.scheduler.jobs", "reset_game_periods"), "cron", hour=0, minute=0, id="reset_game_periods", **_job_defaults)
+
+        # Daily briefing push notification (08:00 UTC — concise morning message to subscribers/trialists)
+        scheduler.add_job(_lazy_job("app.scheduler.domain_marketing", "send_daily_briefing_push"), "cron", hour=8, minute=0, id="daily_briefing_push", **_job_defaults)
 
         scheduler.start()
         logger.info("Scheduler started")

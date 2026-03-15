@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTelegram } from '../hooks/useTelegram'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { api } from '../utils/api.js'
 // Above-the-fold — eager imports
 import PriceWidget from '../components/PriceWidget'
 import TickerTape from '../components/TickerTape'
@@ -296,6 +297,163 @@ const CATEGORIES = [
   },
 ]
 
+// ── Free-tier tease widgets ──
+
+function BlurredPredictionTease() {
+  const navigate = useNavigate()
+  const { t } = useTranslation('common')
+  const [prediction, setPrediction] = useState(null)
+
+  useEffect(() => {
+    api.getCurrentPredictions()
+      .then((data) => {
+        // data is an array or object with predictions — grab the 24h one
+        const pred = Array.isArray(data)
+          ? data.find((p) => p.timeframe === '24h') || data[0]
+          : data
+        if (pred) setPrediction(pred)
+      })
+      .catch(() => {})
+  }, [])
+
+  const isUp = prediction?.direction === 'bullish'
+  const arrowColor = isUp ? 'text-accent-green' : 'text-accent-red'
+  const arrowBg = isUp ? 'bg-accent-green/10' : 'bg-accent-red/10'
+  const arrowIcon = isUp ? '\u25B2' : '\u25BC'
+  const dirLabel = isUp ? 'UP' : 'DOWN'
+
+  return (
+    <div className="relative bg-bg-card rounded-2xl border border-white/5 p-4 overflow-hidden">
+      <div className="flex items-center gap-3">
+        {/* Direction arrow — visible (real data) */}
+        <div className={`w-12 h-12 rounded-full ${arrowBg} flex items-center justify-center shrink-0`}>
+          <span className={`text-2xl font-bold ${arrowColor}`}>{prediction ? arrowIcon : '?'}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-text-primary text-sm font-semibold">
+            AI 24h Prediction: <span className={arrowColor}>{prediction ? dirLabel : '...'}</span>
+          </p>
+          {/* Blurred confidence + details */}
+          <div className="mt-1 space-y-0.5 relative">
+            <div className="blur-[6px] select-none pointer-events-none">
+              <p className="text-text-muted text-xs">Confidence: 87.3%</p>
+              <p className="text-text-muted text-xs">Target: $108,450 | Support: $95,200</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Upgrade overlay */}
+      <button
+        onClick={() => navigate('/subscription')}
+        className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg-card via-bg-card/95 to-transparent pt-6 pb-2.5 flex items-center justify-center gap-1.5"
+      >
+        <svg className="w-3.5 h-3.5 text-accent-yellow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0110 0v4" />
+        </svg>
+        <span className="text-accent-yellow text-xs font-semibold">Upgrade to see full analysis</span>
+      </button>
+    </div>
+  )
+}
+
+function FearGreedMiniWidget() {
+  const { t } = useTranslation('dashboard')
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    api.getFearGreed(1)
+      .then((res) => setData(res?.current))
+      .catch(() => {})
+  }, [])
+
+  if (!data) return null
+
+  const value = Math.max(0, Math.min(100, Math.round(data.value)))
+  let label, color, bgColor
+  if (value <= 20) { label = 'Extreme Fear'; color = 'text-accent-red'; bgColor = 'bg-accent-red/10' }
+  else if (value <= 40) { label = 'Fear'; color = 'text-accent-orange'; bgColor = 'bg-accent-orange/10' }
+  else if (value <= 60) { label = 'Neutral'; color = 'text-accent-yellow'; bgColor = 'bg-accent-yellow/10' }
+  else if (value <= 80) { label = 'Greed'; color = 'text-accent-green'; bgColor = 'bg-accent-green/10' }
+  else { label = 'Extreme Greed'; color = 'text-accent-green'; bgColor = 'bg-accent-green/10' }
+
+  return (
+    <div className="bg-bg-card rounded-2xl border border-white/5 p-4 flex items-center gap-3">
+      <div className={`w-11 h-11 rounded-full ${bgColor} flex items-center justify-center shrink-0`}>
+        <span className={`text-lg font-bold tabular-nums ${color}`}>{value}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-text-primary text-sm font-semibold">Fear & Greed Index</p>
+        <p className={`text-xs font-medium ${color}`}>{label}</p>
+      </div>
+      <div className="w-16 h-2 rounded-full bg-bg-hover overflow-hidden shrink-0">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: `${value}%`,
+            background: value <= 20 ? '#ff4d6a' : value <= 40 ? '#ff8c42' : value <= 60 ? '#ffb800' : value <= 80 ? '#7dd87d' : '#00d68f',
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function PredictionGameTease() {
+  const navigate = useNavigate()
+  const [consensus, setConsensus] = useState(null)
+
+  useEffect(() => {
+    api.getGameConsensus('24h')
+      .then((res) => setConsensus(res))
+      .catch(() => {})
+  }, [])
+
+  const upPct = consensus?.up_pct ?? 50
+  const downPct = consensus?.down_pct ?? 50
+  const total = consensus?.total ?? 0
+
+  return (
+    <div className="bg-bg-card rounded-2xl border border-white/5 p-4">
+      <p className="text-text-primary text-sm font-semibold mb-2">Will BTC go UP or DOWN?</p>
+      <div className="flex gap-2 mb-2">
+        <button
+          onClick={() => navigate('/game')}
+          className="flex-1 py-2 rounded-xl bg-accent-green/10 border border-accent-green/20 text-accent-green text-sm font-bold active:scale-95 transition-all"
+        >
+          {'\u25B2'} UP
+        </button>
+        <button
+          onClick={() => navigate('/game')}
+          className="flex-1 py-2 rounded-xl bg-accent-red/10 border border-accent-red/20 text-accent-red text-sm font-bold active:scale-95 transition-all"
+        >
+          {'\u25BC'} DOWN
+        </button>
+      </div>
+      {total > 0 && (
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-1.5 rounded-full bg-bg-hover overflow-hidden">
+              <div className="h-full rounded-full bg-accent-green transition-all" style={{ width: `${upPct}%` }} />
+            </div>
+            <span className="text-accent-green text-xs font-medium tabular-nums w-10 text-right">{upPct}%</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-1.5 rounded-full bg-bg-hover overflow-hidden">
+              <div className="h-full rounded-full bg-accent-red transition-all" style={{ width: `${downPct}%` }} />
+            </div>
+            <span className="text-accent-red text-xs font-medium tabular-nums w-10 text-right">{downPct}%</span>
+          </div>
+          <p className="text-text-muted text-[10px] text-center mt-1">{total} votes today</p>
+        </div>
+      )}
+      {total === 0 && (
+        <p className="text-text-muted text-xs text-center">Be the first to predict today!</p>
+      )}
+    </div>
+  )
+}
+
 function QuickAccessGrid() {
   const navigate = useNavigate()
   const { t } = useTranslation('common')
@@ -440,7 +598,16 @@ export default function Dashboard() {
         </Suspense>
       </SafeWrap>
 
-      {/* Paywall CTA for free users — shown below price */}
+      {/* Free-tier tease widgets — shown above paywall to give free users a taste */}
+      {!loading && !isPremium && (
+        <div className="space-y-3">
+          <BlurredPredictionTease />
+          <FearGreedMiniWidget />
+          <PredictionGameTease />
+        </div>
+      )}
+
+      {/* Paywall CTA for free users — shown below tease widgets */}
       {!loading && !isPremium && <DashboardPaywallCTA />}
 
       {/* Premium content — only shown for premium users */}

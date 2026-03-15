@@ -90,7 +90,7 @@ class Settings(BaseSettings):
     bot_username: str = ""  # Auto-resolved from Telegram API at startup
 
     # API Monetization (disabled by default — all free)
-    api_key_enabled: bool = False
+    api_key_enabled: bool = True
     api_free_rate_limit: int = 60       # requests/hr
     api_basic_rate_limit: int = 300
     api_pro_rate_limit: int = 1000
