@@ -105,9 +105,14 @@ export function SubscriptionProvider({ children }) {
       }
     } catch (err) {
       clearTimeout(timeout)
-      // If aborted due to timeout, use cached state or default and retry in background
+      // If aborted due to timeout, keep loading=true (don't show paywall) and retry
       if (err.name === 'AbortError') {
-        setState((s) => ({ ...s, loading: false }))
+        const cached = getCachedState()
+        if (cached && cached.isPremium) {
+          // Trust the cache — user was premium last time
+          setState((s) => ({ ...s, ...cached, loading: false }))
+        }
+        // Either way, retry in background — keep loading=true if no premium cache
         _retryInBackground(initData)
         return
       }
@@ -129,7 +134,13 @@ export function SubscriptionProvider({ children }) {
         return newState
       })
     } catch {
-      setState((s) => ({ ...s, loading: false }))  // preserve all existing state
+      // If both register and status failed, use cache if available
+      const cached = getCachedState()
+      if (cached && cached.isPremium) {
+        setState((s) => ({ ...s, ...cached, loading: false }))
+      } else {
+        setState((s) => ({ ...s, loading: false }))
+      }
     }
   }, [_retryInBackground])
 

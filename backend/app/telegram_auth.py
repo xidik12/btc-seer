@@ -7,7 +7,7 @@ import hashlib
 import hmac
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from urllib.parse import parse_qs, unquote
 
 from fastapi import Request, HTTPException
@@ -105,7 +105,7 @@ async def require_premium(request: Request):
             raise HTTPException(403, "Premium subscription required")
 
         tier, sub_end, trial_end = row
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()  # must be naive to match DB's naive datetime columns
         # Check active subscription or active trial
         has_active_sub = tier in ("premium", "pro") and (not sub_end or sub_end > now)
         has_active_trial = tier == "trial" and trial_end and trial_end > now
