@@ -118,17 +118,20 @@ def find_swing_points(
 
 
 def label_waves(swings: List[dict]) -> dict:
-    """Try to fit impulse (5-wave) or corrective pattern from recent swings."""
-    if len(swings) < 6:
+    """Try to fit impulse (5-wave) or corrective pattern from recent swings.
+
+    Always returns a best-guess wave label — never "?" in normal conditions.
+    """
+    if len(swings) < 3:
         return {
             "pattern": "insufficient_data",
-            "current_wave": "?",
+            "current_wave": "1",
             "direction": "neutral",
             "waves": [],
-            "confidence": 0.0,
+            "confidence": 0.10,
         }
 
-    # Try impulse from the last 8+ swings
+    # Try impulse from the last 10 swings
     result = _try_impulse(swings)
     if result:
         return result
@@ -138,12 +141,85 @@ def label_waves(swings: List[dict]) -> dict:
     if result:
         return result
 
+    # Best-guess fallback — analyze swing structure to estimate position
+    return _best_guess_wave(swings)
+
+
+def _best_guess_wave(swings: List[dict]) -> dict:
+    """Estimate wave position from swing structure when textbook patterns don't match.
+
+    Crypto rarely follows textbook Elliott — this provides a reasonable estimate
+    by analyzing the last few swings' direction, size, and momentum.
+    """
+    recent = swings[-6:] if len(swings) >= 6 else swings
+
+    # Determine overall direction from the dominant trend in recent swings
+    if len(recent) >= 2:
+        first_price = recent[0]["price"]
+        last_price = recent[-1]["price"]
+        direction = "bullish" if last_price > first_price else "bearish"
+    else:
+        direction = "neutral"
+
+    # Count alternating moves to estimate wave position
+    moves = []
+    for i in range(len(recent) - 1):
+        delta = recent[i + 1]["price"] - recent[i]["price"]
+        moves.append(delta)
+
+    if not moves:
+        return {
+            "pattern": "developing",
+            "current_wave": "1",
+            "direction": direction,
+            "waves": [],
+            "confidence": 0.15,
+        }
+
+    # Analyze the last few moves to guess which wave we're in
+    n_moves = len(moves)
+    last_move = moves[-1]
+    last_move_with_trend = (last_move > 0) == (direction == "bullish")
+
+    # Build wave labels from available swings
+    labels = ["1", "2", "3", "4", "5"]
+    waves = []
+    for i in range(min(n_moves, 5)):
+        waves.append({
+            "label": labels[i],
+            "start_price": recent[i]["price"],
+            "end_price": recent[i + 1]["price"],
+            "start_idx": recent[i]["index"],
+            "end_idx": recent[i + 1]["index"],
+        })
+
+    # Map number of completed moves to current wave estimate
+    if n_moves >= 5:
+        current_wave = "5"
+    elif n_moves == 4:
+        current_wave = "5" if last_move_with_trend else "4"
+    elif n_moves == 3:
+        current_wave = "4" if not last_move_with_trend else "3"
+    elif n_moves == 2:
+        current_wave = "3" if last_move_with_trend else "2"
+    else:
+        current_wave = "2" if not last_move_with_trend else "1"
+
+    # Find the largest move — if it aligns with wave 3, boost confidence
+    abs_moves = [abs(m) for m in moves]
+    largest_idx = abs_moves.index(max(abs_moves))
+    confidence = 0.25
+    if largest_idx == 2:  # Wave 3 is largest — textbook
+        confidence = 0.40
+    elif largest_idx == 0:  # Wave 1 is largest — extended wave 1
+        confidence = 0.30
+
     return {
-        "pattern": "unclear",
-        "current_wave": "?",
-        "direction": "neutral",
-        "waves": [],
-        "confidence": 0.2,
+        "pattern": "developing",
+        "current_wave": current_wave,
+        "direction": direction,
+        "waves": waves,
+        "confidence": round(confidence, 2),
     }
 
 
@@ -278,16 +354,16 @@ def _detect_current_wave(swings: List[dict], direction: str) -> tuple:
         # Validate waves using soft scoring — mild violations lower confidence
         # instead of rejecting the pattern entirely (BTC rarely follows textbook)
         violations = 0
-        max_violations = 1 if num_points <= 4 else 2  # Allow more slack for longer patterns
+        max_violations = 2 if num_points <= 4 else 3  # Crypto needs more slack
 
         if direction == "bullish":
             w1_range = waves[0]["end_price"] - waves[0]["start_price"]
             w2_retrace = waves[0]["end_price"] - waves[1]["end_price"]
             # Rule 1: Wave 2 must not retrace > 100% of wave 1
-            if w2_retrace > w1_range * 1.05:  # 5% tolerance
+            if w2_retrace > w1_range * 1.10:  # 10% tolerance for crypto
                 violations += 1
-            # Hard fail: W2 retraces > 120% — definitely not an impulse
-            if w2_retrace > w1_range * 1.20:
+            # Hard fail: W2 retraces > 130% — definitely not an impulse
+            if w2_retrace > w1_range * 1.30:
                 violations = max_violations + 1
 
             if len(waves) >= 3:
@@ -307,9 +383,9 @@ def _detect_current_wave(swings: List[dict], direction: str) -> tuple:
         else:
             w1_range = abs(waves[0]["start_price"] - waves[0]["end_price"])
             w2_retrace = abs(waves[1]["end_price"] - waves[1]["start_price"])
-            if w2_retrace > w1_range * 1.05:
+            if w2_retrace > w1_range * 1.10:
                 violations += 1
-            if w2_retrace > w1_range * 1.20:
+            if w2_retrace > w1_range * 1.30:
                 violations = max_violations + 1
 
             if len(waves) >= 3:
@@ -727,7 +803,10 @@ def _analyze(df: pd.DataFrame, lookback: int = 5) -> dict:
         sub_label = f" ({sub_type.replace('_', ' ')})" if sub_type else ""
         summary = f"BTC is in Wave {current} of a {direction} corrective{sub_label} pattern."
     else:
-        summary = f"Elliott Wave pattern is {pattern}. More data needed for clear wave count."
+        if pattern == "developing":
+            summary = f"BTC appears to be forming Wave {current} of a {direction} pattern (developing)."
+        else:
+            summary = f"Elliott Wave pattern is {pattern}. Wave {current} estimated."
 
     if divergences:
         last_div = divergences[-1]

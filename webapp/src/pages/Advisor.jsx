@@ -212,12 +212,12 @@ function AnalysisCard({ analysis, t }) {
       )}
 
       {/* Elliott Wave */}
-      {ew.pattern && ew.pattern !== 'no_data' && ew.pattern !== 'insufficient_data' && (
+      {ew.pattern && ew.pattern !== 'no_data' && (
         <div className="flex items-center justify-between">
           <span className="text-text-muted text-[10px]">{t('advisor.elliottWave')}</span>
           <div className="flex items-center gap-2">
             <span className={`text-xs font-bold ${ew.direction === 'bullish' ? 'text-accent-green' : ew.direction === 'bearish' ? 'text-accent-red' : 'text-text-muted'}`}>
-              W{ew.current_wave} {ew.pattern}
+              W{ew.current_wave}{ew.pattern === 'developing' ? '~' : ''} {ew.pattern === 'impulse' ? 'imp' : ew.pattern === 'corrective' ? `cor` : ''}
             </span>
             <span className="text-text-muted text-[10px]">{(ew.confidence * 100)?.toFixed(0)}%</span>
           </div>

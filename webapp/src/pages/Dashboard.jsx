@@ -299,21 +299,33 @@ const CATEGORIES = [
 
 // ── Free-tier tease widgets ──
 
+// Pre-fetch tease data in one batch to avoid waterfall
+const _teaseCache = { prediction: null, fearGreed: null, consensus: null, _fetched: false }
+function prefetchTeaseData() {
+  if (_teaseCache._fetched) return
+  _teaseCache._fetched = true
+  // Fire all 3 in parallel
+  api.getCurrentPredictions().then(data => {
+    _teaseCache.prediction = Array.isArray(data) ? data.find(p => p.timeframe === '24h') || data[0] : data
+  }).catch(() => {})
+  api.getFearGreed(1).then(res => { _teaseCache.fearGreed = res?.current }).catch(() => {})
+  api.getGameConsensus('24h').then(res => { _teaseCache.consensus = res }).catch(() => {})
+}
+
 function BlurredPredictionTease() {
   const navigate = useNavigate()
   const { t } = useTranslation('common')
-  const [prediction, setPrediction] = useState(null)
+  const [prediction, setPrediction] = useState(_teaseCache.prediction)
 
   useEffect(() => {
-    api.getCurrentPredictions()
-      .then((data) => {
-        // data is an array or object with predictions — grab the 24h one
-        const pred = Array.isArray(data)
-          ? data.find((p) => p.timeframe === '24h') || data[0]
-          : data
-        if (pred) setPrediction(pred)
-      })
-      .catch(() => {})
+    prefetchTeaseData()
+    // Poll cache briefly if not yet resolved
+    if (!prediction) {
+      const id = setInterval(() => {
+        if (_teaseCache.prediction) { setPrediction(_teaseCache.prediction); clearInterval(id) }
+      }, 200)
+      return () => clearInterval(id)
+    }
   }, [])
 
   const isUp = prediction?.direction === 'bullish'
@@ -359,12 +371,16 @@ function BlurredPredictionTease() {
 
 function FearGreedMiniWidget() {
   const { t } = useTranslation('dashboard')
-  const [data, setData] = useState(null)
+  const [data, setData] = useState(_teaseCache.fearGreed)
 
   useEffect(() => {
-    api.getFearGreed(1)
-      .then((res) => setData(res?.current))
-      .catch(() => {})
+    prefetchTeaseData()
+    if (!data) {
+      const id = setInterval(() => {
+        if (_teaseCache.fearGreed) { setData(_teaseCache.fearGreed); clearInterval(id) }
+      }, 200)
+      return () => clearInterval(id)
+    }
   }, [])
 
   if (!data) return null
@@ -401,12 +417,16 @@ function FearGreedMiniWidget() {
 
 function PredictionGameTease() {
   const navigate = useNavigate()
-  const [consensus, setConsensus] = useState(null)
+  const [consensus, setConsensus] = useState(_teaseCache.consensus)
 
   useEffect(() => {
-    api.getGameConsensus('24h')
-      .then((res) => setConsensus(res))
-      .catch(() => {})
+    prefetchTeaseData()
+    if (!consensus) {
+      const id = setInterval(() => {
+        if (_teaseCache.consensus) { setConsensus(_teaseCache.consensus); clearInterval(id) }
+      }, 200)
+      return () => clearInterval(id)
+    }
   }, [])
 
   const upPct = consensus?.up_pct ?? 50

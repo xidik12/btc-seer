@@ -9,7 +9,6 @@ function getCachedState() {
     const raw = sessionStorage.getItem(CACHE_KEY)
     if (raw) {
       const cached = JSON.parse(raw)
-      // Use cached state but mark as not loading (optimistic render)
       return { ...cached, loading: false, _fromCache: true }
     }
   } catch {}
@@ -44,37 +43,12 @@ const DEFAULT_STATE = {
 export function SubscriptionProvider({ children }) {
   const { tg } = useTelegram()
 
-  // Initialize from cache for instant render, or default with loading=true
+  // KEY OPTIMIZATION: Use cache immediately — never block render on first load.
+  // If cache exists, user sees the app instantly. Fresh data updates in background.
   const cached = getCachedState()
   const [state, setState] = useState(
     cached || { ...DEFAULT_STATE, loading: true }
   )
-
-  const _retryInBackground = useCallback(async (initData) => {
-    // Retry up to 3 times with increasing delays (cold start recovery)
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt > 0) await new Promise(r => setTimeout(r, attempt * 2000))
-      try {
-        const res = await api.registerUser(initData)
-        const user = res?.user
-        if (user) {
-          const newState = {
-            isPremium: !!user.is_premium || !!user.is_admin,
-            isAdmin: !!user.is_admin,
-            tier: user.subscription_status || (user.is_premium ? 'active' : 'none'),
-            daysLeft: user.days_remaining ?? 0,
-            statusText: user.status_text || '',
-            loading: false,
-          }
-          setState(newState)
-          saveCachedState(newState)
-          return
-        }
-      } catch {
-        // Retry on next iteration
-      }
-    }
-  }, [])
 
   const fetchStatus = useCallback(async (initData) => {
     if (!initData) {
@@ -82,9 +56,12 @@ export function SubscriptionProvider({ children }) {
       return
     }
 
-    // Timeout for cold Railway starts — 5s gives enough time for warm worker
+    // If we have cache, don't block — fetch silently in background
+    const hasCachedPremium = cached?.isPremium || cached?.isAdmin
+
+    // Shorter timeout: 3s for warm starts, cache covers cold starts
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 5000)
+    const timeout = setTimeout(() => controller.abort(), 3000)
 
     try {
       const res = await api.registerUser(initData, { signal: controller.signal })
@@ -105,26 +82,41 @@ export function SubscriptionProvider({ children }) {
       }
     } catch (err) {
       clearTimeout(timeout)
-      // If aborted due to timeout, keep loading=true (don't show paywall) and retry
       if (err.name === 'AbortError') {
-        const cached = getCachedState()
-        if (cached && cached.isPremium) {
-          // Trust the cache — user was premium last time
+        // Timed out — trust cache, retry once in background
+        if (hasCachedPremium) {
           setState((s) => ({ ...s, ...cached, loading: false }))
         }
-        // Either way, retry in background — keep loading=true if no premium cache
-        _retryInBackground(initData)
+        // Single background retry after 2s (not 3 retries)
+        setTimeout(async () => {
+          try {
+            const res = await api.registerUser(initData)
+            const user = res?.user
+            if (user) {
+              const newState = {
+                isPremium: !!user.is_premium || !!user.is_admin,
+                isAdmin: !!user.is_admin,
+                tier: user.subscription_status || (user.is_premium ? 'active' : 'none'),
+                daysLeft: user.days_remaining ?? 0,
+                statusText: user.status_text || '',
+                loading: false,
+              }
+              setState(newState)
+              saveCachedState(newState)
+            }
+          } catch {}
+        }, 2000)
         return
       }
-      // Registration failed — try subscription status endpoint
     }
 
+    // Fallback: try subscription status endpoint
     try {
       const sub = await api.getSubscriptionStatus(initData)
       setState((prev) => {
         const newState = {
           isPremium: !!sub?.is_premium || prev.isAdmin,
-          isAdmin: prev.isAdmin,  // preserve admin from cache — never downgrade here
+          isAdmin: prev.isAdmin,
           tier: sub?.tier || 'none',
           daysLeft: sub?.days_remaining ?? 0,
           statusText: sub?.status_text || '',
@@ -134,15 +126,14 @@ export function SubscriptionProvider({ children }) {
         return newState
       })
     } catch {
-      // If both register and status failed, use cache if available
-      const cached = getCachedState()
-      if (cached && cached.isPremium) {
+      // Both failed — use cache or default
+      if (hasCachedPremium) {
         setState((s) => ({ ...s, ...cached, loading: false }))
       } else {
         setState((s) => ({ ...s, loading: false }))
       }
     }
-  }, [_retryInBackground])
+  }, [])
 
   useEffect(() => {
     fetchStatus(tg?.initData)
