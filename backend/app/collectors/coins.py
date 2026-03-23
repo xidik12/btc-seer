@@ -126,8 +126,9 @@ async def collect_coin_prices():
                 if info and not info.image_url and coin.get("image_url"):
                     info.image_url = coin["image_url"]
 
-                # Save price snapshot
-                session.add(CoinPrice(
+                # Save price snapshot (upsert to avoid duplicate key errors)
+                from sqlalchemy.dialects.postgresql import insert as pg_insert
+                stmt = pg_insert(CoinPrice).values(
                     coin_id=coin["coin_id"],
                     price_usd=coin["price_usd"],
                     market_cap=coin.get("market_cap"),
@@ -136,7 +137,18 @@ async def collect_coin_prices():
                     change_24h=coin.get("change_24h"),
                     change_7d=coin.get("change_7d"),
                     timestamp=now,
-                ))
+                ).on_conflict_do_update(
+                    constraint="coin_prices_pkey",
+                    set_={
+                        "price_usd": coin["price_usd"],
+                        "market_cap": coin.get("market_cap"),
+                        "volume_24h": coin.get("volume_24h"),
+                        "change_1h": coin.get("change_1h"),
+                        "change_24h": coin.get("change_24h"),
+                        "change_7d": coin.get("change_7d"),
+                    },
+                )
+                await session.execute(stmt)
 
             await session.commit()
             logger.info(f"Collected prices for {len(coins)} coins")

@@ -236,7 +236,8 @@ async def collect_price_data():
         candle_ts = datetime.fromtimestamp(k[0] / 1000, tz=timezone.utc).replace(tzinfo=None)
 
         async with async_session() as session:
-            price = Price(
+            from sqlalchemy.dialects.postgresql import insert as pg_insert
+            stmt = pg_insert(Price).values(
                 timestamp=candle_ts,
                 open=float(k[1]),
                 high=float(k[2]),
@@ -244,8 +245,17 @@ async def collect_price_data():
                 close=float(k[4]),
                 volume=float(k[5]),
                 source="binance",
+            ).on_conflict_do_update(
+                index_elements=[Price.timestamp],
+                set_={
+                    "open": float(k[1]),
+                    "high": float(k[2]),
+                    "low": float(k[3]),
+                    "close": float(k[4]),
+                    "volume": float(k[5]),
+                },
             )
-            session.add(price)
+            await session.execute(stmt)
             await session.commit()
 
         logger.info(f"Price collected: ${k[4]} (kline OHLC)")
