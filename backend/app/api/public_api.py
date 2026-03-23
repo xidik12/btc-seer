@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import (
@@ -38,11 +38,22 @@ async def get_price(session: AsyncSession = Depends(get_session)):
     if not row:
         return {"error": "No price data available"}
 
+    # Get actual 24h high/low from the Price table
+    cutoff_24h = row.timestamp - timedelta(hours=24)
+    agg_result = await session.execute(
+        select(
+            func.max(Price.high).label("high_24h"),
+            func.min(Price.low).label("low_24h"),
+            func.sum(Price.volume).label("volume_24h"),
+        ).where(Price.timestamp >= cutoff_24h)
+    )
+    agg = agg_result.one_or_none()
+
     data = {
         "price": row.close,
-        "high_24h": row.high,
-        "low_24h": row.low,
-        "volume": row.volume,
+        "high_24h": agg.high_24h if agg and agg.high_24h else row.high,
+        "low_24h": agg.low_24h if agg and agg.low_24h else row.low,
+        "volume_24h": agg.volume_24h if agg and agg.volume_24h else row.volume,
         "timestamp": row.timestamp.isoformat(),
     }
     await cache_set("v1:price", data, 15)

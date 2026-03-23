@@ -163,7 +163,17 @@ async def cmd_predict(message: Message):
         await message.answer("⏳ No predictions available yet. Data is being collected...")
         return
 
+    # Fetch live price instead of using stale prediction.current_price
+    async with async_session() as session:
+        price_result = await session.execute(
+            select(Price).order_by(desc(Price.timestamp)).limit(1)
+        )
+        live_price_row = price_result.scalar_one_or_none()
+    live_price = live_price_row.close if live_price_row else None
+
     lines = ["🔮 <b>Current Predictions</b>\n"]
+    if live_price:
+        lines.append(f"💰 <b>BTC Price:</b> ${live_price:,.0f}\n")
 
     direction_emoji = {"bullish": "🟢 ▲", "bearish": "🔴 ▼", "neutral": "🟡 ◄►"}
 
@@ -171,8 +181,7 @@ async def cmd_predict(message: Message):
         emoji = direction_emoji.get(p.direction, "⚪")
         lines.append(
             f"<b>{p.timeframe.upper()}</b>: {emoji} {p.direction.title()} "
-            f"({p.confidence:.0f}% conf)\n"
-            f"   Price: ${p.current_price:,.0f}"
+            f"({p.confidence:.0f}% conf)"
         )
         if p.predicted_change_pct:
             lines.append(f"   Expected: {p.predicted_change_pct:+.2f}%")
