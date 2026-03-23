@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, update
 
 from app.config import settings
 from app.database import (
@@ -236,26 +236,33 @@ async def collect_price_data():
         candle_ts = datetime.fromtimestamp(k[0] / 1000, tz=timezone.utc).replace(tzinfo=None)
 
         async with async_session() as session:
-            from sqlalchemy.dialects.postgresql import insert as pg_insert
-            stmt = pg_insert(Price).values(
-                timestamp=candle_ts,
-                open=float(k[1]),
-                high=float(k[2]),
-                low=float(k[3]),
-                close=float(k[4]),
-                volume=float(k[5]),
-                source="binance",
-            ).on_conflict_do_update(
-                index_elements=[Price.timestamp],
-                set_={
-                    "open": float(k[1]),
-                    "high": float(k[2]),
-                    "low": float(k[3]),
-                    "close": float(k[4]),
-                    "volume": float(k[5]),
-                },
+            # Check if this candle already exists to avoid duplicate key errors
+            existing = await session.execute(
+                select(Price).where(Price.timestamp == candle_ts).limit(1)
             )
-            await session.execute(stmt)
+            if existing.scalar_one_or_none():
+                # Update existing record
+                await session.execute(
+                    update(Price)
+                    .where(Price.timestamp == candle_ts)
+                    .values(
+                        open=float(k[1]),
+                        high=float(k[2]),
+                        low=float(k[3]),
+                        close=float(k[4]),
+                        volume=float(k[5]),
+                    )
+                )
+            else:
+                session.add(Price(
+                    timestamp=candle_ts,
+                    open=float(k[1]),
+                    high=float(k[2]),
+                    low=float(k[3]),
+                    close=float(k[4]),
+                    volume=float(k[5]),
+                    source="binance",
+                ))
             await session.commit()
 
         logger.info(f"Price collected: ${k[4]} (kline OHLC)")
