@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="400" viewBox="0 0 1200 400"
+     role="img" aria-labelledby="title desc">
+  <title id="title">BTC Seer — AI Bitcoin forecasting engine</title>
+  <desc id="desc">BTC Seer predicts Bitcoin price direction across five horizons — 1 hour, 4 hours, 24 hours, 1 week, 1 month — using a four-model machine-learning ensemble (TFT, XGBoost, LSTM, TimesFM) blended with classic quant theory. The right panel shows a fan of horizon rays radiating from a single BTC node and a stacked bar of the ensemble model weights.</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0e14"/>
+      <stop offset="1" stop-color="#0d141f"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#7dd3fc"/>
+      <stop offset="0.55" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#0ea5e9" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="400" rx="26" fill="url(#bg)"/>
+  <rect x="1" y="1" width="1198" height="398" rx="25" fill="none" stroke="#1e2a3a" stroke-width="1"/>
+
+  <!-- Title block -->
+  <g transform="translate(64 66)">
+    <text x="0" y="0" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16" letter-spacing="4" fill="#38bdf8">AI BITCOIN FORECASTING ENGINE</text>
+
+    <text x="-2" y="92" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="104" font-weight="800" letter-spacing="-2" fill="#e8edf4">BTC Seer</text>
+
+    <text x="0" y="146" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="25" font-weight="500" fill="#a9b6c6">Reads 200+ market signals. Calls Bitcoin's next move —</text>
+    <text x="0" y="180" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="25" font-weight="500" fill="#a9b6c6">with the track record kept in the open.</text>
+
+    <!-- metadata chips -->
+    <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14" fill="#cbd5e1">
+      <rect x="0" y="212" width="150" height="34" rx="8" fill="#111823" stroke="#243247"/>
+      <text x="16" y="234">4-model ensemble</text>
+      <rect x="162" y="212" width="170" height="34" rx="8" fill="#111823" stroke="#243247"/>
+      <text x="178" y="234">15+ quant models</text>
+      <rect x="344" y="212" width="176" height="34" rx="8" fill="#111823" stroke="#243247"/>
+      <text x="360" y="234">web · Telegram · API</text>
+    </g>
+  </g>
+
+  <!-- Right proof: horizon fan + ensemble weight bar -->
+  <g transform="translate(0 0)">
+    <line x1="720" y1="52" x2="720" y2="348" stroke="#1a2532" stroke-width="1"/>
+
+    <!-- BTC source node -->
+    <circle cx="792" cy="176" r="44" fill="url(#orb)"/>
+    <circle cx="792" cy="176" r="26" fill="#0a0e14" stroke="#f7931a" stroke-width="2.5"/>
+    <text x="792" y="185" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="26" font-weight="800" fill="#f7931a">₿</text>
+
+    <!-- Horizon rays: length + opacity echo the model's confidence decay 1.0 -> 0.60 -->
+    <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="15" fill="#e8edf4">
+      <!-- 1h -->
+      <line x1="828" y1="160" x2="1064" y2="70" stroke="#38bdf8" stroke-width="2.5" opacity="1.0"/>
+      <circle cx="1064" cy="70" r="5" fill="#38bdf8"/>
+      <text x="1080" y="75" fill="#38bdf8">1h</text>
+      <!-- 4h -->
+      <line x1="832" y1="168" x2="1074" y2="124" stroke="#38bdf8" stroke-width="2.5" opacity="0.9"/>
+      <circle cx="1074" cy="124" r="5" fill="#38bdf8" opacity="0.9"/>
+      <text x="1090" y="129">4h</text>
+      <!-- 24h -->
+      <line x1="836" y1="176" x2="1078" y2="176" stroke="#7dd3fc" stroke-width="2.5" opacity="0.82"/>
+      <circle cx="1078" cy="176" r="5" fill="#7dd3fc" opacity="0.82"/>
+      <text x="1094" y="181">24h</text>
+      <!-- 1w -->
+      <line x1="832" y1="184" x2="1074" y2="228" stroke="#94a3b8" stroke-width="2.5" opacity="0.68"/>
+      <circle cx="1074" cy="228" r="5" fill="#94a3b8" opacity="0.68"/>
+      <text x="1090" y="233" fill="#cbd5e1">1w</text>
+      <!-- 1mo -->
+      <line x1="828" y1="192" x2="1064" y2="282" stroke="#64748b" stroke-width="2.5" opacity="0.55"/>
+      <circle cx="1064" cy="282" r="5" fill="#64748b" opacity="0.55"/>
+      <text x="1080" y="287" fill="#94a3b8">1mo</text>
+    </g>
+
+    <!-- Ensemble weight stack -->
+    <g transform="translate(744 318)">
+      <text x="0" y="-8" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" letter-spacing="2" fill="#64748b">ENSEMBLE WEIGHTS</text>
+      <rect x="0"   y="0" width="152" height="16" rx="3" fill="#38bdf8"/>
+      <rect x="156" y="0" width="95"  height="16" rx="3" fill="#0ea5e9"/>
+      <rect x="255" y="0" width="76"  height="16" rx="3" fill="#f7931a"/>
+      <rect x="335" y="0" width="57"  height="16" rx="3" fill="#475569"/>
+      <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#94a3b8">
+        <text x="0"   y="34">TFT 40</text>
+        <text x="156" y="34">XGB 25</text>
+        <text x="255" y="34">LSTM 20</text>
+        <text x="335" y="34">TFM 15</text>
+      </g>
+    </g>
+  </g>
+</svg>

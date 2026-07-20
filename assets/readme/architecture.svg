@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="560" viewBox="0 0 1200 560"
+     role="img" aria-labelledby="atitle adesc">
+  <title id="atitle">BTC Seer prediction pipeline</title>
+  <desc id="adesc">Four-stage pipeline. Stage one collects 15 families of market data. Stage two compiles them into a 200-plus-feature vector. Stage three runs the four-model ensemble (TFT, XGBoost, LSTM, TimesFM), overlaid with a 15-plus-model quant-theory score and a sentiment modifier. Stage four turns the blended prediction into a trading signal delivered to the web app, Telegram bot, and REST API. A continuous-learning loop feeds live accuracy back to re-weight the models.</desc>
+
+  <defs>
+    <marker id="arw" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arwm" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#f7931a"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="560" rx="26" fill="#0a0e14"/>
+  <rect x="1" y="1" width="1198" height="558" rx="25" fill="none" stroke="#1e2a3a"/>
+
+  <!-- stage labels -->
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" letter-spacing="2" fill="#38bdf8">
+    <text x="48"  y="52">01 · COLLECT</text>
+    <text x="360" y="52">02 · BUILD</text>
+    <text x="592" y="52">03 · PREDICT</text>
+    <text x="980" y="52">04 · DELIVER</text>
+  </g>
+
+  <!-- Stage 1: data families -->
+  <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" fill="#cbd5e1">
+    <g>
+      <rect x="48" y="80"  width="256" height="40" rx="9" fill="#111823" stroke="#243247"/><text x="66" y="105">Price &amp; OHLCV · technical</text>
+      <rect x="48" y="128" width="256" height="40" rx="9" fill="#111823" stroke="#243247"/><text x="66" y="153">News &amp; Reddit sentiment (NLP)</text>
+      <rect x="48" y="176" width="256" height="40" rx="9" fill="#111823" stroke="#243247"/><text x="66" y="201">On-chain · hash rate · mempool</text>
+      <rect x="48" y="224" width="256" height="40" rx="9" fill="#111823" stroke="#243247"/><text x="66" y="249">Macro · DXY · M2 · gold · S&amp;P</text>
+      <rect x="48" y="272" width="256" height="40" rx="9" fill="#111823" stroke="#243247"/><text x="66" y="297">Derivatives · funding · liquidations</text>
+      <rect x="48" y="320" width="256" height="40" rx="9" fill="#111823" stroke="#243247"/><text x="66" y="345">ETF &amp; exchange flows · stablecoins</text>
+      <rect x="48" y="368" width="256" height="40" rx="9" fill="#111823" stroke="#243247"/><text x="66" y="393">Whale activity · power-law bands</text>
+    </g>
+    <text x="48" y="436" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" fill="#64748b">15 data families · refreshed on schedule</text>
+  </g>
+
+  <!-- arrows stage1 -> stage2 -->
+  <path d="M312 244 L352 244" stroke="#38bdf8" stroke-width="2" fill="none" marker-end="url(#arw)"/>
+
+  <!-- Stage 2: feature builder -->
+  <g>
+    <rect x="360" y="150" width="192" height="188" rx="12" fill="#0d141f" stroke="#38bdf8" stroke-width="1.5"/>
+    <text x="456" y="200" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="19" font-weight="700" fill="#e8edf4">Feature</text>
+    <text x="456" y="226" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="19" font-weight="700" fill="#e8edf4">builder</text>
+    <text x="456" y="270" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="34" font-weight="700" fill="#38bdf8">200+</text>
+    <text x="456" y="298" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" fill="#94a3b8">features</text>
+  </g>
+
+  <path d="M560 244 L588 244" stroke="#38bdf8" stroke-width="2" fill="none" marker-end="url(#arw)"/>
+
+  <!-- Stage 3: ensemble + overlays -->
+  <g>
+    <rect x="596" y="96" width="288" height="300" rx="14" fill="#0d141f" stroke="#243247"/>
+    <text x="620" y="128" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="700" fill="#e8edf4">Weighted ensemble</text>
+
+    <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14" fill="#e8edf4">
+      <rect x="620" y="146" width="240" height="34" rx="7" fill="#0a1420" stroke="#1e3a52"/>
+      <rect x="620" y="146" width="96" height="34" rx="7" fill="#38bdf8" opacity="0.22"/>
+      <text x="634" y="168">TFT — attention</text><text x="820" y="168" fill="#38bdf8">40</text>
+
+      <rect x="620" y="188" width="240" height="34" rx="7" fill="#0a1420" stroke="#1e3a52"/>
+      <rect x="620" y="188" width="60" height="34" rx="7" fill="#38bdf8" opacity="0.22"/>
+      <text x="634" y="210">XGBoost — tabular</text><text x="820" y="210" fill="#38bdf8">25</text>
+
+      <rect x="620" y="230" width="240" height="34" rx="7" fill="#0a1420" stroke="#1e3a52"/>
+      <rect x="620" y="230" width="48" height="34" rx="7" fill="#38bdf8" opacity="0.22"/>
+      <text x="634" y="252">LSTM — sequential</text><text x="820" y="252" fill="#38bdf8">20</text>
+
+      <rect x="620" y="272" width="240" height="34" rx="7" fill="#0a1420" stroke="#1e3a52"/>
+      <rect x="620" y="272" width="36" height="34" rx="7" fill="#38bdf8" opacity="0.22"/>
+      <text x="634" y="294">TimesFM — zero-shot</text><text x="820" y="294" fill="#38bdf8">15</text>
+    </g>
+
+    <!-- overlays -->
+    <rect x="620" y="322" width="116" height="52" rx="8" fill="#141a12" stroke="#f7931a" stroke-width="1.2"/>
+    <text x="678" y="345" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" fill="#f7931a">Quant overlay</text>
+    <text x="678" y="363" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#d0a875">15+ models</text>
+
+    <rect x="744" y="322" width="116" height="52" rx="8" fill="#141a12" stroke="#f7931a" stroke-width="1.2"/>
+    <text x="802" y="345" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" fill="#f7931a">Sentiment</text>
+    <text x="802" y="363" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12" fill="#d0a875">±50% modifier</text>
+  </g>
+
+  <path d="M892 244 L928 244" stroke="#38bdf8" stroke-width="2" fill="none" marker-end="url(#arw)"/>
+
+  <!-- Stage 4: signal + surfaces -->
+  <g>
+    <rect x="936" y="96" width="216" height="132" rx="12" fill="#0d141f" stroke="#38bdf8" stroke-width="1.5"/>
+    <text x="1044" y="128" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="17" font-weight="700" fill="#e8edf4">Signal</text>
+    <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" fill="#94a3b8">
+      <text x="958" y="156">direction</text>
+      <text x="958" y="178">confidence %</text>
+      <text x="958" y="200">target / stop (ATR)</text>
+    </g>
+
+    <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" fill="#cbd5e1">
+      <rect x="936" y="248" width="216" height="40" rx="9" fill="#111823" stroke="#243247"/><text x="1044" y="273" text-anchor="middle">Web app</text>
+      <rect x="936" y="296" width="216" height="40" rx="9" fill="#111823" stroke="#243247"/><text x="1044" y="321" text-anchor="middle">Telegram bot</text>
+      <rect x="936" y="344" width="216" height="40" rx="9" fill="#111823" stroke="#243247"/><text x="1044" y="369" text-anchor="middle">REST API</text>
+    </g>
+    <path d="M1044 228 L1044 244" stroke="#38bdf8" stroke-width="2" fill="none" marker-end="url(#arw)"/>
+  </g>
+
+  <!-- continuous learning feedback loop -->
+  <path d="M1044 396 L1044 468 L740 468 L740 400"
+        stroke="#f7931a" stroke-width="2" fill="none" stroke-dasharray="6 5" marker-end="url(#arwm)"/>
+  <rect x="792" y="448" width="192" height="40" rx="9" fill="#141a12" stroke="#f7931a"/>
+  <text x="888" y="473" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14" fill="#f7931a">Continuous learning</text>
+  <text x="888" y="512" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5" fill="#64748b">live accuracy re-weights the models &amp; retrains degraded ones</text>
+</svg>
